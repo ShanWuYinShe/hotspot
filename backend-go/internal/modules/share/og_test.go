@@ -11,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 // ogCrawlerRequest 构造带 chi URLParam 的 GET /share/{code} 请求
@@ -24,7 +23,6 @@ func ogCrawlerRequest(code string) *http.Request {
 }
 
 func TestServeCrawlerHTMLRendersOGTags(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewService())
 
 	// 创建一个 user 分享拿到合法 code
@@ -60,7 +58,6 @@ func TestServeCrawlerHTMLRendersOGTags(t *testing.T) {
 }
 
 func TestServeCrawlerHTMLEscapesInterpolation(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewService())
 	// 不存在的 code 走 404 页（固定文案，攻击面为零）；恶意形态输入不得原样出现
 	rr := httptest.NewRecorder()

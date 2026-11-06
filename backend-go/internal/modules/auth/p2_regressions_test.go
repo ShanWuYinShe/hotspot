@@ -10,7 +10,6 @@ import (
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 func newP2Service() (*Service, *InMemoryRepository) {
@@ -57,7 +56,6 @@ func TestRequestPasswordResetPropagatesDeliveryFailure(t *testing.T) {
 func TestRegisterTrimsNicknameBeforeValidation(t *testing.T) {
 	svc, repo := newP2Service()
 	handler := NewHandler(svc)
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	// 纯空格：TrimSpace 后为空 → 10000。
 	body1 := `{"login_id":"spacetest","nickname":"   ","password":"password1","client_type":"app","device_id":"dev-1"}`
@@ -70,7 +68,6 @@ func TestRegisterTrimsNicknameBeforeValidation(t *testing.T) {
 	}
 
 	// 带空白：通过校验且落库为去空白后的值。
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	body2 := `{"login_id":"trimtest","nickname":"  Alice  ","password":"password1","client_type":"app","device_id":"dev-1"}`
 	req2 := httptest.NewRequest("POST", "/register", strings.NewReader(body2))
 	req2.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")

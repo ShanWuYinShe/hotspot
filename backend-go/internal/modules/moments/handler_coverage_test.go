@@ -10,7 +10,6 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/testdb"
 )
 
@@ -118,7 +117,6 @@ func TestMomentHandlerErrorPaths(t *testing.T) {
 }
 
 func TestCreateMomentRejectsBadCoordinates(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	req := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hi","location":{"point":{"latitude":999,"longitude":999}}}`))
@@ -131,7 +129,6 @@ func TestCreateMomentRejectsBadCoordinates(t *testing.T) {
 }
 
 func TestCreateMomentRejectsOverlongDescription(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	long := strings.Repeat("啊", defaultMomentDescriptionMaxRunes+1)

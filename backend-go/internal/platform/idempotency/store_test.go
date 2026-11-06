@@ -86,39 +86,39 @@ func TestInMemoryStoreSweepPhysicallyRemovesExpired(t *testing.T) {
 	}
 }
 
-// TestStartSweeperIsIdempotent verifies that calling StartSweeper twice
-// doesn't spawn two goroutines (the second call is a no-op).
-func TestStartSweeperIsIdempotent(t *testing.T) {
-	t.Cleanup(StopSweeper)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	StartSweeper(ctx)
-	StartSweeper(ctx) // must not panic, must not duplicate
-}
-
-// TestStartSweeperHonorsCancellation verifies the goroutine exits when ctx
-// is cancelled and a fresh StartSweeper can subsequently launch (which
-// would be blocked if the previous one never cleared sweeperStarted).
+// StartSweeper 现在显式接收 Store：对支持 Sweep 的 store 启动后台清理，
+// 对 Redis 等无 Sweep 的 store 返回 no-op stop；ctx 取消后 goroutine 退出。
 func TestStartSweeperHonorsCancellation(t *testing.T) {
+	store := NewInMemoryStore()
 	ctx, cancel := context.WithCancel(context.Background())
-	StartSweeper(ctx)
+	stop := StartSweeper(ctx, store)
 	cancel()
-	StopSweeper()
-	StartSweeper(context.Background())
-	StopSweeper()
+	stop()
+	// 再次启动独立 sweeper 不应被上一次状态阻塞（无包级单例）。
+	stop2 := StartSweeper(context.Background(), NewInMemoryStore())
+	stop2()
 }
 
-// stubStore is a non-in-memory Store: SetStore must accept any Store
-// implementation (previously it silently dropped everything that was not
-// *InMemoryStore, so the Redis store wired by bootstrap never took effect).
+// 无 Sweep 能力的 Store（如 RedisStore，服务端 TTL 管理）：启动应跳过，
+// 返回可用（幂等）的 stop。
+func TestStartSweeperSkipsStoreWithoutSweep(t *testing.T) {
+	stop := StartSweeper(context.Background(), noopStore{})
+	stop()
+}
+
+// stubStore 是任意非内存 Store 实现的替身：context 注入必须接受任意 Store。
 type stubStore struct{ *InMemoryStore }
 
-func TestSetStoreAcceptsNonInMemoryStore(t *testing.T) {
-	prev := currentStore()
-	t.Cleanup(func() { SetStore(prev) })
-	SetStore(&stubStore{NewInMemoryStore()})
-	if _, ok := currentStore().(*stubStore); !ok {
-		t.Fatalf("expected current store to be *stubStore, got %T", currentStore())
+// 任意 Store 实现都必须能通过 context 注入并被 ReplayOrStore 读到（此前
+// SetStore 只接受 *InMemoryStore，Redis store 被静默忽略）。
+func TestWithStoreContextRoundTrip(t *testing.T) {
+	custom := &stubStore{NewInMemoryStore()}
+	ctx := WithStoreContext(context.Background(), custom)
+	if got := storeFromContext(ctx); got != Store(custom) {
+		t.Fatalf("expected injected store, got %T", got)
+	}
+	if got := storeFromContext(context.Background()); got != nil {
+		t.Fatalf("expected nil store without injection, got %T", got)
 	}
 }
 
@@ -132,13 +132,3 @@ func (noopStore) Reserve(string, string, time.Time) (Record, bool) {
 }
 func (noopStore) Save(Record)           {}
 func (noopStore) Delete(string, string) {}
-
-func TestStartSweeperSkipsStoreWithoutSweep(t *testing.T) {
-	prev := currentStore()
-	t.Cleanup(func() { SetStore(prev) })
-	SetStore(noopStore{})
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	StartSweeper(ctx)
-	StopSweeper()
-}

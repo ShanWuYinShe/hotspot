@@ -136,60 +136,20 @@ func (s *InMemoryStore) Sweep(now time.Time) {
 	}
 }
 
-// sweeper state mirrors the pattern in ratelimit/middleware.go and
-// platform/auth/sweeper.go: idempotent Start, ctx-bound goroutine,
-// explicit Stop for tests.
-var (
-	sweeperMu      sync.Mutex
-	sweeperCancel  context.CancelFunc
-	sweeperStarted bool
-)
-
-// StartSweeper launches a background goroutine that periodically prunes
-// expired records from the default store when it supports sweeping
-// (InMemoryStore). Stores with server-side expiry (RedisStore via TTL) are
-// left alone. It is safe to call from bootstrap; calling it again while a
-// sweeper is already running is a no-op. The goroutine exits when ctx is
-// cancelled.
-//
-// Get/Reserve already apply lazy expiry (StatusExpired → 22001) so correctness
-// does not depend on the sweeper; it just keeps the map from growing forever.
-func StartSweeper(ctx context.Context) {
-	sweeperMu.Lock()
-	defer sweeperMu.Unlock()
-	if sweeperStarted {
-		return
-	}
-	store, ok := currentStore().(interface{ Sweep(time.Time) })
+// StartSweeper 为指定 Store 启动后台清扫（InMemoryStore 支持 Sweep；Redis
+// 由服务端 TTL 清理，直接返回 no-op stop）。显式传入 Store，不再依赖全局
+// store 单例；返回的 stop 幂等，可安全在测试/停机时调用。
+func StartSweeper(ctx context.Context, store Store) (stop func()) {
+	sweeper, ok := store.(interface{ Sweep(time.Time) })
 	if !ok {
-		return
+		return func() {}
 	}
 	sweepCtx, cancel := context.WithCancel(ctx)
-	sweeperCancel = cancel
-	sweeperStarted = true
-	worker.GoRestartable("idempotency.sweeper", func() { runSweeper(sweepCtx, store) })
-}
-
-// StopSweeper cancels the running sweeper if any. Intended for tests.
-func StopSweeper() {
-	sweeperMu.Lock()
-	if sweeperCancel == nil {
-		sweeperMu.Unlock()
-		return
-	}
-	sweeperCancel()
-	sweeperCancel = nil
-	sweeperStarted = false
-	sweeperMu.Unlock()
+	worker.GoRestartable("idempotency.sweeper", func() { runSweeper(sweepCtx, sweeper) })
+	return cancel
 }
 
 func runSweeper(ctx context.Context, store interface{ Sweep(time.Time) }) {
-	defer func() {
-		sweeperMu.Lock()
-		sweeperCancel = nil
-		sweeperStarted = false
-		sweeperMu.Unlock()
-	}()
 	ticker := time.NewTicker(sweepCadence)
 	defer ticker.Stop()
 	for {

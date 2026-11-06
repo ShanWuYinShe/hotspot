@@ -31,7 +31,6 @@ func newTestHandler() *Handler {
 
 func registerAppUser(t *testing.T, handler *Handler, loginID, nickname, password string) AuthTokenPairApp {
 	t.Helper()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"`+loginID+`","nickname":"`+nickname+`","password":"`+password+`","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
@@ -68,8 +67,6 @@ func TestRegisterRequiresIdempotencyKey(t *testing.T) {
 func TestRegisterDuplicateLoginIDReturnsConflict(t *testing.T) {
 	handler := newTestHandler()
 	registerAppUser(t, handler, "alice", "Alice", "secret12")
-
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice","nickname":"Alice 2","password":"secret22","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
@@ -231,15 +228,18 @@ func TestGetStatusReturnsSessionWithPrincipal(t *testing.T) {
 }
 
 func TestGuestWithIdempotencyKeyReturnsTokenPair(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
+	// 回放依赖 store 注入（生产由根中间件 idempotency.WithStore 注入）。
+	store := idempotency.NewInMemoryStore()
 	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
+	req = req.WithContext(idempotency.WithStoreContext(req.Context(), store))
 	rr := httptest.NewRecorder()
 	handler.Guest(rr, req)
 	rr2 := httptest.NewRecorder()
 	dupe := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"Guest","client_type":"app","device_id":"test-device"}`))
 	dupe.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
+	dupe = dupe.WithContext(idempotency.WithStoreContext(dupe.Context(), store))
 	handler.Guest(rr2, dupe)
 
 	var resp struct {
@@ -318,7 +318,6 @@ func TestListSessionsReturnsCurrentSession(t *testing.T) {
 
 func TestListSessionsIncludesSessionMetadata(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	registerReq := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(`{"login_id":"alice-meta","nickname":"Alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	registerReq.Header.Set("Idempotency-Key", "meta1234abcd1234abcd1234abcd1234")
 	registerReq.RemoteAddr = "173.245.48.5:443"
@@ -380,7 +379,6 @@ func TestSessionMetaFromRequestUsesTrustedProxyHeaders(t *testing.T) {
 
 func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := httptest.NewRequest(http.MethodPost, "/request_password_reset", strings.NewReader(`{"login_id":"missing","client_type":"app"}`))
 	req.Header.Set("Idempotency-Key", "cccc1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
@@ -395,12 +393,10 @@ func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 	}
 
 	registerAppUser(t, handler, "alice", "Alice", "secret12")
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req1 := httptest.NewRequest(http.MethodPost, "/request_password_reset", strings.NewReader(`{"login_id":"alice","client_type":"app"}`))
 	req1.Header.Set("Idempotency-Key", "cccc2234abcd1234abcd1234abcd1234")
 	rr1 := httptest.NewRecorder()
 	handler.RequestPasswordReset(rr1, req1)
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req2 := httptest.NewRequest(http.MethodPost, "/request_password_reset", strings.NewReader(`{"login_id":"alice","client_type":"app"}`))
 	req2.Header.Set("Idempotency-Key", "cccc3234abcd1234abcd1234abcd1234")
 	rr2 := httptest.NewRecorder()
@@ -425,8 +421,6 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 	loginReq := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"login_id":"alice","password":"secret12","client_type":"app","device_id":"test-device"}`))
 	loginRR := httptest.NewRecorder()
 	handler.Login(loginRR, loginReq)
-
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	resetReq := httptest.NewRequest(http.MethodPost, "/request_password_reset", strings.NewReader(`{"login_id":"alice","client_type":"app"}`))
 	resetReq.Header.Set("Idempotency-Key", "dddd1234abcd1234abcd1234abcd1234")
 	resetRR := httptest.NewRecorder()
@@ -436,8 +430,6 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 	if code == "" {
 		t.Fatal("expected reset verification code")
 	}
-
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	confirmReq := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"`+code+`","new_password":"newsecret2","client_type":"app","device_id":"test-device"}`))
 	confirmReq.Header.Set("Idempotency-Key", "eeee1234abcd1234abcd1234abcd1234")
 	confirmRR := httptest.NewRecorder()
@@ -472,7 +464,6 @@ func TestResetPasswordRevokesExistingSessionsAndAllowsLoginWithNewPassword(t *te
 func TestResetPasswordUnknownOrInvalidRequestReturnsNotFound(t *testing.T) {
 	handler := newTestHandler()
 	registerAppUser(t, handler, "alice", "Alice", "secret12")
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := httptest.NewRequest(http.MethodPost, "/reset_password", strings.NewReader(`{"login_id":"alice","verification_code":"000000","new_password":"newsecret2","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "ffff1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
@@ -545,8 +536,6 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if otherSessionID == "" {
 		t.Fatal("expected another active session")
 	}
-
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	badReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"wrong","new_password":"newsecret2"}`))
 	badReq.Header.Set("Idempotency-Key", "11111234abcd1234abcd1234abcd1234")
 	badReq = badReq.WithContext(platformauth.WithPrincipal(badReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
@@ -559,8 +548,6 @@ func TestChangePasswordValidatesOldPasswordAndRevokesOtherSessions(t *testing.T)
 	if httpx.Code(int(badResp["code"].(float64))) != httpx.CodeInvalidOldCredential {
 		t.Fatalf("unexpected response: %#v", badResp)
 	}
-
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	goodReq := httptest.NewRequest(http.MethodPost, "/change_password", strings.NewReader(`{"old_password":"secret12","new_password":"newsecret2"}`))
 	goodReq.Header.Set("Idempotency-Key", "22221234abcd1234abcd1234abcd1234")
 	goodReq = goodReq.WithContext(platformauth.WithPrincipal(goodReq.Context(), platformauth.Principal{UserID: register.UserID, SessionID: currentSessionID}))
@@ -926,7 +913,6 @@ func TestHandlerRevokeAllSessionsReturns10600OnError(t *testing.T) {
 // Guest handler tests
 
 func TestHandlerGuestReturnsSuccess(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"GuestUser","client_type":"app","device_id":"test-device"}`))
 	req.Header.Set("Idempotency-Key", "guest1234abcd1234abcd1234abcd1234")
@@ -949,7 +935,6 @@ func TestHandlerGuestReturnsSuccess(t *testing.T) {
 }
 
 func TestHandlerGuestRejectsInvalidJSON(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
 	req := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{invalid json`))
 	req.Header.Set("Idempotency-Key", "badjson1234abcd1234abcd1234abcd12")
@@ -966,7 +951,6 @@ func TestHandlerGuestRejectsInvalidJSON(t *testing.T) {
 }
 
 func TestHandlerGuestReturns10600OnError(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
 	// Missing nickname triggers parameter error (code httpx.CodeInvalidRequest), not httpx.CodeInternalUnavailable.
 	// The Guest handler has no direct httpx.CodeInternalUnavailable code path at handler level;

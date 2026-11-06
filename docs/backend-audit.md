@@ -2877,3 +2877,19 @@ actionlint release.yml 通过；verify-backend-ci.sh --with-db ALL CHECKS PASSED
   `WithCheckerContext(ctx, checker)` 注入；删除全部 SetDefaultChecker 调用。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第二十一批）：idempotency store 去进程级全局单例（2026-11-07）
+
+架构审计 C2 第二个纵切片：删除 `idempotency.defaultStore` 原子全局、
+`SetStore/currentStore` 与包级 sweeper 单例，store 改为显式依赖 +
+context 传递（与 resourceguard 同一模式）。
+
+- 根中间件 `idempotency.WithStore(store)` 装配期注入请求 context；
+  `ReplayOrStore` 从 ctx 取 store；未注入时明确退化为「直接执行 producer、
+  不做幂等缓存」（不再回退全局）。
+- `app.New` 构造唯一 store（Redis 或 InMemory）并传入 router；
+  `StartSweeper(ctx, store)` 显式接收 store（InMemory 才启动，Redis TTL 跳过）。
+- 同进程多套 App 各自持有独立幂等 store；测试不再需要全局 SetStore 复位，
+  13 个模块测试文件删除全局初始化；auth/moments 回放测试改为 ctx 注入。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

@@ -21,7 +21,6 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -223,7 +222,6 @@ func decodeResponse[T any](t *testing.T, rr *httptest.ResponseRecorder) httpx.Ap
 
 func newMountedAdminRouter(t *testing.T) (http.Handler, func(string) string) {
 	t.Helper()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	previousHub := realtime.DefaultHub()
 	hub := realtime.NewHub()
 	realtime.SetDefaultHub(hub)
@@ -322,7 +320,6 @@ func TestAdminModerationRoutesRequireAdminPermission(t *testing.T) {
 
 func TestBanUserAuditUsesCloudflareCountry(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := adminContext(httptest.NewRequest(http.MethodPost, "/users/set_ban", strings.NewReader(`{"user_id":"user_bob","reason":"spam","active":true}`)), "admin", true)
 	req.Header.Set("Idempotency-Key", "banusercountry1234def05678ghij9012")
 	req.RemoteAddr = "173.245.48.5:443"
@@ -375,7 +372,6 @@ func TestGetMeReturnsNonAdminMessage(t *testing.T) {
 
 func TestListPermissionsRequiresRbacPermission(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Viewer"}`)), "admin", true)
 	createRoleReq.Header.Set("Idempotency-Key", "zzzz1234abcd1234abcd1234abcd1234")
@@ -422,7 +418,6 @@ func TestCreateRoleSucceedsWithoutIdempotencyKey(t *testing.T) {
 
 func TestCreateRoleNaturalIdempotency(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	makeReq := func() *http.Request {
 		req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Ops","description":"Operators"}`)), "admin", true)
@@ -448,7 +443,6 @@ func TestCreateRoleNaturalIdempotency(t *testing.T) {
 
 func TestGrantAdminRejectsMutuallyExclusiveFields(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	req := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/admins/award", strings.NewReader(`{"user_id":"user_bob","award_all_permissions":true,"role_ids":["role_x"]}`)), "admin", true)
 	req.Header.Set("Idempotency-Key", "bbbb1234abcd1234abcd1234abcd1234")
 	rr := httptest.NewRecorder()
@@ -463,7 +457,6 @@ func TestGrantAdminRejectsMutuallyExclusiveFields(t *testing.T) {
 
 func TestGrantAdminAndListAdmins(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Reviewer"}`)), "admin", true)
 	createRoleReq.Header.Set("Idempotency-Key", "cccc1234abcd1234abcd1234abcd1234")
@@ -498,7 +491,6 @@ func TestGrantAdminAndListAdmins(t *testing.T) {
 
 func TestGetAppConfigRequiresPermission(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"Operator"}`)), "admin", true)
 	createRoleReq.Header.Set("Idempotency-Key", "xxxx1234abcd1234abcd1234abcd1234")
@@ -544,7 +536,6 @@ func TestBanUserSucceedsWithoutIdempotencyKey(t *testing.T) {
 
 func TestBanUserAndUnbanUser(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	hub := realtime.DefaultHub()
 	bobSink := &sinkCapture{}
 	hub.RegisterUser("user_bob", "sess_user_bob_1", bobSink)
@@ -603,7 +594,6 @@ func TestBanUserAndUnbanUser(t *testing.T) {
 
 func TestSearchUsersRequiresPermission(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"GroupModerator"}`)), "admin", true)
 	createRoleReq.Header.Set("Idempotency-Key", "usread9abc1234def05678ghij9012klmn")
@@ -675,7 +665,6 @@ func (s *sinkCapture) Close() error {
 
 func TestSearchGroupsAndDismissGroup(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	hub := realtime.DefaultHub()
 	aliceSink := &sinkCapture{}
 	bobSink := &sinkCapture{}
@@ -743,7 +732,6 @@ func TestOpenAdminGroupReturnsNotFound(t *testing.T) {
 
 func TestSearchReportsAndHandleReport(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/reports/search", strings.NewReader(`{"status":"pending","pagination":{"limit":10}}`)), "admin", true)
 	searchRR := httptest.NewRecorder()
@@ -783,7 +771,6 @@ func TestSearchReportsAndHandleReport(t *testing.T) {
 
 func TestHandleGroupReportDismissesGroup(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	store.reports["report_group"] = reportHandleRecord{
 		Item: AdminReportItem{
 			ReportID:   "report_group",
@@ -819,7 +806,6 @@ func TestHandleGroupReportDismissesGroup(t *testing.T) {
 
 func TestHandleMomentCommentAndMessageReportsApplyContentActions(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	store.CreateMoment(context.Background(), "moment_1", "bad moment", "user_bob")
 	store.CreateComment(context.Background(), "comment_1", "bad comment", "user_bob", "moment_other")
 	store.SendGroupMessage(context.Background(), "message_1", "bad message", "user_bob")
@@ -996,7 +982,6 @@ func TestCreateAnnouncementRequiresIdempotencyKey(t *testing.T) {
 
 func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	handler, store, notificationRepo := newTestHandlerWithPushStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	hub := realtime.DefaultHub()
 	adminSink := &sinkCapture{}
 	aliceSink := &sinkCapture{}
@@ -1174,7 +1159,6 @@ func TestAnnouncementMutationsReturnNotFound(t *testing.T) {
 
 func TestListRolesReturnsRoleList(t *testing.T) {
 	handler := newTestHandler()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"TestRole","description":"test"}`)), "admin", true)
 	createReq.Header.Set("Idempotency-Key", "listrole001abcd1234abcd1234abcd12")
@@ -1206,7 +1190,6 @@ func TestListRolesReturnsRoleList(t *testing.T) {
 
 func TestUpdateRoleUpdatesNameAndDescription(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"OldName","description":"old desc"}`)), "admin", true)
 	createReq.Header.Set("Idempotency-Key", "updrole001abcd1234abcd1234abcd12")
@@ -1281,7 +1264,6 @@ func TestUpdateRoleRejectsEmptyRoleID(t *testing.T) {
 
 func TestDeleteRoleDeletesExistingRole(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"ToDelete"}`)), "admin", true)
 	createReq.Header.Set("Idempotency-Key", "delrole001abcd1234abcd1234abcd12")
@@ -1339,7 +1321,6 @@ func TestDeleteRoleReturnsNotFoundForMissingRole(t *testing.T) {
 
 func TestSetRolePermissionsSetsPermissions(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"PermRole"}`)), "admin", true)
 	createReq.Header.Set("Idempotency-Key", "setperm001abcd1234abcd1234abcd12")
@@ -1416,7 +1397,6 @@ func TestSetRolePermissionsRejectsEmptyRoleID(t *testing.T) {
 
 func TestRevokeAdminRevokesExistingAdmin(t *testing.T) {
 	handler, store := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	createRoleReq := adminContext(httptest.NewRequest(http.MethodPost, "/rbac/roles/create", strings.NewReader(`{"name":"RevokeTestRole"}`)), "admin", true)
 	createRoleReq.Header.Set("Idempotency-Key", "revk001abcd1234abcd1234abcd1234abcdabcd")
@@ -1471,7 +1451,6 @@ func TestRevokeAdminReturnsNotFoundForMissingAdmin(t *testing.T) {
 
 func TestListAuditLogsReturnsLogs(t *testing.T) {
 	handler, _ := newTestHandlerWithStore()
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 
 	listReq := adminContext(httptest.NewRequest(http.MethodPost, "/audit/list", strings.NewReader(`{"pagination":{"limit":10}}`)), "admin", true)
 	listRR := httptest.NewRecorder()

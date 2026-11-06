@@ -15,11 +15,20 @@ import (
 
 type dummyResult struct{ Value string }
 
+// storeReq/storeKeyReq：把测试 Store 注入请求 ctx（替代已删除的进程级
+// SetStore；生产由根中间件 idempotency.WithStore 注入）。
+func storeReq(req *http.Request, store Store) *http.Request {
+	return req.WithContext(WithStoreContext(req.Context(), store))
+}
+
+func storeKeyReq(req *http.Request, store Store, key string) *http.Request {
+	return storeReq(req.WithContext(WithKey(req.Context(), key)), store)
+}
+
 func TestReplayOrStoreCachesResponse(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
-	req = req.WithContext(WithKey(req.Context(), "abcd1234abcd1234abcd1234abcd1234"))
+	req = storeKeyReq(req, store, "abcd1234abcd1234abcd1234abcd1234")
 	rr1 := httptest.NewRecorder()
 	count := 0
 	ReplayOrStore(rr1, req, "scope", func() httpx.ApiResponse[dummyResult] {
@@ -49,9 +58,8 @@ func TestReplayOrStoreCachesResponse(t *testing.T) {
 // 客户端会拿到 code=0 但没有会话（账号已建却处于未登录态）。
 func TestReplayOrStoreReplaysSetCookie(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
-	req = req.WithContext(WithKey(req.Context(), "cookiereplay1234567890abcdef1234"))
+	req = storeKeyReq(req, store, "cookiereplay1234567890abcdef1234")
 
 	rr1 := httptest.NewRecorder()
 	producerCalls := 0
@@ -87,8 +95,6 @@ func TestReplayOrStoreReplaysSetCookie(t *testing.T) {
 }
 
 func TestReplayOrStoreEmptyKeyExecutesProducer(t *testing.T) {
-	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 	rr := httptest.NewRecorder()
 	count := 0
@@ -110,9 +116,8 @@ func TestReplayOrStoreEmptyKeyExecutesProducer(t *testing.T) {
 // 失败响应不得缓存——同一 key 的重试必须真正再次执行 producer。
 func TestReplayOrStoreDoesNotCacheFailure(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
-	req = req.WithContext(WithKey(req.Context(), "fail0123fail0123fail0123fail0123"))
+	req = storeKeyReq(req, store, "fail0123fail0123fail0123fail0123")
 	rr1 := httptest.NewRecorder()
 	calls := 0
 	ReplayOrStore(rr1, req, "failure_scope", func() httpx.ApiResponse[dummyResult] {
@@ -154,10 +159,9 @@ func TestReplayOrStoreDoesNotCacheFailure(t *testing.T) {
 
 func TestReplayOrStoreConcurrentRaceCondition(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	key := "concurrentkey1234567890123456789012"
 	reqBase := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
-	reqBase = reqBase.WithContext(WithKey(reqBase.Context(), key))
+	reqBase = storeKeyReq(reqBase, store, key)
 
 	var mu sync.Mutex
 	producerCalls := 0
@@ -167,7 +171,7 @@ func TestReplayOrStoreConcurrentRaceCondition(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			req := httptest.NewRequest(http.MethodPost, "/", http.NoBody).WithContext(WithKey(reqBase.Context(), key))
+			req := storeReq(httptest.NewRequest(http.MethodPost, "/", http.NoBody).WithContext(WithKey(reqBase.Context(), key)), store)
 			rr := httptest.NewRecorder()
 			ReplayOrStore(rr, req, "race_scope", func() httpx.ApiResponse[dummyResult] {
 				mu.Lock()
@@ -185,8 +189,7 @@ func TestReplayOrStoreConcurrentRaceCondition(t *testing.T) {
 
 func TestMiddlewareReplaysCompleted(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
-	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
+	req := storeReq(httptest.NewRequest(http.MethodPost, "/", http.NoBody), store)
 	req.Header.Set("Idempotency-Key", "middleware1234567890123456789012345")
 
 	handlerCalls := 0
@@ -227,8 +230,6 @@ func TestMiddlewareReplaysCompleted(t *testing.T) {
 }
 
 func TestMiddlewareNoKeyPassesThrough(t *testing.T) {
-	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 	called := false
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -249,8 +250,6 @@ func TestMiddlewareNoKeyPassesThrough(t *testing.T) {
 // 契约（api_spec_base.md「服务端行为」）：格式非法的非空 key 返回 22000，
 // 客户端应更换新 key 重试——静默放行会让客户端误以为请求受幂等保护。
 func TestMiddlewareInvalidKeyReturns22000(t *testing.T) {
-	store := NewInMemoryStore()
-	SetStore(store)
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 	req.Header.Set("Idempotency-Key", "too_short")
 	called := false
@@ -278,7 +277,6 @@ func TestMiddlewareInvalidKeyReturns22000(t *testing.T) {
 
 func TestReplayOrStoreProcessingStatus22002(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	store.Save(Record{
 		Key: "u:u1::inprogress", Scope: "test_scope",
 		Status:    StatusProcessing,
@@ -286,7 +284,7 @@ func TestReplayOrStoreProcessingStatus22002(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", http.NoBody)
 	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"}))
-	req = req.WithContext(WithKey(req.Context(), "inprogress"))
+	req = storeKeyReq(req, store, "inprogress")
 	rr := httptest.NewRecorder()
 	producerCalled := false
 	ReplayOrStore(rr, req, "test_scope", func() httpx.ApiResponse[dummyResult] {
@@ -308,12 +306,11 @@ func TestReplayOrStoreProcessingStatus22002(t *testing.T) {
 // 换键重试；同 key 同请求体仍正常回放；无 key 请求不受影响。
 func TestReplayOrStoreRejectsBodyMismatchWithConflict(t *testing.T) {
 	store := NewInMemoryStore()
-	SetStore(store)
 	key := "abcd1234abcd1234abcd1234abcd1234"
 
 	newReq := func(body string) *http.Request {
 		req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(body))
-		return req.WithContext(WithKey(req.Context(), key))
+		return storeKeyReq(req, store, key)
 	}
 
 	rr1 := httptest.NewRecorder()

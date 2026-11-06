@@ -12,7 +12,6 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 type shareErrorRepo struct {
@@ -48,7 +47,6 @@ func withSharePrincipal(req *http.Request) *http.Request {
 }
 
 func TestCreateGetAndListShare(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewService())
 	createReq := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
 	createReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
@@ -156,7 +154,6 @@ func TestShareHandlerReturns10600OnServiceError(t *testing.T) {
 }
 
 func TestShareCreateRequiresIdempotencyKey(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewService())
 	req := withSharePrincipal(httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"share_type":"user","payload":{"shared_user_id":"user_bob"}}`)))
 	// No Idempotency-Key header set
@@ -166,7 +163,6 @@ func TestShareCreateRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestShareGetExpiredReturns10300(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	svc := NewService()
 	handler := NewHandler(svc)
 
@@ -202,7 +198,6 @@ func TestShareGetExpiredReturns10300(t *testing.T) {
 }
 
 func TestShareGetReturnsFullShareDetailShape(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewService())
 
 	// Create a share

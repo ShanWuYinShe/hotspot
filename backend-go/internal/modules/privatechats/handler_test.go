@@ -16,7 +16,6 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 type privateChatErrorRepo struct {
@@ -156,7 +155,6 @@ func seedPrivateChatUsers() *fakeUsers {
 }
 
 func newHandlersWithUsers(fake *fakeUsers) (*Handler, *privatemessages.Handler) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	store := newFakeMessageStore()
 	messageService := privatemessages.NewServiceWithDeps(newFakeMessageRepo(store), fake)
 	messageHandler := privatemessages.NewHandler(messageService)

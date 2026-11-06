@@ -23,20 +23,20 @@ import (
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore())
 }
 
 func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore())
 }
 
 // NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
-func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker) http.Handler {
-	return newHTTPRouter(modules, logger, readiness, guardChecker)
+func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store) http.Handler {
+	return newHTTPRouter(modules, logger, readiness, guardChecker, idemStore)
 }
 
-func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker) http.Handler {
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store) http.Handler {
 	r := chi.NewRouter()
 	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
 	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
@@ -58,6 +58,12 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	// 资源守卫 checker 显式注入请求 context（替代进程级 SetDefaultChecker）：
 	// 守卫中间件与写入方 Record* 统一从 ctx 取实例，同进程可装配多套 App。
 	r.Use(resourceguard.WithChecker(guardChecker))
+	// 幂等 Store 同样显式注入（替代进程级 SetStore）：路由树任意位置都能读到，
+	// 多套 App 各自持有独立 store。
+	if idemStore == nil {
+		idemStore = idempotency.NewInMemoryStore()
+	}
+	r.Use(idempotency.WithStore(idemStore))
 	r.NotFound(httpx.NotFoundHandler)
 	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)
 	// Prometheus 抓取端点：仅 compose 网络内可达（nginx 不反代 /metrics，

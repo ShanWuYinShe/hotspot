@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"sync/atomic"
 	"time"
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -33,33 +32,6 @@ func hashRequestBody(body []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// defaultStore is read on every request and written once at boot, so guard it
-// with an atomic pointer instead of a bare global (which would race under
-// -race and on reconfigure). The pointer holds any Store implementation:
-// InMemoryStore for single-instance, RedisStore when Redis is configured
-// (bootstrap wires it — previously SetStore silently dropped non-in-memory
-// stores, breaking cross-instance idempotency).
-var defaultStore atomic.Pointer[Store]
-
-func init() {
-	SetStore(NewInMemoryStore())
-}
-
-// currentStore returns the active store.
-func currentStore() Store {
-	if p := defaultStore.Load(); p != nil {
-		return *p
-	}
-	return NewInMemoryStore()
-}
-
-func SetStore(store Store) {
-	if store == nil {
-		return
-	}
-	defaultStore.Store(&store)
-}
-
 func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, producer func() httpx.ApiResponse[T]) bool {
 	key := KeyFromContext(r.Context())
 	if key == "" {
@@ -69,7 +41,14 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
-	store := currentStore()
+	// store 由根中间件 WithStore 注入 ctx；未注入（单测直调/内部调用）时退化为
+	// 「直接执行 producer、不做幂等缓存」——绝不回退到进程级全局。
+	store := storeFromContext(r.Context())
+	if store == nil {
+		payload := producer()
+		httpx.WriteJSON(w, http.StatusOK, payload)
+		return true
+	}
 
 	// 幂等键按「请求方身份」限定作用域：登录用户绑 userID，匿名请求绑 IP。
 	// 否则用户 B 用与用户 A 相同的 Idempotency-Key 调同端点会重放 A 的响应

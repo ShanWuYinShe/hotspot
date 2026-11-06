@@ -9,7 +9,6 @@ import (
 
 	"hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 // TestHandlerSendMapsForbiddenReasons verifies the spec api_spec_errors.md /
@@ -27,7 +26,6 @@ func TestHandlerSendMapsForbiddenReasons(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			idempotency.SetStore(idempotency.NewInMemoryStore())
 			userStub := &privateMessageUserStub{
 				item:     users.UserItem{Relation: &users.Relationship{}},
 				ok:       true,
@@ -62,7 +60,6 @@ func TestHandlerSendMapsForbiddenReasons(t *testing.T) {
 // TestHandlerSendMapsMissingTarget — 接收方不存在时 ensureCanSend 返回
 // users.ErrUserNotFound，映射为 10300（此前落到 10600）.
 func TestHandlerSendMapsMissingTarget(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userStub := &privateMessageUserStub{ok: false}
 	handler := NewHandler(NewServiceWithDeps(NewInMemoryRepository(), userStub))
 
@@ -85,7 +82,6 @@ func TestHandlerSendMapsMissingTarget(t *testing.T) {
 // TestHandlerSendBlockedResponseNotCachedAsSuccess — httpx.APIError 通过
 // ReplayOrStore 的 producer 路径返回时同样映射为 httpx.CodeForbidden(非 0 响应不缓存为成功)。
 func TestHandlerSendBlockedResponseNotCachedAsSuccess(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,
@@ -123,7 +119,6 @@ func TestHandlerSendBlockedResponseNotCachedAsSuccess(t *testing.T) {
 // contract: private_messages/update 与 private_messages/recall 非作者 → 10200 +
 // data.forbidden_reason=not_resource_owner。
 func TestHandlerUpdateRecallNonAuthorForbidden(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userStub := &privateMessageUserStub{
 		item:     users.UserItem{Relation: &users.Relationship{}},
 		ok:       true,

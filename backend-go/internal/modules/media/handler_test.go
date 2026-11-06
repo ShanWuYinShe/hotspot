@@ -12,7 +12,6 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 )
 
 type mediaErrorRepo struct {
@@ -135,7 +134,6 @@ func TestMediaHandlerBatchValidationAndSuccess(t *testing.T) {
 }
 
 func TestMediaHandlerCompleteMapsSpecCodes(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_ready", UserID: "u1", StorageKey: "uploads/u1/upload_ready.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
 	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}))
@@ -188,7 +186,6 @@ func TestMediaHandlerCompleteSucceedsWithoutIdempotencyKey(t *testing.T) {
 }
 
 func TestMediaHandlerReturns10600OnServerErrors(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewServiceWithRepoAndProvider(
 		&mediaErrorRepo{saveErr: errors.New("boom"), getErr: errors.New("boom")},
 		&mediaStubProvider{presignResp: PresignedUpload{UploadID: "upload_1", UploadURL: "https://storage.example.com/upload_1", Headers: map[string]string{"Content-Type": "image/png"}, ExpiresAt: "2026-03-30T00:00:00Z"}},
@@ -261,7 +258,6 @@ func (r *mediaErrorRepo) CompletedFileMetaByID(context.Context, string) (FileMet
 // 校验失败则整批失败，不部分完成」）——排在前面的 upload 校验通过、排在后面
 // 的失败时，前者不得被置为 completed。
 func TestMediaHandlerCompleteBatchStaysAtomicOnFailure(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	_ = repo.Save(context.Background(), pendingUpload{UploadID: "upload_atomic_ok", UserID: "u1", StorageKey: "uploads/u1/upload_atomic_ok.png", FileName: "a.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar})
 	handler := NewHandler(NewServiceWithRepoAndProvider(repo, &mediaStubProvider{headResp: ObjectMetadata{FileSize: 100, MimeType: "image/png"}, prefix: magicPNG}))

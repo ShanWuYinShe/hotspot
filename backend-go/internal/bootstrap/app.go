@@ -75,14 +75,15 @@ func NewApp(cfg config.Config) (*App, error) {
 	// already apply lazy expiry so this is purely about bounding map growth.
 	// Redis 可用时切共享状态存储：幂等记录（同一 Idempotency-Key 只执行一次）
 	// 与限流计数（多实例共享阈值，进程内各实例独立会放大 N 倍）。
+	idemStore := idempotency.Store(idempotency.NewInMemoryStore())
 	if redisClient != nil {
-		idempotency.SetStore(idempotency.NewRedisStore(redisClient))
+		idemStore = idempotency.NewRedisStore(redisClient)
 		ratelimit.SetRedisStore(redisClient)
 		logger.Info("redis shared stores enabled", "idempotency", "redis", "ratelimit", "redis")
 	} else {
 		logger.Info("redis not configured, idempotency running in single-instance mode")
 	}
-	idempotency.StartSweeper(rootCtx)
+	idempotency.StartSweeper(rootCtx, idemStore)
 	// 热数据缓存（读穿 + 写失效）：users 设置与群成员关系；单一实例贯穿模块与
 	// realtime 适配器（本地模式下失效才互通；配了 Redis 则多实例共享键）。
 	hotCache := hotcache.New(redisClient)
@@ -95,7 +96,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
 		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
 	)
-	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker)
+	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
 	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))

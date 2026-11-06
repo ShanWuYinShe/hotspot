@@ -66,10 +66,13 @@ func (s *sinkCapture) Send(e realtime.Event) error { s.events = append(s.events,
 func (s *sinkCapture) Close() error                { return nil }
 
 func TestCreateOpenAndListMoment(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	// 同一 Idempotency-Key 的第二请求要回放首响应，需要显式注入 store（生产由
+	// 根中间件 idempotency.WithStore 注入）。
+	store := idempotency.NewInMemoryStore()
+	ctx = idempotency.WithStoreContext(ctx, store)
 
 	createReq := httptest.NewRequest(http.MethodPost, "/create", strings.NewReader(`{"description":"hello","location":{"point":{"latitude":1,"longitude":2},"location_name":"Somewhere"}}`))
 	createReq.Header.Set("Idempotency-Key", "abcd1234abcd1234abcd1234abcd1234")
@@ -121,7 +124,6 @@ func TestCreateOpenAndListMoment(t *testing.T) {
 // 契约 comments_count 已改为读时聚合（不再由写路径维护）；评论创建成功后只
 // 维护内部互动热度 interaction_count（排序用途）。
 func TestCreateCommentAdjustsInteractionCount(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewInMemoryRepository()
 	momentService := NewServiceWithRepo(momentRepo)
 	commentService := comments.NewServiceWithDeps(newMomentsCommentsRepo(), momentService, nil, nil, nil, nil)
@@ -164,7 +166,6 @@ func TestCreateCommentAdjustsInteractionCount(t *testing.T) {
 
 // 互动热度更新接口无返回值（实现内部 WARN），评论创建不受其影响。
 func TestCreateCommentWithFailingCounterStillSucceeds(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewInMemoryRepository()
 	momentService := NewServiceWithRepo(momentRepo)
 	counter := &failingMomentCounter{repo: momentRepo, failErr: errors.New("update failed")}
@@ -217,7 +218,6 @@ func TestCreateCommentWithFailingCounterStillSucceeds(t *testing.T) {
 }
 
 func TestCreateCommentReturns10300WhenMomentMissing(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	momentRepo := NewServiceWithRepo(NewInMemoryRepository())
 	commentService := comments.NewServiceWithDeps(newMomentsCommentsRepo(), momentRepo, nil, nil, nil, nil)
 	commentHandler := comments.NewHandler(commentService)
@@ -613,7 +613,6 @@ func TestSearchSortByPopular(t *testing.T) {
 }
 
 func TestCreateMomentAcceptsLocationWithoutName(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
@@ -642,7 +641,6 @@ func TestCreateMomentAcceptsLocationWithoutName(t *testing.T) {
 }
 
 func TestCreateMomentRejectsZeroLocation(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
@@ -668,7 +666,6 @@ func TestCreateMomentRejectsZeroLocation(t *testing.T) {
 // TestCreateMomentAcceptsZeroZeroCoordinates 验证 (0,0) 合法坐标不再被
 // 旧的 (0,0)+空名哨兵误拒（修复回归测试）。
 func TestCreateMomentAcceptsZeroZeroCoordinates(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	ctx := platformauth.WithPrincipal(httptest.NewRequest(http.MethodPost, "/", nil).Context(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
 
@@ -1035,7 +1032,6 @@ func (r *errorRepo) NotificationContext(context.Context, string) (MomentItem, bo
 // moments/create、moments/update 错误码；此前误映射 10000）---
 
 func TestCreateMomentUnownedImagesReturns10300(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	resolverErr := errors.New("file not owned")
 	handler := NewHandler(NewServiceWithDepsAndImages(repo, nil, nil, &momentsImageResolver{err: resolverErr}))

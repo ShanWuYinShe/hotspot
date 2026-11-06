@@ -10,7 +10,6 @@ import (
 
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	httpx "hotspot/backend-go/internal/platform/httpx"
-	idempotency "hotspot/backend-go/internal/platform/idempotency"
 )
 
 // spec_align_test.go 验证 moments 对齐新契约（spec/api_spec_moment.md）：list_my → list_created、OwnerMomentItem、is_favorited 恒定、location 恒定 nullable、非作者 10200+not_resource_owner、被屏蔽标签 10400。
@@ -18,7 +17,6 @@ import (
 func mustReader(s string) *strings.Reader { return strings.NewReader(s) }
 
 func TestSpecListCreatedReturnsOwnerView(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	handler := NewHandler(NewServiceWithRepo(repo))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
@@ -54,7 +52,6 @@ func TestSpecListCreatedReturnsOwnerView(t *testing.T) {
 }
 
 func TestSpecCreateReturnsOwnerView(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := NewHandler(NewServiceWithRepo(NewInMemoryRepository()))
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "u1"})
 	body := `{"description":"hello","location":{"point":{"latitude":1,"longitude":2},"location_name":"Somewhere"},"privacy_level":"private"}`
@@ -173,7 +170,6 @@ func TestSpecDeleteNonOwnerForbiddenReason(t *testing.T) {
 }
 
 func TestSpecCreateBlockedTagReturns10400(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	repo := NewInMemoryRepository()
 	repo.SetBlockedTags("spam")
 	handler := NewHandler(NewServiceWithRepo(repo))

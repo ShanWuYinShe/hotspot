@@ -14,7 +14,6 @@ import (
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/realtime"
 )
 
@@ -356,7 +355,6 @@ func TestSendIgnoresRealtimeErrors(t *testing.T) {
 // --- existing handler tests (retained) ---
 
 func TestSendAndHistoryPrivateMessages(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	userStub := &privateMessageUserStub{
 		item: users.UserItem{Relation: &users.Relationship{}},
 		ok:   true,
@@ -447,7 +445,6 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	})
 
 	t.Run("update maps domain errors", func(t *testing.T) {
-		idempotency.SetStore(idempotency.NewInMemoryStore())
 		cases := []struct {
 			name string
 			err  error
@@ -470,7 +467,6 @@ func TestPrivateMessagesHandlerMapsErrors(t *testing.T) {
 	})
 
 	t.Run("recall maps domain errors", func(t *testing.T) {
-		idempotency.SetStore(idempotency.NewInMemoryStore())
 		cases := []struct {
 			name string
 			err  error

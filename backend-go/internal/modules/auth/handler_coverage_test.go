@@ -10,7 +10,6 @@ import (
 
 	"hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/testdb"
 )
 
@@ -74,7 +73,6 @@ func TestRevokeSessionErrorPaths(t *testing.T) {
 }
 
 func TestRevokeSessionSuccessPath(t *testing.T) {
-	idempotency.SetStore(idempotency.NewInMemoryStore())
 	handler := newTestHandler()
 	tokens := registerAppUser(t, handler, "revoke_user", "撤销用户", "password123")
 	sessionID := handler.service.auth.UnsafeFirstSessionIDForUser(context.Background(), tokens.UserID)
