@@ -2102,3 +2102,22 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 真实库 IT/契约测试/迁移索引一致性）。
 
 后续批次（数据模型与迁移地基、架构收敛、性能体系、可观测性/契约/spec）见上述计划文件。
+
+
+## Batch B1：迁移体系加固（2026-11-06）
+
+持久化审计 P0-3/P1-7 落地：旧 runner 的「存量库启发式基线（只登记不执行）」已导致线上
+索引被永久吞掉（058 迁移自述）。新实现（提交见 git log）：
+
+- `schema_migrations` 增加 `checksum`（sha256）/ `execution_ms`：已应用迁移文件改动或删除
+  会在启动期 fail-fast；旧版本行首次启动自动补写 checksum（一次性过渡）。
+- **删除启发式基线**：库内有业务表但版本表为空时启动失败，必须
+  `go run ./cmd/migrate -adopt-through=<file>` 显式接管；adopt 后立即 manifest 校验。
+- **每文件与版本登记同事务提交**（原子）：失败/崩溃不会留下「已执行未登记」窗口或半应用状态。
+- **schema manifest**：`migrations/schema_manifest.json`（43 表 / 391 列 / 128 索引）作为
+  「迁移集合应产生的 schema」快照，启动与 `cmd/migrate -verify-only` 校验期望对象齐全；
+  `verify-backend-ci.sh --with-db` 新增「临时库重放 + manifest diff」门禁，迁移改了忘重建 manifest 即失败。
+- `cmd/migrate` 扩展：默认应用、`-verify-only`、`-adopt-through`、`-write-manifest`。
+- 迁移纪律调整：破坏性 DDL 允许（用户明确不考虑向后兼容），但迁移文件必须声明
+  `-- allow-destructive: <理由>`（scripts/check-migrations.sh 校验）；CONCURRENTLY 仍禁止（事务内执行）。
+- 验证：`verify-backend-ci.sh --with-db` ALL CHECKS PASSED（含 legacy 拒绝/adopt/checksum 篡改检测的手工实测）。

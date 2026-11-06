@@ -1,19 +1,51 @@
 ---
 name: hotspot-backend-migrations
-description: hotspot 后端数据库迁移纪律：文件命名与幂等要求、向后兼容（只加不删 / expand-contract）、data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 及原因、INVALID 索引处理。触发：新增或修改 backend-go/migrations 下的 SQL；改表结构或索引；回填数据；排查启动时迁移或建索引失败。
+description: hotspot 后端数据库迁移纪律：文件命名、版本表 checksum/原子执行、schema manifest 校验与重建、存量库显式 adopt、破坏性 DDL 声明、data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 及原因。触发：新增或修改 backend-go/migrations 下的 SQL；重建 schema manifest；接管存量库；改表结构或索引；回填数据；排查启动或迁移校验失败。
 ---
 
 # hotspot-backend-migrations
 
-## 数据库迁移
+## 运行模型
 
-`migrations/` 下 `NNN_描述.sql` 格式，嵌入二进制由启动时自动执行：按序号执行**未应用**文件（`schema_migrations` 版本表登记/跳过已应用文件；存量库首次接入做一次性基线登记、不重放，见下）。新增迁移仍应保持幂等写法（`IF NOT EXISTS` / `DO $$` 自检），以兼容基线登记与手工重跑。新增 migration 使用下一个可用序号（CI 校验序号唯一且无重复——009 重号在脚本白名单放行，见仓库根 `scripts/check-migrations.sh`）。
+- `migrations/NNN_描述.sql`，字典序执行，序号唯一（历史 009 重号在 `scripts/check-migrations.sh` 白名单放行，新增不得重复）。
+- 应用启动时 `platform/migrate.EnsureSchema` 执行（与 `go run ./cmd/migrate` 同一实现）：
+  1. 确保/升级版本表 `schema_migrations(name PK, checksum, execution_ms, applied_at)`；
+  2. 读取已应用集合，为旧版 runner 写入的 checksum 空行补写当前文件哈希（一次性过渡，记 WARN）；
+  3. 校验「已应用文件名都存在且当前内容哈希 == 记录」（不符即 fail-fast，启动失败）；
+  4. 逐个执行 pending：**同一事务内**先执行整文件 SQL、再插入版本记录、提交（失败整体回滚，不会留下「已执行未登记」或半应用状态）；
+  5. 用 `migrations/schema_manifest.json` 校验期望表/列/索引是否存在（缺失致命、库内多余对象仅告警）。
+- **已应用迁移文件禁止修改/删除**：checksum 会阻止演进；要改 schema 一律新增迁移。
+- **不再有启发式基线**：库内已有业务表但版本表为空时启动直接失败，必须由运维显式
+  `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 接管（记录 checksum 后立即 manifest 校验）。
+  禁止恢复「只登记不执行」的自动基线（历史事故：线上索引被基线吞掉）。
 
-**向后兼容纪律（硬性）**：迁移必须兼容「上一个已发布版本」的二进制——发布是无停机产物替换，上一版本的后端会短暂与新 schema 共存：
+## 常用命令
 
-- 只加不删：新迁移内不 DROP/RENAME 仍在被上一版本读写的列与表；废弃列先停止写入，跨一个版本再清理（expand-contract 两阶段）。
-  - **CI 强制**：`scripts/check-migrations.sh` 对序号 >= 058 的新迁移扫描 `DROP COLUMN/TABLE/CONSTRAINT`、`RENAME COLUMN`、`SET NOT NULL`、`ALTER COLUMN ... TYPE`，命中即让 backend job 失败并提示 expand-contract 做法；`CREATE INDEX CONCURRENTLY` 对全量文件适用。已发布迁移（含 042 的列改名、050 的主键重建）为白名单，不回改。
-- 改列语义/回填数据用 `DO $$` 自检式幂等写法（参照 `050`），不依赖「只跑一次」。
-- 数据性一次性迁移（无法按格式判幂等的）必须用 `data_migrations` 旗标表包裹（参照 `053`）。
-- 无 down 迁移：回滚版本 = 旧镜像 + 保留新 schema，因此 schema 变更必须对旧代码向后兼容，这是唯一防线。
-- **迁移内禁止 `CREATE INDEX CONCURRENTLY`**：迁移经 pgx 简单协议（`QueryExecModeSimpleProtocol`）把整个文件作为一条消息执行，多语句文件落入 PostgreSQL 隐式事务块，CONCURRENTLY 以 25001 拒绝（实测，`cmd/migrate` 与服务端 `ensureSchema` 两条路径均如此，会导致启动失败）。普通 CREATE INDEX 的 SHARE 锁会短暂阻塞读写是已知代价；`schema_migrations` 版本表已落地（`platform/migrate` 启动时登记/跳过已应用文件；存量库一次性基线不重放），建索引可拆成单语句迁移文件后改用 CONCURRENTLY。并发构建失败会留下 INVALID 索引且 `IF NOT EXISTS` 不会重建——启动日志见索引报错时先 DROP INVALID 索引再重启。
+```bash
+go run ./cmd/migrate                      # 应用 pending（幂等）
+go run ./cmd/migrate -verify-only         # 只读校验：checksum / pending / schema manifest
+go run ./cmd/migrate -adopt-through=059_pg_stat_statements_extension.sql  # 存量库一次性接管
+go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json      # 在全新库重建 manifest
+```
+
+## schema manifest
+
+- `migrations/schema_manifest.json` 是「全部迁移执行后应存在的表/列/索引名」快照（排除
+  `schema_migrations`/`data_migrations` 簿记表）。
+- **新增或修改迁移后必须重建 manifest**：在全新库执行 `-write-manifest`，与迁移文件一起提交。
+  本地门禁 `verify-backend-ci.sh --with-db` 会用临时库重放全部迁移并 diff manifest，忘记重建即失败。
+- 校验方向只检查「期望对象缺失」，允许运维手工加索引/临时表。
+
+## 破坏性 DDL 与幂等
+
+- 本项目已不考虑「旧二进制 + 新 schema」兼容；`DROP/RENAME/TYPE 变更` 允许，但迁移文件顶部必须写
+  `-- allow-destructive: <理由>`，`scripts/check-migrations.sh` 强制该声明。
+- 仍建议幂等写法（`IF NOT EXISTS` / `DO $$` 自检），用于 adopt/手工重跑与本地反复初始化；
+  无法按格式判幂等的一次性数据迁移用 `data_migrations` 旗标表包裹（参照 053）。
+- 无 down 迁移：回滚以数据库备份/快照为准；破坏性迁移一旦发行，旧镜像不能直接跑在新 schema 上。
+
+## 禁止 CREATE INDEX CONCURRENTLY
+
+迁移整文件在**显式事务**内执行（原子性要求），CONCURRENTLY 在事务内报 25001 导致启动失败。
+普通 `CREATE INDEX` 的 SHARE 锁会短暂阻塞读写，是当前已知代价；失败会随事务整体回滚，不留 INVALID 索引。
+如将来需要在线建索引，需在 runner 增加「单语句文件 + 非事务执行」的显式模式（尚未支持）。

@@ -195,12 +195,26 @@ Handler -> Service -> Repository
 
 ## 数据库迁移
 
-**完整纪律见 skill hotspot-backend-migrations**（命名与幂等、向后兼容 expand-contract、
-data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 的原因、INVALID 索引处理）。要点速记：
+**完整纪律见 skill hotspot-backend-migrations**。要点速记：
 
-- migrations/NNN_描述.sql，字典序执行；`schema_migrations` 版本表记录已应用文件（新库逐个执行并登记，存量库首次启动自动一次性基线，不重放历史）——幂等仍靠 IF NOT EXISTS（版本表提供加速与 CONCURRENTLY 前置，不是幂等的替代）；序号唯一由 CI 校验。
-- **迁移必须兼容上一个已发布版本的二进制**（只加不删，废弃列跨版本再清）。
-- **禁止 CREATE INDEX CONCURRENTLY**（pgx 简单协议下整文件单消息执行会落隐式事务，报 25001 导致启动失败）。
+- `migrations/NNN_描述.sql` 字典序执行；`schema_migrations` 版本表记录 `name + checksum + execution_ms`。
+  每个文件与其版本登记在**同一事务**内提交（原子）：文件执行失败/进程崩溃不会留下
+  「已执行未登记」的重放窗口，失败文件也不会被标记为已应用。
+- **不做启发式基线**：库内已有业务表但版本表为空时启动直接失败，必须显式执行
+  `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 接管（记录 checksum + 校验 manifest）。
+  历史事故（线上 idx_moments_keyset 被基线吞掉）即启发式基线所致，不得恢复。
+- **checksum 冻结历史**：已应用迁移文件的任何改动/删除都会在启动期 fail-fast；
+  要改 schema 一律新增迁移文件（不允许改写历史，即使已不考虑二进制向后兼容）。
+- **schema manifest**：`migrations/schema_manifest.json` 是「全部迁移执行后的期望 schema」
+  快照（表/列/索引名）。启动与 `cmd/migrate -verify-only` 校验期望对象是否齐全；
+  新增/修改迁移后必须重建：在全新库执行
+  `go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json`，
+  `verify-backend-ci.sh --with-db` 会用「临时库重放 + diff」保障 manifest 不落后。
+- 破坏性 DDL（DROP/RENAME/TYPE 变更）不再被静态禁止（用户明确不考虑向后兼容），
+  但迁移文件必须以 `-- allow-destructive: <理由>` 显式声明；CI 校验
+  `scripts/check-migrations.sh`。
+- **禁止 CREATE INDEX CONCURRENTLY**（迁移整文件在显式事务内执行，CONCURRENTLY 报 25001；
+  需在线建索引时拆成单语句文件并在 runner 侧支持单独执行模式，尚属未支持项）。
 - 无 down 迁移；回滚 = 旧镜像 + 保留新 schema。
 
 ## 路由与协议

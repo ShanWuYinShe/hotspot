@@ -100,9 +100,9 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 
 ### 3.3 数据面（必读）
 
-**回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill 的 expand-contract 纪律），回滚后线上是「旧镜像 + 新 schema」。绝大多数情况下这是安全的——迁移只加不删、旧二进制必须兼容新 schema 是硬性要求；一旦出现读写异常，按 `docs/backup-restore.md` 评估恢复。
+**回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill）。schema 变更已不再强制「旧镜像兼容」——项目明确不考虑二进制向后兼容，迁移允许破坏性 DDL（文件内 `-- allow-destructive: <理由>` 声明）。因此：**普通增量迁移**回滚后是「旧镜像 + 新 schema」，通常可用；**破坏性迁移**（删表/列/类型变更）发布后旧镜像无法跑在新 schema 上，回滚必须按 `docs/backup-restore.md` 恢复数据库到发布前备份。打 tag 前必须在本地 compose 完整验证迁移 + 新镜像。
 
-**迁移执行方式（2026-10-06 起）**：后端启动按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）。本版本表随 schema_migrations 落地的首个生产版本首次启动时，会对存量库做**一次性基线登记**（启动日志出现 `schema_migrations: legacy database baselined files=N`，属预期行为、不重放历史迁移）；此后每次发布只执行新增迁移。
+**迁移执行方式**：后端启动按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不再有自动基线**：若目标库「已有业务表但版本表为空」，启动会失败并提示执行 `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 显式接管（随后立即 manifest 校验）。存量生产库通常已有旧版 runner 写入的版本行，首次启动会自动补写 checksum（日志 `schema_migrations: backfilled checksums for legacy rows`），属预期的一次性过渡。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
 
 ### 3.4 手工回滚（脚本不可用时）
 
@@ -158,7 +158,7 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 
 ### 4.4 热修特有注意点
 
-- **迁移**：热修若带迁移，必须兼容**上一个已发布版本**的二进制（回滚网依赖这一点）；禁止在热修里做删除列、收紧约束这类需要停机协同的改动。
+- **迁移**：热修允许常规增量迁移；破坏性迁移（删表/列/类型变更）意味着回滚需要数据库备份恢复（见上一条），热修场景下除非确有数据修复必要、且已确认可接受回滚代价，否则避免夹带破坏性 DDL。
 - **前端**：静态产物经静态卷切换上线，切换过程无白屏窗口（见 `frontend/Dockerfile` 的 CMD 说明）；已打开旧页面的用户在下一次导航时拿到新版本。
 - **WebSocket**：后端重启会断开在线连接，客户端自动重连，无需额外操作。
 - **验证**：热修同样要过 $1 门禁——「紧急」不是跳过验证的理由。
