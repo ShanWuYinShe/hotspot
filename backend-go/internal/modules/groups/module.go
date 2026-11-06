@@ -90,10 +90,10 @@ func (m *Module) Mount(r chi.Router) {
 // /api/v1 mirror was removed with the node split.
 func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/groups", func(groupsRouter chi.Router) {
-		groupsRouter.Post("/search", m.handler.Search)
-		groupsRouter.Post("/open_the_door", m.handler.OpenTheDoor)
-		groupsRouter.Post("/members/fetch", m.handler.ListMembers)
-		groupsRouter.Post("/members/search", m.handler.SearchMembers)
+		groupsRouter.Post("/search", m.handler.PublicSearch)
+		groupsRouter.Post("/open_the_door", m.handler.PublicOpenTheDoor)
+		groupsRouter.Post("/members/fetch", m.handler.PublicListMembers)
+		groupsRouter.Post("/members/search", m.handler.PublicSearchMembers)
 		groupsRouter.Route("/announcements", func(ann chi.Router) {
 			ann.Post("/fetch", m.handler.ListAnnouncements)
 		})

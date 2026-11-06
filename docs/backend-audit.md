@@ -3086,3 +3086,18 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
   参数缺失 10000；comments 覆盖率 72.0%。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第五批）：groups 匿名端点 Public 类型层（2026-11-07）
+
+延续 H3/H4 类型隔离，覆盖 groups 四个匿名读端点（公告无对偶类型，按 spec
+直接共用 GroupAnnouncementItem）：
+
+- 新增 PublicGroupItem（去 viewer_state / friends_in_group / last_message）、
+  PublicGroupMemberItem、PublicPaginatedGroups/Members 与四个 Public 请求类型；
+- PublicSearch / PublicOpenTheDoor / PublicListMembers / PublicSearchMembers 做
+  请求转换 + 复用服务读取 + Public 响应映射（tags 归一空数组）；
+- 校验/错误口径复用现有 helper 与映射（10000/10200/10300 保持一致）；
+- 测试：viewer 字段剥离、四个端点成功 shape、缺条件/缺 keyword 10000、
+  不存在群 10300；groups 覆盖率 72.1%。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
