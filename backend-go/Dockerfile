@@ -32,6 +32,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
       -X hotspot/backend-go/internal/platform/buildinfo.BuildTime=${GIT_BUILD_TIME}" \
     -o server ./cmd/server
 
+# 迁移 job 与 server 同镜像构建：生产部署先以一次性容器跑 ./migrate（见
+# docker-compose migrate 服务与 scripts/deploy-production.sh），保证 server
+# 启动前 schema 已就绪；同镜像避免额外构建/分发链路。
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-amd64} \
+    go build -trimpath -ldflags="-s -w \
+      -X hotspot/backend-go/internal/platform/buildinfo.Version=${GIT_VERSION} \
+      -X hotspot/backend-go/internal/platform/buildinfo.Commit=${GIT_COMMIT} \
+      -X hotspot/backend-go/internal/platform/buildinfo.BuildTime=${GIT_BUILD_TIME}" \
+    -o migrate ./cmd/migrate
+
 FROM alpine:${ALPINE_VERSION}
 
 # ARG 按 stage 作用域：第二阶段重新声明才能在 LABEL 中引用全局 build args
@@ -50,6 +60,7 @@ RUN sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=builder /src/server .
+COPY --from=builder /src/migrate .
 
 EXPOSE 8081
 

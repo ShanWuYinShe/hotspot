@@ -2823,3 +2823,25 @@ perf-smoke 扩展至 8 端点并在 hotspot_test 累计数据上复测：
   743 rps/p50 7.1ms/p99 60.4ms（吞吐约 5 倍、p50 约 11 倍）。
 - users/search：PGroonga 后 570-637 rps/p99 65-68ms → 2161 rps/p99 26.8ms。
 - moments/search、groups/search 均稳定数千 rps、p99 < 12ms。
+
+## Batch E（第三批）：独立迁移 job + 镜像 Id 清单校验（2026-11-07）
+
+E2 部署链路加固：迁移从「server 启动隐式执行」提升为部署显式前置步骤。
+
+- backend 镜像同时构建 `server` 与 `migrate` 两个二进制（同镜像同版本指纹，
+  新增二进制约 12MB）。
+- compose 新增一次性 `migrate` 服务（profile=migrate，prod 覆盖内网）：
+  deploy 脚本在数据库快照之后、滚动更新之前执行
+  `--profile migrate run --rm -T migrate`；迁移失败即中止（此时 backend
+  尚未切换，避免新容器 crash-loop + 自动回滚震荡），server 启动期保留
+  EnsureSchema 兜底。
+- 发布包新增 `hotspot-images-<ver>.ids.txt`（两个镜像的 docker config Id）：
+  deploy 加载后逐一核对 `docker inspect .Id`，与 tar sha256 一起约束
+  「发布包内容 == CI 构建产物」；旧版本无该资产时告警放行。
+- 评估结论入档 release-runbook §7：蓝绿部署暂不实施（触发条件与迁移兼容
+  前提已写明）；cosign keyless 签名列为后续步骤（当前 tar sha256 + 镜像 Id
+  清单 + OCI 标签 + GH 资产来源）。
+
+验证：Dockerfile 本地构建通过（/app 同时含 server/migrate）；
+`docker run ... ./migrate`、compose --profile migrate run 对 dev 库执行成功；
+actionlint release.yml 通过；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

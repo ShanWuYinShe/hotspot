@@ -61,10 +61,14 @@ gh run watch <run-id> --exit-status
 部署脚本内部按序执行：
 
 - **加锁**：服务器 `~/hotspot/.deploy.lock` 原子 mkdir，占锁失败即中止（TTL 6h 后可接管陈旧锁）；
-- **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；
+- **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；加载后若存在 `.ids.txt`（镜像 Id 清单）则逐一核对 `docker inspect .Id`，锁定「发布包内容 == CI 构建产物」；
 - **配置同源**：compose / nginx 片段从**被部署的 tag** 用 `git archive` 导出，不取工作树内容（否则本地 HEAD 领先 tag 时会把未发布的配置带上线）；
 - **核对镜像指纹**：`version` 必须等于 tag、`revision` 必须等于该 tag 的 commit；
 - **数据库快照**：`pg_dump -Fc` 到服务器 `backups/` + 本机 `.workwork/`，失败即中止；
+- **独立迁移 job**：滚动更新前先在服务器跑一次性容器
+  `IMAGE_TAG=<tag> docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile migrate run --rm -T migrate`
+  （同镜像内 `./migrate` 二进制，幂等：pending 应用 + checksum/pending/schema manifest 校验）；
+  失败直接中止（此时 backend 尚未切换），不把迁移失败留给新容器 crash-loop；
 - **滚动更新**：`IMAGE_TAG=<tag> compose --profile prod up -d --scale frontend-build=0` + `nginx -s reload`（软重载，不中断在途 HTTP/WS 连接）；容器 `stop_grace_period: 30s` 覆盖应用侧排水预算；
 - **三级版本校验**：后端 health 版本、前端静态卷 `version.json`、**nginx 容器内**真实响应（`/version.json` 与 `/healthz`）——容器里的文件对不等于网关服务得出去；
 - **就绪探针口径**：容器 healthcheck 用 `GET /readyz`——数据库不可达返回 503（实例摘流量），Redis 不可达仅 `degraded`（200，限流/幂等 fail-open 仍可服务）；`GET /healthz` 保留为纯存活探针。
@@ -105,7 +109,7 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 
 **回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill）。schema 变更已不再强制「旧镜像兼容」——项目明确不考虑二进制向后兼容，迁移允许破坏性 DDL（文件内 `-- allow-destructive: <理由>` 声明）。因此：**普通增量迁移**回滚后是「旧镜像 + 新 schema」，通常可用；**破坏性迁移**（删表/列/类型变更）发布后旧镜像无法跑在新 schema 上，回滚必须按 `docs/backup-restore.md` 恢复数据库到发布前备份。打 tag 前必须在本地 compose 完整验证迁移 + 新镜像。
 
-**迁移执行方式**：后端启动按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不再有自动基线**：若目标库「已有业务表但版本表为空」，启动会失败并提示执行 `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 显式接管（随后立即 manifest 校验）。存量生产库通常已有旧版 runner 写入的版本行，首次启动会自动补写 checksum（日志 `schema_migrations: backfilled checksums for legacy rows`），属预期的一次性过渡。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
+**迁移执行方式**：生产部署先运行独立迁移 job（见 §2），server 启动期仅幂等校验并在缺失时补跑。两者共用同一 runner：按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不再有自动基线**：若目标库「已有业务表但版本表为空」，启动会失败并提示执行 `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 显式接管（随后立即 manifest 校验）。存量生产库通常已有旧版 runner 写入的版本行，首次启动会自动补写 checksum（日志 `schema_migrations: backfilled checksums for legacy rows`），属预期的一次性过渡。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
 
 ### 3.4 手工回滚（脚本不可用时）
 
@@ -198,3 +202,17 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 | `ROLLBACK_OF` | 空 | 由 `rollback-production.sh` 注入，仅影响审计与告警文案 |
 | `DEPLOY_DB_USER` / `DEPLOY_DB_NAME` | `postgres` / `hotspot` | 备份使用的库配置 |
 | `DEPLOY_FRONTEND_VOLUME` | `hotspot_frontend_build` | 前端静态卷名 |
+## 7. 部署架构评估（蓝绿 / 供应链签名）
+
+**蓝绿部署（暂不实施）**：当前「一次性迁移 job + 滚动重建 + nginx 软重载」在
+单实例规模下已经做到迁移失败前置暴露、回滚网与版本三级校验；蓝绿需要双
+backend 副本 + nginx upstream 切换 + 迁移兼容窗口评估，收益主要在「秒级零
+停机」而本项目当前流量/发布频率不足以覆盖其复杂度。触发条件：需要发布期间
+零停机 SLA、或单实例发布窗口成为用户可感知事件时再实施（届时迁移必须保持
+向前兼容，独立 migrate job 可直接复用）。
+
+**供应链签名（部分实施）**：当前已具备 tar sha256、镜像 Id 清单（.ids.txt）、
+OCI version/revision/created 标签与 GH Release 资产来源；下一步 cosign keyless
+签名（GitHub OIDC）需要额外证书透明与验签步骤（部署端安装 cosign 并在加载前
+验签），收益是把「资产来源可信」从 GitHub 账户安全提升到签名身份级别。待
+发布链路稳定后再评估引入，不在本轮引入额外工具链。

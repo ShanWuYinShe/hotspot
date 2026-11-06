@@ -235,7 +235,8 @@ if [ "${DEPLOY_SKIP_DOWNLOAD:-0}" = "1" ]; then
   echo "    DEPLOY_SKIP_DOWNLOAD=1：复用 $STAGING 已有镜像包"
 else
   ( cd "$REPO_ROOT" && gh release download "$TARGET" --dir "$STAGING" --clobber \
-      --pattern 'hotspot-images-*.tar.gz' --pattern 'hotspot-images-*.tar.gz.sha256' )
+      --pattern 'hotspot-images-*.tar.gz' --pattern 'hotspot-images-*.tar.gz.sha256' \
+      --pattern 'hotspot-images-*.ids.txt' )
 fi
 TARBALL="$STAGING/hotspot-images-$TARGET.tar.gz"
 [ -f "$TARBALL" ] || { echo "!! Release ${TARGET} 缺少镜像包（CI Release 工作流是否成功？）"; exit 1; }
@@ -333,6 +334,23 @@ for repo in hotspot-backend hotspot-frontend; do
   echo "    ${repo}: version=${ver} revision=${rev:0:12}"
 done
 
+# 镜像 ID 清单核对（Release 资产 .ids.txt；旧版本无该资产时告警放行）：
+# docker load 后镜像 Id 由清单锁定，进一步约束「发布包内容与 CI 构建产物一致」。
+IDS_FILE="$STAGING/hotspot-images-$TARGET.ids.txt"
+if [ -f "$IDS_FILE" ]; then
+  echo "==> 核对已加载镜像 ID（发布包清单）…"
+  while read -r ref expected_id; do
+    [ -n "$ref" ] || continue
+    loaded_id="$(ssh "$SERVER" "docker inspect $ref --format '{{.Id}}'" 2>/dev/null || true)"
+    [ "$loaded_id" = "$expected_id" ] || {
+      echo "!! ${ref} 加载后 Id=${loaded_id:-<空>}，与发布清单 ${expected_id} 不符（资产被替换/损坏），中止部署"
+      exit 1
+    }
+    echo "    ${ref} id=${loaded_id:0:19}…"
+  done < "$IDS_FILE"
+else
+  echo "!! 注意：Release ${TARGET} 未提供 .ids.txt（多为旧版本发布包），跳过镜像 ID 核对"
+fi
 # ── 部署前数据库备份（硬性步骤，失败即中止部署）──────────────────────
 # 新版本迁移不可逆（无 down 迁移），上线前必须先有快照：服务器本地一份 +
 # scp 回本机一份（本机副本即异地备份，服务器磁盘故障也有退路）。格式与
@@ -406,6 +424,12 @@ echo "==> 迁移 frontend 静态卷属主为 100:101（幂等）…"
 ssh "$SERVER" "docker run --rm --user 0:0 --entrypoint sh -v $FRONTEND_VOLUME:/build hotspot-backend:$TARGET -c 'chown -R 100:101 /build'" \
   || { echo "!! frontend 静态卷（${FRONTEND_VOLUME}）属主迁移失败，中止部署"; exit 1; }
 
+echo "==> 独立迁移 job（一次性容器；失败则中止，不切换 backend）…"
+# 迁移与 backend 生命周期解耦：先让独立 job 应用 pending 迁移（幂等，含
+# checksum/pending/schema manifest 校验）；失败在动 backend 之前暴露，避免
+# 新容器 crash-loop 后再触发自动回滚。server 启动期仍保留 EnsureSchema 兜底。
+ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile migrate run --rm -T migrate" \
+  || rollback "独立迁移 job 失败（backend 未切换；检查迁移输出与备份）"
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
 ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null && echo 'nginx reloaded'"
 

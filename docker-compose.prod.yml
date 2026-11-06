@@ -24,6 +24,9 @@ services:
   seaweedfs:
     networks: [hotspot_internal]
 
+  migrate:
+    networks: [hotspot_internal]
+
   backend:
     networks: [hotspot_internal]
     environment:

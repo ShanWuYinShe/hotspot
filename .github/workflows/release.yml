@@ -94,9 +94,11 @@ jobs:
 
       - name: Resolve version fingerprint
         run: |
-          echo "GIT_VERSION=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
-          echo "GIT_COMMIT=${GITHUB_SHA}" >> "$GITHUB_ENV"
-          echo "GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          {
+            echo "GIT_VERSION=${GITHUB_REF_NAME}"
+            echo "GIT_COMMIT=${GITHUB_SHA}"
+            echo "GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> "$GITHUB_ENV"
 
       - name: Build backend image
         run: |
@@ -133,6 +135,12 @@ jobs:
           # 校验和随包发布：部署端下载后强制校验（sha256sum 的两空格输出格式对
           # shasum -a 256 -c 与 sha256sum -c 都兼容），挡住传输损坏与资产替换。
           sha256sum "hotspot-images-${GIT_VERSION}.tar.gz" > "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
+          # docker load 后镜像 Id（config digest）清单：部署脚本加载后据此核对
+          # 「发布包内容 == CI 构建产物」，与 tar sha256 一起形成内容级约束。
+          {
+            printf "%s %s\n" "$IMAGE_BACKEND:${GIT_VERSION}" "$(docker inspect "$IMAGE_BACKEND:${GIT_VERSION}" --format '{{.Id}}')"
+            printf "%s %s\n" "$IMAGE_FRONTEND:${GIT_VERSION}" "$(docker inspect "$IMAGE_FRONTEND:${GIT_VERSION}" --format '{{.Id}}')"
+          } > "hotspot-images-${GIT_VERSION}.ids.txt"
           ls -lh "hotspot-images-${GIT_VERSION}.tar.gz"*
 
       - name: Create GitHub Release and attach images
@@ -151,6 +159,7 @@ jobs:
           版本指纹：version=$GIT_VERSION commit=$GIT_COMMIT built=$GIT_BUILD_TIME" \
             "hotspot-images-${GIT_VERSION}.tar.gz" \
             "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
+            "hotspot-images-${GIT_VERSION}.ids.txt"
 
   auto-deploy:
     name: Auto Deploy to Production
