@@ -570,10 +570,8 @@ func TestRejectInviteHandlerMapsSpecificErrors(t *testing.T) {
 
 func TestCreateGroupRecordsResourceGuard(t *testing.T) {
 	checker := &groupRecordingChecker{}
-	resourceguard.SetDefaultChecker(checker)
-	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
-
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	ctx = resourceguard.WithCheckerContext(ctx, checker)
 	service := NewServiceWithRepo(NewInMemoryRepository())
 	if _, err := service.Create(ctx, CreateGroupRequest{Name: "Guarded Group", Location: Location{LocationName: "Somewhere"}}); err != nil {
 		t.Fatalf("create group: %v", err)

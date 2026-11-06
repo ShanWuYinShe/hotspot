@@ -243,10 +243,8 @@ func TestListCommentsReturns10300WhenMomentMissing(t *testing.T) {
 
 func TestCreateMomentRecordsResourceGuard(t *testing.T) {
 	checker := &momentRecordingChecker{}
-	resourceguard.SetDefaultChecker(checker)
-	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
-
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_1"})
+	ctx = resourceguard.WithCheckerContext(ctx, checker)
 	service := NewServiceWithRepo(NewInMemoryRepository())
 	if _, err := service.Create(ctx, CreateMomentRequest{Description: "hello", Location: &Location{LocationName: "Somewhere"}}); err != nil {
 		t.Fatalf("create moment: %v", err)

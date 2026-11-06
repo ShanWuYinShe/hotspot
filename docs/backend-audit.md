@@ -2862,3 +2862,18 @@ actionlint release.yml 通过；verify-backend-ci.sh --with-db ALL CHECKS PASSED
 - 测试：httpx 新增 WriteCodeError 响应 + 指标（code/route/method 标签）断言。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第二十批）：resourceguard 去进程级全局单例（2026-11-07）
+
+架构审计 C2 第一个纵切片：resourceguard 的 `SetDefaultChecker/DefaultChecker`
+进程级可变全局删除，改为显式依赖 + context 传递。
+
+- 根中间件 `resourceguard.WithChecker(checker)` 在装配期把 Checker 注入请求
+  context；守卫中间件与写入方 `RecordUser/Group/Moment` 都从 ctx 取实例。
+- bootstrap `NewHTTPRouterWithReadiness` 显式接收 checker（app.New 传入按
+  PgDB 构造的 DBChecker）；未注入 checker 的测试装配自动 bypass。
+- 同进程可装配多套 App / 无隐藏单例；`t.Parallel()` 不再被全局 swap 污染。
+- 迁移 4 组测试：middleware 用 `WithChecker(...)` 包裹、service 级用例用
+  `WithCheckerContext(ctx, checker)` 注入；删除全部 SetDefaultChecker 调用。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

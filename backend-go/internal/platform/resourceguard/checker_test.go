@@ -179,20 +179,9 @@ func TestDBCheckerLifecycleAndCache(t *testing.T) {
 	}
 }
 
-func TestDefaultCheckerAndGlobalRecordHelpers(t *testing.T) {
-	orig := DefaultChecker()
-	defer func() { SetDefaultChecker(orig) }()
-
-	// 测试 SetDefaultChecker(nil) 会回退为 NoopChecker
-	SetDefaultChecker(nil)
-	if DefaultChecker() == nil {
-		t.Fatal("DefaultChecker should never return nil")
-	}
-
+func TestRecordHelpersUseContextChecker(t *testing.T) {
 	mockC := &mockCheckRecorder{recorded: map[string]ResourceKind{}}
-	SetDefaultChecker(mockC)
-
-	ctx := context.Background()
+	ctx := WithCheckerContext(context.Background(), mockC)
 	RecordUser(ctx, "usr_1")
 	RecordGroup(ctx, "grp_1")
 	RecordMoment(ctx, "mom_1")

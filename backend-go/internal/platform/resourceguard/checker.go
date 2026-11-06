@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
@@ -195,37 +194,42 @@ func cacheKey(kind ResourceKind, id string) string {
 	return string(kind) + ":" + id
 }
 
-// defaultChecker is written once at boot and read on every request; guard it
-// with an atomic pointer to avoid the data race a bare global would have.
-var defaultChecker atomic.Pointer[Checker]
+// checkerContextKey 把 Checker 放进请求 context：根中间件（WithChecker）在
+// 装配期注入一次，守卫中间件与写入方（Record*）都从 ctx 取实例。不再使用
+// 进程级 global setter —— 同进程可装配多套 App（测试可并行、无隐藏副本）。
+type checkerContextKey struct{}
 
-func init() {
-	noop := Checker(NoopChecker{})
-	defaultChecker.Store(&noop)
-}
-
-func SetDefaultChecker(checker Checker) {
+// WithCheckerContext 把 checker 注入 ctx（中间件与测试用；nil 表示无守卫）。
+func WithCheckerContext(ctx context.Context, checker Checker) context.Context {
 	if checker == nil {
-		checker = NoopChecker{}
+		return ctx
 	}
-	defaultChecker.Store(&checker)
+	return context.WithValue(ctx, checkerContextKey{}, checker)
 }
 
-func DefaultChecker() Checker {
-	if c := defaultChecker.Load(); c != nil {
-		return *c
+func checkerFromContext(ctx context.Context) Checker {
+	if ctx == nil {
+		return nil
 	}
-	return NoopChecker{}
+	checker, _ := ctx.Value(checkerContextKey{}).(Checker)
+	return checker
 }
 
 func RecordUser(ctx context.Context, userID string) {
-	_ = DefaultChecker().Record(ctx, ResourceUser, userID)
+	recordResource(ctx, ResourceUser, userID)
 }
 
 func RecordGroup(ctx context.Context, groupID string) {
-	_ = DefaultChecker().Record(ctx, ResourceGroup, groupID)
+	recordResource(ctx, ResourceGroup, groupID)
 }
 
 func RecordMoment(ctx context.Context, momentID string) {
-	_ = DefaultChecker().Record(ctx, ResourceMoment, momentID)
+	recordResource(ctx, ResourceMoment, momentID)
+}
+
+// recordResource 在 ctx 未注入 checker（内部任务/单测直调 service）时 no-op。
+func recordResource(ctx context.Context, kind ResourceKind, id string) {
+	if checker := checkerFromContext(ctx); checker != nil {
+		_ = checker.Record(ctx, kind, id)
+	}
 }

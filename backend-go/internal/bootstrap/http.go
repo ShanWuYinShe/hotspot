@@ -18,24 +18,25 @@ import (
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/internal/platform/routemeta"
 )
 
 func NewHTTPRouter(modules []modulekit.Module) http.Handler {
-	return newHTTPRouter(modules, nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil)
 }
 
 func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, nil, nil)
+	return newHTTPRouter(modules, nil, nil, nil)
 }
 
 // NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
-func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler) http.Handler {
-	return newHTTPRouter(modules, logger, readiness)
+func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker) http.Handler {
+	return newHTTPRouter(modules, logger, readiness, guardChecker)
 }
 
-func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler) http.Handler {
+func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker) http.Handler {
 	r := chi.NewRouter()
 	// 媒体客户端端点：按请求入口 origin 注入 context，媒体模块据此生成与页面
 	// 同源的直传/读 URL（跨源会被 CORS/LNA 拦截，见 media/client_endpoint.go）。
@@ -54,6 +55,9 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	// 请求计数/耗时指标（chi 路由模板维度）。放在 Recoverer 之后：panic
 	// 恢复为 500 的请求同样被计数。
 	r.Use(observability.RequestMetricsMiddleware)
+	// 资源守卫 checker 显式注入请求 context（替代进程级 SetDefaultChecker）：
+	// 守卫中间件与写入方 Record* 统一从 ctx 取实例，同进程可装配多套 App。
+	r.Use(resourceguard.WithChecker(guardChecker))
 	r.NotFound(httpx.NotFoundHandler)
 	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)
 	// Prometheus 抓取端点：仅 compose 网络内可达（nginx 不反代 /metrics，

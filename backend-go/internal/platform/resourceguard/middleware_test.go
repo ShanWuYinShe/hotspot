@@ -31,10 +31,13 @@ func (s stubChecker) MayExist(_ context.Context, kind ResourceKind, id string) (
 }
 func (s stubChecker) Record(context.Context, ResourceKind, string) error { return nil }
 
+func guarded(checker Checker, next http.Handler) http.Handler {
+	return WithChecker(checker)(Middleware(next))
+}
+
 func TestMiddlewareRejectsKnownMissingUser(t *testing.T) {
-	SetDefaultChecker(stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_missing": false}}})
-	t.Cleanup(func() { SetDefaultChecker(NoopChecker{}) })
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	checker := stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_missing": false}}}
+	handler := guarded(checker, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/users/open_the_door", strings.NewReader(`{"user_id":"user_missing"}`))
@@ -51,10 +54,9 @@ func TestMiddlewareRejectsKnownMissingUser(t *testing.T) {
 }
 
 func TestMiddlewareBypassesWhenCheckerNotReady(t *testing.T) {
-	SetDefaultChecker(stubChecker{ready: false})
-	t.Cleanup(func() { SetDefaultChecker(NoopChecker{}) })
+	checker := stubChecker{ready: false}
 	called := false
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := guarded(checker, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -69,10 +71,9 @@ func TestMiddlewareBypassesWhenCheckerNotReady(t *testing.T) {
 }
 
 func TestMiddlewareBypassesOnCheckerError(t *testing.T) {
-	SetDefaultChecker(stubChecker{ready: true, err: context.DeadlineExceeded})
-	t.Cleanup(func() { SetDefaultChecker(NoopChecker{}) })
+	checker := stubChecker{ready: true, err: context.DeadlineExceeded}
 	called := false
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := guarded(checker, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -87,10 +88,9 @@ func TestMiddlewareBypassesOnCheckerError(t *testing.T) {
 }
 
 func TestMiddlewareBypassesNonWhitelistedRoute(t *testing.T) {
-	SetDefaultChecker(stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_missing": false}}})
-	t.Cleanup(func() { SetDefaultChecker(NoopChecker{}) })
+	checker := stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_missing": false}}}
 	called := false
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := guarded(checker, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -105,10 +105,9 @@ func TestMiddlewareBypassesNonWhitelistedRoute(t *testing.T) {
 }
 
 func TestMiddlewareRestoresRequestBody(t *testing.T) {
-	SetDefaultChecker(stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_1": true}}})
-	t.Cleanup(func() { SetDefaultChecker(NoopChecker{}) })
+	checker := stubChecker{ready: true, results: map[ResourceKind]map[string]bool{ResourceUser: {"user_1": true}}}
 	var body string
-	handler := Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := guarded(checker, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

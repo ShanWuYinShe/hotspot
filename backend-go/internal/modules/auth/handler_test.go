@@ -624,12 +624,11 @@ func TestProfileDefaultsUseAppConfigSource(t *testing.T) {
 
 func TestRegisterRecordsUserForResourceGuard(t *testing.T) {
 	checker := &recordingChecker{}
-	resourceguard.SetDefaultChecker(checker)
-	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+	ctx := resourceguard.WithCheckerContext(context.Background(), checker)
 
 	repo := &recordingAuthRepo{registerAccount: Account{UserID: "user_new", LoginID: "alice", Nickname: "Alice"}}
 	service := NewServiceWithSource(context.Background(), platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
-	if _, err := service.Register(context.Background(), RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}, platformauth.SessionMeta{}); err != nil {
+	if _, err := service.Register(ctx, RegisterRequest{LoginID: "alice", Nickname: "Alice", Password: "secret"}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("register: %v", err)
 	}
 	if len(checker.recorded) != 1 || checker.recorded[0] != "user:user_new" {
@@ -639,12 +638,11 @@ func TestRegisterRecordsUserForResourceGuard(t *testing.T) {
 
 func TestGuestRecordsUserForResourceGuard(t *testing.T) {
 	checker := &recordingChecker{}
-	resourceguard.SetDefaultChecker(checker)
-	defer resourceguard.SetDefaultChecker(resourceguard.NoopChecker{})
+	ctx := resourceguard.WithCheckerContext(context.Background(), checker)
 
 	repo := &recordingAuthRepo{guestAccount: Account{UserID: "guest_new", Nickname: "Guest"}}
 	service := NewServiceWithSource(context.Background(), platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"}), repo, config.Config{AuthTokenSecret: "test-secret"}, appconfig.NewStaticSource(config.Config{AuthTokenSecret: "test-secret"}))
-	if _, err := service.Guest(context.Background(), GuestRequest{Nickname: types.StrPtr("Guest")}, platformauth.SessionMeta{}); err != nil {
+	if _, err := service.Guest(ctx, GuestRequest{Nickname: types.StrPtr("Guest")}, platformauth.SessionMeta{}); err != nil {
 		t.Fatalf("guest: %v", err)
 	}
 	if len(checker.recorded) != 1 || checker.recorded[0] != "user:guest_new" {

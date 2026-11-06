@@ -53,7 +53,6 @@ func NewApp(cfg config.Config) (*App, error) {
 		return nil, err
 	}
 	resourceguardChecker := newResourceGuardChecker(persistenceFactory)
-	resourceguard.SetDefaultChecker(resourceguardChecker)
 	// Create the redis client (if configured) before building modules so the
 	// system health endpoint can probe it. The same client is handed to the
 	// realtime bridge below.
@@ -96,7 +95,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
 		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
 	)
-	router := NewHTTPRouterWithReadiness(modules, logger, readiness)
+	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
 	observability.Register(realtime.NewHubCollector(realtime.DefaultHub()))

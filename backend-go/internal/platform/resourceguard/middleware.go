@@ -16,6 +16,19 @@ const maxGuardBodyBytes = 64 << 10
 // 本包只做请求体解析与存在性预检。类型别名保持既有调用点不变。
 type guardRule = routemeta.GuardRule
 
+// WithChecker 是根中间件：把装配期传入的 Checker 注入请求 context，供后续
+// Middleware 与 Record* 使用。它不做任何守卫判定，可挂在路由树最外层。
+func WithChecker(checker Checker) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		if checker == nil {
+			return next
+		}
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(WithCheckerContext(r.Context(), checker)))
+		})
+	}
+}
+
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rule, ok := matchGuardRule(r.URL.Path)
@@ -23,7 +36,7 @@ func Middleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		checker := DefaultChecker()
+		checker := checkerFromContext(r.Context())
 		if checker == nil || !checker.Ready(r.Context()) {
 			observability.L().Debug("resourceguard bypass: checker not ready", "path", r.URL.Path)
 			next.ServeHTTP(w, r)
