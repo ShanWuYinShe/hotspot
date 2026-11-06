@@ -3310,3 +3310,15 @@ PublicUserItem / PublicGroupItem / PublicMomentSuggestItem 判别联合）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED；
 perf-budget.sh：8 端点均在预算内。
+
+## Batch E6：Go 工具链版本对齐 + 漂移守卫（2026-11-07）
+
+工程效能审计 P1「工具链漂移（本地 1.27.3 / CI 1.26.10 / go.mod 1.26.0）」：
+
+- go.mod `go` 指令由 1.26.0 改为 1.26.10，与 CI setup-go、Dockerfile/Dockerfile.dev
+  的 GO_VERSION 默认值完全一致（本地 1.27.3 仍满足 >= 最小版本，语义正确）；
+- 新增架构守卫 TestGoToolchainVersionsAligned：解析 go.mod / Dockerfile /
+  Dockerfile.dev / .github/workflows/ci.yml，任一 patch 版本漂移即失败；
+- `go mod tidy` 无额外依赖变化（依赖集合保持）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
