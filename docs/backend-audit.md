@@ -3293,3 +3293,20 @@ PublicUserItem / PublicGroupItem / PublicMomentSuggestItem 判别联合）。
   测试（四类 payload、无查看者字段、缺 prefix 10000）；
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D1（续）：handler 级 benchmark + 架构调整后全链路基线复测（2026-11-07）
+
+性能工程审计「Go benchmark 覆盖不足」补齐冷启动/账户/通知热路径：
+
+- 新增 BenchmarkBootstrapHandler / BenchmarkPublicBootstrapHandler（system）：
+  登录/匿名冷启动 envelope + 版本组装（~5.1 µs/op，43 allocs）；
+- 新增 BenchmarkGetMyProfileHandler（users/account 投影 ~3.7 µs/op，39 allocs）；
+- 新增 BenchmarkNotifyListHandler（notify/fetch 空列表 ~2.2 µs/op，31 allocs）；
+- 全链路复测（backend-test + seed，c=10/5s）：8 端点全部 code=0；rps 相比
+  docs/perf-baseline.json 全面提升（account 9847、bootstrap 8580、notify 14167、
+  following 10237、search 2788/8871/5907、nearby 576），`perf-budget.sh` 全部 OK；
+- docs/performance.md 基线表更新为本轮实测（含 moments/groups search 两行）与
+  新增组件 benchmark 结果；确认 logger/Hub 上下文注入未造成读路径退化。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED；
+perf-budget.sh：8 端点均在预算内。

@@ -35,18 +35,22 @@ envelope code，不能只看 HTTP 状态码）。
 
 ## 2. 当前基线（backend-test，seed 数据，c=10，5s，warmup 2s）
 
-2026-11-06 本机实测（相对值；复测请用同一命令/同一机器）：
+2026-11-07 本机实测（相对值；复测请用同一命令/同一机器；本轮为 logger/Hub
+上下文注入、Public 类型层等架构调整后的复测，全部端点 code=0 且
+`scripts/perf-budget.sh` 通过）：
 
 | endpoint | rps | p50 ms | p95 ms | p99 ms |
 |----------|-----|--------|--------|--------|
-| users/account | ~4400-5400 | 1.2-1.8 | 2.8-4.8 | 4.2-8.5 |
-| system/bootstrap | ~4000-4400 | 1.9-2.1 | 4.5-5.2 | 6.9-7.4 |
-| notify/fetch | ~7700 | 1.1 | 2.7 | 4.4 |
-| moments/fetch_following | ~3500-3700 | 2.1-2.3 | 5.9-6.5 | 12-14 |
-| moments/fetch_nearby | ~350 | 14.8-15.2 | 71-72 | 79-81 |
-| users/search | ~570-590 | 9.5-9.6 | 58-60 | 64-65 |
+| users/account | ~9800 | 0.8-0.9 | 1.5-1.6 | 4.0 |
+| system/bootstrap | ~8600 | 1.0 | 1.8 | 3.5 |
+| notify/fetch | ~14200 | 0.6 | 1.1-1.2 | 3.3 |
+| moments/fetch_following | ~10200 | 0.9 | 1.5 | 2.2 |
+| moments/fetch_nearby | ~580 | 7.5 | 70 | 76 |
+| users/search | ~2800 | 2.4 | 5.0-5.2 | 37 |
+| moments/search | ~8900 | 0.9-1.0 | 1.8-1.9 | 4.4-4.9 |
+| groups/search | ~5900 | 1.3 | 2.4-2.5 | 19 |
 
-组件级 benchmark（同机）：
+组件级 benchmark（同机；2026-11-07 复测）：
 
 | benchmark | 结果 | 说明 |
 |-----------|------|------|
@@ -55,12 +59,16 @@ envelope code，不能只看 HTTP 状态码）。
 | BenchmarkEventMarshal | ~1.1 µs/op，392 B | 单事件 JSON 体积回归基线 |
 | BenchmarkWriteJSONPage（20 条列表） | ~12 µs/op，3 allocs | 统一响应 envelope 编码 |
 | BenchmarkRequestMetricsMiddleware | ~0.54 µs/op，7 allocs | 每请求指标采集固定税 |
+| BenchmarkBootstrapHandler | ~5.1 µs/op，9.0 KB，43 allocs | 登录版冷启动 envelope + 版本组装 |
+| BenchmarkPublicBootstrapHandler | ~5.1 µs/op，8.8 KB，43 allocs | 匿名 PublicBootstrapData（缓存 miss） |
+| BenchmarkGetMyProfileHandler | ~3.7 µs/op，7.6 KB，39 allocs | users/account 高频轻读投影 |
+| BenchmarkNotifyListHandler | ~2.2 µs/op，6.9 KB，31 allocs | notify/fetch 空列表 envelope |
 
-热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram ILIKE 双分支）
-是当前 p99 最高的两个读端点，容量规划优先关注；两者都已有 pg_trgm/S2 索引。
-nearby 的 DB 往返已收敛为 4 次（候选含关注 + 详情含图片 + reactions 聚合 +
-作者关系），继续优化方向见 `.workwork/design/backend-improvement-plan.md`
-Batch D2/D5。
+热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram/PGroonga 双分支）
+仍是 p99 最高的两个读端点，容量规划优先关注；本轮架构调整未使其退化（相对
+baseline JSON 的预算门禁全部 OK）。nearby 的 DB 往返已收敛为 4 次（候选含关注 +
+详情含图片 + reactions 聚合 + 作者关系），继续优化方向见
+`.workwork/design/backend-improvement-plan.md` Batch D2/D5。
 
 ## 3. SLO 目标（单实例基线，c=10，seed 规模）
 
