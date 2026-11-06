@@ -2937,3 +2937,14 @@ C2/C5 收口防腐：把本轮清掉的全局单例与事务纪律固化为 CI �
   REGRESSION，门禁行为符合预期；
 - 定位为手动/发版前回归工具，不进默认 CI（共享 runner 噪声），文档见
   docs/performance.md §7。
+
+## Batch D（第六批）：groups 标签过滤接 GIN（2026-11-07）
+
+- 迁移 065 idx_groups_tags_gin（GIN(tags)），manifest 重建（129 索引）；
+- 查询从 = ANY(g.tags) 改 g.tags @> ARRAY[$1]::text[]（语义等价；
+  = ANY 无法走 GIN），新增单测锁定写法；
+- 10 万群合成库实测：选择性标签 13.4ms → 0.28ms（约 48x）；非选择性标签
+  仍走 LIMIT 提前终止的顺序扫描（0.33ms，无回退）；
+- 合成库已清理；dev/test/it 库已应用 065。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

@@ -27,6 +27,17 @@ func TestBuildGroupSearchQueryCarriesHardCap(t *testing.T) {
 	}
 }
 
+// 标签过滤必须用数组包含（GIN 可索引）；= ANY 即使有 GIN 也只能全表扫描。
+func TestBuildGroupSearchQueryTagUsesGINArrayContainment(t *testing.T) {
+	query, args := buildGroupSearchQuery(SearchGroupsRequest{Tag: "hiking"})
+	if !strings.Contains(query, "g.tags @> ARRAY[") || !strings.Contains(query, "::text[]") {
+		t.Fatalf("expected GIN-friendly array containment, got: %s", query)
+	}
+	if len(args) != 1 || args[0] != "hiking" {
+		t.Fatalf("unexpected args: %#v", args)
+	}
+}
+
 type groupBackendStub struct {
 	rows      [][]any
 	queryErrs map[string]error

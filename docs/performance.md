@@ -181,3 +181,21 @@ duration=5s，8 个只读端点。实测两条路径：
 
 该门禁不进默认 CI（共享 runner 噪声大），定位是「改完性能敏感代码/发版前
 本机回归」；业务码与传输错误由 perf-smoke.sh 自身校验并透传退出码。
+
+### 6.4 群标签过滤 GIN 索引（2026-11）
+
+**问题**：groups/search 的 tag 过滤为 = ANY(g.tags)；该写法即使建了 GIN(tags)
+也不会走索引，选择性标签在 10 万群规模下退化为全表扫描。
+
+**方案**：迁移 065 新增 idx_groups_tags_gin，查询改为数组包含
+g.tags @> ARRAY[$1]::text[]（语义等价）。
+
+**实测**（hotspot_perf，100k 群，选择性标签命中 99 行）：
+
+| 写法 | 执行时间 |
+|---|---|
+| = ANY(g.tags)，无索引 | 13.4 ms（Seq Scan） |
+| = ANY(g.tags)，有 GIN | 11.3 ms（仍 Seq Scan，GIN 不可用） |
+| @> + GIN | 0.28 ms（Bitmap Index Scan） |
+
+非选择性标签（95% 群命中）仍是顺序扫描 + LIMIT 提前终止（0.3ms 级），无回退。

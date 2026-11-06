@@ -479,6 +479,7 @@
     "groups:idx_groups_name_trgm",
     "groups:idx_groups_owner_created_at",
     "groups:idx_groups_s2_cell_id",
+    "groups:idx_groups_tags_gin",
     "groups:idx_groups_visible_s2_cell_id",
     "media_upload_sessions:idx_media_upload_sessions_file_id",
     "media_upload_sessions:idx_media_upload_sessions_storage_key",

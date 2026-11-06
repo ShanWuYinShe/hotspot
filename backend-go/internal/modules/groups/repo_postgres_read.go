@@ -308,7 +308,9 @@ func buildGroupSearchQuery(req SearchGroupsRequest) (string, []any) {
 		builder.WriteString(fmt.Sprintf(" AND (g.name &@ %s OR g.description &@ %s) AND (g.name ILIKE '%%' || %s || '%%' ESCAPE '\\' OR g.description ILIKE '%%' || %s || '%%' ESCAPE '\\')", rawArg, rawArg, keywordArg, keywordArg))
 	}
 	if req.Tag != "" {
-		builder.WriteString(fmt.Sprintf(" AND %s = ANY(g.tags)", nextArg(req.Tag)))
+		// 数组包含形式（= ANY 无法使用 GIN）：配合 idx_groups_tags_gin，
+		// 选择性标签从全表扫描降为位图索引扫描。
+		builder.WriteString(fmt.Sprintf(" AND g.tags @> ARRAY[%s]::text[]", nextArg(req.Tag)))
 	}
 	// 防御性候选集硬上限（见 groupSearchHardCap），非业务分页。
 	builder.WriteString(fmt.Sprintf(" LIMIT %d", groupSearchHardCap))
