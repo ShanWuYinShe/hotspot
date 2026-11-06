@@ -50,6 +50,16 @@ var (
 		},
 		[]string{"component"},
 	)
+	// businessErrorsTotal 记录「HTTP 200 + envelope code!=0」的业务错误（契约错误
+	// 不走 HTTP 状态码，此前除日志外完全不可观测）。route 用 chi 路由模板，
+	// method 用 HTTP 方法，避免路径参数造成高基数。
+	businessErrorsTotal = promauto.With(registry).NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "hotspot_business_errors_total",
+			Help: "业务错误响应总数（HTTP 200 + envelope code!=0；按 code/route/method 维度）",
+		},
+		[]string{"code", "route", "method"},
+	)
 	httpRequestDuration = promauto.With(registry).NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -101,4 +111,18 @@ func RequestMetricsMiddleware(next http.Handler) http.Handler {
 // 禁止使用请求维度/用户维度等动态值，避免指标基数膨胀）。
 func RecordRedisFailOpen(component string) {
 	redisFailOpenTotal.WithLabelValues(component).Inc()
+}
+
+// RecordBusinessError 记录一次业务错误响应（由统一错误出口 LogBusinessError
+// 调用，保证「日志/指标/响应」三处口径一致）。
+func RecordBusinessError(r *http.Request, code int) {
+	route := "unmatched"
+	method := ""
+	if r != nil {
+		method = r.Method
+		if rc := chi.RouteContext(r.Context()); rc != nil && rc.RoutePattern() != "" {
+			route = rc.RoutePattern()
+		}
+	}
+	businessErrorsTotal.WithLabelValues(strconv.Itoa(code), route, method).Inc()
 }

@@ -2528,3 +2528,20 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   OCI 标签一致、uid=100 非 root；**重启镜像二次启动幂等**（迁移数仍 54、
   readyz 仍 ok）；migrate -verify-only 输出 schema verification passed；
   check-migration-indexes.sh 对 scratch 库校验 OK（123 期望索引）。
+
+## Batch F（第一批）：业务错误可观测（P0-3 首个切面）（2026-11-06）
+
+审计 P0-3：契约错误走 HTTP 200 + envelope code!=0，HTTP 指标与 5xx 告警都
+看不到它们；此前仅零散日志，业务错误率/分布不可观测、不可告警。
+
+- 新增指标 hotspot_business_errors_total{code,route,method}：route 取 chi
+  路由模板（不引入路径参数高基数），method 取 HTTP 方法；由统一日志出口
+  observability.LogBusinessError 同步记录，保证「日志/指标/响应」口径一致。
+- 现有统一出口（httpx.WriteAPIError / httpx.Business / BusinessForbidden /
+  users.auth 等模块的 writeServiceError）全部经 LogBusinessError，自动获得
+  指标，无需逐个 handler 改造；裸 WriteJSON 校验分支仍不进入指标（高基数
+  10400 噪声，后续可评估仅记录 5xx 语义错误）。
+- Grafana 总览新增「业务错误码分布」面板（sum by code rate）。
+- 测试：chi 路由内触发 10400 后断言指标含 code/method/route 模板三元组。
+- 验证：go test -short 全绿；--with-db ALL CHECKS PASSED；合并后主环境实测
+  触发业务错误 → /metrics 出现计数 → Prometheus 可查询。
