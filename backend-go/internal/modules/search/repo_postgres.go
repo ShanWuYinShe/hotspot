@@ -135,7 +135,7 @@ func queryTagSuggestions(ctx context.Context, queryable persistence.Queryable, p
 			return nil, err
 		}
 		items = append(items, scoredSuggestItem{
-			Item:       SearchSuggestItem{Type: "tag", Payload: map[string]any{"name": name, "usage_count": usageCount}},
+			Item:       SearchSuggestItem{Type: "tag", Payload: TagItem{Name: name, UsageCount: usageCount}},
 			TypeOrder:  0,
 			MatchRank:  classifyPrefixMatch(prefix, name),
 			Popularity: usageCount,
@@ -213,64 +213,39 @@ func queryUserSuggestions(ctx context.Context, queryable persistence.Queryable, 
 		locationVisible, presenceVisible, statsVisible := u.locationVisible, u.presenceVisible, u.statsVisible
 		presenceStatus, locationName, latitude, longitude := u.presenceStatus, u.locationName, u.latitude, u.longitude
 		distance := u.distance
-		// payload 复用通用 UserItem 结构（spec api_spec_types.md，形状恒定）：
-		// 可空字段显式 null（bio/location/presence_status/last_online_at/stats、
-		// tags 恒为数组）。L1 可见性门控（spec api_spec_authz.md #28/#108，
-		// 对齐 users open_the_door 的 isSelf||settings.XVisible 口径；suggest
-		// 无 isSelf 场景）：隐藏即 null（location 含精确坐标与 distance/bearing，
-		// 隐藏防三角定位）。登录视角补充查看者字段 relation（无任何关系时为
-		// null）与 social_context（spec：搜索/列表场景恒 null）；匿名视角不含
-		// 查看者字段（Public 对偶类型）。
-		user := map[string]any{"user_id": userID, "nickname": nickname, "avatar_url": types.StrPtr(avatarURL)}
-		payload := map[string]any{"user": user, "bio": types.StrPtr(bio)}
-		if tags == nil {
-			payload["tags"] = []string{}
-		} else {
-			payload["tags"] = tags
+		// payload 使用类型化 UserItem 形状（spec api_spec_types.md）：可空字段
+		// 显式 null（bio/location/presence_status/last_online_at/stats，tags 恒
+		// 数组）。L1 可见性门控隐藏即 null（location 含精确坐标与 distance/
+		// bearing，隐藏防三角定位）；登录视角补充 relation/social_context。
+		payload := SearchSuggestUserPayload{
+			User:          SearchSuggestUser{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)},
+			Bio:           types.StrPtr(bio),
+			Tags:          firstNonNilStrings(tags),
+			SocialContext: nil,
 		}
 		if locationVisible {
-			payload["location"] = relativeLocationPayload(reference, locationName, latitude, longitude)
-		} else {
-			payload["location"] = nil
+			payload.Location = relativeLocationView(reference, locationName, latitude, longitude)
 		}
 		if presenceVisible {
-			ps := presenceStatusPtr(presenceStatus)
-			if ps == "" {
-				payload["presence_status"] = nil
-			} else {
-				payload["presence_status"] = ps
+			if ps := presenceStatusPtr(presenceStatus); ps != "" {
+				payload.PresenceStatus = &ps
 			}
-			if lastOnline.IsZero() {
-				payload["last_online_at"] = nil
-			} else {
-				payload["last_online_at"] = lastOnline.UTC().Format(time.RFC3339)
+			if !lastOnline.IsZero() {
+				formatted := lastOnline.UTC().Format(time.RFC3339)
+				payload.LastOnlineAt = &formatted
 			}
-		} else {
-			payload["presence_status"] = nil
-			payload["last_online_at"] = nil
 		}
 		if statsVisible {
-			payload["stats"] = map[string]any{
-				"moments_count":   momentsCount,
-				"friends_count":   friendsCount,
-				"followers_count": followersCount,
-				"following_count": followingCount,
-				"groups_count":    groupsCount,
+			payload.Stats = &SearchSuggestUserStats{
+				MomentsCount:   momentsCount,
+				FriendsCount:   friendsCount,
+				FollowersCount: followersCount,
+				FollowingCount: followingCount,
+				GroupsCount:    groupsCount,
 			}
-		} else {
-			payload["stats"] = nil
 		}
-		if viewerID != "" {
-			payload["social_context"] = nil
-			if following[userID] || followedBy[userID] || blocked[userID] {
-				payload["relation"] = map[string]any{
-					"is_following":   following[userID],
-					"is_followed_by": followedBy[userID],
-					"is_blocked":     blocked[userID],
-				}
-			} else {
-				payload["relation"] = nil
-			}
+		if viewerID != "" && (following[userID] || followedBy[userID] || blocked[userID]) {
+			payload.Relation = &SearchSuggestUserRelation{IsFollowing: following[userID], IsFollowedBy: followedBy[userID], IsBlocked: blocked[userID]}
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "user", Payload: payload},
@@ -327,23 +302,15 @@ func queryGroupSuggestions(ctx context.Context, queryable persistence.Queryable,
 		// GroupSettings）；created_at/owner_id 为「详情返回」，搜索场景显式
 		// null；last_activity_at/viewer_state/friends_in_group 建议场景 null
 		//（viewer_state/friends_in_group 仅登录视角携带键，匿名 Public 类型无）。
-		group := map[string]any{"group_id": groupID, "name": name, "members_count": membersCount, "avatar_url": avatarURL}
-		payload := map[string]any{
-			"group":                group,
-			"description":          description,
-			"tags":                 firstNonNilStrings(tags),
-			"join_method":          joinMethod,
-			"requires_approval":    requiresApproval,
-			"location":             relativeLocationPayload(reference, locationName, latitude, longitude),
-			"last_activity_at":     nil,
-			"online_members_count": onlineMembersCount,
-			"next_activity_at":     nextActivity,
-			"created_at":           nil,
-			"owner_id":             nil,
-		}
-		if viewerID != "" {
-			payload["viewer_state"] = nil
-			payload["friends_in_group"] = nil
+		payload := SearchSuggestGroupPayload{
+			Group:              SearchSuggestGroup{GroupID: groupID, Name: name, MembersCount: membersCount, AvatarURL: avatarURL},
+			Description:        description,
+			Tags:               firstNonNilStrings(tags),
+			JoinMethod:         joinMethod,
+			RequiresApproval:   requiresApproval,
+			Location:           relativeLocationView(reference, locationName, latitude, longitude),
+			OnlineMembersCount: onlineMembersCount,
+			NextActivityAt:     nextActivity,
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "group", Payload: payload},
@@ -379,16 +346,12 @@ func queryMomentSuggestions(ctx context.Context, queryable persistence.Queryable
 		if radius > 0 && distance > radius {
 			continue
 		}
-		payload := map[string]any{
-			"moment_id":           momentID,
-			"description_preview": truncatePreview(description),
-			"cover_url":           types.StrPtr(coverURL),
-			"author": map[string]any{
-				"user_id":    userID,
-				"nickname":   nickname,
-				"avatar_url": types.StrPtr(authorAvatar),
-			},
-			"location": relativeLocationPayload(reference, locationName, latitude, longitude),
+		payload := SearchSuggestMomentPayload{
+			MomentID:           momentID,
+			DescriptionPreview: truncatePreview(description),
+			CoverURL:           types.StrPtr(coverURL),
+			Author:             SearchSuggestUser{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(authorAvatar)},
+			Location:           relativeLocationView(reference, locationName, latitude, longitude),
 		}
 		items = append(items, scoredSuggestItem{
 			Item:       SearchSuggestItem{Type: "moment", Payload: payload},
@@ -448,13 +411,14 @@ func classifyPrefixMatch(prefix, value string) int {
 	}
 }
 
-func relativeLocationPayload(reference GeoPoint, locationName string, latitude, longitude float64) map[string]any {
+func relativeLocationView(reference GeoPoint, locationName string, latitude, longitude float64) *RelativeLocation {
 	distance, bearing := computeRelativeDistance(reference, GeoPoint{Latitude: latitude, Longitude: longitude})
-	return map[string]any{
-		"point":           map[string]any{"latitude": latitude, "longitude": longitude},
-		"location_name":   locationName,
-		"distance":        distance,
-		"bearing_degrees": bearing,
+	distanceValue, bearingValue := float64(distance), float64(bearing)
+	return &RelativeLocation{
+		Point:          GeoPoint{Latitude: latitude, Longitude: longitude},
+		LocationName:   locationName,
+		Distance:       &distanceValue,
+		BearingDegrees: &bearingValue,
 	}
 }
 

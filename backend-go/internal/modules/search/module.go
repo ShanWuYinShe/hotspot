@@ -38,6 +38,6 @@ func (m *Module) Mount(r chi.Router) {
 // (spec api_spec_public.md), rate limited per IP.
 func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/search", func(searchRouter chi.Router) {
-		searchRouter.Post("/suggest", m.handler.Suggest)
+		searchRouter.Post("/suggest", m.handler.PublicSuggest)
 	})
 }

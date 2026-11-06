@@ -2,6 +2,7 @@ package search
 
 import (
 	"context"
+	"encoding/json"
 	"hotspot/backend-go/internal/platform/testdb"
 	"strings"
 	"testing"
@@ -115,7 +116,7 @@ func TestPostgresRepositoryHonorsNicknameSearchableOnlyForNickname(t *testing.T)
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if len(resp.Items) != 1 || resp.Items[0].Payload["user"].(map[string]any)["user_id"] != "user_bio" {
+	if len(resp.Items) != 1 || payloadJSON(t, resp.Items[0].Payload)["user"].(map[string]any)["user_id"] != "user_bio" {
 		t.Fatalf("expected bio-matched user result, got %#v", resp.Items)
 	}
 }
@@ -137,7 +138,7 @@ func TestPostgresRepositoryRanksExactBeforePrefixBeforeContains(t *testing.T) {
 	if len(resp.Items) != 3 {
 		t.Fatalf("expected 3 items, got %#v", resp.Items)
 	}
-	if resp.Items[0].Payload["name"] != "hot" || resp.Items[1].Payload["name"] != "hotzone" || resp.Items[2].Payload["name"] != "xxhot" {
+	if payloadJSON(t, resp.Items[0].Payload)["name"] != "hot" || payloadJSON(t, resp.Items[1].Payload)["name"] != "hotzone" || payloadJSON(t, resp.Items[2].Payload)["name"] != "xxhot" {
 		t.Fatalf("unexpected order: %#v", resp.Items)
 	}
 }
@@ -155,7 +156,7 @@ func TestPostgresRepositoryUsesDistanceBeforePopularityWhenMatchRankTies(t *test
 	if err != nil {
 		t.Fatalf("Suggest returned error: %v", err)
 	}
-	if len(resp.Items) != 2 || resp.Items[0].Payload["group"].(map[string]any)["group_id"] != "group_near" {
+	if len(resp.Items) != 2 || payloadJSON(t, resp.Items[0].Payload)["group"].(map[string]any)["group_id"] != "group_near" {
 		t.Fatalf("expected nearer group first, got %#v", resp.Items)
 	}
 }
@@ -179,7 +180,7 @@ func TestPostgresRepositoryAppliesRadiusFilter(t *testing.T) {
 	if len(resp.Items) != 1 {
 		t.Fatalf("expected only the near user after Go-side radius filter, got %#v", resp.Items)
 	}
-	if resp.Items[0].Payload["user"].(map[string]any)["user_id"] != "user_near" {
+	if payloadJSON(t, resp.Items[0].Payload)["user"].(map[string]any)["user_id"] != "user_near" {
 		t.Fatalf("expected user_near to survive the filter, got %#v", resp.Items[0].Payload)
 	}
 }
@@ -257,7 +258,7 @@ func TestPostgresRepositoryNullsFieldsHiddenByVisibilitySwitches(t *testing.T) {
 	}
 	byID := map[string]map[string]any{}
 	for _, item := range resp.Items {
-		byID[item.Payload["user"].(map[string]any)["user_id"].(string)] = item.Payload
+		byID[payloadJSON(t, item.Payload)["user"].(map[string]any)["user_id"].(string)] = payloadJSON(t, item.Payload)
 	}
 	hidden, ok := byID["user_hidden"]
 	if !ok {
@@ -281,4 +282,17 @@ func TestPostgresRepositoryNullsFieldsHiddenByVisibilitySwitches(t *testing.T) {
 			t.Fatalf("expected %q to be present for open user, got %#v", key, open)
 		}
 	}
+}
+
+func payloadJSON(t *testing.T, payload any) map[string]any {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	return decoded
 }

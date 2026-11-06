@@ -3273,3 +3273,23 @@ meta/client_config」。
 - 测试：FromContext 注入/回退语义单测 + archtest 全绿。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第十四批）：search/suggest 类型化 payload + 匿名 Public 判别联合（2026-11-07）
+
+契约审计：`SearchSuggestItem.Payload` 原为 `map[string]any` 弱类型，登录/匿名
+共用同一响应形状；匿名节点未提供独立 Public 类型（spec 要求 TagItem /
+PublicUserItem / PublicGroupItem / PublicMomentSuggestItem 判别联合）。
+
+- 新增类型化 payload：TagItem、SearchSuggestUserPayload（含 relation/
+  social_context 登录查看者字段）、SearchSuggestGroupPayload（含 viewer_state/
+  friends_in_group）、SearchSuggestMomentPayload（无查看者字段）及 Public 对偶
+  （PublicSearchSuggestUserPayload / PublicSearchSuggestGroupPayload）；
+- 仓储三处 suggest payload 由 map 改为 typed 结构（user/group/moment/tag），
+  relativeLocationPayload 改类型化 relativeLocationView；
+- 新增 PublicSuggest handler：复用 decodeSuggestRequest 校验，将 typed payload
+  映射为 Public 判别联合（剥离查看者字段）；MountPublic 改挂 PublicSuggest；
+- 登录版 Suggest 响应形状保持（relation/social_context/viewer_state 键恒在 null）；
+- 测试：仓储层 JSON payload 断言改为 typed→JSON 归一；新增 public suggest 形状
+  测试（四类 payload、无查看者字段、缺 prefix 10000）；
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
