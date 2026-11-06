@@ -3156,3 +3156,17 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
 - 测试：对应 stub 行补 avatar 列，并断言 applicant/inviter/封禁成员 avatar 已解析。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第十批）：reactions 读路径补齐 UserInfo.avatar_url（2026-11-07）
+
+契约审计「avatar_url 多读路径缺失」逐模块收口（本批 reactions）：
+
+- queryListReactions 在 nickname 后补 `COALESCE(u.avatar_url, '')`；
+- ListReactions 扫描填充 ReactionItem.User.AvatarURL（空串归一 nil），
+  覆盖公开端点 /public/v1/reactions/fetch 与登录版反应人列表；
+- 测试 row 列序对齐（游标过滤索引 3→4），并断言首条反应人 avatar 已解析。
+
+其余模块核查：notify actor 由各模块 buildActor/resolveUserInfo 提供 avatar；
+comments/moments/groups/messages/search/share/system/admin 读路径均已带 avatar。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

@@ -77,9 +77,11 @@ func (r *PostgresRepository) ListReactions(ctx context.Context, targetType React
 	for rows.Next() {
 		var item ReactionItem
 		var reactedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &item.Emoji, &reactedAt); err != nil {
+		var avatarURL string
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &item.Emoji, &reactedAt); err != nil {
 			return nil, "", fmt.Errorf("reactions.ListReactions scan: %w", err)
 		}
+		item.User.AvatarURL = types.StrPtr(avatarURL)
 		// 纳秒精度：秒级截断会让同秒内更晚的行在下一页被谓词排除（分页丢行）。
 		item.ReactedAt = reactedAt.UTC().Format(time.RFC3339Nano)
 		items = append(items, item)

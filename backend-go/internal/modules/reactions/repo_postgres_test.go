@@ -50,7 +50,7 @@ func (s *reactionRowStub) Query(_ context.Context, query string, args ...any) (p
 			cursorUser := args[4].(string)
 			filtered := make([][]any, 0, len(rows))
 			for _, row := range rows {
-				reactedAt := row[3].(time.Time)
+				reactedAt := row[4].(time.Time)
 				userID := row[0].(string)
 				if reactedAt.Before(at) || (reactedAt.Equal(at) && userID < cursorUser) {
 					filtered = append(filtered, row)
@@ -152,9 +152,9 @@ func TestPostgresAggregateAndList(t *testing.T) {
 				{"like", 3, true},
 			},
 			queryListReactions: {
-				{"u1", "Alice", "👍", time.Date(2026, 3, 20, 10, 0, 0, 0, time.UTC)},
-				{"u2", "Bob", "👍", time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)},
-				{"u3", "Cara", "❤️", time.Date(2026, 3, 18, 10, 0, 0, 0, time.UTC)},
+				{"u1", "Alice", "http://avatar/u1", "👍", time.Date(2026, 3, 20, 10, 0, 0, 0, time.UTC)},
+				{"u2", "Bob", "http://avatar/u2", "👍", time.Date(2026, 3, 19, 10, 0, 0, 0, time.UTC)},
+				{"u3", "Cara", "http://avatar/u3", "❤️", time.Date(2026, 3, 18, 10, 0, 0, 0, time.UTC)},
 			},
 		},
 	}
@@ -169,7 +169,7 @@ func TestPostgresAggregateAndList(t *testing.T) {
 	if err != nil || len(items) != 2 || next == "" {
 		t.Fatalf("list: items=%d next=%q err=%v", len(items), next, err)
 	}
-	if items[0].User.UserID != "u1" || items[0].Emoji != "👍" {
+	if items[0].User.UserID != "u1" || items[0].Emoji != "👍" || items[0].User.AvatarURL == nil || *items[0].User.AvatarURL != "http://avatar/u1" {
 		t.Fatalf("unexpected first item: %#v", items[0])
 	}
 

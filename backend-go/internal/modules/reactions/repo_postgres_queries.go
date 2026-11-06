@@ -50,7 +50,7 @@ SELECT EXISTS (SELECT 1 FROM del) AS deleted`
 	// (<) cursor predicate matches the ordering. An optional emoji filter is
 	// applied via $3::text NULL.
 	queryListReactions = `
-SELECT r.user_id, COALESCE(u.nickname, r.user_id), r.emoji, r.reacted_at
+SELECT r.user_id, COALESCE(u.nickname, r.user_id), COALESCE(u.avatar_url, ''), r.emoji, r.reacted_at
 FROM reactions r
 LEFT JOIN users u ON u.user_id = r.user_id
 WHERE r.target_type = $1
