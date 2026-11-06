@@ -25,11 +25,11 @@ type Module struct {
 	Service *Service
 }
 
-func NewModule(factory *persistence.Factory, source appconfig.MutableSource, pushService *notify.Service, announcements systemmodule.AnnouncementAdminStore) *Module {
+func NewModule(factory *persistence.Factory, source appconfig.MutableSource, pushService *notify.Service, announcements systemmodule.AnnouncementAdminStore, momentTags momentTagStore) *Module {
 	repo := NewPostgresRepository(factory)
 	provider := NewAppConfigProvider(source)
 	// 公告写能力经 system 模块的最小接口注入（不再自建 system.Repository 副本）。
-	moderationStore := NewPersistenceModerationStore(factory, announcements)
+	moderationStore := NewPersistenceModerationStore(factory, announcements, momentTags)
 	return NewModuleWithDeps(repo, provider, moderationStore, pushService)
 }
 

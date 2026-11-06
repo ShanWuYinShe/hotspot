@@ -2684,3 +2684,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 生产代码 grep 已无 NewInMemoryRepository 引用）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十六批）：跨模块写债务收敛 1/5 — admin:moment_tags（2026-11-07）
+
+架构审计 P0-4 首批收敛：admin 直接 DELETE moment_tags（标签硬删除）是
+跨模块写表债务，moment_tags 归属 moments 模块。
+
+- moments 模块新增标签关联管理能力：HasTagAssignments /
+  DeleteTagAssignments（Service 经可选 tagAssignmentStore 能力断言消费，
+  不膨胀通用 Repository 大接口、不迫使既有测试桩实现）；SQL 移入
+  moments/repo_postgres_tags_admin.go + repo_postgres_queries.go。
+- admin 侧新增 momentTagStore 最小接口注入（NewModule 显式参数，bootstrap
+  传 momentsModule.Service）：GetTagDeleteState 的引用判定、SetTagBan 的
+  hard_delete 删除均经 moments 模块；admin 只保留本模块 admin_blocked_tags
+  读写（queryBlockedTagExists）。
+- 事务语义保持：admin RunInTransaction 的 txCtx 传给 moments 仓储，
+  跨模块删除与屏蔽仍在同一事务（persistence ctx tx 传播）。
+- archtest 删除 allowlist 条目 admin:moment_tags（跨模块写债务 5→4）。
+- 测试：admin 测试注入 fakeMomentTagStore（含与 backend stub map 共享版本），
+  新增断言硬删通过 moments 接口执行；moments 内存实现补齐方法。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

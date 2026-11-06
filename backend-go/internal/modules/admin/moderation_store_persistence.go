@@ -10,20 +10,22 @@ import (
 )
 
 type PersistenceModerationStore struct {
-	factory *persistence.Factory
+	momentTags momentTagStore
+	factory    *persistence.Factory
 	// announcements 由 system 模块实现（只暴露公告管理最小接口）：公告数据
 	// 归 system 所有，admin 不再自建 system.Repository 副本。
 	announcements systemmodule.AnnouncementAdminStore
 	memory        *InMemoryModerationStore
 }
 
-func NewPersistenceModerationStore(factory *persistence.Factory, announcements systemmodule.AnnouncementAdminStore) *PersistenceModerationStore {
+func NewPersistenceModerationStore(factory *persistence.Factory, announcements systemmodule.AnnouncementAdminStore, momentTags momentTagStore) *PersistenceModerationStore {
 	if announcements == nil {
 		announcements = NewInMemoryModerationStore()
 	}
 	return &PersistenceModerationStore{
 		factory:       factory,
 		announcements: announcements,
+		momentTags:    momentTags,
 		memory:        NewInMemoryModerationStore(),
 	}
 }
@@ -79,8 +81,14 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 	}
 	tagName := normalizeTagName(name)
 	var isBlocked bool
-	var hasMomentRefs bool
-	if err := queryable.QueryRow(ctx, queryTagDeleteState, tagName).Scan(&isBlocked, &hasMomentRefs); err != nil {
+	if err := queryable.QueryRow(ctx, queryBlockedTagExists, tagName).Scan(&isBlocked); err != nil {
+		return false, false, err
+	}
+	if s.momentTags == nil {
+		return false, false, errMomentTagStoreNotWired
+	}
+	hasMomentRefs, err := s.momentTags.HasTagAssignments(ctx, tagName)
+	if err != nil {
 		return false, false, err
 	}
 	return isBlocked, hasMomentRefs, nil
@@ -117,7 +125,10 @@ func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string,
 			return persistence.ErrNotImplemented
 		}
 		if hardDelete {
-			if err := txQueryable.Exec(txCtx, queryDeleteMomentTagAssignments, tagName); err != nil {
+			if s.momentTags == nil {
+				return errMomentTagStoreNotWired
+			}
+			if err := s.momentTags.DeleteTagAssignments(txCtx, tagName); err != nil {
 				return err
 			}
 		}

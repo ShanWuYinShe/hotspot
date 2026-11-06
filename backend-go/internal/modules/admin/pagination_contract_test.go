@@ -157,7 +157,7 @@ func TestPostgresModerationStoreTagsPaginationEnumeratesAll(t *testing.T) {
 			t.Fatalf("insert tag %s: %v", name, err)
 		}
 	}
-	store := NewPersistenceModerationStore(txFactory, nil)
+	store := NewPersistenceModerationStore(txFactory, nil, nil)
 	seen := map[string]bool{}
 	var cursor *tagCursor
 	pages := 0

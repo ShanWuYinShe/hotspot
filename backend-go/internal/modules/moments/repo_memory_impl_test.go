@@ -302,6 +302,38 @@ func (r *InMemoryRepository) NotificationContext(_ context.Context, momentID str
 // is_deleted=true 并清空 description）：作者 fetch_created、收藏者 fetch_favorites
 // 继续返回占位项；search/fetch_following/fetch_nearby/Exists 按不存在过滤。幂等：
 // 重复删除返回成功（与 Postgres UPDATE 语义一致）。
+// HasTagAssignments 内存实现：扫描未删除瞬间的标签。
+func (r *InMemoryRepository) HasTagAssignments(_ context.Context, tagName string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, item := range r.moments {
+		if item.IsDeleted {
+			continue
+		}
+		if containsTag(item.Tags, tagName) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// DeleteTagAssignments 内存实现：从所有瞬间移除该标签。
+func (r *InMemoryRepository) DeleteTagAssignments(_ context.Context, tagName string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for momentID, item := range r.moments {
+		kept := item.Tags[:0]
+		for _, tag := range item.Tags {
+			if tag != tagName {
+				kept = append(kept, tag)
+			}
+		}
+		item.Tags = kept
+		r.moments[momentID] = item
+	}
+	return nil
+}
+
 func (r *InMemoryRepository) Delete(_ context.Context, momentID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -63,9 +63,13 @@ func newAdminFullRepo(stub *adminFullStub) *PostgresRepository {
 }
 
 func newAdminFullStore(stub *adminFullStub) *PersistenceModerationStore {
+	return newAdminFullStoreWithTags(stub, newFakeMomentTagStore())
+}
+
+func newAdminFullStoreWithTags(stub *adminFullStub, tags momentTagStore) *PersistenceModerationStore {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = stub
-	return NewPersistenceModerationStore(factory, nil)
+	return NewPersistenceModerationStore(factory, nil, tags)
 }
 
 var aTestTime = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -503,25 +507,31 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 		t.Fatal("search tags tail error must propagate")
 	}
 	// 回退内存路径（queryable 不可用，内存 store 含预置标签）
-	store = NewPersistenceModerationStore(&persistence.Factory{}, nil)
+	store = NewPersistenceModerationStore(&persistence.Factory{}, nil, nil)
 	if page, err := store.SearchTags(ctx, TagSearchFilter{Limit: 5}); err != nil {
 		t.Fatalf("search tags fallback: %#v err=%v", page, err)
 	}
 
 	// SetTagBan 分支：无引用 → not found；已屏蔽 → 幂等；硬删 + 屏蔽；解屏蔽
-	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, false}}})
+	//（moment_tags 引用判定/删除走 moments 模块接口，queryRow 只查
+	// admin_blocked_tags，P0-4）。
+	store = newAdminFullStoreWithTags(&adminFullStub{queryRow: map[string][]any{queryBlockedTagExists: {false}}}, newFakeMomentTagStore())
 	if err := store.SetTagBan(ctx, "tag1", true, false); !errors.Is(err, errTagNotFound) {
 		t.Fatalf("ban tag not found: %v", err)
 	}
-	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {true, false}}})
+	store = newAdminFullStoreWithTags(&adminFullStub{queryRow: map[string][]any{queryBlockedTagExists: {true}}}, newFakeMomentTagStore())
 	if err := store.SetTagBan(ctx, "tag1", true, false); err != nil {
 		t.Fatalf("ban blocked tag: %v", err)
 	}
-	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, true}}})
+	tags := newFakeMomentTagStore("tag1")
+	store = newAdminFullStoreWithTags(&adminFullStub{queryRow: map[string][]any{queryBlockedTagExists: {false}}}, tags)
 	if err := store.SetTagBan(ctx, "tag1", true, true); err != nil {
 		t.Fatalf("ban tag hard delete: %v", err)
 	}
-	store = newAdminFullStore(&adminFullStub{queryRow: map[string][]any{queryTagDeleteState: {false, true}}})
+	if len(tags.deleted) != 1 || tags.deleted[0] != "tag1" {
+		t.Fatalf("expected moment tag assignments deleted via moments module, got %#v", tags.deleted)
+	}
+	store = newAdminFullStoreWithTags(&adminFullStub{queryRow: map[string][]any{queryBlockedTagExists: {false}}}, newFakeMomentTagStore("tag1"))
 	if err := store.SetTagBan(ctx, "tag1", true, false); err != nil {
 		t.Fatalf("ban tag soft: %v", err)
 	}
@@ -531,13 +541,13 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 		t.Fatalf("unban tag: %v", err)
 	}
 	// GetTagDeleteState 查询错误
-	store = newAdminFullStore(&adminFullStub{queryRowErr: map[string]error{queryTagDeleteState: errors.New("boom")}})
+	store = newAdminFullStoreWithTags(&adminFullStub{queryRowErr: map[string]error{queryBlockedTagExists: errors.New("boom")}}, newFakeMomentTagStore())
 	if err := store.SetTagBan(ctx, "tag1", true, false); err == nil {
 		t.Fatal("ban tag query error must propagate")
 	}
 
 	// 公告方法走 system adapter（NewPersistenceModerationStore 第二个参数 nil 时自动创建）
-	store = NewPersistenceModerationStore(store.factory, nil)
+	store = NewPersistenceModerationStore(store.factory, nil, nil)
 	ann, err := store.CreateAnnouncement(ctx, systemmodule.AnnouncementCreateInput{Title: "公告", Content: "内容"})
 	if err != nil || ann.AnnouncementID == "" {
 		t.Fatalf("create announcement: %#v err=%v", ann, err)

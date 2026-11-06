@@ -213,7 +213,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	usersModule.Service.SetCredentialWriter(upgradeCredentialWriter{svc: authModule.Service()}, persistence.NewTxRunner(factory))
 	// update_account 的 avatar_file_id 归属校验接线（spec 10300）。
 	usersModule.Service.SetAvatarMediaResolver(mediaModule.Service)
-	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService, systemModule.Service())
+	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService, systemModule.Service(), momentsModule.Service)
 	// 举报裁决的内容删除/消息撤回走归属模块服务（admin 不再直接写
 	// moments/comments/group_messages/private_messages 表）。
 	adminModule.Service.SetMomentModerator(momentsModule.Service)

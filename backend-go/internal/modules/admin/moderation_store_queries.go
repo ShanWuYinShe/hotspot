@@ -28,11 +28,8 @@ SET blocked_at = EXCLUDED.blocked_at`
 DELETE FROM admin_blocked_tags
 WHERE name = $1`
 
-	queryDeleteMomentTagAssignments = `
-DELETE FROM moment_tags
-WHERE tag_name = $1`
-
-	queryTagDeleteState = `
-SELECT EXISTS(SELECT 1 FROM admin_blocked_tags WHERE name = $1) AS is_blocked,
-       EXISTS(SELECT 1 FROM moment_tags WHERE tag_name = $1) AS has_moment_refs`
+	// queryBlockedTagExists 只查本模块归属表（moment_tags 的引用判定经
+	// moments 模块接口，P0-4）。
+	queryBlockedTagExists = `
+SELECT EXISTS(SELECT 1 FROM admin_blocked_tags WHERE name = $1)`
 )

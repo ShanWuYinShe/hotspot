@@ -29,6 +29,13 @@ type TagSearchFilter struct {
 	Cursor  *tagCursor
 }
 
+// momentTagStore 是 moments 模块的标签关联能力（moment_tags 归属 moments；
+// admin 经此消费，不直写；架构审计 P0-4）。
+type momentTagStore interface {
+	HasTagAssignments(ctx context.Context, tagName string) (bool, error)
+	DeleteTagAssignments(ctx context.Context, tagName string) error
+}
+
 type ModerationStore interface {
 	SearchTags(context.Context, TagSearchFilter) (TagPage, error)
 	GetTagDeleteState(context.Context, string) (bool, bool, error)
@@ -44,6 +51,10 @@ type ModerationStore interface {
 }
 
 var errTagNotFound = errors.New("tag not found")
+
+// errMomentTagStoreNotWired 表示 bootstrap 未注入 moments 标签能力：宁可显式
+// 失败也不回退到直写其它模块的表（架构审计 P0-4）。
+var errMomentTagStoreNotWired = errors.New("admin: moment tag store not wired")
 
 func normalizeTagName(name string) string {
 	return strings.TrimSpace(name)

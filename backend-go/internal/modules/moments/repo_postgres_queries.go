@@ -294,3 +294,12 @@ WHERE r.target_type = 'moment' AND r.user_id = $1
 ORDER BY r.reacted_at DESC, m.moment_id DESC
 LIMIT $5`
 )
+
+// 管理端标签管理（moment_tags 归属本模块；admin 经 Service 消费，P0-4）。
+const (
+	queryMomentTagAssignmentsExist = `
+SELECT EXISTS(SELECT 1 FROM moment_tags WHERE tag_name = $1)`
+	queryDeleteMomentTagAssignments = `
+DELETE FROM moment_tags
+WHERE tag_name = $1`
+)

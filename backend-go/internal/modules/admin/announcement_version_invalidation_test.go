@@ -41,7 +41,7 @@ func (s *recordingAnnouncementStore) DeleteAnnouncement(ctx context.Context, ann
 
 func TestAnnouncementWritesGoThroughSystemStore(t *testing.T) {
 	announcements := &recordingAnnouncementStore{inner: NewInMemoryModerationStore()}
-	store := NewPersistenceModerationStore(nil, announcements)
+	store := NewPersistenceModerationStore(nil, announcements, nil)
 	svc := NewService(NewInMemoryRepository(), &stubProvider{config: defaultConfig()}, store, &stubPushService{})
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "admin", SessionID: "sess_admin"})
 

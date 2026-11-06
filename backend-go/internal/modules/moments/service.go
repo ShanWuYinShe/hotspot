@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -466,6 +467,34 @@ func (s *Service) DeleteAsAdmin(ctx context.Context, momentID string) error {
 		return nil
 	}
 	return s.softDeleteAndBroadcast(ctx, item)
+}
+
+// tagAssignmentStore 是标签关联管理能力（PG/内存仓储可选实现；仅供管理端
+// 标签屏蔽/硬删除使用，不进入通用 Repository 大接口，避免测试桩被迫实现）。
+type tagAssignmentStore interface {
+	HasTagAssignments(ctx context.Context, tagName string) (bool, error)
+	DeleteTagAssignments(ctx context.Context, tagName string) error
+}
+
+var errTagAssignmentStoreUnsupported = errors.New("moments: tag assignment store unsupported")
+
+// HasTagAssignments 报告标签是否仍有瞬间引用（管理端标签屏蔽/删除前置校验；
+// moment_tags 归属本模块，admin 经此接口消费，P0-4）。
+func (s *Service) HasTagAssignments(ctx context.Context, tagName string) (bool, error) {
+	store, ok := s.repo.(tagAssignmentStore)
+	if !ok {
+		return false, errTagAssignmentStoreUnsupported
+	}
+	return store.HasTagAssignments(ctx, tagName)
+}
+
+// DeleteTagAssignments 物理删除标签的全部瞬间关联（管理端 hard_delete）。
+func (s *Service) DeleteTagAssignments(ctx context.Context, tagName string) error {
+	store, ok := s.repo.(tagAssignmentStore)
+	if !ok {
+		return errTagAssignmentStoreUnsupported
+	}
+	return store.DeleteTagAssignments(ctx, tagName)
 }
 
 // softDeleteAndBroadcast 软删瞬间并向作者/收藏者广播 MomentDeleted
