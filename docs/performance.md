@@ -47,15 +47,17 @@ nearby 详情查询合并 reactions/作者关系（4→2 往返）。全部端�
 | notify/fetch | ~14400 | 0.6 | 1.1 | 2.5 |
 | moments/fetch_following | ~10200 | 0.9 | 1.5 | 2.2 |
 | moments/fetch_nearby | ~480 | 7.9 | 75.5 | 81.9 |
-| users/search | ~3560 | 2.1 | 4.1 | 25.3 |
+| users/search | ~5090 | 1.7 | 3.4 | 6.0 |
 | moments/search | ~9800 | 0.9 | 1.7 | 3.9 |
 | groups/search | ~6040 | 1.2 | 2.5 | 18.3 |
 
-专项对比（users/search keyword=游客，单端点 loadgen c=10/10s）：轻量位置
-回退修复前 1799 rps / p95 25.2ms / p99 40.2ms → 修复后 **2139 rps / p95
-8.5ms / p99 28.8ms**（+19% 吞吐，p95 -66%）。全链路 perf-smoke 下该端点
-~2800→~3560 rps。nearby 与 users/search 仍是 p99 最高的两个读端点（DB CPU
-受限，Postgres 容器 2 CPU 是当前吞吐天花板）。
+专项对比（users/search keyword=游客，单端点 loadgen c=10/10s）：
+- 轻量位置回退修复：1799→2139 rps，p95 25.2→8.5ms，p99 40.2→28.8ms；
+- 去掉冗余 ILIKE 复核：2139→**3279 rps**（+53%），p95 5.1ms，**p99 7.3ms**
+  （-75%）；全链路 perf-smoke：3562→**5090 rps**，p99 25.3→6.0ms。
+
+nearby 仍是 p99 最高的读端点（约 81ms，S2 候选扫描 + 排序在 Postgres 2 CPU
+限额下成为瓶颈）；users/search 已从 p99 榜第二降至中游。
 
 热点解读：nearby（S2 半径查询 + 聚合）与 users/search（trigram/PGroonga 双分支）
 仍是 p99 最高的两个读端点，容量规划优先关注；本轮架构调整未使其退化（相对

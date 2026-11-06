@@ -3405,3 +3405,8 @@ PGroonga opclass 本身支持 ILIKE（`~~*`）且实测 &@ 已具备大小写不
 - SQL 构建/参数测试同步（非手机号 keyword 参数 3→2）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+实测（backend-test，2026-11-07）：users/search keyword=游客 单端点 loadgen
+c=10/10s：去掉 ILIKE 复核前 2139 rps / p95 8.53ms / p99 28.81ms → 去掉后
+**3279 rps / p95 5.08ms / p99 7.27ms**（吞吐 +53%，p99 -75%）；全链路
+perf-smoke users/search 3562→5090 rps、p99 25.3→6.0ms，8 端点 budget 全部 OK。
