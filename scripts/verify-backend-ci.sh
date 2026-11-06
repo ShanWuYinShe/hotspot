@@ -103,6 +103,23 @@ if [ "$WITH_DB" = "1" ]; then
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
   DSN="postgres://postgres:$PG_PASSWORD@localhost:5432/$DB?sslmode=disable"
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate >/dev/null )
+  # 迁移完整性只读校验：已应用文件 checksum、无 pending、schema manifest 期望的
+  # 表/列/索引全部存在（捕获「版本表写着已应用但对象不存在」的基线型事故）。
+  step "迁移 checksum 与 schema manifest 校验（${DB}）"
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate -verify-only >/dev/null )
+
+  # schema manifest 新鲜度：在临时全新库上重放全部迁移并生成 manifest，与仓库
+  # 提交的 manifest diff。任何新增/修改迁移忘记重新生成 manifest 都会在此失败
+  #（否则「期望对象」集合会悄悄落后于迁移集合，schema 漂移重新变得不可检出）。
+  step "schema manifest 与迁移集合一致性（临时库重放）"
+  MANIFEST_DB=hotspot_manifest_check
+  "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "DROP DATABASE IF EXISTS ${MANIFEST_DB} WITH (FORCE)" >/dev/null 2>&1 || true
+  "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE ${MANIFEST_DB}" >/dev/null
+  MANIFEST_DSN="postgres://postgres:${PG_PASSWORD}@localhost:5432/${MANIFEST_DB}?sslmode=disable"
+  ( cd "$BACKEND" && POSTGRES_DSN="$MANIFEST_DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go run ./cmd/migrate -write-manifest=/tmp/schema_manifest.actual.json >/dev/null )
+  if ! diff -u "$BACKEND/migrations/schema_manifest.json" /tmp/schema_manifest.actual.json; then
+    die "schema manifest 过期：在临时库执行 go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json 并提交"
+  fi
   # 迁移声明索引 vs 库实际索引（只读比对）：存量库基线（schema_migrations 只登记
   # 不执行）会让「基线数据快照里不存在的索引」永久缺失——线上 2026-11-01 排查到的
   # idx_moments_keyset 即此因。新库顺序执行永远发现不了这类缺失，故对「先于新版

@@ -33,20 +33,24 @@ for f in *.sql; do
   fi
 done
 
-# ── 3) 新迁移的 expand-contract 兼容性（回滚 = 旧镜像 + 保留新 schema）──
-# 本守卫落地时最新序号为 057；>=058 视为「新增迁移」受约束，历史文件不回改。
+# ── 3) 破坏性 DDL 需要显式声明 ─────────────────────────────────
+# 用户已明确「不考虑向后兼容」，因此不再静态禁止 DROP/RENAME/TYPE 变更；
+# 但迁移历史是发布可审计性的一部分：破坏性 DDL 必须在文件顶部用
+#   -- allow-destructive: <理由>
+# 显式声明，防止误把清理语句夹带进与自述无关的迁移。
+# 历史迁移（序号 < 60）为已发布白名单：checksum 机制下不允许再修改它们。
+DESTRUCTIVE_GUARD_MIN_SEQ=60
 for f in *.sql; do
   seq=${f%%_*}
-  # POSIX sh 不保证前导 0 的算术解释；去掉前导 0 后按十进制比较。
   seq=$(printf '%s' "$seq" | sed 's/^0*//')
   [ -n "$seq" ] || seq=0
-  [ "$seq" -ge 58 ] || continue
-  if strip_comments "$f" | grep -qiE 'drop[[:space:]]+(column|table|constraint)|rename[[:space:]]+column|set[[:space:]]+not[[:space:]]+null|alter[[:space:]]+column[[:space:]]+[a-z_]+[[:space:]]+type'; then
-    echo "!! 迁移 $f 含破坏性/不兼容 DDL（expand-contract 纪律）："
-    echo "   禁止 DROP COLUMN/TABLE/CONSTRAINT、RENAME COLUMN、SET NOT NULL、ALTER COLUMN TYPE。"
-    echo "   做法：先加新列/新表并双写兼容，跨版本再清理旧结构（见 skill hotspot-backend-migrations）。"
-    exit 1
+  [ "$seq" -ge "$DESTRUCTIVE_GUARD_MIN_SEQ" ] || continue
+  if strip_comments "$f" | grep -qiE 'drop[[:space:]]+(column|table|constraint)|rename[[:space:]]+column|alter[[:space:]]+column[[:space:]]+[a-z_]+[[:space:]]+type'; then
+    if ! grep -qE '^--[[:space:]]*allow-destructive:[[:space:]]*\S' "$f"; then
+      echo "!! 迁移 $f 含破坏性 DDL，但缺少显式声明：在文件顶部加"
+      echo "   -- allow-destructive: <理由>"
+      exit 1
+    fi
   fi
 done
-
 echo "迁移序号与兼容性纪律校验 OK"
