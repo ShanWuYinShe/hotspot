@@ -126,32 +126,6 @@ func (r *InMemoryRepository) HandleReport(_ context.Context, reportID string, ac
 	return cloneAdminReportItem(record.Item), true, nil
 }
 
-// RecallGroupMessage/RecallPrivateMessage 返回是否真实撤回（未命中或已
-// 撤回返回 false，对齐 PG 实现的 is_recalled = FALSE 条件）。
-func (r *InMemoryRepository) RecallGroupMessage(_ context.Context, messageID string) (bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	msg, ok := r.groupMessages[messageID]
-	if !ok || msg.Recalled {
-		return false, nil
-	}
-	msg.Recalled = true
-	r.groupMessages[messageID] = msg
-	return true, nil
-}
-
-func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID string) (bool, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	msg, ok := r.privateMessages[messageID]
-	if !ok || msg.Recalled {
-		return false, nil
-	}
-	msg.Recalled = true
-	r.privateMessages[messageID] = msg
-	return true, nil
-}
-
 func (r *InMemoryRepository) CreateMoment(_ context.Context, id, content, authorID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

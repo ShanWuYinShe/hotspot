@@ -65,6 +65,8 @@ func (r *stubMsgRepo) LockStrangerQuota(_ context.Context, _, _ string) error {
 	return nil
 }
 
+func (r *stubMsgRepo) RecallAsAdmin(context.Context, string) (bool, error) { return false, nil }
+
 func (r *stubMsgRepo) Recall(_ context.Context, _ string, _ time.Duration, _ RecallPrivateMessageRequest) (MessageEventMeta, error) {
 	return r.recallMeta, r.recallErr
 }

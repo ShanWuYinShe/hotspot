@@ -214,9 +214,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// update_account 的 avatar_file_id 归属校验接线（spec 10300）。
 	usersModule.Service.SetAvatarMediaResolver(mediaModule.Service)
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService, systemModule.Service())
-	// 举报裁决的内容删除走归属模块服务（admin 不再直接写 moments/comments 表）。
+	// 举报裁决的内容删除/消息撤回走归属模块服务（admin 不再直接写
+	// moments/comments/group_messages/private_messages 表）。
 	adminModule.Service.SetMomentModerator(momentsModule.Service)
 	adminModule.Service.SetCommentModerator(commentsModule.Service)
+	adminModule.Service.SetMessageModerators(gmModule.Service, pmModule.Service())
 	// 审计日志/终态举报保留期清理（RETENTION_SWEEP_ENABLED；各条目天数 <=0 关闭
 	// 该类清理）。后台幂等删除，不阻塞启动/请求。
 	if cfg.RetentionSweepEnabled {

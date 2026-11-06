@@ -282,3 +282,11 @@ GROUP BY pm.chat_key`
 	// 会把「已获得锁」误判为失败。
 	queryLockStrangerQuota = `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`
 )
+
+// queryRecallPrivateMessageAsAdmin 平台审核撤回：无作者/时间窗限制，幂等（已撤回
+// 不命中）。RETURNING 用于拿命中结果（Queryable.Exec 不暴露 affected rows）。
+const queryRecallPrivateMessageAsAdmin = `
+UPDATE private_messages
+SET is_recalled = TRUE, recalled_at = NOW()
+WHERE message_id = $1 AND is_recalled = FALSE
+RETURNING message_id`

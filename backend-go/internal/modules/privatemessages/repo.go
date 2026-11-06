@@ -41,6 +41,9 @@ type Repository interface {
 	// message_recall_window_seconds，由 service 从 appConfig 取值传入）；
 	// window<=0 表示撤回禁用（spec chat.md：0=禁用），一律拒绝。
 	Recall(ctx context.Context, userID string, window time.Duration, req RecallPrivateMessageRequest) (MessageEventMeta, error)
+	// RecallAsAdmin 平台审核撤回（无作者/时间窗限制）；消息不存在或已撤回返回
+	// (false, nil)。返回是否实际撤回，供 admin 举报裁决判断「两表都未命中」。
+	RecallAsAdmin(ctx context.Context, messageID string) (bool, error)
 	MarkAsRead(context.Context, string, MarkPrivateMessagesReadRequest) (MessageEventMeta, error)
 	MarkAllRead(context.Context, string) error
 	GetMessageForReply(context.Context, string, string) (map[string]any, bool, error)

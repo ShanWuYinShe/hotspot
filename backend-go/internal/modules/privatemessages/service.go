@@ -350,6 +350,31 @@ func (s *Service) Recall(ctx context.Context, req RecallPrivateMessageRequest) e
 	return nil
 }
 
+// RecallMessageByIDAsAdmin 供举报裁决按 message_id 撤回私聊消息（无作者/时间窗
+// 限制）：消息不存在或已撤回返回 (false, nil)，由调用方决定是否尝试其它来源。
+func (s *Service) RecallMessageByIDAsAdmin(ctx context.Context, operatorID, messageID string) (bool, error) {
+	sender, receiver, found, err := s.repo.MessageParticipants(ctx, messageID)
+	if err != nil || !found {
+		return false, err
+	}
+	hit, err := s.repo.RecallAsAdmin(ctx, messageID)
+	if err != nil {
+		return false, err
+	}
+	if !hit {
+		return false, nil
+	}
+	event := realtime.Event{Type: realtime.EventTypePrivateMessageRecalled, Payload: PrivateMessageRecalledPayload{
+		MessageID:    messageID,
+		TargetUserID: receiver,
+		RecalledBy:   s.resolveUserInfo(ctx, operatorID),
+		RecalledAt:   time.Now().UTC().Format(time.RFC3339),
+	}}
+	realtime.DefaultHub().BroadcastToUser(sender, event)
+	realtime.DefaultHub().BroadcastToUser(receiver, event)
+	return true, nil
+}
+
 func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	meta, err := s.repo.MarkAsRead(ctx, principal.UserID, req)

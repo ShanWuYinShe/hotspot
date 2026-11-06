@@ -247,6 +247,22 @@ func orderedUsers(a, b string) (string, string) {
 	return b, a
 }
 
+// RecallAsAdmin 平台审核撤回（无作者/时间窗限制）；已撤回/不存在返回 false。
+func (r *PostgresRepository) RecallAsAdmin(ctx context.Context, messageID string) (bool, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return false, persistence.ErrNotImplemented
+	}
+	var recalledID string
+	if err := queryable.QueryRow(ctx, queryRecallPrivateMessageAsAdmin, messageID).Scan(&recalledID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *PostgresRepository) MessageParticipants(ctx context.Context, messageID string) (string, string, bool, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

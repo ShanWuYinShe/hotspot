@@ -59,12 +59,32 @@ func (c testCommentModerator) DeleteAsAdmin(_ context.Context, commentID string)
 	return nil
 }
 
+// testMessageModerator 把审核撤回动作落到测试用内存 store 的群消息/私聊消息表。
+type testMessageModerator struct{ store *InMemoryRepository }
+
+func (m testMessageModerator) RecallMessageByIDAsAdmin(_ context.Context, _, messageID string) (bool, error) {
+	m.store.mu.Lock()
+	defer m.store.mu.Unlock()
+	if record, ok := m.store.groupMessages[messageID]; ok && !record.Recalled {
+		record.Recalled = true
+		m.store.groupMessages[messageID] = record
+		return true, nil
+	}
+	if record, ok := m.store.privateMessages[messageID]; ok && !record.Recalled {
+		record.Recalled = true
+		m.store.privateMessages[messageID] = record
+		return true, nil
+	}
+	return false, nil
+}
+
 func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
 	module := NewModuleWithDeps(store, provider, nil, nil)
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
+	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
 	return module, store
 }
 
@@ -73,7 +93,11 @@ func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemor
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
 	notificationRepo := notify.NewInMemoryRepository()
 	pushService := notify.NewServiceWithRepo(notificationRepo)
-	return NewModuleWithDeps(store, provider, nil, pushService), store, notificationRepo
+	module := NewModuleWithDeps(store, provider, nil, pushService)
+	module.Service.SetMomentModerator(testMomentModerator{store: store})
+	module.Service.SetCommentModerator(testCommentModerator{store: store})
+	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})
+	return module, store, notificationRepo
 }
 
 func newTestHandlerWithStore() (*Handler, *InMemoryRepository) {

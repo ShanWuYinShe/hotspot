@@ -2265,3 +2265,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   admin handler 测试改用内存内容审核 fake。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第四批）：举报裁决的消息撤回走归属模块（2026-11-06）
+
+架构审计 P0-4：admin 直接 UPDATE group_messages/private_messages 的两条路径收敛。
+
+- **groupmessages** 新增 `RecallMessageByIDAsAdmin`：按 message_id 查群归属后复用
+  `RecallMessageAsAdmin`（无作者/时间窗限制，广播 GroupMessageRecalled）；不存在/
+  已撤回返回 (false, nil) 供裁决侧 fallback。
+- **privatemessages** 新增 repo `RecallAsAdmin`（PG + 内存实现、契约接口）与
+  `RecallMessageByIDAsAdmin`：取双方参与者后审核撤回，向双方广播
+  PrivateMessageRecalled；已撤回/不存在返回 false。
+- **admin**：举报裁决消息目标改为调用注入的群/私聊消息审核接口（bootstrap 注入
+  gm/pm Service），删除 admin 仓库 RecallGroupMessage/RecallPrivateMessage 及 SQL；
+  archtest allowlist 移除 admin:group_messages、admin:private_messages 两条债务。
+- 行为改进：此前 admin 裁决撤回消息只改库不广播，在线双方界面不会即时更新；
+  现在与自助撤回同款事件下发。
+- 测试：两模块补按 ID 审核撤回（命中/幂等/不存在）用例；privatemessages 断言双方
+  均收到 PrivateMessageRecalled；admin handler 测试用内存消息审核 fake。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

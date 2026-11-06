@@ -39,11 +39,6 @@ type Repository interface {
 	SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
 	HandleReport(context.Context, string, ReportAction, string, *UserInfo) (AdminReportItem, bool, error)
-	// RecallGroupMessage/RecallPrivateMessage 撤回一条消息，返回是否命中
-	//（false = 该表无此消息或已撤回；消息表 group/private 分离，裁决侧靠
-	// 两次尝试定位真实所属表——返回值缺失曾使私聊 fallback 永不执行）。
-	RecallGroupMessage(context.Context, string) (bool, error)
-	RecallPrivateMessage(context.Context, string) (bool, error)
 	AppendAuditLog(context.Context, AuditLogEntry) error
 	// DeleteAuditLogsBefore / DeleteHandledReportsBefore 物理删除超保留期数据，
 	// 供后台 retention worker 调用（幂等；返回删除行数用于日志）。举报只删

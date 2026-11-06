@@ -27,8 +27,10 @@ type Service struct {
 	// momentModerator / commentModerator：举报裁决的内容删除走归属模块服务
 	//（admin 不再直接 UPDATE moments/comments 表，架构审计 P0-4）。bootstrap
 	// 注入缺失时裁决删除返回错误，绝不静默跳过。
-	momentModerator  momentModerator
-	commentModerator commentModerator
+	momentModerator         momentModerator
+	commentModerator        commentModerator
+	groupMessageModerator   messageModerator
+	privateMessageModerator messageModerator
 	// sessionCacheInvalidator 封禁逐条撤销会话后失效平台 auth 的会话校验缓存：
 	// admin 仓库直接 UPDATE auth_sessions（不经 platform auth SessionStore 装饰器），
 	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
@@ -44,6 +46,12 @@ type momentModerator interface {
 
 type commentModerator interface {
 	DeleteAsAdmin(ctx context.Context, commentID string) error
+}
+
+// messageModerator 是按 message_id 撤回消息的审核能力（groupmessages 与
+// privatemessages Service 均实现相同签名；返回是否命中，供裁决侧先群后私）。
+type messageModerator interface {
+	RecallMessageByIDAsAdmin(ctx context.Context, operatorID, messageID string) (bool, error)
 }
 
 type announcementPushService interface {
@@ -83,6 +91,12 @@ func (s *Service) SetMomentModerator(m momentModerator) { s.momentModerator = m 
 
 // SetCommentModerator wires the comments module's admin delete capability.
 func (s *Service) SetCommentModerator(c commentModerator) { s.commentModerator = c }
+
+// SetMessageModerators wires group/private message admin recall capabilities.
+func (s *Service) SetMessageModerators(groupModerator, privateModerator messageModerator) {
+	s.groupMessageModerator = groupModerator
+	s.privateMessageModerator = privateModerator
+}
 
 func (s *Service) invalidateSessionCache(sessionIDs ...string) {
 	if s.sessionCacheInvalidator != nil {

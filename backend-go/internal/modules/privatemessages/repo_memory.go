@@ -319,6 +319,27 @@ func (r *InMemoryRepository) Recall(_ context.Context, userID string, window tim
 	return MessageEventMeta{}, ErrMessageNotFound
 }
 
+// RecallAsAdmin 平台审核撤回（内存实现，契约测试用）。
+func (r *InMemoryRepository) RecallAsAdmin(_ context.Context, messageID string) (bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for key, msgs := range r.messages {
+		for i := range msgs {
+			if msgs[i].MessageID != messageID {
+				continue
+			}
+			if msgs[i].RecalledAt != nil {
+				return false, nil
+			}
+			recalledAt := time.Now().UTC().Format("2006-01-02T15:04:05.000000000Z")
+			msgs[i].RecalledAt = &recalledAt
+			r.messages[key] = msgs
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *InMemoryRepository) MarkAsRead(_ context.Context, userID string, req MarkPrivateMessagesReadRequest) (MessageEventMeta, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

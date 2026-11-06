@@ -100,15 +100,18 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 				return apiErr, err
 			}
 		case ReportTargetTypeMessage:
-			// 消息表 group/private 分离且举报记录不区分来源：先试群表，
-			// 未命中再试私聊表。两表都未命中（消息已删除/已撤回）时内容
-			// 已不可见，记 Warn 后继续裁决流程，不阻断。
-			groupHit, err := s.repo.RecallGroupMessage(ctx, record.Item.TargetID)
+			// 消息表 group/private 分离且举报记录不区分来源：先试群表，未命中再试
+			// 私聊表（撤回走归属模块服务并广播撤回事件）。两表都未命中（消息已
+			// 删除/已撤回）时内容已不可见，记 Warn 后继续裁决流程，不阻断。
+			if s.groupMessageModerator == nil || s.privateMessageModerator == nil {
+				return nil, errors.New("admin: message moderators not configured")
+			}
+			groupHit, err := s.groupMessageModerator.RecallMessageByIDAsAdmin(ctx, actor.UserID, record.Item.TargetID)
 			if err != nil {
 				return nil, err
 			}
 			if !groupHit {
-				privateHit, err := s.repo.RecallPrivateMessage(ctx, record.Item.TargetID)
+				privateHit, err := s.privateMessageModerator.RecallMessageByIDAsAdmin(ctx, actor.UserID, record.Item.TargetID)
 				if err != nil {
 					return nil, err
 				}

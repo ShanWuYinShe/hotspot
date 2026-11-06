@@ -391,6 +391,23 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 	return nil
 }
 
+// RecallMessageByIDAsAdmin 供举报裁决按 message_id 撤回群消息（不区分来源表时
+// 先试群消息）：查群归属后复用 RecallMessageAsAdmin（广播 GroupMessageRecalled）。
+// 消息不存在或已撤回返回 (false, nil)，由调用方决定是否尝试私聊表。
+func (s *Service) RecallMessageByIDAsAdmin(ctx context.Context, operatorID, messageID string) (bool, error) {
+	meta, found, err := s.repo.LookupMessageMeta(ctx, messageID)
+	if err != nil || !found {
+		return false, err
+	}
+	if err := s.RecallMessageAsAdmin(ctx, operatorID, meta.GroupID, messageID); err != nil {
+		if errors.Is(err, ErrMessageRecalled) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
 // authorizeMessageMutation enforces the two invariants that Update/Recall
 // require before touching a message:
 //  1. the caller must still be a member of the group the message lives in

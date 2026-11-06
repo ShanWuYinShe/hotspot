@@ -30,6 +30,15 @@ func NewModule(factory *persistence.Factory, source appconfig.Source, shares sha
 // reactions/reports 的跨模块读路径使用。
 func (m *Module) MessageService() ReadService { return m.runtime.ReadService() }
 
+// Service 暴露消息服务（供 bootstrap 注入 admin 的审核撤回能力等跨模块写入口；
+// 读路径仍只暴露 ReadService 最小接口）。
+func (m *Module) Service() *Service {
+	if svc, ok := m.runtime.ReadService().(*Service); ok {
+		return svc
+	}
+	return nil
+}
+
 // SetMessageReactionsSource 接线消息 reactions 聚合源。
 func (m *Module) SetMessageReactionsSource(src MessageReactionsSource) {
 	m.runtime.SetReactionsSource(src)
