@@ -34,6 +34,17 @@ groups:
           summary: "HotSpot 5xx 比例超过 1%"
           description: "检查 panic 恢复日志（httpx.Recoverer）与容器 OOM/重启记录。"
 
+      # Redis fail-open 持续发生：限流/幂等/缓存/多实例广播处于降级状态，
+      # 业务仍可用但保护能力与跨实例一致性下降（ops 审计 P0-2）。
+      - alert: HotspotRedisFailOpen
+        expr: sum by (component) (rate(hotspot_redis_failopen_total{job="hotspot-backend"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot Redis 降级持续发生（component={{ $labels.component }}）"
+          description: "Redis 故障导致 fail-open：检查 redis 容器、网络与 maxmemory；限流/幂等/缓存/多实例广播处于降级状态。"
+
       # 全局 p99：跨路由汇总，超过 1s 说明整体响应明显退化（含慢查询/连接池排队）。
       - alert: HotspotP99LatencyHigh
         expr: |

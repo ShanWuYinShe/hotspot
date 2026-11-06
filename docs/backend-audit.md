@@ -2415,3 +2415,27 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 
 ---
 
+
+
+## Batch E（第二批）：可观测性装配闭环（2026-11-06）
+
+审计 ops P0-1/P0-2 的装配端补齐（此前「有零件没装机」）：
+
+- **prod 网络修正**：prometheus/grafana 在 `docker-compose.prod.yml` 显式加入
+  `hotspot_internal`——base 里二者落在隐式 default 网络，prod 下抓取
+  backend:8081 必然失败（ops 审计 P0-1 证据 2）。
+- **部署链路纳入采集栈（可选开启）**：`deploy-production.sh` 读取服务器
+  `.env` 的 `OBSERVABILITY_ENABLED`，为 1 时以 `--profile observability`
+  滚动更新 prometheus + grafana；默认关闭（小机器不常驻），配置仍随部署分发。
+- **Redis fail-open 指标化**：新增 `hotspot_redis_failopen_total{component}`，
+  覆盖 ratelimit / idempotency / hotcache / realtime 多实例广播的故障降级
+  路径（此前只打 Warn 日志，线上持续降级不可见）。
+- **告警投递闭环（单机方案）**：新增 `HotspotRedisFailOpen` 告警规则；
+  `health-check.sh` 巡检新增 `/readyz` 检查（degraded 也告警）与 Prometheus
+  firing alerts 拉取，经既有 `ALERT_WEBHOOK` 外发——不引入 Alertmanager
+  也把「告警发出」打通，最坏延迟=巡检周期。
+- **Grafana 面板**：provisioning 增加 dashboards provider 与「HotSpot 后端总览」
+  （HTTP 状态码速率/p99、WS 连接与在线用户、DB 连接池、Redis fail-open、
+  WS 丢弃事件/goroutine/RSS）；数据源固定 uid=prometheus 供面板稳定引用。
+- 验证：`promtool check config/rules` SUCCESS（8 条规则）；prod compose
+  config 确认采集栈网络；dashboard JSON 解析通过；脚本 `bash -n`/`sh -n` 通过。

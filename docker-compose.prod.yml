@@ -32,6 +32,14 @@ services:
   frontend:
     networks: [hotspot_internal]
 
+  # 采集栈必须与业务同网络才能抓取 backend:8081/metrics（此前落在隐式
+  # default 网络，prod 下抓取必然失败——ops 审计 P0-1）。
+  prometheus:
+    networks: [hotspot_internal]
+
+  grafana:
+    networks: [hotspot_internal]
+
   nginx:
     networks:
       hotspot_internal:

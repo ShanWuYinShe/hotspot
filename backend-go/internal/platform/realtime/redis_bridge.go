@@ -82,7 +82,13 @@ func (b *RedisBridge) Publish(ctx context.Context, channel string, event Event) 
 	if err != nil {
 		return fmt.Errorf("marshal redis envelope: %w", err)
 	}
-	return b.rdb.Publish(ctx, redisChannelPrefix+channel, data).Err()
+	if err := b.rdb.Publish(ctx, redisChannelPrefix+channel, data).Err(); err != nil {
+		// 多实例广播失败：事件仅在本实例投递，跨实例丢事件属于降级，记指标
+		// 供告警（调用方各自决定日志级别，桥这一层不重复打日志）。
+		observability.RecordRedisFailOpen("realtime")
+		return err
+	}
+	return nil
 }
 
 func (b *RedisBridge) Close() error {

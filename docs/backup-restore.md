@@ -77,9 +77,11 @@ custom format 输出 `.dump`、dump 后 `pg_restore -l` 完整性自检、保留
 ```
 
 - `scripts/backup-seaweedfs.sh`：媒体卷定时打包（第 4 节的手动方案即由此脚本固化）。
-- `scripts/health-check.sh`：健康巡检（后端 health 端点、核心容器运行状态、
-  磁盘水位、**备份新鲜度（>25h 即告警）**、TLS 证书剩余有效期），异常时非零
-  退出并留日志；**这是当前唯一的线上巡检通道**，新机器重建时必须重配 crontab。
+- `scripts/health-check.sh`：健康巡检（后端 health 与 **`/readyz` 就绪探针**、
+  核心容器运行状态、**备份新鲜度（>25h 即告警）**、TLS 证书剩余有效期；启用
+  observability 后额外巡检 prometheus/grafana 容器与 **Prometheus firing
+  alerts**），异常时非零退出并留日志、经 `ALERT_WEBHOOK` 外发；**这是当前
+  唯一的线上巡检与告警投递通道**，新机器重建时必须重配 crontab。
 - 另有部署兜底：`scripts/deploy-production.sh` 在滚动更新前自动执行一次
   pg_dump（`-Fc`，服务器 `backups/` + 本机 `.workwork/` 各一份，完整性校验
   失败即中止部署）；版本校验失败时自动回滚到上一版本并经 `ALERT_WEBHOOK`

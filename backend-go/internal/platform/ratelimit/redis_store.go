@@ -52,6 +52,7 @@ func redisAllow(now time.Time, rl rule) (int, bool) {
 		// fail-open：Redis 故障期间放行（限流是保护机制，不阻断业务）
 		observability.L().Warn("rate limit redis backend unavailable, failing open",
 			"rule", rl.name, "key", rl.key, "err", scriptErr)
+		observability.RecordRedisFailOpen("ratelimit")
 		return 0, false
 	}
 	return retry, limited

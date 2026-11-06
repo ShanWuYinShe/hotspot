@@ -104,6 +104,7 @@ func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bo
 		// 直通执行，优于让全部带幂等键的写端点整体不可用（22002 拒服）。
 		// 代价是该 key 在故障窗口内失去去重（重复执行由业务侧幂等性兜底）。
 		observability.L().Warn("idempotency redis reserve failed, failing open", "error", err)
+		observability.RecordRedisFailOpen("idempotency")
 		return processing, true
 	}
 	if ok {
@@ -113,6 +114,7 @@ func (s *RedisStore) Reserve(scope, key string, expiresAt time.Time) (Record, bo
 	if err != nil {
 		// 同上：已存在 key 但读不出（故障窗口），直通执行。
 		observability.L().Warn("idempotency redis get failed, failing open", "error", err)
+		observability.RecordRedisFailOpen("idempotency")
 		return processing, true
 	}
 	existing, ok := unmarshalRecord(b)

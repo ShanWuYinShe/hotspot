@@ -59,3 +59,15 @@ func TestMetricsHandlerExposedCollectors(t *testing.T) {
 		t.Fatalf("default go/process collectors missing from /metrics: %s", body[:min(len(body), 400)])
 	}
 }
+
+// TestRedisFailOpenMetricExposed：Redis 降级计数按 component 维度暴露，
+// 供告警规则（HotspotRedisFailOpen）与 Grafana 面板使用。
+func TestRedisFailOpenMetricExposed(t *testing.T) {
+	RecordRedisFailOpen("test-component")
+	rec := httptest.NewRecorder()
+	MetricsHandler().ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/metrics", http.NoBody))
+	body := rec.Body.String()
+	if !strings.Contains(body, `hotspot_redis_failopen_total{component="test-component"} 1`) {
+		t.Fatalf("redis fail-open metric missing from /metrics: %s", body[:min(len(body), 600)])
+	}
+}

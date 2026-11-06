@@ -1,0 +1,14 @@
+# ── Grafana 面板自动 provisioning（observability profile）──────────
+# 挂载为 /etc/grafana/provisioning/dashboards/dashboards.yml：启动即加载
+# 同目录 JSON 面板（无需手工导入）。面板查询默认数据源（Prometheus）。
+apiVersion: 1
+
+providers:
+  - name: hotspot
+    orgId: 1
+    folder: HotSpot
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/provisioning/dashboards

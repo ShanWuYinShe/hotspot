@@ -40,6 +40,16 @@ var (
 		},
 		[]string{"method", "route", "status"},
 	)
+	// redisFailOpenTotal 记录 Redis 故障触发 fail-open 的降级次数：这类降级
+	// 不阻断业务（限流/幂等/缓存/多实例广播），但必须可观测，否则线上持续
+	// 降级无人知晓（ops 审计 P0-2）。
+	redisFailOpenTotal = promauto.With(registry).NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "hotspot_redis_failopen_total",
+			Help: "Redis 故障导致 fail-open 的累计次数（component=ratelimit/idempotency/cache/realtime）",
+		},
+		[]string{"component"},
+	)
 	httpRequestDuration = promauto.With(registry).NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
@@ -85,4 +95,10 @@ func RequestMetricsMiddleware(next http.Handler) http.Handler {
 		httpRequestsTotal.WithLabelValues(method, route, status).Inc()
 		httpRequestDuration.WithLabelValues(method, route).Observe(time.Since(start).Seconds())
 	})
+}
+
+// RecordRedisFailOpen 记录一次 Redis 故障导致的 fail-open（component 固定取值，
+// 禁止使用请求维度/用户维度等动态值，避免指标基数膨胀）。
+func RecordRedisFailOpen(component string) {
+	redisFailOpenTotal.WithLabelValues(component).Inc()
 }

@@ -14,6 +14,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/worker"
 )
 
@@ -82,6 +83,8 @@ func (c *Cache) Get(ctx context.Context, key string) (string, bool) {
 	if c.rdb != nil {
 		v, err := c.rdb.Get(ctx, key).Result()
 		if err != nil {
+			// Redis 读失败按 miss 处理（fail-open 回源 DB），但需可观测。
+			observability.RecordRedisFailOpen("cache")
 			return "", false
 		}
 		return v, true
@@ -101,7 +104,9 @@ func (c *Cache) Set(ctx context.Context, key, value string, ttl time.Duration) {
 		return
 	}
 	if c.rdb != nil {
-		_ = c.rdb.Set(ctx, key, value, ttl).Err()
+		if err := c.rdb.Set(ctx, key, value, ttl).Err(); err != nil {
+			observability.RecordRedisFailOpen("cache")
+		}
 		return
 	}
 	c.local.Store(key, localEntry{value: value, expiresAt: time.Now().Add(ttl)})

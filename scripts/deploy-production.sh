@@ -195,6 +195,19 @@ weak_env_check() {
 }
 weak_env_check
 
+# ── 可观测性采集栈开关（可选）──────────────────────────────────────
+# 服务器 .env 中 OBSERVABILITY_ENABLED=1 时，本次部署同时拉起/更新
+# prometheus + grafana（observability profile）。默认关闭：小机器不常驻
+# 采集栈，但配置仍随部署分发，随时可开启。开启后采集栈与业务同挂
+# hotspot_internal 网络（docker-compose.prod.yml），否则抓不到 backend。
+OBSERVABILITY_ENABLED="$(ssh "$SERVER" "grep -E '^OBSERVABILITY_ENABLED=' $REMOTE_DIR/.env 2>/dev/null | head -n1 | cut -d= -f2- | tr -d '\"' | tr -d '[:space:]'" || true)"
+if [ "$OBSERVABILITY_ENABLED" = "1" ]; then
+  COMPOSE="$COMPOSE --profile observability"
+  echo "==> 可观测性采集栈已启用（prometheus/grafana 随本次部署拉起/更新）"
+else
+  echo "==> 可观测性采集栈未启用（服务器 .env 设 OBSERVABILITY_ENABLED=1 可开启）"
+fi
+
 # 按服务名动态探测线上容器名：compose 默认容器名 <项目>-<服务>-<序号> 依赖
 # 部署目录名为 hotspot，目录改名或编号变化时硬编码即失效。ps -q 只列运行中
 # 容器；探测不到（首次部署/服务未启动）时回退旧默认命名，行为与从前等价。

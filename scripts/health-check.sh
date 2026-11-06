@@ -5,7 +5,9 @@
 #
 # 检查项：
 #   1. 后端 health 端点可达且返回版本号（容器网络内直连，不依赖域名/CF）
+#   1.5 就绪探针 /readyz：DB 不可达=失败；Redis 降级=告警（fail-open 状态可见）
 #   2. 核心容器（postgres/redis/seaweedfs/backend/nginx/frontend）在运行
+#   2.7 Prometheus firing alerts（OBSERVABILITY_ENABLED=1 时随巡检推送）
 #   3. 磁盘水位：< 80% 正常，80-89% 告警，>= 90% 失败
 #   4. 备份新鲜度：backups/ 下最新 .sql.gz/.dump 距今 < BACKUP_MAX_AGE_HOURS（默认 25h）
 #   5. TLS 证书剩余有效期 >= CERT_MIN_DAYS（默认 14 天；读 nginx 挂载的证书文件）
@@ -28,6 +30,9 @@ FRONTEND_CONTAINER="${FRONTEND_CONTAINER:-hotspot-frontend-1}"
 DISK_WARN="${DISK_WARN:-80}"
 DISK_FAIL="${DISK_FAIL:-90}"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
+OBSERVABILITY_ENABLED="${OBSERVABILITY_ENABLED:-$(grep -E '^OBSERVABILITY_ENABLED=' "$REMOTE_DIR/.env" 2>/dev/null | head -n1 | cut -d= -f2- | tr -d '"' | tr -d '[:space:]')}"
+PROMETHEUS_CONTAINER="${PROMETHEUS_CONTAINER:-hotspot-prometheus-1}"
+GRAFANA_CONTAINER="${GRAFANA_CONTAINER:-hotspot-grafana-1}"
 # 目标为 ops-portal webhook 网关（POST /api/hooks/{slug}）时须持登记证书：
 # 默认取 ~/.webhook-caller/{cert,key}.pem，可用 ALERT_MTLS_CERT/KEY 覆盖；
 # 两文件齐备才追加 --cert/--key（目标是钉钉/飞书等无需证书的机器人时不受影响）。
@@ -59,9 +64,21 @@ else
   mark_fail "health FAIL: backend health 端点不可达或无版本字段（检查 docker logs ${BACKEND_CONTAINER}）"
 fi
 
+# 1.5 就绪探针：DB 不可达返回 503；Redis 故障仅 degraded（仍 200）。
+READY="$(docker exec "$BACKEND_CONTAINER" curl -sf http://localhost:8081/readyz 2>/dev/null || true)"
+case "$READY" in
+  *'"status":"ok"'*) echo "$(date '+%F %T') readyz ok: $(echo "$READY" | head -c 200)" ;;
+  *'"status":"degraded"'*) mark_fail "readyz DEGRADED: Redis 故障 fail-open 中（业务可用，保护能力下降）: $(echo "$READY" | head -c 200)" ;;
+  *) mark_fail "readyz FAIL: 就绪探针不可达或数据库不可用（检查 docker logs $BACKEND_CONTAINER）: $(echo "$READY" | head -c 200)" ;;
+esac
+
 # 2. 核心容器运行状态（含 nginx 网关与 frontend 静态卷容器——此前巡检不覆盖，
-#    网关挂了站点全断但巡检仍报绿）
-for c in "$DB_CONTAINER" "$REDIS_CONTAINER" "$SEAWEEDFS_CONTAINER" "$BACKEND_CONTAINER" "$NGINX_CONTAINER" "$FRONTEND_CONTAINER"; do
+#    网关挂了站点全断但巡检仍报绿；采集栈启用时一并巡检）
+OBS_CONTAINERS=""
+if [ "$OBSERVABILITY_ENABLED" = "1" ]; then
+  OBS_CONTAINERS="$PROMETHEUS_CONTAINER $GRAFANA_CONTAINER"
+fi
+for c in "$DB_CONTAINER" "$REDIS_CONTAINER" "$SEAWEEDFS_CONTAINER" "$BACKEND_CONTAINER" "$NGINX_CONTAINER" "$FRONTEND_CONTAINER" $OBS_CONTAINERS; do
   if [ "$(docker inspect -f '{{.State.Running}}' "$c" 2>/dev/null)" != "true" ]; then
     mark_fail "container FAIL: $c 未在运行"
   fi
@@ -94,6 +111,20 @@ if [ -n "$CERT_FILE" ] && [ -f "$CERT_FILE" ]; then
   fi
 elif [ -n "$CERT_FILE" ]; then
   mark_fail "cert FAIL: 证书文件不存在: $CERT_FILE"
+fi
+
+# 2.7 Prometheus firing alerts：告警规则的投递通道（无 Alertmanager 时的
+#     单机方案，随本巡检 cron 通过 ALERT_WEBHOOK 送达；最坏延迟=巡检周期）。
+if [ "$(docker inspect -f '{{.State.Running}}' "$PROMETHEUS_CONTAINER" 2>/dev/null)" = "true" ]; then
+  ALERTS="$(docker exec "$PROMETHEUS_CONTAINER" wget -qO- http://127.0.0.1:9090/api/v1/alerts 2>/dev/null || true)"
+  FIRING="$(printf '%s' "$ALERTS" | grep -o '"alertname":"[^"]*"' | sed 's/"alertname":"//; s/"$//' | sort -u | tr '\n' ' ')"
+  if [ -n "$FIRING" ]; then
+    mark_fail "prometheus FAIL: firing alerts: $FIRING"
+  else
+    echo "$(date '+%F %T') prometheus ok: 无 firing alert"
+  fi
+elif [ "$OBSERVABILITY_ENABLED" = "1" ]; then
+  mark_fail "observability FAIL: OBSERVABILITY_ENABLED=1 但 $PROMETHEUS_CONTAINER 未运行（检查 --profile observability 部署与镜像拉取）"
 fi
 
 # 3. 磁盘水位（覆盖根分区；数据盘另挂载时把路径追加到 DISK_PATHS）

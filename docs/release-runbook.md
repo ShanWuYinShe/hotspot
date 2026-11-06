@@ -68,6 +68,7 @@ gh run watch <run-id> --exit-status
 - **滚动更新**：`IMAGE_TAG=<tag> compose --profile prod up -d --scale frontend-build=0` + `nginx -s reload`（软重载，不中断在途 HTTP/WS 连接）；容器 `stop_grace_period: 30s` 覆盖应用侧排水预算；
 - **三级版本校验**：后端 health 版本、前端静态卷 `version.json`、**nginx 容器内**真实响应（`/version.json` 与 `/healthz`）——容器里的文件对不等于网关服务得出去；
 - **就绪探针口径**：容器 healthcheck 用 `GET /readyz`——数据库不可达返回 503（实例摘流量），Redis 不可达仅 `degraded`（200，限流/幂等 fail-open 仍可服务）；`GET /healthz` 保留为纯存活探针。
+- **可观测性（可选）**：服务器 `.env` 设 `OBSERVABILITY_ENABLED=1` 时随本次部署拉起/更新 prometheus + grafana（采集栈与业务同挂 `hotspot_internal` 网络）；未启用则仅分发采集配置、不常驻。Prometheus firing alerts 由 `health-check.sh` 巡检经 `ALERT_WEBHOOK` 外发（最坏延迟=巡检周期，无独立 Alertmanager）；
 - **失败自动回滚**：任一级校验失败 → 用上一版本镜像重新 `up -d` + 告警（数据不回滚）；
 - **审计**：追加一行到服务器 `backups/deploy-history.log` 与本机 `.workwork/deploy-history.log`；
 - **旧镜像回收**：保留最近 `DEPLOY_KEEP_IMAGES`（默认 3）个历史版本 + 当前/上一版本。
@@ -189,7 +190,8 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 |------|------|------|
 | `SERVER` | `workwork-server` | 部署目标 ssh 别名 |
 | `REMOTE_DIR` | `~/hotspot` | 服务器部署目录 |
-| `ALERT_WEBHOOK` | 空 | 接收 `POST {"text":...}` 的机器人地址（部署失败/回滚告警） |
+| `ALERT_WEBHOOK` | 空 | 接收 `POST {"text":...}` 的机器人地址（部署失败/回滚、巡检失败、Prometheus firing alerts 告警） |
+| `OBSERVABILITY_ENABLED` | 空（关闭） | 服务器 `.env` 设 `1` 时部署脚本用 `--profile observability` 拉起/更新 prometheus + grafana |
 | `DEPLOY_KEEP_IMAGES` | `3` | 服务器保留的历史镜像版本数，`0` = 不清理 |
 | `DEPLOY_LOCK_TTL_HOURS` | `6` | 并发锁陈旧判定阈值 |
 | `ROLLBACK_OF` | 空 | 由 `rollback-production.sh` 注入，仅影响审计与告警文案 |
