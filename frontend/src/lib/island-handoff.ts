@@ -156,12 +156,52 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	// 默认启用：胶囊永远走滚动交接；显式传 enabled:false 才跳过（测试/特殊场景）。
 	if (params.enabled === false) return;
 	let target = measureTarget(node);
+	let prevP = currentHandoff().p;
+	let initialized = false;
+	let landingTimer: ReturnType<typeof setTimeout> | null = null;
+
+	const clearLanding = () => {
+		if (landingTimer !== null) {
+			clearTimeout(landingTimer);
+			landingTimer = null;
+		}
+		node.classList.remove('island-land');
+	};
+
+	const triggerLanding = () => {
+		if (prefersReducedMotion()) return;
+		clearLanding();
+		void node.offsetWidth;
+		node.classList.add('island-land');
+		landingTimer = setTimeout(clearLanding, 80);
+	};
+
+	const onAnimationEnd = (e: AnimationEvent) => {
+		if (e.animationName === 'cst-island-land') {
+			clearLanding();
+		}
+	};
+	node.addEventListener('animationend', onAnimationEnd);
+
 	const apply = (s: HandoffState) => {
 		if (!target) target = measureTarget(node);
 		if (!target || !s.source) {
 			node.style.opacity = '0';
+			clearLanding();
+			prevP = s.p;
 			return;
 		}
+
+		// 落地微动效（P1-7）：从飞行中（prevP < 1）刚刚抵达落位终态（s.p >= 1）瞬间触发；反向滚动时清空
+		if (!initialized) {
+			initialized = true;
+		} else if (prevP < 1 && s.p >= 1) {
+			triggerLanding();
+		} else if (s.p < 1) {
+			clearLanding();
+		}
+		prevP = s.p;
+
 		applyFrame(node, target, s, prefersReducedMotion());
 	};
 	const unsubscribe = subscribeHandoff(apply);
@@ -178,6 +218,8 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	return {
 		destroy() {
 			unsubscribe();
+			node.removeEventListener('animationend', onAnimationEnd);
+			clearLanding();
 			ro?.disconnect();
 		}
 	};

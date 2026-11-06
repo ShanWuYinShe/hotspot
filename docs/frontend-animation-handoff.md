@@ -116,8 +116,8 @@ cd frontend && AB=~/.local/bin/agent-browser bash scripts/browser-qa.sh --base h
      1. 将 `.nav-glass` 偏长拖沓的 400ms 过渡（`--cst-motion-slow`）收敛为 260ms（`--cst-motion-relaxed`），与卡片 hover 及表面层一致；
      2. 在 `theme.svelte.ts` 引入 View Transition API 平滑淡入机制（`::view-transition-old(root)` / `new(root)` 统一定为 260ms `--cst-ease-standard`），运行时切主题使用整屏 GPU 交叉过渡，彻底消除上百个 DOM 元素同时触发 CSS transition 的重绘风暴；
      3. 首屏 `initTheme` 保持瞬出（无过渡），`prefers-reduced-motion` 立即终态。单测覆盖见 `theme.svelte.test.ts`。
-7. **岛落地微动效（可选）**：抵达时 scale 1.006→1（80ms）+ accent 细边亮度回落一档；不做 overshoot。
-   用户未确认要不要，先别做。
+7. **[已完成] 岛落地微动效**：
+   - 实现：在 `lib/island-handoff.ts` 与 `utilities.css` 落地 `.island-land`（抵达终态瞬间 80ms scale 1.006→1 减速缓动 + accent 细边亮度回落一档，无 overshoot）；`prefers-reduced-motion` 显式跳过，反向滚动即可逆清空。单测覆盖见 `island-handoff.test.ts`。
 8. **[已完成] 岛 meta 文本跳变平滑化**：
    - 实现：`IslandCapsule` 中第二行 meta 文本变动时加入 120ms fade-in 柔和渐变，让状态与数字更新如呼吸般润泽自然。
 

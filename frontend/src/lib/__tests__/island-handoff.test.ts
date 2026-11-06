@@ -97,6 +97,46 @@ describe('island-handoff 纯函数', () => {
 			publishHandoff({ p: 1, source: { x: 100, y: 76, width: 80, height: 28 } });
 			expect(node.style.transform).toBe('');
 			expect(node.style.opacity).toBe('1');
+			expect(node.classList.contains('island-land')).toBe(true);
+		} finally {
+			cleanup?.destroy();
+			node.remove();
+			publishHandoff({ p: 0, source: null });
+		}
+	});
+
+	it('岛落地微动效：抵达终态 (p=1) 时触发 .island-land，反向滚动 (p<1) 立即清空', () => {
+		const node = document.createElement('div');
+		node.getBoundingClientRect = () =>
+			({
+				x: 600,
+				y: 8,
+				left: 600,
+				top: 8,
+				width: 200,
+				height: 36,
+				right: 800,
+				bottom: 44,
+				toJSON: () => ({})
+			}) as DOMRect;
+		document.body.appendChild(node);
+		publishHandoff({ p: 0, source: null });
+		const cleanup = islandHandoff(node, {});
+		try {
+			// 初始 mount 不触发
+			expect(node.classList.contains('island-land')).toBe(false);
+
+			// 飞行中 p=0.6 不触发
+			publishHandoff({ p: 0.6, source: { x: 100, y: 76, width: 80, height: 28 } });
+			expect(node.classList.contains('island-land')).toBe(false);
+
+			// 抵达 p=1 触发落地类
+			publishHandoff({ p: 1, source: { x: 100, y: 76, width: 80, height: 28 } });
+			expect(node.classList.contains('island-land')).toBe(true);
+
+			// 反向滚动 p=0.8，立即清空落地类保持滚动严格跟手
+			publishHandoff({ p: 0.8, source: { x: 100, y: 76, width: 80, height: 28 } });
+			expect(node.classList.contains('island-land')).toBe(false);
 		} finally {
 			cleanup?.destroy();
 			node.remove();

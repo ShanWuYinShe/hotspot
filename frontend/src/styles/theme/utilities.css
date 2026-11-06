@@ -803,6 +803,26 @@
     animation: cst-state-pop var(--cst-motion-standard) var(--cst-ease-bounce);
   }
 
+  /* 灵动岛落地微动效（P1-7）：
+     标题滚动交接抵达顶栏灵动岛（p 从 <1 抵达 1）瞬间，
+     执行 80ms 极轻微 scale 1.006→1 与 accent 细边亮度回落一档，
+     提供精确的物理着陆感，不做 overshoot；reduced 下跳过。 */
+  @keyframes cst-island-land {
+    0% {
+      transform: scale(1.006);
+      border-color: var(--color-accent-border);
+      box-shadow: var(--shadow-raised-md);
+    }
+    100% {
+      transform: scale(1);
+      border-color: color-mix(in srgb, var(--color-border-default) 50%, transparent);
+      box-shadow: var(--shadow-raised-sm);
+    }
+  }
+  .island-land {
+    animation: cst-island-land 80ms cubic-bezier(0, 0, 0.2, 1) both;
+  }
+
   /* 主题切换过渡收敛（P1-6）：
      当运行时使用 View Transition 切换主题时，使用 260ms 的标准缓动优雅平滑过渡整页画面，
      规避全站上百个元素同时触发 CSS transition 的重绘风暴。 */
