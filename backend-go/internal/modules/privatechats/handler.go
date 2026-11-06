@@ -22,7 +22,7 @@ func NewHandler(service *Service, appConfig appconfig.Source) *Handler {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req MyPrivateChatsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 游标预校验（对齐 groupmessages/privatemessages/reactions 的 handler 模式）：
@@ -44,7 +44,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req OpenTheDoorRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	cfg := h.appConfig.Get(r.Context())
@@ -59,7 +59,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdatePrivateChatSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" || (req.IsMuted == nil && req.IsPinned == nil) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.UpdateSettings(r.Context(), req); err != nil {
@@ -72,7 +72,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	var req DeletePrivateChatRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.TargetUserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.Delete(r.Context(), req.TargetUserID); err != nil {

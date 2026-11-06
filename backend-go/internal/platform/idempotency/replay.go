@@ -86,7 +86,7 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	// 读取；命中完成态记录时比对，存量记录（无哈希）跳过比对以兼容滚动升级。
 	body, readErr := io.ReadAll(r.Body)
 	if readErr != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return true
 	}
 	r.Body = io.NopCloser(bytes.NewReader(body))
@@ -99,12 +99,12 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 	existing, claimed := store.Reserve(scope, scopedKey, expiresAt)
 	if !claimed {
 		if existing.Status == StatusExpired {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyExpired, "幂等缓存已过期，请使用新的幂等键重试"))
+			httpx.WriteCodeError(w, r, httpx.CodeIdempotencyExpired, "幂等缓存已过期，请使用新的幂等键重试")
 			return true
 		}
 		if existing.Status == StatusCompleted {
 			if existing.BodyHash != "" && existing.BodyHash != bodyHash {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyConflict, "幂等上下文不匹配"))
+				httpx.WriteCodeError(w, r, httpx.CodeIdempotencyConflict, "幂等上下文不匹配")
 				return true
 			}
 			// 重发首次响应设置的会话类响应头（Set-Cookie）：producer 在回放
@@ -119,7 +119,7 @@ func ReplayOrStore[T any](w http.ResponseWriter, r *http.Request, scope string, 
 			_, _ = w.Write(existing.Response)
 			return true
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyInFlight, "请求正在处理中，请稍后重试"))
+		httpx.WriteCodeError(w, r, httpx.CodeIdempotencyInFlight, "请求正在处理中，请稍后重试")
 		return true
 	}
 

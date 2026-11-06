@@ -2845,3 +2845,20 @@ E2 部署链路加固：迁移从「server 启动隐式执行」提升为部署�
 验证：Dockerfile 本地构建通过（/app 同时含 server/migrate）；
 `docker run ... ./migrate`、compose --profile migrate run 对 dev 库执行成功；
 actionlint release.yml 通过；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch F（第三批）：业务错误统一出口 — 221 处裸 WriteJSON 清零（2026-11-07）
+
+架构审计 C3/P0-3 续：业务错误响应此前大量写成
+`WriteJSON(w, 200, Error(code,msg))`，绕过统一日志与
+`hotspot_business_errors_total` 指标（F1 加的指标只覆盖少数走 WriteAPIError 的路径）。
+
+- 新增 httpx.WriteCodeError(w,r,code,message)：统一记录业务错误日志（method 用
+  chi 路由模板，避免高基数/敏感参数）+ 业务错误指标 + 契约响应（HTTP 200）。
+- codemod 全仓：200 处常量错误 + 21 处 err/apiErr 变量错误全部改走该出口；
+  platform 内 resourceguard middleware 同步；system/health 手写 LogBusinessError
+  去重（避免双计）。
+- 结果：非 httpx 包的裸 `WriteJSON(..., Error(...))` 为 0；所有业务错误自动进入
+  F1 的指标/Grafana 面板/F2 的错误日志链路口径。
+- 测试：httpx 新增 WriteCodeError 响应 + 指标（code/route/method 标签）断言。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

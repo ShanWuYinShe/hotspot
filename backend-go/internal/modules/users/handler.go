@@ -18,7 +18,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	profile, err := h.service.GetMyProfile(r.Context())
@@ -32,7 +32,7 @@ func (h *Handler) GetMyProfile(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 	var req UpdateAccountRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if err := h.service.UpdateMyProfile(r.Context(), req); err != nil {
@@ -44,7 +44,7 @@ func (h *Handler) UpdateMyProfile(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	settings, err := h.service.GetMySettings(r.Context())
@@ -58,7 +58,7 @@ func (h *Handler) GetMySettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateMySettings(w http.ResponseWriter, r *http.Request) {
 	var req UpdateSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if err := h.service.UpdateMySettings(r.Context(), req); err != nil {
@@ -79,7 +79,7 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, r *http.Request, meth
 		httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(apiErr.Code, apiErr.Message, apiErr.Data))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+	httpx.WriteCodeError(w, r, apiErr.Code, apiErr.Message)
 }
 
 func apiErrorFromService(err error) *httpx.APIError {

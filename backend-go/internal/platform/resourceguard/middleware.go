@@ -43,7 +43,7 @@ func Middleware(next http.Handler) http.Handler {
 				return
 			}
 			if !allowed {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, notFoundMessage(ref.kind)))
+				httpx.WriteCodeError(w, r, httpx.CodeNotFound, notFoundMessage(ref.kind))
 				return
 			}
 		}

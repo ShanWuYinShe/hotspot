@@ -23,12 +23,12 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	var req CreateGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Name == "" || req.Location.LocationName == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// Reject out-of-range coordinates before they corrupt the S2 index: an
@@ -62,7 +62,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req GroupOpenTheDoorRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	item, ok, err := h.service.OpenTheDoor(r.Context(), req.GroupID)
@@ -75,7 +75,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+		httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
@@ -84,24 +84,24 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchGroupsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if !hasSearchCriteria(req) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "至少需要提供 keyword、tag、radius 之一"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "至少需要提供 keyword、tag、radius 之一")
 		return
 	}
 	if req.Radius != nil && (*req.Radius < minSearchRadius || *req.Radius > maxSearchRadius) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "radius 超出范围"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "radius 超出范围")
 		return
 	}
 	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
 	if utf8.RuneCountInString(req.Keyword) > 100 || utf8.RuneCountInString(req.Tag) > 30 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if sortBy := normalizedSearchSort(req.SortBy); sortBy == "" && strings.TrimSpace(req.SortBy) != "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "sort_by 不支持"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "sort_by 不支持")
 		return
 	}
 	req = normalizedSearchRequest(req)
@@ -116,7 +116,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteAPIError(w, r, "Search", err)
@@ -128,11 +128,11 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClearPassword != nil && *req.ClearPassword && req.Password != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "密码参数冲突"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "密码参数冲突")
 		return
 	}
 	// 同 Create：更新定位时也必须在入库前拒绝非法坐标。
@@ -147,7 +147,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -164,16 +164,16 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 	var req DismissGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.Dismiss(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidReason) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -189,7 +189,7 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	var req GroupMembersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListMembers(r.Context(), req)
@@ -199,11 +199,11 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -215,11 +215,11 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 	var req SearchGroupMembersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.Keyword == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if utf8.RuneCountInString(req.Keyword) > 100 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.SearchMembers(r.Context(), req)
@@ -229,7 +229,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrNotMember) {
@@ -239,7 +239,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -251,7 +251,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 	var req MyGroupsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListMyGroups(r.Context(), req)
@@ -261,7 +261,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -273,7 +273,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 	var req EnterGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 自然去重（spec api_spec_base.md）：approval 路径命中已有 pending 申请返回已有
@@ -285,23 +285,23 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidPassword) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "密码错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "密码错误")
 			return
 		}
 		if errors.Is(err, ErrAlreadyApplied) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "已申请过"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "已申请过")
 			return
 		}
 		if errors.Is(err, ErrGroupFull) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群组已满"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群组已满")
 			return
 		}
 		if errors.Is(err, ErrBusinessConflict) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "该群组仅限邀请加入，请通过邀请加入"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "该群组仅限邀请加入，请通过邀请加入")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -316,12 +316,12 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	var req CreateGroupAnnouncementRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.Title == "" || req.Content == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	idempotency.ReplayOrStore(w, r, "groups/announcements/create", func() httpx.ApiResponse[any] {
@@ -347,7 +347,7 @@ func (h *Handler) CreateAnnouncement(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	var req GroupAnnouncementsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, err := h.service.ListAnnouncements(r.Context(), req)
@@ -357,7 +357,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -370,7 +370,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupAnnouncementRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	item, err := h.service.UpdateAnnouncement(r.Context(), req)
@@ -380,7 +380,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -388,7 +388,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAnnouncementNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "公告不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "公告不存在")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -401,16 +401,16 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 	var req DeleteGroupAnnouncementRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.AnnouncementID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.DeleteAnnouncement(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAnnouncementNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "公告不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "公告不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -426,12 +426,12 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 	var req UpdateGroupPreferencesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.UpdatePreferences(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrNotMember) {
@@ -451,20 +451,20 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 	var req LeaveGroupRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.LeaveGroup(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "不是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "不是群成员")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主需先转让群主身份"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群主需先转让群主身份")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -476,7 +476,7 @@ func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 	var req MyApplicationsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListMyApplications(r.Context(), req)
@@ -486,7 +486,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -498,24 +498,24 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	var req CancelApplicationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.CancelApplication(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrApplicationNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "申请不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "申请不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidReason) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		if errors.Is(err, ErrAlreadyProcessed) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "申请已处理")
 			return
 		}
 		httpx.WriteServerError(w, r, err)

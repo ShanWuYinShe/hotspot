@@ -12,20 +12,20 @@ import (
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	var req SearchUsersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.Keyword == "" && req.Tag == "" && req.Radius == nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
 	if n := utf8.RuneCountInString(req.Keyword); n > 100 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if n := utf8.RuneCountInString(req.Tag); n > 30 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)
@@ -40,7 +40,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	var req UserOpenTheDoorRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	bundle, ok, err := h.service.GetProfileBundle(r.Context(), req.UserID, req.IncludeRecentMoments)
@@ -49,7 +49,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "用户不存在"))
+		httpx.WriteCodeError(w, r, httpx.CodeNotFound, "用户不存在")
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bundle))
@@ -60,11 +60,11 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 	var req BatchGetUsersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.UserIDs) == 0 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if len(req.UserIDs) > 100 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	users, err := h.service.BatchGet(r.Context(), req.UserIDs)
@@ -78,7 +78,7 @@ func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 	var req UpdateLocationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Location.LocationName == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// Reject out-of-range coordinates before they corrupt the S2 index: an
@@ -99,17 +99,17 @@ func (h *Handler) UpdateLocation(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Upgrade(w http.ResponseWriter, r *http.Request) {
 	var req UpgradeAccountRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.LoginID == "" || req.Password == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if !isValidLoginID(req.LoginID) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// login_id 所有权验证（spec api_spec_user.md → upgrade）：手机号/邮箱需验证码
 	// 服务校验所有权，接入前暂仅支持用户名型 login_id（防止访客抢占他人手机号/邮箱）。
 	if strings.Contains(req.LoginID, "@") || isNumericLoginID(req.LoginID) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "手机号/邮箱升级需验证码验证，暂仅支持用户名"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "手机号/邮箱升级需验证码验证，暂仅支持用户名")
 		return
 	}
 	// 升级成功返回完整账户数据（spec api_spec_user.md users/upgrade），
@@ -156,7 +156,7 @@ func isValidLoginID(loginID string) bool {
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	var req DeleteAccountRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.Confirmation != "DELETE_MY_ACCOUNT" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.DeleteAccount(r.Context(), req); err != nil {
@@ -172,18 +172,18 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 	var req FollowRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 组合约束（spec user.md → set_follow）：source='moment' 时 source_moment_id 必填；
 	// 提供 source_moment_id 但 source != 'moment' 视为参数冲突
 	if req.Active {
 		if req.Source == FollowSourceMoment && req.SourceMomentID == "" {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "source 为 moment 时 source_moment_id 必填"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "source 为 moment 时 source_moment_id 必填")
 			return
 		}
 		if req.SourceMomentID != "" && req.Source != FollowSourceMoment {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "source_moment_id 仅在 source=moment 时有意义"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "source_moment_id 仅在 source=moment 时有意义")
 			return
 		}
 	} else if req.SourceMomentID != "" || req.Source != "" {
@@ -210,7 +210,7 @@ func (h *Handler) Follow(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 	var req BlockRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.Active {
@@ -229,7 +229,7 @@ func (h *Handler) Block(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListBlocked(w http.ResponseWriter, r *http.Request) {
 	var req MyBlockedRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	blocked, err := h.service.ListBlocked(r.Context(), req)
@@ -242,7 +242,7 @@ func (h *Handler) ListBlocked(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 	var req SetRemarkRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.SetRemark(r.Context(), req.UserID, req.Remark); err != nil {
@@ -255,7 +255,7 @@ func (h *Handler) SetRemark(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListReactedMoments(w http.ResponseWriter, r *http.Request) {
 	var req UserReactedMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	result, err := h.service.ListReactedMoments(r.Context(), req)
@@ -269,7 +269,7 @@ func (h *Handler) ListReactedMoments(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListFriends(w http.ResponseWriter, r *http.Request) {
 	var req ListFriendsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	result, err := h.service.ListFriends(r.Context(), req)
@@ -283,7 +283,7 @@ func (h *Handler) ListFriends(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 	var req ListFollowingRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	result, err := h.service.ListFollowing(r.Context(), req)
@@ -297,7 +297,7 @@ func (h *Handler) ListFollowing(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListFollowers(w http.ResponseWriter, r *http.Request) {
 	var req ListFollowersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	result, err := h.service.ListFollowers(r.Context(), req)
@@ -311,7 +311,7 @@ func (h *Handler) ListFollowers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 	var req UserGroupsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	result, err := h.service.ListGroups(r.Context(), req)
@@ -325,7 +325,7 @@ func (h *Handler) ListGroups(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListMoments(w http.ResponseWriter, r *http.Request) {
 	var req UserMomentsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	result, err := h.service.ListMoments(r.Context(), req)

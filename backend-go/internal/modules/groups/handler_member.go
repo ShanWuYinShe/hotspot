@@ -11,7 +11,7 @@ import (
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	var req GroupApplicationsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListApplications(r.Context(), req)
@@ -21,7 +21,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -29,7 +29,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -41,16 +41,16 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	var req ApproveGroupApplicationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.ApproveApplication(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrApplicationNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "申请不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "申请不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -58,7 +58,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAlreadyProcessed) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "申请已处理")
 			return
 		}
 		// 申请人在封禁后再被审批：与 JoinGroup 的群封禁拦截同口径（10200）。
@@ -75,20 +75,20 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	var req RejectGroupApplicationRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.ApplicationID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RejectApplication(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrApplicationNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "申请不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "申请不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidReason) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -96,7 +96,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAlreadyProcessed) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "申请已处理")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -108,12 +108,12 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 	var req SetMemberRoleRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" || req.Role == "" || (req.Role != GroupRoleAdmin && req.Role != GroupRoleMember) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.SetMemberRole(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -121,12 +121,12 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrTargetNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "目标用户不是群成员")
 			return
 		}
 		// 群主不可降级（含自降级）：10400 业务冲突（spec api_spec_group.md → set_role 错误码）。
 		if errors.Is(err, ErrBusinessConflict) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可降级，请先转让群主身份"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群主不可降级，请先转让群主身份")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -142,7 +142,7 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 	var req MuteMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	var err error
@@ -157,7 +157,7 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -165,12 +165,12 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrTargetNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "目标用户不是群成员")
 			return
 		}
 		// 群主不受禁言：10400（spec api_spec_group.md → set_mute 群主保护）。
 		if errors.Is(err, ErrBusinessConflict) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不受禁言"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群主不受禁言")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -182,12 +182,12 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 	var req SetMemberBanRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.SetMemberBan(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -196,7 +196,7 @@ func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 		}
 		// 群主不可被封禁：10400（spec api_spec_group.md → set_ban 群主保护）。
 		if errors.Is(err, ErrBusinessConflict) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被封禁"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群主不可被封禁")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -208,7 +208,7 @@ func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 	var req BannedMembersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListBannedMembers(r.Context(), req)
@@ -218,7 +218,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -226,7 +226,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -238,12 +238,12 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	var req RemoveMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RemoveMember(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -251,14 +251,14 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrTargetNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "目标用户不是群成员")
 			return
 		}
 		// 群主不可被移除：10400 业务冲突（与 set_role 的 owner 保护同源——
 		// service 对 isGroupOwner 目标返回 ErrBusinessConflict，此前未映射
 		// 落入 10600「服务暂时不可用」，语义错误且对客户端不可理解）。
 		if errors.Is(err, ErrBusinessConflict) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被移除，请先转让群主身份"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "群主不可被移除，请先转让群主身份")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -270,12 +270,12 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 	var req TransferOwnershipRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.NewOwnerID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.TransferOwnership(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -283,7 +283,7 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrTargetNotMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "目标用户不是群成员")
 			return
 		}
 		httpx.WriteServerError(w, r, err)

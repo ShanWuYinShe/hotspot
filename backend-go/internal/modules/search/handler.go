@@ -25,11 +25,11 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 		Radius int      `json:"radius,omitempty"`
 	}
 	if err := httpx.DecodeStrictJSON(r, &body); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if body.Prefix == "" || len(body.Prefix) > 50 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// reference_point 可选:缺失时由 service 按回退链解析(见 api_spec_types.md)。
@@ -38,13 +38,13 @@ func (h *Handler) Suggest(w http.ResponseWriter, r *http.Request) {
 	if body.ReferencePoint != nil && body.ReferencePoint.Latitude != nil && body.ReferencePoint.Longitude != nil {
 		p := GeoPoint{Latitude: *body.ReferencePoint.Latitude, Longitude: *body.ReferencePoint.Longitude}
 		if !isValidGeoPoint(p) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		point = &p
 	}
 	if body.Radius != 0 && body.Radius < 100 {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	result, err := h.service.Suggest(r.Context(), SearchSuggestRequest{

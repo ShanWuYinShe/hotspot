@@ -24,7 +24,7 @@ func Middleware(next http.Handler) http.Handler {
 			return
 		}
 		if !keyPattern.MatchString(key) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeIdempotencyConflict, "Idempotency-Key 格式非法，请更换新 key 重试"))
+			httpx.WriteCodeError(w, r, httpx.CodeIdempotencyConflict, "Idempotency-Key 格式非法，请更换新 key 重试")
 			return
 		}
 		r = r.WithContext(WithKey(r.Context(), key))

@@ -72,3 +72,24 @@ func WriteServerError(w http.ResponseWriter, r *http.Request, err error) {
 	observability.RecordInternalError(r)
 	WriteJSON(w, http.StatusOK, Error(CodeInternalUnavailable, "服务暂时不可用"))
 }
+
+// routeOpLabel 返回 chi 路由模板（缺失时回退 HTTP 方法）：业务错误日志的
+// method 维度用路由模板而非原始 URL，避免高基数/敏感参数入日志。
+func routeOpLabel(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if rc := chi.RouteContext(r.Context()); rc != nil && rc.RoutePattern() != "" {
+		return rc.RoutePattern()
+	}
+	return r.Method
+}
+
+// WriteCodeError 是「HTTP 200 + envelope 业务错误码」的统一出口：自动记录
+// 业务错误日志与 hotspot_business_errors_total{code,route,method} 指标。
+// handler 内裸 WriteJSON(w, 200, Error(...)) 一律改走这里（架构审计 C3：
+// 221 处裸错误响应此前绕过统一观测）。
+func WriteCodeError(w http.ResponseWriter, r *http.Request, code Code, message string) {
+	observability.LogBusinessError(r, routeOpLabel(r), int(code), message)
+	WriteJSON(w, http.StatusOK, Error(code, message))
+}

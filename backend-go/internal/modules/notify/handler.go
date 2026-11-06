@@ -18,13 +18,13 @@ func NewHandler(service *Service) *Handler {
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	var req NotifyListRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	list, err := h.service.List(r.Context(), req)
 	if err != nil {
 		if errors.Is(err, ErrInvalidNotifyRequest) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteAPIError(w, r, "List", err)
@@ -35,7 +35,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	count, err := h.service.UnreadCount(r.Context())
@@ -53,13 +53,13 @@ func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	switch MarkReadScope(req.Scope) {
 	case MarkReadScopeIDs:
 		if len(req.NotifyIDs) == 0 || len(req.NotifyIDs) > maxMarkReadIDs {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		if err := h.service.MarkAsRead(r.Context(), req.NotifyIDs); err != nil {
@@ -72,7 +72,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	default:
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

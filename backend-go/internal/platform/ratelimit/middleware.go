@@ -259,7 +259,7 @@ func Middleware(next http.Handler) http.Handler {
 					"retry_after", retryAfter,
 				)
 				w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeRateLimited, "请求过于频繁"))
+				httpx.WriteCodeError(w, r, httpx.CodeRateLimited, "请求过于频繁")
 				return
 			}
 		}

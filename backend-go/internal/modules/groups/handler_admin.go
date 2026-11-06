@@ -12,7 +12,7 @@ import (
 func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 	var req GetGroupSettingsRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	settings, ok, err := h.service.GetSettings(r.Context(), req.GroupID)
@@ -25,7 +25,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ok {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+		httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(settings))
@@ -35,7 +35,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListAdminMembers(w http.ResponseWriter, r *http.Request) {
 	var req ListAdminGroupMembersRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListAdminMembers(r.Context(), req)
@@ -45,11 +45,11 @@ func (h *Handler) ListAdminMembers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -62,7 +62,7 @@ func (h *Handler) ListAdminMembers(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RecallGroupMessageAsAdmin(w http.ResponseWriter, r *http.Request) {
 	var req RecallGroupMessageAdminRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.MessageID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RecallGroupMessageAsAdmin(r.Context(), req); err != nil {

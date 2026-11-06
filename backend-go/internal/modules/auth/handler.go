@@ -26,7 +26,7 @@ func NewHandler(service *Service) *Handler {
 // GetStatus 查询当前会话状态（spec auth.md → auth/session，必须认证节点）。
 func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	status, err := h.service.GetStatus(r.Context())
@@ -39,16 +39,16 @@ func (h *Handler) GetStatus(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	var req RegisterRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// nickname/password 通用字段约束（spec api_spec_base.md「通用字段约束」）：
@@ -57,33 +57,33 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// 此前 Register 原样校验，30 个纯空格可通过并原样入库。
 	req.Nickname = strings.TrimSpace(req.Nickname)
 	if !isValidNickname(req.Nickname) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if !isValidPassword(req.Password) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// login_id 格式三分校验（spec api_spec_base.md「通用字段约束」）：
 	// 长度 3-64；含 '@' 必须为合法邮箱；纯数字即手机号型；其余为用户名型。
 	if !isValidAuthLoginID(req.LoginID) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 验证码规则（spec api_spec_public.md → register）：手机号/邮箱型必填
 	//（缺失 10000，错误/过期 10401 由 service 判定）；用户名型必须为 null。
 	if isPhoneOrEmailLoginID(req.LoginID) {
 		if req.VerificationCode == nil || *req.VerificationCode == "" {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 	} else if req.VerificationCode != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
@@ -109,21 +109,21 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.LoginID == "" || req.Password == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// login_id 格式三分校验（与 register 同一规则，spec api_spec_base.md）。
 	if !isValidAuthLoginID(req.LoginID) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	result, err := h.service.Login(r.Context(), req, sessionMetaFromRequest(r, req.ClientType, deviceID))
@@ -147,33 +147,33 @@ func writeAuthError(w http.ResponseWriter, r *http.Request, op string, err error
 	} else {
 		observability.LogBusinessError(r, op, int(apiErr.Code), apiErr.Message)
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+	httpx.WriteCodeError(w, r, apiErr.Code, apiErr.Message)
 }
 
 func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 	if err := idempotency.RequireKey(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	var req GuestRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	// Nickname 可选（spec api_spec_public.md → guest）：null 时由 service 生成
 	// 默认昵称「游客·xxxx」；显式传入时须符合 1-30 字符约束
 	//（spec api_spec_base.md「通用字段约束」）。
 	if req.Nickname != nil && !isValidNickname(strings.TrimSpace(*req.Nickname)) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClientType == ClientTypeWeb {
@@ -199,24 +199,24 @@ func (h *Handler) Guest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClientType == ClientTypeWeb && req.RefreshToken != "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if req.ClientType == ClientTypeApp && req.RefreshToken == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if req.ClientType == ClientTypeApp && deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	refreshCookie := ""
@@ -250,17 +250,17 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) SendRegisterCode(w http.ResponseWriter, r *http.Request) {
 	var req SendRegisterCodeRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 仅手机号型（纯数字）/邮箱型（合法邮箱）支持；用户名型 10000
 	//（spec api_spec_public.md：用户名无第三方所有权，无需验证码）。
 	if !isValidAuthLoginID(req.LoginID) || !isPhoneOrEmailLoginID(req.LoginID) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.SendRegisterCode(r.Context(), req); err != nil {
@@ -273,11 +273,11 @@ func (h *Handler) SendRegisterCode(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	var req RequestPasswordResetRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.LoginID == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 幂等语义（spec api_spec_auth.md）：本接口靠 IP 限流保护，无需
@@ -292,17 +292,17 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	var req ResetPasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.LoginID == "" || req.VerificationCode == "" || (req.ClientType != ClientTypeWeb && req.ClientType != ClientTypeApp) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// password 通用约束（spec api_spec_base.md「通用字段约束」：8-128 字符，
 	// 至少含字母和数字），与 register 同一规则。
 	if !isValidPassword(req.NewPassword) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// device_id：Web 端从 Cookie 读取，App 端请求体必填非 null
@@ -310,7 +310,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	// 一致以空值 10000 拒绝，保证 (user_id, device_id) 单会话模型不被空设备标识破坏。
 	deviceID := resolveDeviceID(r, req.DeviceID)
 	if deviceID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 自然去重（spec api_spec_auth.md）：验证码为一次性凭证，首次成功后即失效，
@@ -337,12 +337,12 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req ChangePasswordRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	// 新密码须符合通用约束（spec api_spec_base.md：8-128 字符，至少含字母和数字）。
 	if req.OldPassword == "" || !isValidPassword(req.NewPassword) {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	// 自然去重（spec api_spec_auth.md → change_password）：首次成功后旧密码立即失效，
@@ -356,7 +356,7 @@ func (h *Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	list := h.service.ListSessions(r.Context())
@@ -366,11 +366,11 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	var req RevokeSessionRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	if req.SessionID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RevokeSession(r.Context(), req); err != nil {
@@ -378,7 +378,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 		//（type assertion 会因包装而失效，导致业务错误码退化为 httpx.CodeInternalUnavailable）。
 		var apiErr *httpx.APIError
 		if errors.As(err, &apiErr) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
+			httpx.WriteCodeError(w, r, apiErr.Code, apiErr.Message)
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -389,7 +389,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.RevokeAll(r.Context())))
@@ -397,7 +397,7 @@ func (h *Handler) RevokeAllSessions(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	principal, ok := platformauth.PrincipalFromContext(r.Context())

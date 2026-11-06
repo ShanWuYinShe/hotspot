@@ -22,7 +22,7 @@ func groupAdminGuard(ownerOnly bool) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			groupID, ok := guardGroupID(r)
 			if !ok || groupID == "" {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+				httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 				return
 			}
 			if serviceGroupRoleResolver == nil {

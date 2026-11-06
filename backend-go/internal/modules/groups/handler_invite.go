@@ -11,7 +11,7 @@ import (
 func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 	var req MyInvitesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListMyInvites(r.Context(), req)
@@ -21,7 +21,7 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -33,12 +33,12 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	var req AcceptInviteRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.InviteID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.AcceptInvite(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrBannedInGroup) {
@@ -48,7 +48,7 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 		// 对齐 RejectInvite：已撤销/已拒绝/已过期的邀请一律 10200「邀请已失效」，
 		// 而非 10600 内部错误兜底（此前缺失该映射，撤销后接受会打到 10600）。
 		if errors.Is(err, ErrInviteExpired) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "邀请已失效")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -60,16 +60,16 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 	var req RejectInviteRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.InviteID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RejectInvite(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrInviteExpired) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "邀请已失效")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -81,7 +81,7 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 	var req InviteMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	item, err := h.service.InviteMember(r.Context(), req)
@@ -91,7 +91,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -99,12 +99,12 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrAlreadyMember) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "已是群成员"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "已是群成员")
 			return
 		}
 		// spec api_spec_group.md → invites/create 错误码：邀请已被封禁的用户 10400。
 		if errors.Is(err, ErrBannedInGroup) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "该用户已被群封禁，无法邀请"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "该用户已被群封禁，无法邀请")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -116,7 +116,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 	var req GroupSentInvitesRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	items, nextCursor, err := h.service.ListSentInvites(r.Context(), req)
@@ -126,7 +126,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -134,7 +134,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if errors.Is(err, ErrInvalidCursor) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+			httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 			return
 		}
 		httpx.WriteServerError(w, r, err)
@@ -146,12 +146,12 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 	var req RevokeSentInviteRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.InviteID == "" {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
 	if err := h.service.RevokeInvite(r.Context(), req); err != nil {
 		if errors.Is(err, ErrGroupNotFound) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
+			httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 			return
 		}
 		if errors.Is(err, ErrAccessRestricted) {
@@ -161,7 +161,7 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 		// 对齐 Accept/RejectInvite：非 pending（已撤销/已接受/已过期）邀请
 		// 的重复撤销一律 10400「邀请已失效」，而非 10600 内部错误兜底。
 		if errors.Is(err, ErrInviteExpired) {
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
+			httpx.WriteCodeError(w, r, httpx.CodeConflict, "邀请已失效")
 			return
 		}
 		httpx.WriteServerError(w, r, err)

@@ -6,7 +6,6 @@ import (
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/buildinfo"
 	"hotspot/backend-go/internal/platform/httpx"
-	"hotspot/backend-go/internal/platform/observability"
 )
 
 type Handler struct {
@@ -19,7 +18,7 @@ func NewHandler(service *Service) *Handler {
 
 func (h *Handler) GetMeta(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetMeta(r.Context())))
@@ -27,13 +26,13 @@ func (h *Handler) GetMeta(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	code, message, data := h.service.Health(r.Context())
 	if code != 0 {
-		observability.LogBusinessError(r, "Health", int(httpx.Code(code)), message)
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.Code(code), message))
+		// 已由 WriteCodeError 统一记录业务错误日志/指标。
+		httpx.WriteCodeError(w, r, httpx.Code(code), message)
 		return
 	}
 	// 版本指纹随 health 下发（spec api_spec_types.md HealthStatus）：线上排障
@@ -46,7 +45,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	payload, err := h.service.ListAnnouncements(r.Context())
@@ -59,7 +58,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetClientConfig(w http.ResponseWriter, r *http.Request) {
 	if err := httpx.RequireEmptyObject(r); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+		httpx.WriteCodeError(w, r, err.Code, err.Message)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(h.service.GetClientConfig(r.Context())))
@@ -72,7 +71,7 @@ func (h *Handler) Bootstrap(w http.ResponseWriter, r *http.Request) {
 	platformauth.EnsureDeviceIDCookie(w, r)
 	var req BootstrapRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "请求体格式错误"))
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
 		return
 	}
 	bootstrapResolver := h.service.GetBootstrapResolver()

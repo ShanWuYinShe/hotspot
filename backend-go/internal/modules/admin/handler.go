@@ -551,7 +551,7 @@ func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *htt
 		httpx.WriteJSON(w, http.StatusOK, httpx.ErrorWithData(err.Code, err.Message, err.Data))
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(err.Code, err.Message))
+	httpx.WriteCodeError(w, r, err.Code, err.Message)
 }
 
 // writeUnavailable 统一 10600 出口。err 为底层真实错误（审查 P2-10：此前签名

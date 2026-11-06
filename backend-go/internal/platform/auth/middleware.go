@@ -59,7 +59,7 @@ func RequiredAuth(next http.Handler) http.Handler {
 				"has_auth_header", hasHeader,
 				"has_cookie", hasCookie,
 			)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeUnauthorized, "Access Token 无效或过期"))
+			httpx.WriteCodeError(w, r, httpx.CodeUnauthorized, "Access Token 无效或过期")
 			return
 		}
 		// Banned accounts are force-logged-out and get httpx.CodeAccountBanned so the client can
@@ -67,7 +67,7 @@ func RequiredAuth(next http.Handler) http.Handler {
 		// also get their auth cookies cleared.
 		if svc.IsUserBanned(ctx, principal.UserID) {
 			ClearAuthCookies(w)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeAccountBanned, "账号已被封禁"))
+			httpx.WriteCodeError(w, r, httpx.CodeAccountBanned, "账号已被封禁")
 			return
 		}
 		ctx = WithPrincipal(ctx, principal)
