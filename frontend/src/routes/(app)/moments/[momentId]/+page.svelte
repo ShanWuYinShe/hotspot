@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { page } from '$app/state';
 	import { ArrowLeft, MoreHorizontal, Link2, PencilLine, Trash2, Flag, EyeOff } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
@@ -10,565 +9,83 @@
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
-	import { auth, requireAuth } from '@/stores/auth.svelte';
 	import { platform } from '@/stores/platform.svelte';
-	import Avatar from '@/components/shared/Avatar.svelte';
-	import RailSection from '@/components/rail/RailSection.svelte';
-	import RailUserRow from '@/components/rail/RailUserRow.svelte';
-	import RailLocationMini from '@/components/rail/RailLocationMini.svelte';
-	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
+	import { ROUTES } from '@/lib/routes';
 	import MomentPostBody from './MomentPostBody.svelte';
-	import type { CommentItem } from '@/api/types';
-
-	/** CommentItem → MomentComment（含 top_replies 一级回复映射；列表映射共用） */
-	function toMomentComment(c: CommentItem): MomentComment {
-		return {
-			id: c.comment_id,
-			userId: c.user?.user_id ?? '',
-			user: c.user?.nickname ?? '',
-			avatar: c.user?.avatar_url ?? '',
-			text: c.content ?? '',
-			time: formatMomentTime(c.created_at),
-			likes: (c.reactions || []).reduce((sum, rx) => sum + (rx.count ?? 0), 0),
-			liked: (c.reactions || []).some((rx) => rx.reacted_by_me),
-			isDeleted: c.is_deleted,
-			replies: (c.top_replies ?? []).map(toMomentComment),
-			repliesCount: c.replies_count ?? 0
-		};
-	}
 	import MomentDetailRail from './shared/MomentDetailRail.svelte';
 	import DeleteMomentDialog from './shared/DeleteMomentDialog.svelte';
 	import CommentInputBar from './shared/CommentInputBar.svelte';
-	import { toNearbyRailRows } from './nearby-rail';
 	import MomentEditDialog from '@/components/overlays/MomentEditDialog.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
-	import { showToast } from '@/stores/toast.svelte';
-	import { getMomentDetail, listComments, listCommentReplies, setReaction, createComment, deleteComment, favoriteMoment, fetchNearbyMoments, searchMoments, deleteMoment, listMyMoments , netError } from '@/api';
-	import { formatMomentTime } from '@/lib/utils';
-	import { smartBack } from '@/lib/smart-back';
-	import { copyShareLink } from '@/lib/share';
-	import { ROUTES } from '@/lib/routes';
 	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
-	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 	import { contentFade } from '@/lib/motion';
+	import { smartBack } from '@/lib/smart-back';
+	import { useMomentDetailData } from './shared/useMomentDetailData.svelte';
 
 	// 动态详情：点赞/收藏/评论/复制链接/更多菜单 + 桌面右 Rail。
+	// 数据状态与异步操作收敛至 useMomentDetailData。
 
 	let { params }: { params: { momentId: string } } = $props();
 
-	// 页面私有类型：内容体由 MomentPostBody 渲染（类型与其导出保持一致）。
-	type MomentComment = import('./MomentPostBody.svelte').MomentComment;
-	type MomentData = import('./MomentPostBody.svelte').MomentData;
+	const d = useMomentDetailData(() => params.momentId);
 
-	// 桌面 rail 数据：此刻附近来自 moments/fetch_nearby，更多动态来自 moments/search 热门模式。
-	let nearbyNow = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
-	let relatedMoments = $state<{ id: string; title: string; meta: string; image: string }[]>([]);
+	let moreMenuEl = $state<HTMLElement | null>(null);
+	let commentInputEl = $state<HTMLInputElement | null>(null);
 
-	$effect(() => {
-		let cancelled = false;
-		void Promise.all([
-			fetchNearbyMoments({ pagination: { limit: 3 } }).catch(() => netError(null)),
-			searchMoments({ sort_by: 'popular', pagination: { limit: 4 } }).catch(() => netError(null))
-		]).then(([nearbyRes, relatedRes]) => {
-			if (cancelled) return;
-			const nearbyItems = nearbyRes.code === 0 ? nearbyRes.data?.items ?? [] : [];
-			const relatedItems = relatedRes.code === 0 ? relatedRes.data?.items ?? [] : [];
-			nearbyNow = toNearbyRailRows(nearbyItems);
-			// 「更多动态」剔除当前帖( Gemini 审查 r19:重复推荐正在看的帖子 );
-			// 多拉一条补偿过滤损耗,展示仍截 3 条
-			relatedMoments = relatedItems
-				.filter((m) => m.moment_id !== params.momentId)
-				.slice(0, 3)
-				.map((m) => ({
-					id: m.moment_id,
-					title: m.description ?? '',
-					meta: `${m.user?.nickname ?? ''} · ${(m.reactions ?? []).reduce((sum, r) => sum + r.count, 0)} 赞`,
-					image: m.images?.[0]?.url ?? ''
-				}));
-		});
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	// params 为路由参数（SPA 内可能变化），此处用 $derived 保持响应。
-	// spec: moment_id 为 string，客户端不解析 ID 内容，直接透传使用。
-	const momentId = $derived(params.momentId);
-
-	function emptyMoment(): MomentData {
-		return {
-			id: '',
-			authorId: '',
-			user: '',
-			avatar: '',
-			location: '',
-			images: [],
-			content: '',
-			time: '',
-			likes: 0,
-			tag: '',
-			comments: []
-		};
-	}
-	let moment = $state<MomentData>(emptyMoment());
-	let apiComments = $state<MomentComment[]>([]);
-	// 评论 cursor 分页（契约 listComments 支持 pagination）：null = 无更多页。
-	// 此前只拉第一页且无加载更多入口，超出首页的评论永远不可见。
-	const COMMENT_PAGE_SIZE = 20;
-	let commentsNextCursor = $state<string | null>(null);
-	let commentsLoadingMore = $state(false);
-	let loading = $state(true);
-	let loadError = $state<string | null>(null);
-	let reloadKey = $state(0);
-	let input = $state('');
-	let moreOpen = $state(false);
-	let shareStatus = $state<'idle' | 'copied' | 'failed'>('idle');
-	// Reaction/favorite state derived from the moment detail (spec: liked state
-	// comes from reactions[].reacted_by_me; saved from my_state.is_favorited).
-	let liked = $state(false);
-	let saved = $state(false);
-	let likeEmoji = $state('👍');
-	// 编辑所需原始字段（扁平 moment 未保留 description/tags/privacy_level）。
-	// privacy_level 三态：null = 拥有者可见性未探测完成，编辑弹窗据此禁用可见性修改。
-	let momentRaw = $state<{ description: string; tags: string[]; privacy_level: 'public' | 'private' | null }>({ description: '', tags: [], privacy_level: null });
-	let deleteOpen = $state(false);
-	let editOpen = $state(false);
-	let deleting = $state(false);
-	// 举报目标：动态本体或某条评论（spec api_spec_report.md target_type='moment'|'comment'）
-	let reportTarget = $state<{ target_type: 'moment' | 'comment'; target_id: string } | null>(null);
-
-	$effect(() => {
-		void reloadKey;
-		let cancelled = false;
-		async function fetchMoment() {
-			try {
-				loading = true;
-				loadError = null;
-				// 路由参数切换（SPA 内 momentId 变化）时清空旧数据，避免新数据到达前残留展示
-				moment = emptyMoment();
-				apiComments = [];
-				const [detailRes, commentsRes] = await Promise.all([
-					getMomentDetail(momentId).catch(() => netError(null)),
-					listComments(momentId, { limit: COMMENT_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }))
-				]);
-				if (cancelled) return;
-
-				const detailData = detailRes.code === 0 ? detailRes.data : null;
-				const commentsData = commentsRes.code === 0 ? commentsRes.data : null;
-
-				// 动态不存在或加载失败：与 notify/users 分栏页一致，展示 LoadError + 重试
-				if (!detailData) {
-					loadError = detailRes.code === 0 ? '动态不存在或已被删除' : (detailRes.message || '加载失败');
-				} else {
-					loadError = null;
-				}
-
-				if (detailData) {
-					moment = {
-						id: momentId,
-						authorId: detailData.user?.user_id ?? '',
-						user: detailData.user?.nickname ?? '',
-							avatar: detailData.user?.avatar_url ?? '',
-						location: detailData.location?.location_name ?? '',
-						images: (detailData.images ?? []).map((im) => im.url).filter(Boolean),
-						// 每张图宽高用于加载前比例占位（图片慢/失败时不塌陷、覆盖层不错位）
-						imageSizes: (detailData.images ?? []).map((im) => ({
-							width: im.width ?? null,
-							height: im.height ?? null
-						})),
-						content: detailData.description ?? '',
-						time: formatMomentTime(detailData.created_at),
-						likes: (detailData.reactions ?? []).reduce((sum, r) => sum + r.count, 0),
-						tag: detailData.tags?.[0] ?? '',
-						comments: []
-					};
-					// 评论计数基数 = 服务端权威值；本页内新增走 commentDelta
-					commentCountBase = detailData.comments_count ?? 0;
-					commentDelta = 0;
-					// Derive liked from reactions[].reacted_by_me (spec); saved from my_state.
-					const mine = (detailData.reactions || []).find((r) => r.reacted_by_me);
-					if (mine) {
-						liked = true;
-						likeEmoji = mine.emoji ?? '👍';
-					} else {
-						liked = false;
-					}
-					saved = Boolean(detailData.is_favorited);
-					momentRaw = {
-						description: detailData.description ?? '',
-						tags: detailData.tags ?? [],
-						privacy_level: null
-					};
-					// privacy_level 属拥有者数据（OwnerMomentItem），不在公开详情类型 MomentItem 中；
-					// 仅在拥有者打开编辑弹窗时按需惰性探测，避免首屏盲拉多页数据造成网络浪费。
-				}
-
-				if (commentsData) {
-					const items: MomentComment[] = (commentsData.items || []).map(toMomentComment);
-					apiComments = items;
-					commentsNextCursor = commentsData.next_cursor ?? null;
-				}
-			} catch {
-				// empty data is normal
-			} finally {
-				if (!cancelled) {
-					loading = false;
-					// 卡片评论按钮深链（?focus=comments）：直达评论区并聚焦输入栏。
-					// rAF 等 loading=false 的 DOM 渲染完成后再定位。
-					if (page.url.searchParams.get('focus') === 'comments') {
-						requestAnimationFrame(() => focusComments());
-					}
-				}
-			}
-		}
-		void fetchMoment();
-		return () => {
-			cancelled = true;
-		};
-	});
-
-	// 评论计数基数取服务端权威 comments_count（评论列表只取第一页，
-	// 本地列表长度会少算第 2 页起的评论）；commentDelta 承载本页内的增减。
-	let commentCountBase = $state(0);
-	let commentDelta = $state(0);
-	// 本次新增的评论/回复 id（仅它们播 160ms 进场；初始加载/缓存不播）
-	let newCommentId = $state<string | null>(null);
-	let newReplyId = $state<string | null>(null);
-	function markNewComment(id: string) {
-		newCommentId = id;
-		setTimeout(() => { if (newCommentId === id) newCommentId = null; }, 600);
-	}
-	function markNewReply(id: string) {
-		newReplyId = id;
-		setTimeout(() => { if (newReplyId === id) newReplyId = null; }, 600);
-	}
-	const commentCount = $derived(commentCountBase + commentDelta);
-	// 点赞计数：moment.likes 由本页维护（服务端快照 + toggleLike 乐观增量，已含本人状态），
-	const isAuthor = $derived(Boolean(auth.user?.user_id) && auth.user?.user_id === moment.authorId);
-
-	// in-flight 去重：写请求未完成时忽略重复触发，避免连点双翻转 + 并发乱序
-	let likePending = $state(false);
-	let savePending = $state(false);
-	let commentPending = $state(false);
-	const commentLikePending = new Set<string>();
-
-	// 回复目标（顶层评论）：非空时提交携带 parent_id，输入区上方显示取消条。
-	let replyTarget = $state<{ commentId: string; userId: string; user: string } | null>(null);
-	const startReply = (user: string, commentId: string) => {
-		replyTarget = { commentId, userId: '', user };
-		input = '@' + user + ' ';
-		commentInputEl?.focus();
-	};
-	const cancelReply = () => {
-		replyTarget = null;
-		input = input.replace(/^@\S+\s*/, '');
-	};
-	// 「查看全部回复」：fetch_replies 拉全量（时间正序）替换预览。
-	const expandReplies = async (commentId: string) => {
-		const res = await listCommentReplies(commentId, { limit: 100 }).catch(() => null);
-		if (!res || res.code !== 0 || !res.data) {
-			showToast('加载回复失败，请重试', 'danger');
-			return;
-		}
-		const full = res.data.items.map(toMomentComment);
-		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, replies: full } : c));
-	};
-
-	const handleComment = async () => {
-		const text = input.trim();
-		if (!text || commentPending) return;
-		// 写操作先过登录闸：匿名提交只会失败回滚，用户侧无任何反馈
-		if (!requireAuth({ action: '评论', targetId: momentId, run: () => void handleComment() })) return;
-		const reply = replyTarget;
-		input = '';
-		if (reply) {
-			// 回复：携带 parent_id（spec 两级评论模型）+ mentions 通知被回复人；
-			// 成功后插入父级 replies（父级不在已加载集合时重拉第一页）。
-			commentPending = true;
-			try {
-				const res = await createComment({
-					moment_id: momentId,
-					content: text,
-					parent_id: reply.commentId,
-					mentions: reply.userId ? [reply.userId] : []
-				});
-				if (res.code !== 0 || !res.data) throw new Error(res.message || '回复发布失败');
-				showToast('回复已发布', 'success');
-				commentDelta += 1;
-				const newReply = toMomentComment(res.data);
-				const parent = apiComments.find((c) => c.id === reply.commentId);
-				if (parent) {
-					apiComments = apiComments.map((c) =>
-						c.id === reply.commentId ? { ...c, replies: [...c.replies, newReply] } : c
-					);
-					markNewReply(newReply.id);
-				} else {
-					const refreshed = await listComments(momentId, { limit: COMMENT_PAGE_SIZE }).catch(() => netError({ items: [], next_cursor: null }));
-					if (refreshed.code === 0 && refreshed.data) {
-						apiComments = refreshed.data.items.map(toMomentComment);
-						commentsNextCursor = refreshed.data.next_cursor ?? null;
-					}
-				}
-				replyTarget = null;
-			} catch (err) {
-				showToast(err instanceof Error && err.message ? err.message : '回复发布失败，请重试', 'danger');
-			} finally {
-				commentPending = false;
-			}
-			return;
-		}
-		// Optimistic append; createComment confirms server-side.
-		const optimistic: MomentComment = {
-			id: `optimistic-${Date.now()}`,
-			userId: auth.user?.user_id ?? '',
-			user: auth.user?.nickname ?? '',
-			avatar: auth.user?.avatar_url ?? '',
-			text,
-			time: '刚刚',
-			likes: 0,
-			liked: false,
-			isDeleted: false,
-			replies: [],
-			repliesCount: 0
-		};
-		apiComments = [...apiComments, optimistic];
-		markNewComment(optimistic.id);
-		commentDelta += 1;
-		commentPending = true;
-		try {
-			// 业务失败（HTTP 200 + code≠0）api client 不抛错，必须显式判 code
-			const res = await createComment({ moment_id: momentId, content: text });
-			if (res.code !== 0 || !res.data) throw new Error(res.message || '评论发布失败');
-			// 用服务端真实 CommentItem 回填乐观条目：后续点赞走
-			// reactions/set(target_id=comment_id)，乐观占位 id 必然失败。
-			const confirmed = toMomentComment(res.data);
-			apiComments = apiComments.map((item) => (item.id === optimistic.id ? confirmed : item));
-			markNewComment(confirmed.id);
-		} catch (err) {
-			apiComments = apiComments.filter((c) => c.id !== optimistic.id);
-			commentDelta -= 1;
-			showToast(err instanceof Error && err.message ? err.message : '评论发布失败，请重试', 'danger');
-		} finally {
-			commentPending = false;
-		}
-	};
-
-	// 加载更多评论（cursor 分页）：评论区底部 InfiniteSentinel 滚到即自动续载
-	const loadMoreComments = async () => {
-		if (commentsNextCursor === null || commentsLoadingMore) return;
-		commentsLoadingMore = true;
-		try {
-			const res = await listComments(momentId, { limit: COMMENT_PAGE_SIZE, cursor: commentsNextCursor }).catch(() => netError({ items: [], next_cursor: null }));
-			if (res.code === 0 && res.data) {
-				const items: MomentComment[] = (res.data.items || []).map(toMomentComment);
-				const known = new Set(apiComments.map((c) => c.id));
-				apiComments = [...apiComments, ...items.filter((c) => !known.has(c.id))];
-				commentsNextCursor = res.data.next_cursor ?? null;
-			}
-		} finally {
-			commentsLoadingMore = false;
-		}
-	};
-
-	// 评论点赞：登录闸 + 乐观翻转（likes 同步 ±1，服务端计数已含本人，刷新后口径一致）
-	// + reactions/set(target_type='comment')，失败回滚
-	const toggleCommentLike = async (commentId: string) => {		const target = apiComments.find((c) => c.id === commentId);
-		if (!target || commentLikePending.has(commentId)) return;
-		if (!requireAuth({ action: '点赞', targetId: commentId, run: () => void toggleCommentLike(commentId) })) return;
-		const prev = target.liked;
-		const prevLikes = target.likes;
-		apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: !prev, likes: prevLikes + (prev ? -1 : 1) } : c));
-		commentLikePending.add(commentId);
-		try {
-			const res = await setReaction({ target_type: 'comment', target_id: commentId, emoji: '👍', active: !prev });
-			if (res.code !== 0) throw new Error(res.message || '操作失败');
-		} catch (err) {
-			apiComments = apiComments.map((c) => (c.id === commentId ? { ...c, liked: prev, likes: prevLikes } : c));
-			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
-		} finally {
-			commentLikePending.delete(commentId);
-		}
-	};
-
-	// 删除自己的评论（spec: comments/delete，仅作者；软删除——顶层删后子评论保留，
-	// 列表展示「该评论已删除」占位）。计数口径与 handleComment 的 +1 对称取 -1。
-	let commentDeleteTarget = $state<string | null>(null);
-	let commentDeletePending = $state(false);
-	const handleCommentDelete = async () => {
-		const target = commentDeleteTarget;
-		if (!target || commentDeletePending) return;
-		commentDeletePending = true;
-		try {
-			const res = await deleteComment({ comment_id: target });
-			if (res.code !== 0) throw new Error(res.message || '删除失败');
-			showToast('评论已删除', 'success');
-			commentDelta -= 1;
-			apiComments = apiComments.map((c) => (c.id === target ? { ...c, isDeleted: true, text: '', liked: false, likes: 0 } : c));
-		} catch (err) {
-			showToast(err instanceof Error && err.message ? err.message : '删除失败，请重试', 'danger');
-		} finally {
-			commentDeletePending = false;
-			commentDeleteTarget = null;
-		}
-	};
-
-	// 操作条评论计数点击：滚动到评论区并聚焦输入栏
 	const focusComments = () => {
 		document.getElementById('moment-comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		commentInputEl?.focus();
 	};
 
-	// 评论区"回复"：聚焦输入栏并 @ 对方
 	const replyTo = (user: string) => {
-		input = `@${user} `;
+		d.input = `@${user} `;
 		commentInputEl?.focus();
 	};
-
-	const toggleLike = async () => {
-		if (likePending) return;
-		if (!requireAuth({ action: '点赞', targetId: momentId, run: () => void toggleLike() })) return;
-		const next = !liked;
-		const prevLikes = moment.likes;
-		liked = next;
-		// 点赞数乐观 ±1：moment.likes 是服务端快照（reactions[].count 已含本人），
-		// 本页只承载快照后的增量；刷新重拉后口径自然对齐。
-		moment = { ...moment, likes: prevLikes + (next ? 1 : -1) };
-		likePending = true;
-		try {
-			const res = await setReaction({ target_type: 'moment', target_id: momentId, emoji: likeEmoji, active: next });
-			if (res.code !== 0) throw new Error(res.message || '操作失败');
-		} catch (err) {
-			liked = !next;
-			moment = { ...moment, likes: prevLikes };
-			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
-		} finally {
-			likePending = false;
-		}
-	};
-
-	const toggleSave = async () => {
-		if (savePending) return;
-		if (!requireAuth({ action: '收藏', targetId: momentId, run: () => void toggleSave() })) return;
-		const next = !saved;
-		saved = next;
-		savePending = true;
-		try {
-			const res = await favoriteMoment({ moment_id: momentId, active: next });
-			if (res.code !== 0) throw new Error(res.message || '操作失败');
-		} catch (err) {
-			saved = !next;
-			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
-		} finally {
-			savePending = false;
-		}
-	};
-
-	const handleDelete = async () => {
-		deleting = true;
-		try {
-			const res = await deleteMoment({ moment_id: momentId });
-			if (res.code === 0) {
-				showToast('动态已删除', 'success');
-				// 已删瞬间不再出现在附近 feed 的会话缓存里（返回列表即重拉）。
-				clearMomentsProgress();
-				smartBack();
-			} else {
-				showToast(res.message || '删除失败', 'danger');
-			}
-		} catch {
-			showToast('删除失败，请重试', 'danger');
-		} finally {
-			deleting = false;
-		}
-	};
-
-	const handleUpdated = (updated: { description: string; tags: string[]; privacy_level: 'public' | 'private' | null }) => {
-		moment = { ...moment, content: updated.description, tag: updated.tags[0] ?? '' };
-		momentRaw = updated;
-	};
-
-	const openEditDialog = async () => {
-		editOpen = true;
-		moreOpen = false;
-		if (isAuthor && momentRaw.privacy_level === null) {
-			try {
-				let cursor: string | null = null;
-				for (let i = 0; i < 2; i++) {
-					const ownRes: Awaited<ReturnType<typeof listMyMoments>> | null = await listMyMoments({ pagination: { limit: 20, cursor: cursor ?? undefined } }).catch(() => null);
-					if (!ownRes || ownRes.code !== 0 || !ownRes.data) break;
-					const found = ownRes.data.items.find((m) => m.moment_id === momentId);
-					if (found) {
-						momentRaw = { ...momentRaw, privacy_level: found.privacy_level };
-						break;
-					}
-					cursor = ownRes.data.next_cursor;
-					if (!cursor) break;
-				}
-			} catch {}
-		}
-	};
-
-	// 分享：share/create 生成分享码并复制 /share/[code] 落地链接；
-	// 创建失败（匿名/网络异常）降级为复制页面原始链接（lib/share 统一降级链）。
-	const copyMomentLink = async () => {
-		const result = await copyShareLink({ type: 'moment', id: momentId });
-		shareStatus = result === 'failed' ? 'failed' : 'copied';
-		moreOpen = false;
-		window.setTimeout(() => (shareStatus = 'idle'), 1800);
-	};
-
-	let moreMenuEl = $state<HTMLElement | null>(null);
-	// 评论输入框元素（focusComments/replyTo 聚焦用）
-	let commentInputEl = $state<HTMLInputElement | null>(null);
 </script>
+
 <svelte:head>
 	<title>瞬间详情 · HotSpot</title>
 </svelte:head>
 
-<!-- 页面唯一 h1：DetailHeader 的实体名是工具行文本，不产生标题元素；
-     这里提供读屏/axe 的页面级标题，不参与视觉布局。 -->
-<h1 class="sr-only">{moment.user ? `${moment.user} 的瞬间` : '瞬间详情'}</h1>
+<h1 class="sr-only">{d.moment.user ? `${d.moment.user} 的瞬间` : '瞬间详情'}</h1>
 
-<!-- 评论输入器（唯一实现，按端切换登记形态）：
-     桌面/平板 → inline 嵌在评论区顶部；移动 → floating 悬浮 dock（页面 footer 承载）。
-     2026-10-29：替代原先「整条白底 border-t 底栏」，解决输入区与本卡格格不入、移动端动作条+输入器叠两条横杠的问题。 -->
 {#snippet commentComposer()}
-	{#if replyTarget}
+	{#if d.replyTarget}
 		<div class="mb-2 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/70 px-3 py-1.5">
-			<p class="truncate text-xs text-text-secondary font-medium">回复 @{replyTarget.user}</p>
+			<p class="truncate text-xs text-text-secondary font-medium">回复 @{d.replyTarget.user}</p>
 			<button
 				type="button"
 				class="link-btn shrink-0 text-xs text-accent-default hover:underline"
-				onclick={cancelReply}
+				onclick={() => d.cancelReply()}
 			>取消回复</button>
 		</div>
 	{/if}
 	<CommentInputBar
-		bind:input
+		bind:input={d.input}
 		bind:inputEl={commentInputEl}
-		onSend={() => void handleComment()}
+		onSend={() => void d.handleComment()}
 		variant={platform.platform === 'mobile' ? 'docked' : 'inline'}
 	/>
 {/snippet}
 
 {#snippet moreMenu()}
-	<DropdownMenu.Root bind:open={moreOpen}>
+	<DropdownMenu.Root bind:open={d.moreOpen}>
 		<div bind:this={moreMenuEl} class="relative">
-			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" ariaExpanded={moreOpen} ariaHasPopup="menu" onClick={() => (moreOpen = !moreOpen)} />
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" variant="ghost" tone="current" ariaExpanded={d.moreOpen} ariaHasPopup="menu" onClick={() => (d.moreOpen = !d.moreOpen)} />
 		</div>
 		<DropdownMenu.Content customAnchor={moreMenuEl}>
-			{#if isAuthor}
-				<DropdownMenu.Item onSelect={() => void openEditDialog()}>
+			{#if d.isAuthor}
+				<DropdownMenu.Item onSelect={() => void d.openEditDialog()}>
 					<PencilLine class="size-3.5 text-accent-default" strokeWidth={1.75} />
 					编辑动态
 				</DropdownMenu.Item>
-				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { deleteOpen = true; moreOpen = false; }}>
+				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { d.deleteOpen = true; d.moreOpen = false; }}>
 					<Trash2 class="size-3.5" strokeWidth={1.75} />
 					删除动态
 				</DropdownMenu.Item>
-			{:else if moment.id}
-				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { reportTarget = { target_type: 'moment', target_id: momentId }; moreOpen = false; }}>
+			{:else if d.moment.id}
+				<DropdownMenu.Item class="text-status-danger hover:text-text-status-danger-on-soft data-[highlighted]:text-text-status-danger-on-soft hover:bg-danger-bg data-[highlighted]:bg-danger-bg" onSelect={() => { d.reportTarget = { target_type: 'moment', target_id: params.momentId }; d.moreOpen = false; }}>
 					<Flag class="size-3.5" strokeWidth={1.75} />
 					举报动态
 				</DropdownMenu.Item>
@@ -578,50 +95,53 @@
 {/snippet}
 
 {#snippet headerActions()}
-	{#if moment.id && !loading}
-		<div class="flex items-center gap-1">
-			<ActionIconButton icon={Link2} label="复制动态链接" variant="ghost" tone="current" size={36} onClick={() => void copyMomentLink()} />
-			{@render moreMenu()}
-		</div>
-	{:else}
-		<span class="size-9 shrink-0" aria-hidden="true"></span>
-	{/if}
+	<button
+		type="button"
+		class="relative flex size-9 items-center justify-center rounded-full text-text-primary hover:bg-interactive-hover focus-ring"
+		aria-label={d.shareStatus === 'copied' ? '已复制动态链接' : '分享动态'}
+		onclick={() => void d.copyMomentLink()}
+	>
+		<Link2 class="size-4" strokeWidth={1.75} />
+		{#if d.shareStatus === 'copied'}
+			<span class="absolute -top-7 right-0 rounded-sm bg-surface-primary px-2 py-0.5 text-xxs font-medium text-text-primary shadow-raised-sm whitespace-nowrap">
+				已复制
+			</span>
+		{/if}
+	</button>
+	{@render moreMenu()}
 {/snippet}
 
 <SplitPageLayout
 	contentMaxWidth="var(--cst-content-detail)"
 	edgeToEdgeMobile={true}
-	overlayHeaderMobile={!loading && moment.images.length > 0}
+	overlayHeaderMobile={!d.loading && d.moment.images.length > 0}
 	contentClassName="flex flex-col flex-1 min-h-full pt-0 sm:pt-1 pb-0 sm:pb-6"
 >
 	{#snippet header()}
 		<DetailHeader
 			category="发现动态"
-			entityName={moment.user ? `@${moment.user} 的瞬间` : '瞬间详情'}
-			author={moment.id && !loading ? {
-				id: moment.authorId,
-				name: moment.user || '用户',
-				avatar: moment.avatar,
-				location: moment.location,
-				time: moment.time
+			entityName={d.moment.user ? `@${d.moment.user} 的瞬间` : '瞬间详情'}
+			author={d.moment.id && !d.loading ? {
+				id: d.moment.authorId,
+				name: d.moment.user || '用户',
+				avatar: d.moment.avatar,
+				location: d.moment.location,
+				time: d.moment.time
 			} : undefined}
 			onBack={() => smartBack()}
 			onAuthorClick={() => {
-				if (moment.authorId) void goto(ROUTES.user(moment.authorId));
+				if (d.moment.authorId) void goto(ROUTES.user(d.moment.authorId));
 			}}
 			trailing={headerActions}
 		/>
 	{/snippet}
+
 	<p aria-live="polite" class="sr-only">
-		{shareStatus === 'copied' ? '动态链接已复制' : shareStatus === 'failed' ? '无法复制动态链接' : ''}
+		{d.shareStatus === 'copied' ? '动态链接已复制' : d.shareStatus === 'failed' ? '无法复制动态链接' : ''}
 	</p>
 
-	<!-- 内容（移动端通栏满宽，桌面居中软岛） -->
-	<div class="flex min-h-full flex-1 flex-col" use:contentFade={loading}>
-		{#if loading}
-			<!-- 详情首屏骨架屏：作者行 → 正文 → 媒体 → 操作条 → 评论区，与 MomentPostBody
-			     的真实卡片同构（同外壳/同纵向节奏），做到「骨架→内容零位移」；
-			     评论区用 decorative 骨架避免屏读器重复播报 -->
+	<div class="flex min-h-full flex-1 flex-col" use:contentFade={d.loading}>
+		{#if d.loading}
 			<div
 				class="mx-auto w-full max-w-4xl flex-1 flex flex-col"
 				role="status"
@@ -630,7 +150,6 @@
 				data-skeleton-root
 			>
 				<div class="overflow-hidden rounded-none sm:rounded-lg bg-surface-island shadow-none sm:shadow-xs flex-1 flex flex-col">
-					<!-- 画廊 hero 首屏：与真实页一致（图片 → 作者/正文 → 动作条 → 评论区），零位移 -->
 					<Skeleton class="aspect-[4/3] w-full" />
 					<div class="p-4 sm:p-5 md:p-7">
 						<div class="flex items-center gap-3 pb-4">
@@ -656,9 +175,9 @@
 					</div>
 				</div>
 			</div>
-		{:else if loadError}
-			<LoadError message={loadError} onRetry={() => reloadKey++} />
-		{:else if !moment.id}
+		{:else if d.loadError}
+			<LoadError message={d.loadError} onRetry={() => d.reload()} />
+		{:else if !d.moment.id}
 			<EmptyState
 				spotlight
 				iconTone="accent"
@@ -674,31 +193,30 @@
 			</EmptyState>
 		{:else}
 			<MomentPostBody
-				{moment}
-				comments={apiComments}
-				{commentCount}
-				hasMoreComments={commentsNextCursor !== null}
-				loadingMoreComments={commentsLoadingMore}
-				{liked}
-				{saved}
-				{newCommentId}
-				{newReplyId}
-				onToggleLike={() => void toggleLike()}
-				onToggleSave={() => void toggleSave()}
+				moment={d.moment}
+				comments={d.apiComments}
+				commentCount={d.commentCount}
+				hasMoreComments={d.commentsNextCursor !== null}
+				loadingMoreComments={d.commentsLoadingMore}
+				liked={d.liked}
+				saved={d.saved}
+				newCommentId={d.newCommentId}
+				newReplyId={d.newReplyId}
+				onToggleLike={() => void d.toggleLike()}
+				onToggleSave={() => void d.toggleSave()}
 				onCommentClick={focusComments}
-				onReply={(user, commentId) => startReply(user, commentId)}
-				onExpandReplies={(commentId) => void expandReplies(commentId)}
-				onToggleCommentLike={(id) => void toggleCommentLike(id)}
-				onReportComment={(id) => (reportTarget = { target_type: 'comment', target_id: id })}
-				onDeleteComment={(id) => (commentDeleteTarget = id)}
-				onLoadMoreComments={() => void loadMoreComments()}
+				onReply={(user, commentId) => d.startReply(user, commentId)}
+				onExpandReplies={(commentId) => void d.expandReplies(commentId)}
+				onToggleCommentLike={(id: string) => void d.toggleCommentLike(id)}
+				onReportComment={(id: string) => (d.reportTarget = { target_type: 'comment', target_id: id })}
+				onDeleteComment={(id: string) => (d.commentDeleteTarget = id)}
+				onLoadMoreComments={() => void d.loadMoreComments()}
 				commentComposer={platform.platform === 'mobile' ? undefined : commentComposer}
 			/>
 		{/if}
 	</div>
 
 	{#snippet footer()}
-		<!-- 移动端：通栏贴底底栏，消除浮动胶囊与内容穿插漏光 -->
 		{#if platform.platform === 'mobile'}
 			<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md">
 				{@render commentComposer()}
@@ -707,34 +225,39 @@
 	{/snippet}
 
 	{#snippet rail()}
-		<MomentDetailRail {moment} {nearbyNow} {relatedMoments} />
+		<MomentDetailRail moment={d.moment} nearbyNow={d.nearbyNow} relatedMoments={d.relatedMoments} />
 	{/snippet}
 </SplitPageLayout>
 
-<DeleteMomentDialog open={deleteOpen} {deleting} onCancel={() => (deleteOpen = false)} onConfirm={handleDelete} />
+<DeleteMomentDialog
+	open={d.deleteOpen}
+	deleting={d.deleting}
+	onCancel={() => (d.deleteOpen = false)}
+	onConfirm={() => void d.handleDelete()}
+/>
 
 <ConfirmDialog
-	open={commentDeleteTarget !== null}
+	open={d.commentDeleteTarget !== null}
 	title="删除这条评论？"
 	description="删除后将显示「该评论已删除」，其下的回复保留。"
-	confirmLabel={commentDeletePending ? '删除中…' : '确认删除'}
-	loading={commentDeletePending}
-	onCancel={() => (commentDeleteTarget = null)}
-	onConfirm={() => void handleCommentDelete()}
+	confirmLabel={d.commentDeletePending ? '删除中…' : '确认删除'}
+	loading={d.commentDeletePending}
+	onCancel={() => (d.commentDeleteTarget = null)}
+	onConfirm={() => void d.handleCommentDelete()}
 />
 
 <ReportDialog
-	open={reportTarget !== null}
-	targetType={reportTarget?.target_type ?? 'moment'}
-	targetId={reportTarget?.target_id ?? ''}
-	targetLabel={reportTarget?.target_type === 'comment' ? '这条评论' : '这条动态'}
-	onClose={() => (reportTarget = null)}
+	open={d.reportTarget !== null}
+	targetType={d.reportTarget?.target_type ?? 'moment'}
+	targetId={d.reportTarget?.target_id ?? ''}
+	targetLabel={d.reportTarget?.target_type === 'comment' ? '这条评论' : '这条动态'}
+	onClose={() => (d.reportTarget = null)}
 />
 
 <MomentEditDialog
-	open={editOpen}
-	{momentId}
-	initial={momentRaw}
-	onClose={() => (editOpen = false)}
-	onUpdated={handleUpdated}
+	open={d.editOpen}
+	momentId={params.momentId}
+	initial={d.momentRaw}
+	onClose={() => (d.editOpen = false)}
+	onUpdated={d.handleUpdated}
 />
