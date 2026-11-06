@@ -71,7 +71,9 @@ jobs:
           # 的退出码取自 tee，测试失败不会让本步骤变红，必须显式开启 pipefail。
           set -eo pipefail
           cd backend-go
-          go test -race -count=1 -cover $(go list ./... | grep -v /test/integration) 2>&1 | tee /tmp/gotest.log
+          # 用数组承载包列表：避免未加引号的命令替换被 shell 分词（shellcheck SC2046）。
+          mapfile -t pkgs < <(go list ./... | grep -v /test/integration)
+          go test -race -count=1 -cover "${pkgs[@]}" 2>&1 | tee /tmp/gotest.log
           # 业务模块覆盖率门槛：internal/modules 下任一包 <70% 即失败。
           # go test 单包输出格式：ok  <pkg>  <dur>  coverage: <x>% of statements
           awk '/^ok .*coverage: [0-9.]+% of statements/ {
@@ -291,7 +293,7 @@ jobs:
             -v "$PWD/docker/nginx.proxy.inc":/etc/nginx/conf.d/proxy.inc:ro \
             -v "$PWD/docker/amap.default.inc":/etc/nginx/conf.d/amap.inc:ro \
             nginx:1.30.4-alpine
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             root_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8888/ || true)
             s3_code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8888/s3/ || true)
             if [ "$root_code" = "200" ] && [ "$s3_code" != "000" ] && [ "$s3_code" != "502" ]; then
