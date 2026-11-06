@@ -85,7 +85,7 @@ func (r PublicSearchGroupMembersRequest) toInternal() SearchGroupMembersRequest 
 	return SearchGroupMembersRequest{GroupID: r.GroupID, Keyword: r.Keyword, Role: r.Role, Pagination: r.Pagination}
 }
 
-func toPublicGroupItem(item GroupItem) PublicGroupItem {
+func ToPublicGroupItem(item GroupItem) PublicGroupItem {
 	tags := item.Tags
 	if tags == nil {
 		tags = []string{}
@@ -105,10 +105,10 @@ func toPublicGroupItem(item GroupItem) PublicGroupItem {
 	}
 }
 
-func toPublicPaginatedGroups(page PaginatedGroups) PublicPaginatedGroups {
+func ToPublicPaginatedGroups(page PaginatedGroups) PublicPaginatedGroups {
 	items := make([]PublicGroupItem, 0, len(page.Items))
 	for _, item := range page.Items {
-		items = append(items, toPublicGroupItem(item))
+		items = append(items, ToPublicGroupItem(item))
 	}
 	return PublicPaginatedGroups{Items: items, NextCursor: page.NextCursor}
 }
@@ -164,7 +164,7 @@ func (h *Handler) PublicSearch(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteAPIError(w, r, "PublicSearch", err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedGroups(list)))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(ToPublicPaginatedGroups(list)))
 }
 
 func (h *Handler) PublicOpenTheDoor(w http.ResponseWriter, r *http.Request) {
@@ -186,7 +186,7 @@ func (h *Handler) PublicOpenTheDoor(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteCodeError(w, r, httpx.CodeNotFound, "群组不存在")
 		return
 	}
-	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicGroupItem(item)))
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(ToPublicGroupItem(item)))
 }
 
 func (h *Handler) PublicListMembers(w http.ResponseWriter, r *http.Request) {

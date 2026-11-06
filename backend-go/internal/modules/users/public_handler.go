@@ -3,6 +3,7 @@ package users
 import (
 	"net/http"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/httpx"
 )
@@ -145,4 +146,149 @@ func (h *Handler) PublicBatchGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(UsersBatchResult{Users: users}))
+}
+
+// ── 关系列表 / 用户群组 / 用户瞬间（匿名版）──────────────────────────
+
+// PublicRelatedUserItem：RelatedUserItem 去 remark（查看者字段）；互关由
+// followed_back_at 表达（仅 fetch_friends 返回真值）。
+type PublicRelatedUserItem struct {
+	User           PublicUserItem `json:"user"`
+	FollowedAt     string         `json:"followed_at"`
+	FollowedBackAt *string        `json:"followed_back_at"`
+}
+
+type PublicPaginatedRelatedUsers struct {
+	Items      []PublicRelatedUserItem `json:"items"`
+	NextCursor *string                 `json:"next_cursor"`
+}
+
+type PublicFetchFriendsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type PublicFetchFollowingRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type PublicFetchFollowersRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type PublicFetchUserGroupsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type PublicFetchUserMomentsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+type PublicFetchUserReactedMomentsRequest struct {
+	UserID     string            `json:"user_id"`
+	Pagination *PaginationParams `json:"pagination,omitempty"`
+}
+
+func toPublicRelatedUserItem(item RelatedUserItem) PublicRelatedUserItem {
+	return PublicRelatedUserItem{
+		User:           toPublicUserItem(item.User),
+		FollowedAt:     item.FollowedAt,
+		FollowedBackAt: item.FollowedBackAt,
+	}
+}
+
+func toPublicPaginatedRelatedUsers(items []RelatedUserItem, nextCursor *string) PublicPaginatedRelatedUsers {
+	converted := make([]PublicRelatedUserItem, 0, len(items))
+	for _, item := range items {
+		converted = append(converted, toPublicRelatedUserItem(item))
+	}
+	return PublicPaginatedRelatedUsers{Items: converted, NextCursor: nextCursor}
+}
+
+func (h *Handler) PublicListFriends(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchFriendsRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListFriends(r.Context(), ListFriendsRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListFriends", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedRelatedUsers(result.Items, result.NextCursor)))
+}
+
+func (h *Handler) PublicListFollowing(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchFollowingRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListFollowing(r.Context(), ListFollowingRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListFollowing", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedRelatedUsers(result.Items, result.NextCursor)))
+}
+
+func (h *Handler) PublicListFollowers(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchFollowersRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListFollowers(r.Context(), ListFollowersRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListFollowers", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(toPublicPaginatedRelatedUsers(result.Items, result.NextCursor)))
+}
+
+func (h *Handler) PublicListGroups(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchUserGroupsRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListGroups(r.Context(), UserGroupsRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListGroups", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(grouptypes.ToPublicPaginatedGroups(result)))
+}
+
+func (h *Handler) PublicListMoments(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchUserMomentsRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListMoments(r.Context(), UserMomentsRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListMoments", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(momenttypes.ToPublicPaginatedMoments(result)))
+}
+
+func (h *Handler) PublicListReactedMoments(w http.ResponseWriter, r *http.Request) {
+	var pubReq PublicFetchUserReactedMomentsRequest
+	if err := httpx.DecodeStrictJSON(r, &pubReq); err != nil {
+		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "请求体格式错误")
+		return
+	}
+	result, err := h.service.ListReactedMoments(r.Context(), UserReactedMomentsRequest{UserID: pubReq.UserID, Pagination: pubReq.Pagination})
+	if err != nil {
+		h.writeServiceError(w, r, "PublicListReactedMoments", err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, httpx.Success(momenttypes.ToPublicPaginatedMoments(result)))
 }

@@ -60,12 +60,12 @@ func (m *Module) MountPublic(r chi.Router) {
 	r.Route("/users", func(usersRouter chi.Router) {
 		usersRouter.Post("/search", m.handler.PublicSearch)
 		usersRouter.Post("/open_the_door", m.handler.PublicOpenTheDoor)
-		usersRouter.Post("/fetch_friends", m.handler.ListFriends)
-		usersRouter.Post("/fetch_following", m.handler.ListFollowing)
-		usersRouter.Post("/fetch_followers", m.handler.ListFollowers)
-		usersRouter.Post("/fetch_groups", m.handler.ListGroups)
-		usersRouter.Post("/fetch_moments", m.handler.ListMoments)
-		usersRouter.Post("/fetch_reacted_moments", m.handler.ListReactedMoments)
+		usersRouter.Post("/fetch_friends", m.handler.PublicListFriends)
+		usersRouter.Post("/fetch_following", m.handler.PublicListFollowing)
+		usersRouter.Post("/fetch_followers", m.handler.PublicListFollowers)
+		usersRouter.Post("/fetch_groups", m.handler.PublicListGroups)
+		usersRouter.Post("/fetch_moments", m.handler.PublicListMoments)
+		usersRouter.Post("/fetch_reacted_moments", m.handler.PublicListReactedMoments)
 		usersRouter.Post("/batch_fetch", m.handler.PublicBatchGet)
 	})
 }

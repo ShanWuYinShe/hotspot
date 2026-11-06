@@ -1,12 +1,14 @@
 package users
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	grouptypes "hotspot/backend-go/internal/modules/groups"
 	momenttypes "hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/platform/httpx"
 )
@@ -151,3 +153,117 @@ func decodeUsersCode(t *testing.T, rr *httptest.ResponseRecorder) httpx.Code {
 }
 
 func typesStrPtr(s string) *string { return &s }
+
+func TestPublicRelatedUserItemStripsRemark(t *testing.T) {
+	item := RelatedUserItem{
+		User:           UserItem{User: UserInfo{UserID: "u2", Nickname: "Bob"}, Relation: &Relationship{IsFollowing: true}},
+		FollowedAt:     "2026-01-01T00:00:00Z",
+		FollowedBackAt: typesStrPtr("2026-01-02T00:00:00Z"),
+		Remark:         typesStrPtr("alias"),
+	}
+	pub := toPublicRelatedUserItem(item)
+	blob, _ := json.Marshal(pub)
+	for _, forbidden := range []string{"remark", "relation", "social_context"} {
+		if strings.Contains(string(blob), forbidden) {
+			t.Fatalf("public related item must not expose %q: %s", forbidden, blob)
+		}
+	}
+	if !strings.Contains(string(blob), "followed_back_at") {
+		t.Fatalf("followed_back_at must be present: %s", blob)
+	}
+}
+
+func TestPublicUserListHandlersReturnPublicShape(t *testing.T) {
+	viewerGroupState := &grouptypes.GroupViewerState{Role: "owner"}
+	repo := &stubUserRepo{
+		profile:      MyProfile{UserID: "u1", Nickname: "Alice"},
+		profileFound: true,
+		exists:       true,
+		friends: PaginatedFriends{Items: []RelatedUserItem{{
+			User:       UserItem{User: UserInfo{UserID: "u2", Nickname: "Bob"}, Relation: &Relationship{IsFollowing: true}},
+			FollowedAt: "2026-01-01T00:00:00Z",
+			Remark:     typesStrPtr("alias"),
+		}}},
+		following: PaginatedFollowing{Items: []RelatedUserItem{{User: UserItem{User: UserInfo{UserID: "u3", Nickname: "Cara"}}, FollowedAt: "2026-01-01T00:00:00Z"}}},
+		followers: PaginatedFollowers{Items: []RelatedUserItem{{User: UserItem{User: UserInfo{UserID: "u4", Nickname: "Dan"}}, FollowedAt: "2026-01-01T00:00:00Z"}}},
+		groupsResult: grouptypes.PaginatedGroups{Items: []grouptypes.GroupItem{{
+			Group:       grouptypes.GroupInfo{GroupID: "g1", Name: "Group"},
+			Tags:        []string{"x"},
+			ViewerState: viewerGroupState,
+		}}},
+		momentsResult: momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{{
+			MomentID:    "m1",
+			Description: "hello",
+			User:        UserInfo{UserID: "u2", Nickname: "Bob"},
+			IsFavorited: true,
+		}}},
+		reactedMoments: momenttypes.PaginatedMoments{Items: []momenttypes.MomentItem{{
+			MomentID:       "m2",
+			Description:    "reacted",
+			User:           UserInfo{UserID: "u2", Nickname: "Bob"},
+			AuthorRelation: &momenttypes.UserRelationView{IsFollowing: true},
+		}}},
+	}
+	service := NewServiceWithRepo(repo)
+	service.SetContentProviders(publicGroupsProvider{result: repo.groupsResult}, publicMomentsProvider{moments: repo.momentsResult, reacted: repo.reactedMoments})
+	handler := NewHandler(service)
+	cases := []struct {
+		name    string
+		call    func(w http.ResponseWriter, r *http.Request)
+		body    string
+		mustNot []string
+	}{
+		{"friends", handler.PublicListFriends, `{"user_id":"u1"}`, []string{"remark", "relation", "social_context"}},
+		{"following", handler.PublicListFollowing, `{"user_id":"u1"}`, []string{"remark", "relation", "social_context"}},
+		{"followers", handler.PublicListFollowers, `{"user_id":"u1"}`, []string{"remark", "relation", "social_context"}},
+		{"groups", handler.PublicListGroups, `{"user_id":"u1"}`, []string{"viewer_state", "friends_in_group"}},
+		{"moments", handler.PublicListMoments, `{"user_id":"u1"}`, []string{"is_favorited", "author_relation", "recommendation"}},
+		{"reacted", handler.PublicListReactedMoments, `{"user_id":"u1"}`, []string{"is_favorited", "author_relation", "recommendation"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rr := httptest.NewRecorder()
+			tc.call(rr, httptest.NewRequest(http.MethodPost, "/public/v1/users/"+tc.name, strings.NewReader(tc.body)))
+			var resp struct {
+				Code httpx.Code `json:"code"`
+				Data struct {
+					Items []map[string]any `json:"items"`
+				} `json:"data"`
+			}
+			if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+				t.Fatalf("decode: %v body=%s", err, rr.Body.String())
+			}
+			if resp.Code != 0 || resp.Data.Items == nil || len(resp.Data.Items) != 1 {
+				t.Fatalf("unexpected response: %s", rr.Body.String())
+			}
+			for _, forbidden := range tc.mustNot {
+				if strings.Contains(rr.Body.String(), forbidden) {
+					t.Fatalf("public response must not expose %q: %s", forbidden, rr.Body.String())
+				}
+			}
+		})
+	}
+}
+
+// 测试用跨模块内容 provider：直接回放 stub 结果，避免依赖真实 groups/moments 服务。
+type publicGroupsProvider struct{ result grouptypes.PaginatedGroups }
+
+func (p publicGroupsProvider) ListGroupsByUser(context.Context, string, int, string) (grouptypes.PaginatedGroups, error) {
+	return p.result, nil
+}
+func (p publicGroupsProvider) CountCommonGroups(context.Context, string, string) (int, error) {
+	return 0, nil
+}
+func (p publicGroupsProvider) OwnedGroupCount(context.Context, string) (int, error) { return 0, nil }
+
+type publicMomentsProvider struct {
+	moments momenttypes.PaginatedMoments
+	reacted momenttypes.PaginatedMoments
+}
+
+func (p publicMomentsProvider) ListMomentsByAuthor(context.Context, string, int, string, bool) (momenttypes.PaginatedMoments, error) {
+	return p.moments, nil
+}
+func (p publicMomentsProvider) ListReactedByUser(context.Context, string, string, int, string) (momenttypes.PaginatedMoments, error) {
+	return p.reacted, nil
+}

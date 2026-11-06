@@ -3188,3 +3188,20 @@ comments/moments/groups/messages/search/share/system/admin 读路径均已带 av
   users 覆盖率 73.2%。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第十二批）：users 其余匿名端点 Public 类型层收口（2026-11-07）
+
+覆盖 users 剩余 6 个匿名读端点（关系列表 / 群组 / 瞬间）：
+
+- 新增 PublicRelatedUserItem（RelatedUserItem 去 remark；互关由
+  followed_back_at 表达）、PublicPaginatedRelatedUsers、PublicFetch* 请求类型；
+- PublicListFriends / PublicListFollowing / PublicListFollowers：Public 请求→
+  内部请求→服务读取→PublicRelatedUserItem 映射；
+- PublicListGroups 复用 groups.ToPublicPaginatedGroups（PublicGroupItem）；
+- PublicListMoments / PublicListReactedMoments 复用 moments.ToPublicPaginatedMoments
+  （PublicMomentItem）；为此导出 groups/moments 的 Public 转换 helper；
+- MountPublic 全部 users 路由改为 Public handler；
+- 测试：关系项无 remark/relation/social_context、群组无 viewer 字段、瞬间无
+  is_favorited/author_relation，六个端点成功 shape；users 覆盖率 73.4%。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

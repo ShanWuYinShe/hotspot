@@ -21,7 +21,7 @@ func TestToPublicGroupItemStripsViewerFields(t *testing.T) {
 		FriendsInGroup: &friends,
 		LastMessage:    &GroupLastMessage{MessageID: "m1"},
 	}
-	pub := toPublicGroupItem(item)
+	pub := ToPublicGroupItem(item)
 	if pub.Tags == nil {
 		t.Fatal("tags must normalize to empty slice")
 	}
