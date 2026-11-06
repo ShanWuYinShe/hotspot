@@ -634,12 +634,12 @@ func (s *Service) resolveReferencePoint(ctx context.Context, ref GeoPoint) GeoPo
 	if ref.Latitude != 0 || ref.Longitude != 0 {
 		return ref
 	}
-	// 回退 2:已登录用户的存储位置
+	// 回退 2:已登录用户的存储位置。走 RecentLocation 的单列轻量查询
+	//（架构审计 perf D2）：此前直调 GetProfile 会为每次无 reference_point 的
+	// 搜索加载完整画像 + 5 个统计子查询，实测占该端点 DB CPU ~15%。
 	if principal, ok := platformauth.PrincipalFromContext(ctx); ok && principal.UserID != "" {
-		if profile, ok, err := s.repo.GetProfile(ctx, principal.UserID); err == nil && ok {
-			if profile.Location.Point.Latitude != 0 || profile.Location.Point.Longitude != 0 {
-				return profile.Location.Point
-			}
+		if pt, found := s.RecentLocation(ctx, principal.UserID); found {
+			return GeoPoint{Latitude: pt.Latitude, Longitude: pt.Longitude}
 		}
 	}
 	// 回退 3:default_location

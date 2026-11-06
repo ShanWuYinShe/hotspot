@@ -3370,3 +3370,18 @@ perf-budget.sh：8 端点均在预算内。
   回填与 fetched 标记断言；moments 包 -race 全绿。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D2（第四批）：users/search 回退链改轻量位置查询（2026-11-07）
+
+pg_stat_statements 实测（c=10、keyword=游客、10s）：users/search 每请求除主
+查询（mean 1.0ms）外还执行一次 `GetProfile` 完整画像查询（mean 0.152ms，含 5
+个统计子查询），10s 内占该端点 DB 总耗时 ~13%。根因：Service.resolveReferencePoint
+回退链第 2 级直接调 `repo.GetProfile`，而未使用已有的单列轻量查询能力。
+
+- resolveReferencePoint 改走 `s.RecentLocation`（PG 仓储实现为
+  `queryGetRecentLocation` 单列查询；内存/测试仓储自动回退 GetProfile，行为不变）；
+- 新增单测：无 reference_point 的 Search 不得触发 GetProfile（getProfileCalls=0），
+  且使用 GetRecentLocation 返回的位置；
+- 该路径同时惠及所有缺省 reference_point 的搜索/列表端点。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

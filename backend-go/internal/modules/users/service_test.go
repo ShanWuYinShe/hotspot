@@ -1086,3 +1086,23 @@ func TestServiceRecentLocationFallsBackToProfileRepo(t *testing.T) {
 		t.Fatalf("fallback recent location = %#v found=%v", pt, found)
 	}
 }
+
+// TestSearchReferencePointUsesLightLocationQuery：无 reference_point 时回退链
+// 必须走轻量 GetRecentLocation，不得为分页搜索加载完整画像（perf D2）。
+func TestSearchReferencePointUsesLightLocationQuery(t *testing.T) {
+	repo := &stubUserRepo{
+		recentLocation:      geo.Point{Latitude: 34.26, Longitude: 117.18},
+		recentLocationFound: true,
+		getProfileCalls:     0,
+		profile:             MyProfile{UserID: "viewer", Nickname: "viewer"},
+		profileFound:        true,
+	}
+	service := NewServiceWithRepo(repo)
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "viewer", SessionID: "s1"})
+	if _, err := service.Search(ctx, SearchUsersRequest{Keyword: "alice"}); err != nil {
+		t.Fatalf("search: %v", err)
+	}
+	if repo.getProfileCalls != 0 {
+		t.Fatalf("search fallback must not load full profile, calls=%d", repo.getProfileCalls)
+	}
+}
