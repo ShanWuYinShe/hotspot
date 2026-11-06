@@ -42,12 +42,16 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 	}
 	defer rows.Close()
 	items := make([]AuditLogItem, 0, limit+1)
+	// 与 items 平行保存行的真实创建时间（微秒）：Item.CreatedAt 是契约展示字段
+	//（秒），直接拿它做 keyset 游标会让同秒审计日志翻页重复/丢行。
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		entry, err := scanAuditEntry(rows)
 		if err != nil {
 			return auditLogPage{}, err
 		}
 		items = append(items, auditLogItemFromEntry(entry, includeIPAddress))
+		rawCreatedAt = append(rawCreatedAt, entry.CreatedAt.UTC())
 	}
 	if err := rows.Err(); err != nil {
 		return auditLogPage{}, err
@@ -56,7 +60,7 @@ func (r *PostgresRepository) ListAuditLogs(ctx context.Context, filter AuditLogF
 	if len(items) > limit {
 		page.Items = items[:limit]
 		last := page.Items[limit-1]
-		page.Next = &auditCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), LogID: last.LogID}
+		page.Next = &auditCursor{CreatedAt: rawCreatedAt[limit-1], LogID: last.LogID}
 	}
 	return page, nil
 }

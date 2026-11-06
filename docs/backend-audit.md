@@ -2167,3 +2167,18 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED
 （真实库契约测试覆盖计数聚合/分页/软删；迁移回填后 dev 库 interaction_count 0–16 与业务量一致）。
+
+
+## Batch B4：keyset 游标精度全场收尾（2026-11-06）
+
+持久化审计 P1-1 的剩余面：写路径已统一 time.Time（微秒），但部分列表的游标仍从
+**契约展示字段**（按秒格式化的字符串）构造，同秒行翻页会重复/丢行。
+
+- admin：audit logs / users / groups / reports 四个列表改为与 items 平行保存行内
+  真实 CreatedAt（新增 scan*WithCreatedAt 变体；reportHandleRecord 增加
+  CreatedAtRaw），游标取真实微秒时间。admin tags/rbac/stats/geo 原本已用 time.Time。
+- share：列表 SQL 追加原始 created_at 列，游标用 RFC3339Nano；展示字段保持秒级。
+- 复核其余模块：moments/comments/notify/users/groups/privatechats 已用真实时间；
+  privatemessages/groupmessages 的 TO_CHAR 已含 .US 微秒；system announcements、
+  admin moderation tag 均直接持有 time.Time；内存实现仅测试使用（保持展示字符串口径）。
+- 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

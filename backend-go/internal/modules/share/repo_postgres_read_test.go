@@ -181,7 +181,11 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 	}
 	rows := make([][]any, 0, len(records))
 	for _, record := range records {
-		rows = append(rows, []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatedAt, record.ExpiresAt, record.IsRevoked, record.PayloadJSON})
+		createdAtRaw, err := time.Parse(time.RFC3339, record.CreatedAt)
+		if err != nil {
+			createdAtRaw = time.Time{}
+		}
+		rows = append(rows, []any{record.ShareID, record.ShareCode, record.ShareType, record.CreatedAt, record.ExpiresAt, record.IsRevoked, record.PayloadJSON, createdAtRaw})
 	}
 	return &testdb.RowsValues{Rows: rows}, nil
 }

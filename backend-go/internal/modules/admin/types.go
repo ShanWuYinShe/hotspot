@@ -230,4 +230,7 @@ func (s UserBanState) Expired(now time.Time) bool {
 type reportHandleRecord struct {
 	Item       AdminReportItem
 	TargetUser usersmodule.UserInfo
+	// CreatedAtRaw 保留行的真实创建时间（微秒），供 keyset 游标使用；Item.CreatedAt
+	// 是契约展示字段（秒），不能拿来做游标。
+	CreatedAtRaw time.Time
 }

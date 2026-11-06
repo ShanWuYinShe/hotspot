@@ -61,12 +61,14 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 	}
 	defer rows.Close()
 	items := make([]AdminUserItem, 0, limit+1)
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
-		item, err := scanAdminUserRow(rows)
+		item, createdAt, err := scanAdminUserRowWithCreatedAt(rows)
 		if err != nil {
 			return adminUserPage{}, err
 		}
 		items = append(items, item)
+		rawCreatedAt = append(rawCreatedAt, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return adminUserPage{}, err
@@ -75,7 +77,7 @@ func (r *PostgresRepository) SearchUsers(ctx context.Context, req AdminUserSearc
 	if len(items) > limit {
 		page.Items = items[:limit]
 		last := page.Items[limit-1]
-		page.Next = &adminUserCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), UserID: last.User.UserID}
+		page.Next = &adminUserCursor{CreatedAt: rawCreatedAt[limit-1], UserID: last.User.UserID}
 	}
 	return page, nil
 }

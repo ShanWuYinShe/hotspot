@@ -91,12 +91,15 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	}
 	defer rows.Close()
 	items := make([]ShareListItem, 0, query.Limit+1)
+	rawCreatedAt := make([]time.Time, 0, query.Limit+1)
 	for rows.Next() {
 		var item ShareListItem
 		var payloadJSON string
-		if err := rows.Scan(&item.ShareID, &item.ShareCode, &item.ShareType, &item.CreatedAt, &item.ExpiresAt, &item.IsRevoked, &payloadJSON); err != nil {
+		var createdAtRaw time.Time
+		if err := rows.Scan(&item.ShareID, &item.ShareCode, &item.ShareType, &item.CreatedAt, &item.ExpiresAt, &item.IsRevoked, &payloadJSON, &createdAtRaw); err != nil {
 			return PaginatedShares{}, err
 		}
+		rawCreatedAt = append(rawCreatedAt, createdAtRaw.UTC())
 		if payloadJSON != "" {
 			var payload map[string]any
 			if err := json.Unmarshal([]byte(payloadJSON), &payload); err != nil {
@@ -123,7 +126,9 @@ func (r *PostgresRepository) List(ctx context.Context, query listSharesQuery) (P
 	page := PaginatedShares{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		c, err := encodeShareCursor(shareCursor{CreatedAt: last.CreatedAt, ShareID: last.ShareID})
+		// 游标用行内真实时间（微秒）：CreatedAt 是契约展示字段（秒），同秒分享
+		// 用它做 keyset 会翻页重复/丢行。
+		c, err := encodeShareCursor(shareCursor{CreatedAt: rawCreatedAt[query.Limit-1].Format(time.RFC3339Nano), ShareID: last.ShareID})
 		if err != nil {
 			return PaginatedShares{}, err
 		}

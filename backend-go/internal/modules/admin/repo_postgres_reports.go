@@ -39,12 +39,14 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 	}
 	defer rows.Close()
 	items := make([]AdminReportItem, 0, limit+1)
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		record, err := scanAdminReportRow(rows, false)
 		if err != nil {
 			return adminReportPage{}, err
 		}
 		items = append(items, record.Item)
+		rawCreatedAt = append(rawCreatedAt, record.CreatedAtRaw)
 	}
 	if err := rows.Err(); err != nil {
 		return adminReportPage{}, err
@@ -53,7 +55,7 @@ func (r *PostgresRepository) SearchReports(ctx context.Context, req AdminReportL
 	if len(items) > limit {
 		page.Items = items[:limit]
 		last := page.Items[limit-1]
-		page.Next = &adminReportCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), ReportID: last.ReportID}
+		page.Next = &adminReportCursor{CreatedAt: rawCreatedAt[limit-1], ReportID: last.ReportID}
 	}
 	// Total = 过滤后、分页前的命中总数（「待处理」角标，spec AdminReportsPage.
 	// total）。仅 service 会透出的场景（带 status 过滤）才跑独立 COUNT，避免

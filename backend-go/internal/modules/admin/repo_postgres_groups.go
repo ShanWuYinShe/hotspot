@@ -33,12 +33,14 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 	}
 	defer rows.Close()
 	items := make([]AdminGroupItem, 0, limit+1)
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
-		item, err := scanAdminGroupRow(rows)
+		item, createdAt, err := scanAdminGroupRowWithCreatedAt(rows)
 		if err != nil {
 			return adminGroupPage{}, err
 		}
 		items = append(items, item)
+		rawCreatedAt = append(rawCreatedAt, createdAt)
 	}
 	if err := rows.Err(); err != nil {
 		return adminGroupPage{}, err
@@ -47,7 +49,7 @@ func (r *PostgresRepository) SearchGroups(ctx context.Context, req AdminGroupSea
 	if len(items) > limit {
 		page.Items = items[:limit]
 		last := page.Items[limit-1]
-		page.Next = &adminGroupCursor{CreatedAt: timeFromRFC3339(last.CreatedAt), GroupID: last.Group.GroupID}
+		page.Next = &adminGroupCursor{CreatedAt: rawCreatedAt[limit-1], GroupID: last.Group.GroupID}
 	}
 	return page, nil
 }

@@ -277,7 +277,14 @@ type adminReportRow struct {
 	TargetUserAvatar   string
 }
 
+// scanAdminUserRow 保留给单条查询；列表分页需要行的真实 CreatedAt（微秒）作为
+// keyset 游标，不能用已按秒格式化的展示字段（否则同秒行翻页重复/丢行）。
 func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
+	item, _, err := scanAdminUserRowWithCreatedAt(row)
+	return item, err
+}
+
+func scanAdminUserRowWithCreatedAt(row persistence.Row) (AdminUserItem, time.Time, error) {
 	var record adminUserRow
 	if err := row.Scan(
 		&record.UserID,
@@ -302,7 +309,7 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		&record.BannedUntil,
 		&record.PrivacyLevel,
 	); err != nil {
-		return AdminUserItem{}, err
+		return AdminUserItem{}, time.Time{}, err
 	}
 	presenceStatus := usersmodule.UserPresenceStatus(record.PresenceStatus)
 	var presenceStatusPtr *usersmodule.UserPresenceStatus
@@ -343,10 +350,15 @@ func scanAdminUserRow(row persistence.Row) (AdminUserItem, error) {
 		LastLoginLocation: types.StrPtr(record.LastLoginLocation),
 		Email:             types.StrPtr(record.Email),
 		Phone:             types.StrPtr(record.Phone),
-	}, nil
+	}, record.CreatedAt.UTC(), nil
 }
 
 func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
+	item, _, err := scanAdminGroupRowWithCreatedAt(row)
+	return item, err
+}
+
+func scanAdminGroupRowWithCreatedAt(row persistence.Row) (AdminGroupItem, time.Time, error) {
 	var record adminGroupRow
 	if err := row.Scan(
 		&record.GroupID,
@@ -367,7 +379,7 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		&record.MembersCount,
 		&record.LastActivityAt,
 	); err != nil {
-		return AdminGroupItem{}, err
+		return AdminGroupItem{}, time.Time{}, err
 	}
 	return AdminGroupItem{
 		Group:       groupsmodule.GroupInfo{GroupID: record.GroupID, Name: record.Name, AvatarURL: types.StrPtr(record.AvatarURL), MembersCount: record.MembersCount},
@@ -383,7 +395,7 @@ func scanAdminGroupRow(row persistence.Row) (AdminGroupItem, error) {
 		CreatedAt:      record.CreatedAt.UTC().Format(time.RFC3339),
 		Owner:          usersmodule.UserInfo{UserID: record.OwnerID, Nickname: record.OwnerNickname, AvatarURL: types.StrPtr(record.OwnerAvatarURL)},
 		LastActivityAt: types.StrPtr(record.LastActivityAt.UTC().Format(time.RFC3339)),
-	}, nil
+	}, record.CreatedAt.UTC(), nil
 }
 
 func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleRecord, error) {
@@ -474,7 +486,7 @@ func scanAdminReportRow(row persistence.Row, withTargetUser bool) (reportHandleR
 		handledBy := usersmodule.UserInfo{UserID: record.HandledByUserID, Nickname: record.HandledByNickname, AvatarURL: types.StrPtr(record.HandledByAvatar)}
 		item.HandledBy = &handledBy
 	}
-	result := reportHandleRecord{Item: item}
+	result := reportHandleRecord{Item: item, CreatedAtRaw: record.CreatedAt.UTC()}
 	if withTargetUser && record.TargetUserID != "" {
 		result.TargetUser = usersmodule.UserInfo{UserID: record.TargetUserID, Nickname: record.TargetUserNickname, AvatarURL: types.StrPtr(record.TargetUserAvatar)}
 	}

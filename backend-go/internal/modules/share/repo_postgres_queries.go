@@ -36,7 +36,8 @@ const (
 	       to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
 	       COALESCE(to_char(expires_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ''),
 	       is_revoked,
-	       payload::text
+	       payload::text,
+	       created_at
 	FROM shares
 	WHERE creator_user_id = $1
 	  -- 显式 cast：extended protocol 下 prepare 阶段无法从 "IS NULL" 推断参数类型
