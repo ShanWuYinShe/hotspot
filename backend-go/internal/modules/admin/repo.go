@@ -44,8 +44,6 @@ type Repository interface {
 	// 两次尝试定位真实所属表——返回值缺失曾使私聊 fallback 永不执行）。
 	RecallGroupMessage(context.Context, string) (bool, error)
 	RecallPrivateMessage(context.Context, string) (bool, error)
-	DeleteMoment(context.Context, string) error
-	DeleteComment(context.Context, string) error
 	AppendAuditLog(context.Context, AuditLogEntry) error
 	// DeleteAuditLogsBefore / DeleteHandledReportsBefore 物理删除超保留期数据，
 	// 供后台 retention worker 调用（幂等；返回删除行数用于日志）。举报只删

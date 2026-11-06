@@ -456,18 +456,36 @@ func (s *Service) Delete(ctx context.Context, momentID string) error {
 		// 重复删除（已软删）视为 no-op 成功
 		return nil
 	}
-	if err := s.repo.Delete(ctx, momentID); err != nil {
+	return s.softDeleteAndBroadcast(ctx, item)
+}
+
+// DeleteAsAdmin 平台审核删除：无归属校验；目标不存在/已软删时幂等成功。
+// 内容删除后同样广播 MomentDeleted（作者其他在线设备 + 收藏者更新占位），
+// 由 admin 经最小接口调用（内容数据归 moments 模块所有）。
+func (s *Service) DeleteAsAdmin(ctx context.Context, momentID string) error {
+	item, ok, err := s.repo.Get(ctx, momentID)
+	if err != nil {
+		return err
+	}
+	if !ok || item.IsDeleted {
+		return nil
+	}
+	return s.softDeleteAndBroadcast(ctx, item)
+}
+
+// softDeleteAndBroadcast 软删瞬间并向作者/收藏者广播 MomentDeleted
+// （spec api_spec_websocket.md）：自助删除与平台审核删除共用。
+func (s *Service) softDeleteAndBroadcast(ctx context.Context, item MomentItem) error {
+	if err := s.repo.Delete(ctx, item.MomentID); err != nil {
 		return fmt.Errorf("moments.Service.Delete: repo: %w", err)
 	}
-	// 软删后推送 MomentDeleted（spec api_spec_websocket.md）：作者其他在线设备 + 收藏者
-	// 据此将本地列表/收藏更新为"已删除"占位。
 	now := time.Now().UTC().Format(time.RFC3339)
-	realtime.DefaultHub().BroadcastToUser(principal.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
-		MomentID:  momentID,
+	realtime.DefaultHub().BroadcastToUser(item.User.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+		MomentID:  item.MomentID,
 		DeletedAt: now,
 	}})
-	if err := s.broadcastMomentDeletedToFavorites(ctx, momentID, principal.UserID, now); err != nil {
-		observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", momentID)
+	if err := s.broadcastMomentDeletedToFavorites(ctx, item.MomentID, item.User.UserID, now); err != nil {
+		observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", item.MomentID)
 	}
 	return nil
 }

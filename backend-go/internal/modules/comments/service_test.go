@@ -730,3 +730,31 @@ func decodePayload(t *testing.T, p any) map[string]any {
 	}
 	return m
 }
+
+// TestDeleteAsAdminIgnoresOwnershipAndIsIdempotent：平台审核删除无归属校验，
+// 目标不存在/已删除时幂等成功（举报裁决重复执行不报错）。
+func TestDeleteAsAdminIgnoresOwnershipAndIsIdempotent(t *testing.T) {
+	repo := NewInMemoryRepository()
+	moments := &momentProviderStub{exists: true, commentableFound: true, commentable: true}
+	svc := NewServiceWithDeps(repo, moments, nil, nil, nil, nil)
+	created, err := svc.Create(testCommentContext("user_bob"), CreateCommentRequest{MomentID: "moment_1", Content: "bad comment"})
+	if err != nil {
+		t.Fatalf("create comment: %v", err)
+	}
+
+	// 非作者（管理员上下文）也能删除。
+	if err := svc.DeleteAsAdmin(testCommentContext("user_carol"), created.CommentID); err != nil {
+		t.Fatalf("delete as admin: %v", err)
+	}
+	got, found, err := repo.Get(context.Background(), created.CommentID)
+	if err != nil || !found || !got.IsDeleted {
+		t.Fatalf("comment should be soft-deleted: %#v found=%v err=%v", got, found, err)
+	}
+	// 重复删除幂等；不存在目标也幂等成功。
+	if err := svc.DeleteAsAdmin(context.Background(), created.CommentID); err != nil {
+		t.Fatalf("repeat delete as admin: %v", err)
+	}
+	if err := svc.DeleteAsAdmin(context.Background(), "comment_missing"); err != nil {
+		t.Fatalf("delete missing comment as admin must be nil, got %v", err)
+	}
+}

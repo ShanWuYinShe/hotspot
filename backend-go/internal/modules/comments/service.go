@@ -263,20 +263,32 @@ func (s *Service) Delete(ctx context.Context, req DeleteCommentRequest) error {
 	}
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// 评论删除仅作者（spec api_spec_comment.md「删除评论（仅评论作者）」）。
-	// 平台审核删除统一走 /admin/api/v1/reports/judge，本端点没有「平台管理员」分支。
-	isOwner := comment.User.UserID == principal.UserID
-	if !isOwner {
+	// 平台审核删除统一走 /admin/api/v1/reports/judge，经 DeleteAsAdmin 进入。
+	if comment.User.UserID != principal.UserID {
 		return ErrPermissionDenied
 	}
-	// Already soft-deleted — no-op (idempotent)
-	if comment.IsDeleted {
+	return s.softDelete(ctx, comment)
+}
+
+// DeleteAsAdmin 平台审核删除：无归属校验；目标不存在/已删除时幂等成功。
+// 由 admin 经最小接口调用（内容数据归 comments 模块所有，admin 不再直接写
+// comments 表）。
+func (s *Service) DeleteAsAdmin(ctx context.Context, commentID string) error {
+	comment, found, err := s.repo.Get(ctx, commentID)
+	if err != nil {
+		return err
+	}
+	if !found || comment.IsDeleted {
 		return nil
 	}
-	// 软删与内部互动热度递减同一事务：热度递减以软删实际命中为条件
-	//（deleted=false = 并发下已被删除），避免 TOCTOU 窗口内并发双删重复扣减。
-	// 契约 comments_count 由读时聚合保证，不依赖该递减。
+	return s.softDelete(ctx, comment)
+}
+
+// softDelete 软删 + 内部互动热度递减（同一事务，以软删实际命中为条件，
+// 避免并发双删重复扣减）；自助删除与平台审核删除共用。
+func (s *Service) softDelete(ctx context.Context, comment CommentItem) error {
 	deleteAll := func(txCtx context.Context) error {
-		deleted, err := s.repo.SoftDelete(txCtx, req.CommentID)
+		deleted, err := s.repo.SoftDelete(txCtx, comment.CommentID)
 		if err != nil {
 			return err
 		}

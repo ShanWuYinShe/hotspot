@@ -80,14 +80,20 @@ func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest)
 				return apiErr, err
 			}
 		case ReportTargetTypeMoment:
-			if err := s.repo.DeleteMoment(ctx, record.Item.TargetID); err != nil {
+			if s.momentModerator == nil {
+				return nil, errors.New("admin: moment moderator not configured")
+			}
+			if err := s.momentModerator.DeleteAsAdmin(ctx, record.Item.TargetID); err != nil {
 				return nil, err
 			}
 			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {
 				return apiErr, err
 			}
 		case ReportTargetTypeComment:
-			if err := s.repo.DeleteComment(ctx, record.Item.TargetID); err != nil {
+			if s.commentModerator == nil {
+				return nil, errors.New("admin: comment moderator not configured")
+			}
+			if err := s.commentModerator.DeleteAsAdmin(ctx, record.Item.TargetID); err != nil {
 				return nil, err
 			}
 			if apiErr, err := s.banReportedUser(ctx, actor, record.TargetUser.UserID, note, req.BanDurationDays); apiErr != nil || err != nil {

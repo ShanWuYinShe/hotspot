@@ -24,11 +24,26 @@ type Service struct {
 	// 接线 platformauth.Service.InvalidateBanCache）：保证解封/封禁即时生效，
 	// 不等 banCacheTTL 窗口。nil 时跳过（单测/未接线场景）。
 	banCacheInvalidator func(userIDs ...string)
+	// momentModerator / commentModerator：举报裁决的内容删除走归属模块服务
+	//（admin 不再直接 UPDATE moments/comments 表，架构审计 P0-4）。bootstrap
+	// 注入缺失时裁决删除返回错误，绝不静默跳过。
+	momentModerator  momentModerator
+	commentModerator commentModerator
 	// sessionCacheInvalidator 封禁逐条撤销会话后失效平台 auth 的会话校验缓存：
 	// admin 仓库直接 UPDATE auth_sessions（不经 platform auth SessionStore 装饰器），
 	// 不主动失效会让被撤销会话在缓存 TTL 内继续可用。bootstrap 接线
 	// platformauth.Service.InvalidateSessionCache；nil 时跳过（单测/未接线场景）。
 	sessionCacheInvalidator func(sessionIDs ...string)
+}
+
+// momentModerator / commentModerator 是 admin 消费的内容审核删除能力最小接口
+// （由 moments/comments 模块 Service 实现）。
+type momentModerator interface {
+	DeleteAsAdmin(ctx context.Context, momentID string) error
+}
+
+type commentModerator interface {
+	DeleteAsAdmin(ctx context.Context, commentID string) error
 }
 
 type announcementPushService interface {
@@ -62,6 +77,12 @@ func (s *Service) SetBanCacheInvalidator(fn func(userIDs ...string)) {
 func (s *Service) SetSessionCacheInvalidator(fn func(sessionIDs ...string)) {
 	s.sessionCacheInvalidator = fn
 }
+
+// SetMomentModerator wires the moments module's admin delete capability.
+func (s *Service) SetMomentModerator(m momentModerator) { s.momentModerator = m }
+
+// SetCommentModerator wires the comments module's admin delete capability.
+func (s *Service) SetCommentModerator(c commentModerator) { s.commentModerator = c }
 
 func (s *Service) invalidateSessionCache(sessionIDs ...string) {
 	if s.sessionCacheInvalidator != nil {

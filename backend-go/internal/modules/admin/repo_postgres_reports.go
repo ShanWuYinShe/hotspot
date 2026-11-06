@@ -162,37 +162,3 @@ func (r *PostgresRepository) recallMessage(ctx context.Context, query, messageID
 	}
 	return hit, nil
 }
-
-// DeleteMoment 裁决执行的内容删除：与 moments 模块自身删除路径一致（spec
-// api_spec_moment.md「删除语义」：软删除——标记 is_deleted=true、description
-// 清空，评论/反应数据保留，不物理删除）。
-const queryAdminSoftDeleteMoment = `
-UPDATE moments
-SET is_deleted = TRUE, description = ''
-WHERE moment_id = $1`
-
-// DeleteComment 与 comments 模块自身删除路径一致（spec api_spec_comment.md：
-// 软删除——is_deleted=true、content 清空；回复删除同时递减父评论 replies_count）。
-const queryAdminSoftDeleteComment = `
-WITH deleted AS (
-	UPDATE comments SET is_deleted = TRUE, content = '' WHERE comment_id = $1
-	RETURNING parent_id
-)
-UPDATE comments SET replies_count = GREATEST(replies_count - 1, 0)
-WHERE comment_id IN (SELECT parent_id FROM deleted WHERE parent_id IS NOT NULL AND parent_id != '')`
-
-func (r *PostgresRepository) DeleteMoment(ctx context.Context, momentID string) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryAdminSoftDeleteMoment, momentID)
-}
-
-func (r *PostgresRepository) DeleteComment(ctx context.Context, commentID string) error {
-	queryable, ok := r.queryable(ctx)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryAdminSoftDeleteComment, commentID)
-}

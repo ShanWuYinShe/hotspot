@@ -31,10 +31,41 @@ func newTestHandler() *Handler {
 	return handler
 }
 
+// testContentModerators 把举报裁决的内容删除动作落到测试用内存 store：
+// 生产实现由 moments/comments 模块 Service 承担（内容归属对方模块）。
+type testMomentModerator struct{ store *InMemoryRepository }
+
+func (m testMomentModerator) DeleteAsAdmin(_ context.Context, momentID string) error {
+	m.store.mu.Lock()
+	defer m.store.mu.Unlock()
+	if record, ok := m.store.moments[momentID]; ok {
+		record.Deleted = true
+		record.Content = ""
+		m.store.moments[momentID] = record
+	}
+	return nil
+}
+
+type testCommentModerator struct{ store *InMemoryRepository }
+
+func (c testCommentModerator) DeleteAsAdmin(_ context.Context, commentID string) error {
+	c.store.mu.Lock()
+	defer c.store.mu.Unlock()
+	if record, ok := c.store.comments[commentID]; ok {
+		record.Deleted = true
+		record.Content = ""
+		c.store.comments[commentID] = record
+	}
+	return nil
+}
+
 func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	return NewModuleWithDeps(store, provider, nil, nil), store
+	module := NewModuleWithDeps(store, provider, nil, nil)
+	module.Service.SetMomentModerator(testMomentModerator{store: store})
+	module.Service.SetCommentModerator(testCommentModerator{store: store})
+	return module, store
 }
 
 func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notify.InMemoryRepository) {

@@ -547,10 +547,6 @@ func TestAdminRepoRecallDeleteContent(t *testing.T) {
 			&adminFullStub{queryRow: map[string][]any{queryRecallPrivateMessage: {true}}},
 			&adminFullStub{queryRowErr: map[string]error{queryRecallPrivateMessage: errors.New("boom")}}},
 		// 裁决删除为软删除（spec api_spec_moment.md「删除语义」/api_spec_comment.md）
-		{"delete moment", func(r *PostgresRepository) error { return r.DeleteMoment(ctx, "m1") },
-			&adminFullStub{}, &adminFullStub{execErrs: map[string]error{queryAdminSoftDeleteMoment: errors.New("boom")}}},
-		{"delete comment", func(r *PostgresRepository) error { return r.DeleteComment(ctx, "c1") },
-			&adminFullStub{}, &adminFullStub{execErrs: map[string]error{queryAdminSoftDeleteComment: errors.New("boom")}}},
 	}
 	for _, tc := range cases {
 		if err := tc.call(newAdminFullRepo(tc.ok)); err != nil {

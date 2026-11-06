@@ -152,32 +152,6 @@ func (r *InMemoryRepository) RecallPrivateMessage(_ context.Context, messageID s
 	return true, nil
 }
 
-// DeleteMoment 裁决内容删除（内存对齐 postgres 软删除，spec api_spec_moment.md
-// 「删除语义」：is_deleted=true、description 清空，评论/反应数据保留）。
-func (r *InMemoryRepository) DeleteMoment(_ context.Context, momentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if record, ok := r.moments[momentID]; ok {
-		record.Deleted = true
-		record.Content = ""
-		r.moments[momentID] = record
-	}
-	return nil
-}
-
-// DeleteComment 内存软删除（spec api_spec_comment.md：is_deleted=true、content
-// 清空），与 comments 模块自身删除路径一致。
-func (r *InMemoryRepository) DeleteComment(_ context.Context, commentID string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if record, ok := r.comments[commentID]; ok {
-		record.Deleted = true
-		record.Content = ""
-		r.comments[commentID] = record
-	}
-	return nil
-}
-
 func (r *InMemoryRepository) CreateMoment(_ context.Context, id, content, authorID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

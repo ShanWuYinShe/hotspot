@@ -2244,3 +2244,24 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   防止扫描空转；隐藏副本类问题从「靠审计发现」变为「提交即失败」。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+
+## Batch C（第三批）：举报裁决的内容删除走归属模块（2026-11-06）
+
+架构审计 P0-4（数据所有权）：admin 直接 UPDATE moments/comments 表的两条路径收敛：
+
+- **comments 模块**新增 `DeleteAsAdmin`：无归属校验、目标不存在/已删除幂等成功；
+  和自助删除共用 `softDelete`（软删 + 内部互动热度递减同一事务）。
+- **moments 模块**新增 `DeleteAsAdmin`：无归属校验；软删 + MomentDeleted 广播
+  （作者其他设备 + 收藏者占位更新）抽成 `softDeleteAndBroadcast`，与自助删除共用。
+- **admin**：举报裁决（reports/judge）的 moment/comment 目标改为调用注入的内容
+  审核最小接口（bootstrap 注入 moments/comments Service），删除 admin 仓库的
+  DeleteMoment/DeleteComment 方法与 SQL；archtest allowlist 移除 admin:moments、
+  admin:comments 两条债务。
+- 顺带修复潜在缺陷：admin 原 comment 软删 SQL 仍在更新 B3a 已删除的
+  `comments.replies_count` 列，举报裁决删除评论会运行时报错；改走 comments
+  模块后该问题消失。
+- 测试：comments/moments 各补 DeleteAsAdmin 幂等/无归属校验/广播路径用例；
+  admin handler 测试改用内存内容审核 fake。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

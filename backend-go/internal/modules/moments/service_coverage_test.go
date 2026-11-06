@@ -2,6 +2,7 @@ package moments
 
 import (
 	"context"
+	"hotspot/backend-go/internal/platform/realtime"
 	"testing"
 
 	"hotspot/backend-go/internal/platform/actor"
@@ -129,5 +130,33 @@ func TestServiceUserListsAndDiscoveryHelpers(t *testing.T) {
 	reactedList, err := svc.ListReactedByUser(ctx, "u2", "u2", 10, "")
 	if err != nil || len(reactedList.Items) != 1 {
 		t.Fatalf("ListReactedByUser: %v len=%d", err, len(reactedList.Items))
+	}
+}
+
+// TestDeleteAsAdminIgnoresOwnershipAndIsIdempotent：平台审核删除无归属校验，
+// 软删成功后按作者/收藏者广播；目标不存在/已删除时幂等成功。
+func TestDeleteAsAdminIgnoresOwnershipAndIsIdempotent(t *testing.T) {
+	previousHub := realtime.DefaultHub()
+	realtime.SetDefaultHub(realtime.NewHub())
+	t.Cleanup(func() { realtime.SetDefaultHub(previousHub) })
+
+	repo := NewInMemoryRepository()
+	svc := NewServiceWithRepo(repo)
+	created, err := svc.Create(momentCtx("user_bob"), CreateMomentRequest{Description: "bad moment", Location: &Location{LocationName: "Somewhere"}})
+	if err != nil {
+		t.Fatalf("create moment: %v", err)
+	}
+	if err := svc.DeleteAsAdmin(momentCtx("user_carol"), created.MomentID); err != nil {
+		t.Fatalf("delete as admin: %v", err)
+	}
+	got, found, err := repo.Get(context.Background(), created.MomentID)
+	if err != nil || !found || !got.IsDeleted {
+		t.Fatalf("moment should be soft-deleted: %#v found=%v err=%v", got, found, err)
+	}
+	if err := svc.DeleteAsAdmin(context.Background(), created.MomentID); err != nil {
+		t.Fatalf("repeat delete as admin: %v", err)
+	}
+	if err := svc.DeleteAsAdmin(context.Background(), "moment_missing"); err != nil {
+		t.Fatalf("delete missing moment as admin must be nil, got %v", err)
 	}
 }
