@@ -2563,3 +2563,17 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 累计 11/17 模块完成内存仓储迁移。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十一批）：comments 内存仓储迁入测试构建（2026-11-06）
+
+审计 P0-2 持续推进：comments 的内存实现只被测试使用，生产装配只有 PG。
+
+- comments/repo_memory.go（约 300 行）迁移为 repo_memory_impl_test.go。
+- 两个跨包测试消费者改用本地最小桩（embed comments.Repository + 必要方法），
+  不再依赖具体内存仓储：
+  - moments/handler_test（4 处建服务）：newMomentsCommentsRepo（Create/List/
+    Get/SoftDelete/回复空集）；
+  - bootstrap/reaction_providers_test：commentRepoTestStub（Create/Get/SoftDelete）。
+- comments 生产覆盖率 72.5%，仍过 70% 门槛；累计 12/17 模块完成内存迁移。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
