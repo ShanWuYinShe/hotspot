@@ -65,6 +65,19 @@ type backendStub struct {
 	execErrs map[string]error
 }
 
+// stubTimeString 兼容写库时间精度改造：插入参数现在是 time.Time（保留微秒），
+// stub 内部仍以对外展示字符串存储。
+func stubTimeString(v any) string {
+	switch t := v.(type) {
+	case time.Time:
+		return t.UTC().Format(time.RFC3339Nano)
+	case string:
+		return t
+	default:
+		return ""
+	}
+}
+
 type backendCommentCursor struct {
 	commentID string
 	likedAt   string
@@ -85,7 +98,7 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 			CommentID:    args[0].(string),
 			MomentID:     args[1].(string),
 			Content:      args[4].(string),
-			CreatedAt:    args[5].(string),
+			CreatedAt:    stubTimeString(args[5]),
 			LikesCount:   args[6].(int),
 			RepliesCount: args[7].(int),
 			User:         UserInfo{UserID: args[2].(string), Nickname: args[2].(string)},

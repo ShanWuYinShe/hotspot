@@ -210,7 +210,8 @@ func decodeUserMomentCursor(raw string) (any, string, error) {
 }
 
 func encodeUserCursor(at time.Time, id string) string {
-	return encodeUserMomentCursor(at.UTC().Format(time.RFC3339), id)
+	// 与列写入精度对齐：秒截断游标配微秒列会在同秒行翻页时丢行。
+	return encodeUserMomentCursor(at.UTC().Format(time.RFC3339Nano), id)
 }
 
 func decodeUserCursor(cursor string) (any, string, error) {

@@ -29,7 +29,9 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return CommentItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	createdAt := now.Format(time.RFC3339)
+	// 写库保留亚秒精度（timestamptz 微秒）：秒截断会让同秒评论只能靠随机主键
+	// tie-break，keyset 分页不稳定（审计 P1-1）。对外展示仍按秒格式化。
+	createdAtText := now.Format(time.RFC3339)
 	commentID, err := idgen.WithPrefix("comment_")
 	if err != nil {
 		return CommentItem{}, err
@@ -38,7 +40,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 	if req.ParentID != "" {
 		parentID = req.ParentID
 	}
-	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, createdAt, 0, 0); err != nil {
+	if err := queryable.Exec(ctx, queryInsertComment, commentID, req.MomentID, userID, parentID, req.Content, now, 0, 0); err != nil {
 		return CommentItem{}, fmt.Errorf("comments.Create insert comment: %w", err)
 	}
 	if req.ParentID != "" {
@@ -66,7 +68,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		MomentID:     req.MomentID,
 		User:         UserInfo{UserID: userID, Nickname: nickname},
 		Content:      req.Content,
-		CreatedAt:    createdAt,
+		CreatedAt:    createdAtText,
 		LikesCount:   0,
 		RepliesCount: 0,
 	}, nil
@@ -102,6 +104,9 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 	}
 	defer rows.Close()
 	items := make([]CommentItem, 0, limit+1)
+	// rawCreatedAt 与 items 平行保存列的真实精度时间：response 的 created_at 按
+	// 秒展示，但 keyset 游标必须用真实值（微秒）编码，否则同秒行翻页会重复/丢行。
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
 		var userID, nickname, parentID string
@@ -113,12 +118,13 @@ func (r *PostgresRepository) List(ctx context.Context, momentID string, limit in
 		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
+		rawCreatedAt = append(rawCreatedAt, createdAt.UTC())
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedComments{}, fmt.Errorf("comments.List rows: %w", err)
 	}
 	if len(items) > limit {
-		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
+		c := encodeCommentCursor(rawCreatedAt[limit-1].Format(time.RFC3339Nano), items[limit-1].CommentID)
 		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil
@@ -161,6 +167,7 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 	}
 	defer rows.Close()
 	items := make([]CommentItem, 0, limit+1)
+	rawCreatedAt := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item CommentItem
 		var userID, nickname, parentID string
@@ -172,12 +179,13 @@ func (r *PostgresRepository) ListReplies(ctx context.Context, commentID string, 
 		item.ParentID = strPtr(parentID)
 		item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
+		rawCreatedAt = append(rawCreatedAt, createdAt.UTC())
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedComments{}, fmt.Errorf("comments.ListReplies rows: %w", err)
 	}
 	if len(items) > limit {
-		c := encodeCommentCursor(items[limit-1].CreatedAt, items[limit-1].CommentID)
+		c := encodeCommentCursor(rawCreatedAt[limit-1].Format(time.RFC3339Nano), items[limit-1].CommentID)
 		return PaginatedComments{Items: items[:limit], NextCursor: &c}, nil
 	}
 	return PaginatedComments{Items: items}, nil

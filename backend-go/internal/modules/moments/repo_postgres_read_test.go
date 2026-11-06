@@ -87,6 +87,19 @@ type backendStub struct {
 	queryRowErrs map[string]error
 }
 
+// stubTimeString 兼容写库时间精度改造：插入参数现在是 time.Time（保留微秒），
+// stub 内部仍以对外展示字符串存储。
+func stubTimeString(v any) string {
+	switch t := v.(type) {
+	case time.Time:
+		return t.UTC().Format(time.RFC3339Nano)
+	case string:
+		return t
+	default:
+		return ""
+	}
+}
+
 func newBackendStub() *backendStub {
 	return &backendStub{moments: make(map[string]MomentItem), blockedTags: make(map[string]struct{}), favorites: make(map[string]map[string]string), execErrs: make(map[string]error), queryRowErrs: make(map[string]error)}
 }
@@ -112,7 +125,7 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item := MomentItem{
 			MomentID:      args[0].(string),
 			Description:   args[2].(string),
-			CreatedAt:     args[3].(string),
+			CreatedAt:     stubTimeString(args[3]),
 			LikesCount:    args[4].(int),
 			CommentsCount: args[5].(int),
 			SharesCount:   args[6].(int),

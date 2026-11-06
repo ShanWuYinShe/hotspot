@@ -30,6 +30,9 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 	}
 	defer rows.Close()
 	items := make([]NotifyItem, 0, query.Limit+1)
+	// rawCreatedAt 与 items 平行保存列的真实精度（timestamptz 微秒）：响应按秒展示，
+	// 但 keyset 游标必须用真实值编码，否则同秒通知翻页会重复/丢行。
+	rawCreatedAt := make([]time.Time, 0, query.Limit+1)
 	for rows.Next() {
 		var item NotifyItem
 		var payloadJSON string
@@ -47,6 +50,7 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 			}
 		}
 		items = append(items, item)
+		rawCreatedAt = append(rawCreatedAt, createdAt.UTC())
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedNotify{}, err
@@ -54,7 +58,9 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, req Notify
 	page := PaginatedNotify{}
 	if len(items) > query.Limit {
 		last := items[query.Limit-1]
-		c := encodeNotifyCursor(notifyCursor{CreatedAt: last.CreatedAt, NotifyID: last.NotifyID})
+		// 解码侧 normalizeNotifyListQuery 直接把字符串交给 SQL 的 timestamptz 参数，
+		// RFC3339Nano 与既有秒级格式均被 PG 接受（老游标仍有效）。
+		c := encodeNotifyCursor(notifyCursor{CreatedAt: rawCreatedAt[query.Limit-1].Format(time.RFC3339Nano), NotifyID: last.NotifyID})
 		page.NextCursor = &c
 		items = items[:query.Limit]
 	}

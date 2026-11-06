@@ -30,7 +30,10 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		return MomentItem{}, persistence.ErrNotImplemented
 	}
 	now := time.Now().UTC()
-	createdAt := now.Format(time.RFC3339)
+	// 写库传 time.Time（pgx 原生 timestamptz，微秒精度）：此前先 Format(RFC3339)
+	// 再回写会把 created_at 截断到秒，同秒瞬间只能靠随机主键 tie-break，使
+	// keyset 分页排序不稳定（审计 P1-1）。对外展示仍按秒格式化（契约只要求 RFC3339）。
+	createdAtText := now.Format(time.RFC3339)
 	momentID, err := idgen.WithPrefix("moment_")
 	if err != nil {
 		return MomentItem{}, err
@@ -49,7 +52,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := txQueryable.Exec(txCtx, queryInsertMoment, momentID, userID, req.Description, createdAt, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
+		if err := txQueryable.Exec(txCtx, queryInsertMoment, momentID, userID, req.Description, now, 0, 0, 0, req.Location.LocationName, req.Location.Point.Latitude, req.Location.Point.Longitude, privacy, geo.LeafCellID(geo.Point{Latitude: req.Location.Point.Latitude, Longitude: req.Location.Point.Longitude})); err != nil {
 			return fmt.Errorf("moments.Create: insert moment: %w", err)
 		}
 		tags := normalizeMomentTags(req.Tags)
@@ -85,7 +88,7 @@ func (r *PostgresRepository) Create(ctx context.Context, userID string, req Crea
 		Description:   req.Description,
 		Tags:          allowedTags,
 		Mentions:      normalizedMentions,
-		CreatedAt:     createdAt,
+		CreatedAt:     createdAtText,
 		LikesCount:    0,
 		CommentsCount: 0,
 		SharesCount:   0,

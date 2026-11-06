@@ -79,7 +79,7 @@ func (r *PostgresRepository) ListMomentsByAuthor(ctx context.Context, userID str
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
 		parsed, _ := time.Parse(time.RFC3339Nano, item.CreatedAt)
-		cursors = append(cursors, encodeMomentsByUserCursor(parsed.UTC().Format(time.RFC3339), item.MomentID))
+		cursors = append(cursors, encodeMomentsByUserCursor(parsed.UTC().Format(time.RFC3339Nano), item.MomentID))
 		if len(items) == limit+1 {
 			tagsByMomentID, err := loadMomentTags(ctx, queryable, momentIDs[:limit])
 			if err != nil {

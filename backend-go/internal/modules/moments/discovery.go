@@ -191,7 +191,9 @@ func paginateFollowingMoments(items []momentCandidate, limit int, cursor string)
 	}
 	if len(items) > limit && end > 0 {
 		last := items[end-1]
-		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID}))
+		// 游标精度必须与列写入精度一致（列现在存微秒）：秒截断游标会让同秒行
+		// 在翻页时静默丢失（AGENTS 分页纪律）。
+		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339Nano), ID: last.Item.MomentID}))
 	}
 	return resp, nil
 }
@@ -211,7 +213,7 @@ func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (P
 	}
 	if end < len(items) && end > start {
 		last := items[end-1]
-		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{Score: last.Score, Distance: last.Distance, CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339), ID: last.Item.MomentID}))
+		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{Score: last.Score, Distance: last.Distance, CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339Nano), ID: last.Item.MomentID}))
 	}
 	return resp, nil
 }

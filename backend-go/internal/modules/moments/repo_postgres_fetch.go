@@ -201,7 +201,7 @@ func (r *PostgresRepository) ListNearbyMoments(ctx context.Context, query moment
 	}
 	if end < len(candidates) && end > start {
 		last := candidates[end-1]
-		page.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{Score: last.score, Distance: last.distance, CreatedAt: last.createdAt.UTC().Format(time.RFC3339), ID: last.momentID}))
+		page.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{Score: last.score, Distance: last.distance, CreatedAt: last.createdAt.UTC().Format(time.RFC3339Nano), ID: last.momentID}))
 	}
 	return page, nil
 }

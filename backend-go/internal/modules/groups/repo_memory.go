@@ -208,7 +208,7 @@ func (r *InMemoryRepository) Search(ctx context.Context, req SearchGroupsRequest
 	response.Items = items[:limit]
 	last := response.Items[len(response.Items)-1]
 	lastMeta := metas[last.Group.GroupID]
-	next, err := encodeSearchCursor(groupSearchCursor{SortBy: req.SortBy, GroupID: last.Group.GroupID, Distance: lastMeta.Distance, MembersCount: last.Group.MembersCount, NameMatch: lastMeta.NameMatch, CreatedAt: lastMeta.CreatedAt.Format(time.RFC3339)})
+	next, err := encodeSearchCursor(groupSearchCursor{SortBy: req.SortBy, GroupID: last.Group.GroupID, Distance: lastMeta.Distance, MembersCount: last.Group.MembersCount, NameMatch: lastMeta.NameMatch, CreatedAt: lastMeta.CreatedAt.Format(time.RFC3339Nano)})
 	if err != nil {
 		return PaginatedGroups{}, err
 	}
