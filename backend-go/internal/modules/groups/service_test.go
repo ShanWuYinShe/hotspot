@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"hotspot/backend-go/internal/platform/httpx"
 	"strings"
 	"testing"
@@ -1733,6 +1734,29 @@ func TestServiceDismissAsAdmin(t *testing.T) {
 	svc = NewServiceWithRepo(&stubGroupsRepo{getResult: ownerGroup(), getFound: true})
 	if _, err := svc.DismissAsAdmin(context.Background(), "admin1", "g1", ""); !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("already dismissed: %v", err)
+	}
+}
+
+// TestServiceDismissAsAdminDefersBroadcastUntilCommit：事务内解散群的实时广播
+// 必须等到 aftercommit.Run（COMMIT）后才发出，回滚时不产生幻影 Boot。
+func TestServiceDismissAsAdminDefersBroadcastUntilCommit(t *testing.T) {
+	repo := &stubGroupsRepo{getResult: ownerGroup(), getFound: true, dismissAdminHit: true}
+	svc := NewServiceWithRepo(repo)
+	hub := withTestHub(t)
+	sink := &sinkStub{}
+	hub.RegisterUser("member1", "sess_member1", sink)
+	hub.SetGroupSubscriptions([]string{"g1"}, sink)
+
+	ctx := aftercommit.WithHooks(grpCtx("admin1"))
+	if _, err := svc.DismissAsAdmin(ctx, "admin1", "g1", "policy violation"); err != nil {
+		t.Fatalf("dismiss as admin: %v", err)
+	}
+	if len(sink.events) != 0 {
+		t.Fatalf("broadcast must wait for COMMIT, got %d events early", len(sink.events))
+	}
+	aftercommit.Run(ctx)
+	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeGroupDismissed {
+		t.Fatalf("expected one GroupDismissed after commit, got %#v", sink.events)
 	}
 }
 

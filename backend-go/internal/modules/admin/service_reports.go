@@ -293,7 +293,10 @@ func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason 
 	// 记录由逐条 Warn 留痕便于排查；此前失败即 return 会让部分会话漏撤。
 	failedSessions := 0
 	for _, sessionID := range sessionIDs {
-		realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
+		// 踢连接广播在事务 COMMIT 后执行（封禁回滚时不应误踢）；无事务时立即执行。
+		aftercommit.Register(ctx, func(context.Context) {
+			realtime.DefaultHub().CloseSession(sessionID, realtime.Event{Type: realtime.EventTypeAccountBanned, Payload: payload})
+		})
 		if _, err := s.sessionAdmin.RevokeSessionAsAdmin(ctx, sessionID); err != nil {
 			failedSessions++
 			observability.L().Warn("admin: revoke session after ban failed",

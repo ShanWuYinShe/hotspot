@@ -3,6 +3,7 @@ package privatemessages
 import (
 	"context"
 	"fmt"
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
@@ -380,8 +381,11 @@ func (s *Service) RecallMessageByIDAsAdmin(ctx context.Context, operatorID, mess
 		RecalledBy:   s.resolveUserInfo(ctx, operatorID),
 		RecalledAt:   time.Now().UTC().Format(time.RFC3339),
 	}}
-	realtime.DefaultHub().BroadcastToUser(sender, event)
-	realtime.DefaultHub().BroadcastToUser(receiver, event)
+	// 撤回广播在事务 COMMIT 后执行；无事务时立即执行。
+	aftercommit.Register(ctx, func(context.Context) {
+		realtime.DefaultHub().BroadcastToUser(sender, event)
+		realtime.DefaultHub().BroadcastToUser(receiver, event)
+	})
 	return true, nil
 }
 

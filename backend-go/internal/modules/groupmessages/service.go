@@ -3,6 +3,7 @@ package groupmessages
 import (
 	"context"
 	"errors"
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"sync"
 	"time"
 
@@ -381,12 +382,16 @@ func (s *Service) RecallMessageAsAdmin(ctx context.Context, operatorID, groupID,
 		observability.L().Error("groupmessages.recall_as_admin failed", "error", err, "message_id", messageID, "group_id", groupID)
 		return err
 	}
-	realtime.DefaultHub().BroadcastToGroup(groupID, realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
+	event := realtime.Event{Type: realtime.EventTypeGroupMessageRecalled, Payload: GroupMessageRecalledPayload{
 		GroupID:    groupID,
 		MessageID:  messageID,
 		RecalledBy: RecalledByUser{UserID: operatorID},
 		RecalledAt: meta2.SentAt,
-	}})
+	}}
+	// 撤回广播在事务 COMMIT 后执行；无事务时立即执行。
+	aftercommit.Register(ctx, func(context.Context) {
+		realtime.DefaultHub().BroadcastToGroup(groupID, event)
+	})
 	return nil
 }
 

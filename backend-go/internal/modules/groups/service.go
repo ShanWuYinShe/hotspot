@@ -3,6 +3,7 @@ package groups
 import (
 	"context"
 	"fmt"
+	"hotspot/backend-go/internal/platform/aftercommit"
 
 	"golang.org/x/crypto/bcrypt"
 	"hotspot/backend-go/internal/platform/types"
@@ -492,8 +493,11 @@ func (s *Service) DismissAsAdmin(ctx context.Context, operatorID, groupID, reaso
 		}
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
-	realtime.DefaultHub().BroadcastToGroup(groupID, event)
-	realtime.DefaultHub().DropGroup(groupID)
+	// 广播/DropGroup 在事务 COMMIT 后执行；无事务时立即执行。
+	aftercommit.Register(ctx, func(context.Context) {
+		realtime.DefaultHub().BroadcastToGroup(groupID, event)
+		realtime.DefaultHub().DropGroup(groupID)
+	})
 	return group.Group, nil
 }
 

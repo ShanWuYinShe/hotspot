@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -504,13 +505,17 @@ func (s *Service) softDeleteAndBroadcast(ctx context.Context, item MomentItem) e
 		return fmt.Errorf("moments.Service.Delete: repo: %w", err)
 	}
 	now := time.Now().UTC().Format(time.RFC3339)
-	realtime.DefaultHub().BroadcastToUser(item.User.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
-		MomentID:  item.MomentID,
-		DeletedAt: now,
-	}})
-	if err := s.broadcastMomentDeletedToFavorites(ctx, item.MomentID, item.User.UserID, now); err != nil {
-		observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", item.MomentID)
-	}
+	// 广播在事务 COMMIT 后执行：回滚时不会出现「库未删但用户已收到 MomentDeleted」。
+	// 无事务上下文时 Register 立即执行，语义不变。
+	aftercommit.Register(ctx, func(postCtx context.Context) {
+		realtime.DefaultHub().BroadcastToUser(item.User.UserID, realtime.Event{Type: realtime.EventTypeMomentDeleted, Payload: MomentDeletedPayload{
+			MomentID:  item.MomentID,
+			DeletedAt: now,
+		}})
+		if err := s.broadcastMomentDeletedToFavorites(postCtx, item.MomentID, item.User.UserID, now); err != nil {
+			observability.L().Warn("moments.delete favorite broadcast failed", "error", err, "moment_id", item.MomentID)
+		}
+	})
 	return nil
 }
 

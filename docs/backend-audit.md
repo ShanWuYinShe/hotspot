@@ -3002,3 +3002,19 @@ admin 事务注入单测；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
   aftercommit 收敛。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C5（第三批）：事务内实时广播迁 aftercommit（消除幻影广播）（2026-11-07）
+
+第二批遗留边界收敛：admin 事务包装内的内容/会话模块广播不再早于 COMMIT。
+
+- moments `softDeleteAndBroadcast`：作者 MomentDeleted + 收藏者广播放入
+  aftercommit（回滚不再出现「库未删但用户已收到删除事件」）；
+- groups `DismissAsAdmin`：GroupDismissed 广播 + DropGroup 迁 aftercommit；
+- groupmessages `RecallMessageAsAdmin`：GroupMessageRecalled 广播迁 aftercommit；
+- privatemessages `RecallMessageByIDAsAdmin`：双方 PrivateMessageRecalled
+  广播迁 aftercommit；
+- admin `banUser`：CloseSession（踢 WS 连接）迁 aftercommit，封禁回滚不误踢；
+- 无事务上下文的调用方式不变（aftercommit.Register 立即执行），测试语义不受
+  影响；新增 groups「广播必须等 COMMIT」单测（before=0、Run 后=1）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
