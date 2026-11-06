@@ -47,7 +47,7 @@
 		<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
 		<AmbientBackdrop />
 		<RoutedContentViewport
-			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : (!isSubPage ? 'pb-24' : '')}"
+			contentClassName="tablet-page-canvas {(pathname === ROUTES.map || (pathname === ROUTES.messages && isWide)) ? 'h-full' : (!isSubPage ? 'pb-36' : '')}"
 			style={(pathname === ROUTES.map || pathname === ROUTES.messages) ? 'overflow:hidden;' : undefined}
 		>
 			{@render children()}

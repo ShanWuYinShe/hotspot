@@ -108,7 +108,7 @@
 		<div class="relative isolate flex-1 min-h-0 overflow-hidden">
 			<!-- 氛围画布固定在外壳内容区（不随路由滚动） -->
 			<AmbientBackdrop />
-			<RoutedContentViewport contentClassName={!isSubPage ? 'pb-24' : ''}>{@render children()}</RoutedContentViewport>
+			<RoutedContentViewport contentClassName={!isSubPage ? 'pb-36' : ''}>{@render children()}</RoutedContentViewport>
 		</div>
 
 		{#if !isSubPage}

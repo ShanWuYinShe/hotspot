@@ -20,7 +20,7 @@
 	let { data }: { data: HomeFeedData } = $props();
 </script>
 
-<div class="flex flex-col flex-1 min-h-full pb-28 px-4 max-w-4xl mx-auto w-full">
+<div class="flex flex-col flex-1 min-h-full pb-36 px-4 max-w-4xl mx-auto w-full">
 	<!-- 平板端顶栏：适度放大触控热区，宽屏居中，不占全宽大留白 -->
 	<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-3 pt-2">
 		<div class="flex items-center justify-between py-2">
