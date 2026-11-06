@@ -3130,3 +3130,15 @@ spec api_spec_public.md「类型体系」要求匿名节点 Request/Response 使
 - 测试 stub 列序对齐（repo read/user_lists/search_tests），full suite 全绿。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch H（第八批）：groups 成员读路径补齐 UserInfo.avatar_url（2026-11-07）
+
+契约审计「avatar_url 多读路径缺失」逐模块收口（本批 groups 成员面）：
+
+- queryListGroupMembers / queryListAdminGroupMembers / querySearchGroupMembers
+  在 nickname 后补 `COALESCE(u.avatar_url, '')`；
+- 三个扫描点统一填充 UserInfo.AvatarURL（空串归一 nil），覆盖公开成员列表、
+  公开成员搜索、管理视角成员列表；
+- 测试：memberRow 固定 avatar 列并断言 ListMembers 返回头像（防列序漂移）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

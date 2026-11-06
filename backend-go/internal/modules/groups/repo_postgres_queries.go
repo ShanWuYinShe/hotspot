@@ -57,7 +57,7 @@ FROM group_members
 WHERE group_id = $1`
 
 	queryListGroupMembers = `
-SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), COALESCE(u.avatar_url, ''), gm.role, gm.joined_at
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
@@ -68,7 +68,7 @@ LIMIT $5`
 	// queryListAdminGroupMembers 是管理视角成员列表（含 muted_until 真值，null=未禁言），
 	// 仅守卫子树 groups/admin/members/list 使用。
 	queryListAdminGroupMembers = `
-SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at, gm.muted_until
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), COALESCE(u.avatar_url, ''), gm.role, gm.joined_at, gm.muted_until
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)
@@ -433,7 +433,7 @@ SET owner_id = $2
 WHERE group_id = $1`
 
 	querySearchGroupMembers = `
-SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), gm.role, gm.joined_at
+SELECT gm.user_id, COALESCE(u.nickname, gm.user_id), COALESCE(u.avatar_url, ''), gm.role, gm.joined_at
 FROM group_members gm
 LEFT JOIN users u ON u.user_id = gm.user_id
 WHERE gm.group_id = $1 AND ($2 = '' OR gm.role = $2)

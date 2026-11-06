@@ -8,6 +8,7 @@ import (
 
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/textutil"
+	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -38,11 +39,12 @@ func (r *PostgresRepository) ListMembers(ctx context.Context, groupID string, ro
 	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupMemberItem
-		var roleText string
+		var roleText, avatarURL string
 		var joinedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
+		item.User.AvatarURL = types.StrPtr(avatarURL)
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)
@@ -86,12 +88,13 @@ func (r *PostgresRepository) ListAdminMembers(ctx context.Context, groupID strin
 	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item AdminGroupMemberItem
-		var roleText string
+		var roleText, avatarURL string
 		var joinedAt time.Time
 		var mutedUntil *time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt, &mutedUntil); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &roleText, &joinedAt, &mutedUntil); err != nil {
 			return nil, "", err
 		}
+		item.User.AvatarURL = types.StrPtr(avatarURL)
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		item.MutedUntil = formatMutedUntil(mutedUntil)
@@ -137,11 +140,12 @@ func (r *PostgresRepository) SearchMembers(ctx context.Context, groupID string, 
 	joinedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item GroupMemberItem
-		var roleText string
+		var roleText, avatarURL string
 		var joinedAt time.Time
-		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &roleText, &joinedAt); err != nil {
+		if err := rows.Scan(&item.User.UserID, &item.User.Nickname, &avatarURL, &roleText, &joinedAt); err != nil {
 			return nil, "", err
 		}
+		item.User.AvatarURL = types.StrPtr(avatarURL)
 		item.Role = GroupRole(roleText)
 		item.JoinedAt = joinedAt.UTC().Format(time.RFC3339)
 		items = append(items, item)

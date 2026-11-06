@@ -187,7 +187,7 @@ func TestPostgresUpdateDismissAndExecWrappers(t *testing.T) {
 func TestPostgresListMembersAndSearchMembers(t *testing.T) {
 	ctx := context.Background()
 	memberRow := func(uid string, role string) []any {
-		return []any{uid, "昵称", role, gTestTime}
+		return []any{uid, "昵称", "http://avatar/" + uid, role, gTestTime}
 	}
 	stub := &groupFullStub{queryRows: map[string][][]any{
 		queryListGroupMembers:   {memberRow("u1", "owner"), memberRow("u2", "member")},
@@ -196,7 +196,7 @@ func TestPostgresListMembersAndSearchMembers(t *testing.T) {
 	repo := newGroupsFullRepo(stub)
 	role := GroupRoleAdmin
 	items, _, err := repo.ListMembers(ctx, "group_1", &role, 20, "")
-	if err != nil || len(items) != 2 || items[0].Role != GroupRoleOwner || items[0].JoinedAt == "" {
+	if err != nil || len(items) != 2 || items[0].Role != GroupRoleOwner || items[0].JoinedAt == "" || items[0].User.AvatarURL == nil || *items[0].User.AvatarURL != "http://avatar/u1" {
 		t.Fatalf("list members: %#v err=%v", items, err)
 	}
 	items, _, err = repo.SearchMembers(ctx, "group_1", "kw", nil, 20, "")
@@ -210,7 +210,7 @@ func TestPostgresListMembersAndSearchMembers(t *testing.T) {
 	}
 	// rows.Err 尾错误
 	stub = &groupFullStub{queryCustomRows: map[string]persistence.Rows{
-		queryListGroupMembers: &groupRowsErrValues{rows: [][]any{{"u1", "n", "member", gTestTime}}, err: errors.New("tail")},
+		queryListGroupMembers: &groupRowsErrValues{rows: [][]any{{"u1", "n", "", "member", gTestTime}}, err: errors.New("tail")},
 	}}
 	if _, _, err := newGroupsFullRepo(stub).ListMembers(ctx, "g", nil, 20, ""); err == nil {
 		t.Fatal("list members tail error must propagate")
