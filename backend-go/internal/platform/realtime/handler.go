@@ -30,6 +30,11 @@ type typingActorProvider interface {
 	GetActorInfo(context.Context, string) (actor.Info, error)
 }
 
+// resumeReplayTimeout 是一次重连回放的总写入时限。回放必须可靠送达（阻塞入队），
+// 但持续不读的客户端不能无限占用 handler goroutine：超时即断开，由客户端按
+// 重连退避语义重试。
+const resumeReplayTimeout = 20 * time.Second
+
 type userRelationAuthorizer interface {
 	GetSettings(context.Context, string) (bool, string, bool, error)
 	Relationship(context.Context, string, string) (bool, bool, bool, error)
@@ -431,25 +436,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOnline, Payload: UserOnlinePayload{UserID: principal.UserID, OnlineAt: time.Now().UTC().Format(time.RFC3339)}})
 	}
 	defer func() {
-		// resume 基线必须在 UnregisterUser **之前**捕获：注销后并发 Broadcast 对
-		// 该用户 Record 的事件已无 sink 可投递，若注销后才取全局 LastSeq 写入快照，
-		// 这些「已记录未送达」的事件会被高基线永久跳过（既没实时送达也不被补回）。
-		// 先定格基线的代价是可能重放已送达事件——客户端按 ServerSeq 去重，可接受。
-		var baselineSeq int64
-		if h.resumeStore != nil {
-			baselineSeq = h.resumeStore.LastSeq()
-		}
+		// 先注销 Hub 注册：此后不再有新事件写入本连接队列。
 		if DefaultHub().UnregisterUser(principal.UserID, principal.SessionID, sink) {
 			// 最后一条连接断开：presence 落库 offline（多连接共存时中间断开不写，
 			// 由 Hub 的「连接数归零」判定保证语义）。
 			h.markPresence(principal.UserID, false)
 			DefaultHub().BroadcastToUserSubscribers(principal.UserID, Event{Type: EventTypeUserOffline, Payload: UserOfflinePayload{UserID: principal.UserID, OfflineAt: time.Now().UTC().Format(time.RFC3339)}})
 		}
+		// resume 基线取「本连接真正写入 TCP 的最大 ServerSeq」，而不是全局
+		// resumeStore.LastSeq()：全局 seq 会被其它用户/其它群的事件推进，用它做
+		// 基线会永久跳过本用户「已 Record 未送达」的事件（审计 R-04）。以实际
+		// 写成功为准时，队列里未写出的尾事件会在重连回放中补回；写成功但客户端
+		// 尚未处理的重复由客户端按 ServerSeq 去重。
+		baselineSeq := sink.LastWrittenSeq()
 		// 停掉该连接的 writer goroutine（幂等；conn.Close 另有外层 defer 兜底）。
 		_ = sink.Close()
 		observability.L().Info("ws: disconnected", "user_id", principal.UserID, "session_id", principal.SessionID, "connection_id", connectionID)
-		// resume：连接断开时保存 state（LastSeq + 订阅快照），作为重连续传起点与
-		// 服务端订阅恢复依据（spec L156）。多端登录共享全局 seq 流，LastSeq 取全局。
+		// resume：连接断开时保存 state（已写 seq 基线 + 订阅快照），作为重连续传
+		// 起点与服务端订阅恢复依据（spec L156）。
 		if h.resumeStore != nil {
 			h.resumeStore.SaveState(resumeToken, ResumeState{UserID: principal.UserID, LastSeq: baselineSeq, Subs: subs.snapshot()})
 		}
@@ -488,8 +492,25 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				items = append(items, SubscriptionItem{Type: "user", IDs: state.Subs.UserIDs})
 			}
 			_, snap := h.applyAuthorizedSubscriptions(principalCtx, principal.UserID, SetSubscriptionsPayload{Operation: "set", Items: items}, subs, sink)
-			for _, ev := range h.resumeStore.Replay(principal.UserID, snap.GroupIDs, state.LastSeq) {
-				_ = sink.Send(ev)
+			// 回放必须可靠送达：断线积压可能远超连接出站队列（128 条），此前的
+			// 非阻塞 Send 会在队列满时丢弃**最新**事件——恰好是客户端重连要补的
+			// 那批（审计 R-01）。改为带总时限的阻塞入队；客户端持续不读则放弃
+			// 回放并断开，由其重连退避后重试（数据仍在 resume 流中，不会丢）。
+			events := h.resumeStore.Replay(principal.UserID, snap.GroupIDs, state.LastSeq)
+			if len(events) > 0 {
+				replayCtx, cancelReplay := context.WithTimeout(context.Background(), resumeReplayTimeout)
+				for _, ev := range events {
+					if err := sink.SendBlocking(replayCtx, ev); err != nil {
+						observability.L().Warn("ws: resume replay aborted",
+							"user_id", principal.UserID,
+							"connection_id", connectionID,
+							"replayed", len(events),
+							"error", err)
+						cancelReplay()
+						return
+					}
+				}
+				cancelReplay()
 			}
 		}
 	}

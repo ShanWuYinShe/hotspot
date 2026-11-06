@@ -138,38 +138,25 @@ func TestHubPublish_LogsOnFailure(t *testing.T) {
 	}
 }
 
-// TestHubDeliverAllLocalDropsTailBeyondCap verifies the drop-tail broadcast
-// cap: when more than maxConnectionsPerBroadcast sinks are registered, only
-// the first cap-many receive the event and the rest are silently dropped.
-// This guards against fan-out storms swamping the goroutine pool.
-func TestHubDeliverAllLocalDropsTailBeyondCap(t *testing.T) {
+// TestHubDeliverAllLocalReachesEverySink 验证全量广播不再有 drop-tail 上限：
+// 曾经的 1000 条截断会让万连接部署下的系统公告只覆盖 10% 用户（静默丢尾部）。
+func TestHubDeliverAllLocalReachesEverySink(t *testing.T) {
 	hub := NewHub()
-	// Register exactly cap+5 distinct sessions so total sinks exceed the cap.
-	total := maxConnectionsPerBroadcast + 5
+	const total = 1205 // 覆盖旧上限之上的尾部
 	sinks := make([]*countingSink, total)
 	for i := 0; i < total; i++ {
 		sinks[i] = &countingSink{}
-		// Each session gets its own sink so we can count per-sink deliveries.
 		hub.RegisterUser("user_"+itoa(i), "sess_"+itoa(i), sinks[i])
 	}
 	hub.deliverAllLocal(Event{Type: "SystemAnnouncement"})
 
-	delivered := 0
-	dropped := 0
-	for _, s := range sinks {
+	for i, s := range sinks {
 		s.mu.Lock()
-		if s.count > 0 {
-			delivered++
-		} else {
-			dropped++
-		}
+		count := s.count
 		s.mu.Unlock()
-	}
-	if delivered != maxConnectionsPerBroadcast {
-		t.Fatalf("expected exactly %d delivered, got %d", maxConnectionsPerBroadcast, delivered)
-	}
-	if dropped != 5 {
-		t.Fatalf("expected 5 dropped tail sessions, got %d", dropped)
+		if count != 1 {
+			t.Fatalf("sink %d: expected 1 delivery, got %d", i, count)
+		}
 	}
 }
 

@@ -2,6 +2,7 @@ package realtime
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"sync"
@@ -224,6 +225,78 @@ func TestResumeReplayOnReconnect(t *testing.T) {
 	}
 	if ev1.ServerSeq <= 0 || ev2.ServerSeq <= ev1.ServerSeq {
 		t.Fatalf("replayed events should have ascending seq: %d then %d", ev1.ServerSeq, ev2.ServerSeq)
+	}
+}
+
+// TestResumeReplayLargeBacklogDoesNotDropEvents 回归审计 R-01：断线积压超过连接
+// 出站队列（sendQueueSize=128）时，回放不得静默丢弃事件。旧实现用非阻塞
+// sink.Send 灌回放结果，队列满即丢，丢掉的恰好是最新那批——客户端重连正是为了
+// 补它们。新实现用带时限的阻塞入队，必须按 seq 升序收齐全部事件。
+func TestResumeReplayLargeBacklogDoesNotDropEvents(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, err := authService.IssueSession(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	fake := newFakeResumeStore()
+	handler := newRealtimeHandlerForTest(authService)
+	handler.SetResumeStore(fake)
+	DefaultHub().SetResumeStore(fake)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	// 连接 A 取得 resume token 后断开。
+	connA, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial A: %v", err)
+	}
+	if err := connA.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken}}); err != nil {
+		t.Fatalf("write auth A: %v", err)
+	}
+	ceA := readEventWithTimeout(t, connA)
+	token := ceA.Payload.(map[string]any)["resume_token"].(string)
+	if err := connA.Close(); err != nil {
+		t.Fatalf("close A: %v", err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if _, ok := fake.LoadState(token); ok {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if _, ok := fake.LoadState(token); !ok {
+		t.Fatal("resume state not saved after disconnect")
+	}
+
+	// 断线期间写入超过出站队列容量的事件。
+	const backlog = sendQueueSize + 72
+	for i := 0; i < backlog; i++ {
+		DefaultHub().BroadcastToUser("user_alice", Event{
+			Type:    EventTypePrivateMessageNew,
+			Payload: map[string]any{"message_id": fmt.Sprintf("m%03d", i)},
+		})
+	}
+
+	// 带 token 重连：必须按序收齐全部 backlog 条回放事件。
+	connB, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial B: %v", err)
+	}
+	defer connB.Close()
+	if err := connB.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken, ResumeToken: token}}); err != nil {
+		t.Fatalf("write auth B: %v", err)
+	}
+	if ce := readEventWithTimeout(t, connB); ce.Type != EventTypeConnectionEstablished {
+		t.Fatalf("want CE on reconnect, got %s", ce.Type)
+	}
+	for i := 0; i < backlog; i++ {
+		ev := readEventWithTimeout(t, connB)
+		want := fmt.Sprintf("m%03d", i)
+		if got, _ := ev.Payload.(map[string]any)["message_id"].(string); got != want {
+			t.Fatalf("replay[%d]: want %s, got %s", i, want, got)
+		}
 	}
 }
 

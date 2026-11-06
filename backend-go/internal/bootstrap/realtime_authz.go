@@ -172,7 +172,9 @@ func (a realtimeUserRepo) Relationship(ctx context.Context, userID, targetUserID
 func (a realtimeUserRepo) BlockedEitherWay(ctx context.Context, aUserID, bUserID string) (callerBlocked, targetBlocked bool, err error) {
 	key, swapped := hotcache.BlockPairKey(aUserID, bUserID)
 	if a.cache != nil {
-		if v, ok := a.cache.Get(ctx, key); ok {
+		// 缓存值必须是单个 '0'..'3' 字符：类型断言为 string 后直接取 v[0] 在
+		// 空值/损坏值（Redis 手工写入、旧版本键格式）下会 panic 打穿请求。
+		if v, ok := a.cache.Get(ctx, key); ok && len(v) == 1 && v[0] >= '0' && v[0] <= '3' {
 			mask := int(v[0] - '0')
 			first, second := mask&1 == 1, mask&2 == 2
 			if swapped {

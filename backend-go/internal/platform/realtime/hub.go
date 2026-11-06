@@ -2,8 +2,11 @@ package realtime
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"hotspot/backend-go/internal/platform/observability"
 )
@@ -13,11 +16,39 @@ type FanoutSink interface {
 	Close() error
 }
 
-// maxConnectionsPerBroadcast caps the pre-allocation in deliverAllLocal to
-// prevent a sudden allocation spike when broadcasting to a hub with a very
-// large number of connections. BroadcastToAll is rare (system events only),
-// so the O(n) iteration is acceptable.
-const maxConnectionsPerBroadcast = 1000
+// preparedMessageSink 由支持「一次准备、多连接复用」的 sink 实现（socketSink）。
+// 广播热路径把事件 JSON（及开启压缩后的 deflate 结果）只准备一次，避免每个连接
+// 一次 json.Marshal + 一次 permessage-deflate 压缩。
+type preparedMessageSink interface {
+	SendPrepared(pm *websocket.PreparedMessage, seq int64) error
+}
+
+// broadcastSinks 向一组 sink 投递同一事件：JSON 与 wire 表示只准备一次
+// （websocket.PreparedMessage 按「服务端/压缩/压缩级别」缓存），实现
+// preparedMessageSink 的连接走复用路径，测试桩等回退到普通 Send。
+// 投递仍是非阻塞 best-effort：慢消费者由各自输出队列丢弃并计入指标。
+func broadcastSinks(sinks []FanoutSink, event Event) {
+	if len(sinks) == 0 {
+		return
+	}
+	data, err := json.Marshal(event)
+	if err != nil {
+		observability.L().Warn("realtime: marshal broadcast event failed", "type", event.Type, "error", err)
+		return
+	}
+	pm, err := websocket.NewPreparedMessage(websocket.TextMessage, data)
+	if err != nil {
+		observability.L().Warn("realtime: prepare broadcast event failed", "type", event.Type, "error", err)
+		return
+	}
+	for _, sink := range sinks {
+		if ps, ok := sink.(preparedMessageSink); ok {
+			_ = ps.SendPrepared(pm, event.ServerSeq)
+			continue
+		}
+		_ = sink.Send(event)
+	}
+}
 
 // maxConnectionsPerUser caps concurrent WS connections per user (all
 // sessions/devices). Beyond the cap the oldest connection is evicted — a
@@ -80,8 +111,8 @@ func (h *Hub) SetResumeStore(store ResumeStore) {
 }
 
 func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
+	var evicted []FanoutSink
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	if len(h.byUser[userID]) >= maxConnectionsPerUser {
 		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
 		oldest := h.byUser[userID][0]
@@ -101,12 +132,19 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 			delete(h.subsBySink, oldest)
 		}
 		h.removeSinkFromSliceAt(h.byUser, userID, oldest)
-		_ = oldest.Close()
+		evicted = append(evicted, oldest)
 	}
 	first := len(h.byUser[userID]) == 0
 	h.byUser[userID] = append(h.byUser[userID], sink)
 	h.bySession[sessionID] = append(h.bySession[sessionID], sink)
 	h.sessionBySink[sink] = sessionID
+	h.mu.Unlock()
+	// 关闭被逐出连接必须在释放 h.mu 之后：socketSink.Close/closeWithCode 会做
+	// 网络 Close 并最多等待写超时（5s），持全局写锁关闭单个慢连接会阻塞所有
+	// 注册/注销/广播（万连接下的全局停顿）。
+	for _, evictedSink := range evicted {
+		_ = evictedSink.Close()
+	}
 	return first
 }
 
@@ -204,8 +242,8 @@ func (h *Hub) closeSessionLocal(sessionID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.bySession[sessionID]...)
 	h.mu.RUnlock()
+	broadcastSinks(sinks, event)
 	for _, sink := range sinks {
-		_ = sink.Send(event)
 		// SessionRevoked（登出/改密/撤销会话）按 spec 以 close code 4001 断开，
 		// 客户端据此刷新 token 或重新登录后重连（api_spec_websocket.md「Close Code 规范」）。
 		if ws, ok := sink.(interface {
@@ -300,9 +338,7 @@ func (h *Hub) deliverUserLocal(userID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byUser[userID]...)
 	h.mu.RUnlock()
-	for _, sink := range sinks {
-		_ = sink.Send(event)
-	}
+	broadcastSinks(sinks, event)
 }
 
 func (h *Hub) BroadcastToUserSubscribers(userID string, event Event) {
@@ -316,9 +352,7 @@ func (h *Hub) deliverUserSubscribersLocal(userID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byUserWatchers[userID]...)
 	h.mu.RUnlock()
-	for _, sink := range sinks {
-		_ = sink.Send(event)
-	}
+	broadcastSinks(sinks, event)
 }
 
 // subscriptionRevoker 由连接层实现：服务端强制摘除订阅时（踢出/退群/群解散），
@@ -447,9 +481,7 @@ func (h *Hub) deliverGroupLocal(groupID string, event Event) {
 	h.mu.RLock()
 	sinks := append([]FanoutSink(nil), h.byGroup[groupID]...)
 	h.mu.RUnlock()
-	for _, sink := range sinks {
-		_ = sink.Send(event)
-	}
+	broadcastSinks(sinks, event)
 }
 
 // BroadcastToAll sends event to every connected session. It is O(n) for all
@@ -462,36 +494,23 @@ func (h *Hub) BroadcastToAll(event Event) {
 }
 
 // deliverAllLocal collects a snapshot of every connected sink under RLock and
-// then delivers to each outside the lock. The number of sinks actually
-// delivered is capped at maxConnectionsPerBroadcast (drop-tail): beyond the
-// cap, additional sessions are silently skipped and a single warning is
-// logged per call so operators can detect fan-out storms. This is O(n) for
-// all active connections.
+// then delivers to each outside the lock. O(n) for all active connections;
+// BroadcastToAll is reserved for rare system-wide events. The previous
+// drop-tail cap (1000) was removed: silently skipping sessions means system
+// announcements never reach most users on a large deployment, which is worse
+// than the short allocation spike it avoided.
 func (h *Hub) deliverAllLocal(event Event) {
 	h.mu.RLock()
 	total := 0
 	for _, sessionSinks := range h.bySession {
 		total += len(sessionSinks)
 	}
-	sinks := make([]FanoutSink, 0, min(total, maxConnectionsPerBroadcast))
+	sinks := make([]FanoutSink, 0, total)
 	for _, sessionSinks := range h.bySession {
 		sinks = append(sinks, sessionSinks...)
-		if len(sinks) >= maxConnectionsPerBroadcast {
-			break
-		}
 	}
 	h.mu.RUnlock()
-	if total > maxConnectionsPerBroadcast {
-		observability.L().Warn(
-			"broadcast fanout exceeded cap; tail sessions dropped",
-			"total", total,
-			"cap", maxConnectionsPerBroadcast,
-			"delivered", len(sinks),
-		)
-	}
-	for _, sink := range sinks {
-		_ = sink.Send(event)
-	}
+	broadcastSinks(sinks, event)
 }
 
 func (h *Hub) publish(channel string, event Event) {
