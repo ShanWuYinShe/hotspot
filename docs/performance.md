@@ -124,3 +124,18 @@ PGroonga 镜像；只替换为官方 postgres:18 会导致 063 迁移失败、�
 
 迁移 064 为 moments.description、groups.name/description 建 PGroonga GIN 索引；
 SQL 增加 &@ 预过滤 + 原 ILIKE 精确复核（语义不变）。
+
+### 6.2 nearby 候选查询拉黑过滤物化（2026-11）
+
+**问题**：moments/fetch_nearby 候选粗筛用两个相关 NOT EXISTS 过滤双向拉黑，
+每个候选行各扫一次 user_relations；478 候选时 prepared 执行 6.7ms/次，
+backend-test 压测 DB CPU 成为瓶颈（p50 82ms）。
+
+**方案**：CTE 一次物化查看者双向拉黑集合 + m.user_id NOT IN (...)，语义不变。
+
+**SQL 级实测**（hotspot_test，prepared statement，478 候选）：
+
+| 版本 | 执行时间 |
+|---|---|
+| 旧（相关 NOT EXISTS × 2） | 6.7 ms |
+| 新（CTE blocked + NOT IN） | **0.9 ms** |

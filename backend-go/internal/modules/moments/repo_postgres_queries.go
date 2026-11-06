@@ -215,6 +215,18 @@ WHERE m.moment_id = ANY($1)`
 	// queryNearbyMoments 候选粗筛只返回排序所需列（无逐行子查询、无 users join）：
 	// 热度/关注改为候选集批量聚合，展示字段分页后批量补全。
 	queryNearbyMoments = `
+-- blocked：查看者双向拉黑集合一次物化（通常 0–几十行）。此前两个相关
+-- NOT EXISTS 让优化器对每个候选行各扫一遍 user_relations（478 候选 × 2 次
+-- 全表扫描，压测下 nearby p99 明显劣化），改为 hash/anti-join 一次构建。
+WITH blocked AS (
+  SELECT target_user_id AS user_id
+  FROM user_relations
+  WHERE user_id = $3 AND is_blocked = TRUE
+  UNION
+  SELECT user_id
+  FROM user_relations
+  WHERE target_user_id = $3 AND is_blocked = TRUE
+)
 SELECT m.moment_id,
        m.user_id,
        m.created_at,
@@ -232,8 +244,7 @@ FROM moments m
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
   -- 双向拉黑过滤（对齐私聊/评论口径）：任何一方拉黑即互不可见
-  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $3 AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)
-  AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $3 AND blk.is_blocked = TRUE)
+  AND m.user_id NOT IN (SELECT user_id FROM blocked)
   AND EXISTS (SELECT 1 FROM unnest($1::bigint[], $2::bigint[]) AS t(lo, hi)
               WHERE m.s2_cell_id BETWEEN t.lo AND t.hi)
 ORDER BY m.created_at DESC

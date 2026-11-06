@@ -2801,3 +2801,17 @@ D5 续：把 users/search 的 PGroonga 方案推广到 moments/search、groups/s
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED
 （manifest 128 索引、真实库 IT、覆盖率）。
+
+## Batch D（第四批）：nearby 候选查询拉黑过滤物化（2026-11-07）
+
+D 系列性能回归排查：moments/fetch_nearby 压测 p50 长期约 82ms、DB CPU 单请求
+接近打满（backend-test，hotspot_test 478 候选瞬间）。根因：候选粗筛用两个相关
+NOT EXISTS 过滤双向拉黑，优化器对每个候选行各做一次 user_relations 全表扫描
+（478 候选 × 2），prepared 执行 6.7ms/次。
+
+- 改写为 CTE blocked（一次物化查看者双向拉黑集合，通常 0-几十行）加
+  m.user_id NOT IN 子查询：语义不变（任何一方拉黑即互不可见）。
+- hotspot_test prepared 执行对比：旧 6.7ms 降为新 0.9ms（约 7.5 倍）；
+  DB 单请求 CPU 显著下降，nearby 吞吐上限回到连接池/网络而非 DB。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
