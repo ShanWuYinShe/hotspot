@@ -24,7 +24,7 @@ func (h *Handler) ListMyInvites(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedInvites{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -51,7 +51,7 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -72,7 +72,7 @@ func (h *Handler) RejectInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -107,7 +107,7 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "该用户已被群封禁，无法邀请"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(item))
@@ -137,7 +137,7 @@ func (h *Handler) ListSentInvites(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedSentInvites{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -164,7 +164,7 @@ func (h *Handler) RevokeInvite(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "邀请已失效"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))

@@ -32,7 +32,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedApplications{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -66,7 +66,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "ApproveApplication", httpx.Forbidden(httpx.ReasonBannedInGroup, "申请人已被群封禁，无法加入"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -99,7 +99,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -129,7 +129,7 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可降级，请先转让群主身份"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -173,7 +173,7 @@ func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不受禁言"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -199,7 +199,7 @@ func (h *Handler) SetMemberBan(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被封禁"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -229,7 +229,7 @@ func (h *Handler) ListBannedMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedBannedMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -261,7 +261,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主不可被移除，请先转让群主身份"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -286,7 +286,7 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "目标用户不是群成员"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))

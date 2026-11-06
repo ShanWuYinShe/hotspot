@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"errors"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 
 	"hotspot/backend-go/internal/platform/observability"
@@ -54,4 +55,20 @@ func BusinessForbidden(r *http.Request, method string, reason ForbiddenReason, m
 	observability.LogBusinessError(r, method, int(CodeForbidden), message)
 	data := any(ForbiddenErrorData{ForbiddenReason: reason})
 	return ApiResponse[any]{Code: CodeForbidden, Message: message, Data: &data}
+}
+
+// WriteServerError 是 10600「服务暂时不可用」的统一出口：记录底层错误（含
+// request_id/路由模板，便于排障）+ 内部错误指标 + 契约错误响应。handler 里
+// 手写的 WriteJSON(Error(CodeInternalUnavailable,...)) 一律改走这里（P0-3）。
+func WriteServerError(w http.ResponseWriter, r *http.Request, err error) {
+	op := ""
+	if r != nil {
+		op = r.Method
+		if rc := chi.RouteContext(r.Context()); rc != nil && rc.RoutePattern() != "" {
+			op = r.Method + " " + rc.RoutePattern()
+		}
+	}
+	observability.LogServerError(r, op, err)
+	observability.RecordInternalError(r)
+	WriteJSON(w, http.StatusOK, Error(CodeInternalUnavailable, "服务暂时不可用"))
 }

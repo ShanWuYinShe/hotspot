@@ -2616,3 +2616,21 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
 - 累计 15/17 模块完成内存迁移（剩余 notify、users）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch F（第二批）：10600 内部错误统一出口 + 指标/告警（2026-11-06）
+
+审计 P0-3 续：业务错误已统一出口，但 10600「服务暂时不可用」仍有 45 处
+裸 WriteJSON（不走统一日志/指标；HTTP 状态恒 200，5xx 告警看不到）。
+
+- 新增 httpx.WriteServerError(w,r,err)：统一记录底层错误（含 request_id/
+  路由模板）+ 内部错误指标 + 契约 10600 响应；
+- 45 处 handler 裸 10600 出口全部改为该 helper（groups 最多 35 处，另有
+  share/groupmessages/privatemessages/reports/privatechats/media/auth/admin
+  等）；grep 已无残留裸 10600；
+- 新增指标 hotspot_internal_errors_total{route,method}（10600 专属；业务
+  错误指标 hotspot_business_errors_total 仍覆盖 4xx 语义）；Grafana 总览新增
+  「内部错误（10600）速率」面板；Prometheus 新增 HotspotInternalErrorsHigh
+  告警（sum rate > 0.2/s 持续 5m）；
+- 测试：路由内触发 WriteServerError 断言响应 code=10600 且指标含 route 模板。
+- 验证：go test -short 全绿；--with-db ALL CHECKS PASSED；promtool check rules
+  9 条规则 SUCCESS。

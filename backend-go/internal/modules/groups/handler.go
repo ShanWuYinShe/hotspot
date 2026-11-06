@@ -154,7 +154,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "Update", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
@@ -180,7 +180,7 @@ func (h *Handler) Dismiss(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "Dismiss", httpx.Forbidden(httpx.ReasonNotGroupOwner, "权限不足"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -206,7 +206,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -242,7 +242,7 @@ func (h *Handler) SearchMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -264,7 +264,7 @@ func (h *Handler) ListMyGroups(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedGroups{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -308,7 +308,7 @@ func (h *Handler) JoinGroup(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "JoinGroup", httpx.Forbidden(httpx.ReasonPrivacySetting, "权限不足"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(result))
@@ -360,7 +360,7 @@ func (h *Handler) ListAnnouncements(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "群组不存在"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	resp := map[string]any{"items": items}
@@ -391,7 +391,7 @@ func (h *Handler) UpdateAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeNotFound, "公告不存在"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	// 内容类更新返回更新后完整对象（spec api_spec_base.md「设计规范」）
@@ -417,7 +417,7 @@ func (h *Handler) DeleteAnnouncement(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "DeleteAnnouncement", httpx.Forbidden(httpx.ReasonNotGroupAdmin, "权限不足"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -442,7 +442,7 @@ func (h *Handler) UpdatePreferences(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "UpdatePreferences", httpx.Forbidden(httpx.ReasonNotGroupMember, "权限不足"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -467,7 +467,7 @@ func (h *Handler) LeaveGroup(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "群主需先转让群主身份"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))
@@ -489,7 +489,7 @@ func (h *Handler) ListMyApplications(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedApplications{Items: items, NextCursor: types.StrPtr(nextCursor)}))
@@ -518,7 +518,7 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeConflict, "申请已处理"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(struct{}{}))

@@ -45,6 +45,17 @@ groups:
           summary: "HotSpot Redis 降级持续发生（component={{ $labels.component }}）"
           description: "Redis 故障导致 fail-open：检查 redis 容器、网络与 maxmemory；限流/幂等/缓存/多实例广播处于降级状态。"
 
+      # 内部错误（10600）持续出现：契约错误不走 HTTP 5xx，5xx 告警看不到，
+      # 需要单独基于业务 envelope 的内部错误指标（ops 审计 P0-3）。
+      - alert: HotspotInternalErrorsHigh
+        expr: sum(rate(hotspot_internal_errors_total{job="hotspot-backend"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot 内部错误速率偏高（>0.2/s，10600）"
+          description: "检查后端日志 handler error（含 request_id/route）与容器/DB 健康；内部错误被契约包装为 HTTP 200，5xx 面板不可见。"
+
       # 全局 p99：跨路由汇总，超过 1s 说明整体响应明显退化（含慢查询/连接池排队）。
       - alert: HotspotP99LatencyHigh
         expr: |

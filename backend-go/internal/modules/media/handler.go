@@ -62,7 +62,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
 		default:
 			observability.LogServerError(r, "CompleteUpload", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 	}
 	prepared := make([]UploadedMedia, 0, len(req.UploadIDs))

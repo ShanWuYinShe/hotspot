@@ -107,7 +107,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Update", httpx.CodeConflict, "消息不可编辑")
 		default:
 			observability.LogServerError(r, "Update", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
@@ -131,7 +131,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Recall", httpx.CodeConflict, "消息不可撤回")
 		default:
 			observability.LogServerError(r, "Recall", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}

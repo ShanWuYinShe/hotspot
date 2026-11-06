@@ -559,7 +559,7 @@ func (h *Handler) writeAPIError(w http.ResponseWriter, r *http.Request, err *htt
 // 看到「服务暂时不可用」）。对外响应仍不透传内部细节（spec 禁止）。
 func (h *Handler) writeUnavailable(w http.ResponseWriter, r *http.Request, err error) {
 	observability.L().Error("handler error", "method", handlerMethodName(r), "error", err, "request_id", observability.RequestIDFromContext(r.Context()))
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+	httpx.WriteServerError(w, r, err)
 }
 
 func handlerMethodName(r *http.Request) string {

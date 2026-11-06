@@ -53,6 +53,16 @@ var (
 	// businessErrorsTotal 记录「HTTP 200 + envelope code!=0」的业务错误（契约错误
 	// 不走 HTTP 状态码，此前除日志外完全不可观测）。route 用 chi 路由模板，
 	// method 用 HTTP 方法，避免路径参数造成高基数。
+	// internalErrorsTotal 记录 10600「服务暂时不可用」出口（HTTP 200 + 内部
+	// 错误码），此前只有日志；与业务错误指标互补，用于 5xx 语义的真实内部故障
+	// 趋势/告警（ops 审计 P0-3）。
+	internalErrorsTotal = promauto.With(registry).NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "hotspot_internal_errors_total",
+			Help: "内部错误响应总数（10600；按 route/method 维度）",
+		},
+		[]string{"route", "method"},
+	)
 	businessErrorsTotal = promauto.With(registry).NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "hotspot_business_errors_total",
@@ -125,4 +135,18 @@ func RecordBusinessError(r *http.Request, code int) {
 		}
 	}
 	businessErrorsTotal.WithLabelValues(strconv.Itoa(code), route, method).Inc()
+}
+
+// RecordInternalError 记录一次 10600 内部错误（由 httpx.WriteServerError 统一
+// 出口调用，与日志同步）。
+func RecordInternalError(r *http.Request) {
+	route := "unmatched"
+	method := ""
+	if r != nil {
+		method = r.Method
+		if rc := chi.RouteContext(r.Context()); rc != nil && rc.RoutePattern() != "" {
+			route = rc.RoutePattern()
+		}
+	}
+	internalErrorsTotal.WithLabelValues(route, method).Inc()
 }

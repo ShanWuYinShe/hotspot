@@ -381,7 +381,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(apiErr.Code, apiErr.Message))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())

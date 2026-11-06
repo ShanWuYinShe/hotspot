@@ -122,7 +122,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Update", httpx.CodeConflict, "消息不可编辑")
 		default:
 			observability.LogServerError(r, "Update", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
@@ -154,7 +154,7 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Recall", httpx.CodeConflict, "撤回时间窗口已过")
 		default:
 			observability.LogServerError(r, "Recall", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
@@ -208,7 +208,7 @@ func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 				httpx.WriteAPIError(w, r, "MarkRead", httpx.Forbidden(httpx.ReasonNotGroupMember, "不是群组成员"))
 			default:
 				observability.LogServerError(r, "MarkRead", err)
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+				httpx.WriteServerError(w, r, err)
 			}
 			return
 		}

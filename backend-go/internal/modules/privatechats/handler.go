@@ -88,5 +88,5 @@ func (h *Handler) handleServiceError(w http.ResponseWriter, r *http.Request, met
 		return
 	}
 	observability.LogServerError(r, method, err)
-	httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+	httpx.WriteServerError(w, r, err)
 }

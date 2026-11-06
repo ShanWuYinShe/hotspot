@@ -55,7 +55,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Get", httpx.CodeNotFound, "资源不存在")
 		default:
 			observability.LogServerError(r, "Get", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
@@ -75,7 +75,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "List", httpx.CodeInvalidRequest, "参数错误")
 		default:
 			observability.LogServerError(r, "List", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
@@ -100,7 +100,7 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Revoke", httpx.CodeNotFound, "资源不存在")
 		default:
 			observability.LogServerError(r, "Revoke", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}

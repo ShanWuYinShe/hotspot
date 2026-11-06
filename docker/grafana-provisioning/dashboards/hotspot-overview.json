@@ -345,6 +345,47 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "内部错误（10600）速率",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 24
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (route,method) (rate(hotspot_internal_errors_total{job=\"hotspot-backend\"}[5m]))",
+          "legendFormat": "{{method}} {{route}}",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }

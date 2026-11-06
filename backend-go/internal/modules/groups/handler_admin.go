@@ -21,7 +21,7 @@ func (h *Handler) GetSettings(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteAPIError(w, r, "groups.admin.get_settings", err)
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	if !ok {
@@ -52,7 +52,7 @@ func (h *Handler) ListAdminMembers(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInvalidRequest, "参数错误"))
 			return
 		}
-		httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+		httpx.WriteServerError(w, r, err)
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(PaginatedAdminGroupMembers{Items: items, NextCursor: types.StrPtr(nextCursor)}))

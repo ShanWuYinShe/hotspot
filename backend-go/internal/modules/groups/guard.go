@@ -26,12 +26,12 @@ func groupAdminGuard(ownerOnly bool) func(http.Handler) http.Handler {
 				return
 			}
 			if serviceGroupRoleResolver == nil {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+				httpx.WriteServerError(w, r, nil)
 				return
 			}
 			role, found, err := serviceGroupRoleResolver.RoleOf(r.Context(), groupID)
 			if err != nil {
-				httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+				httpx.WriteServerError(w, r, err)
 				return
 			}
 			if !found {

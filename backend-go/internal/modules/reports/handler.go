@@ -29,7 +29,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "Create", httpx.CodeConflict, "举报被拒绝")
 		default:
 			observability.LogServerError(r, "Create", err)
-			httpx.WriteJSON(w, http.StatusOK, httpx.Error(httpx.CodeInternalUnavailable, "服务暂时不可用"))
+			httpx.WriteServerError(w, r, err)
 		}
 		return
 	}
