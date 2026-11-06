@@ -2072,3 +2072,33 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 - 应用层热点已基本收敛：继续微优化收益低且易被 VM 抖动掩盖；
 - 若要再上一个量级，应转向架构：多实例部署（会话/公告缓存跨实例广播）、
   独立压测机（准生产环境）验证真实容量，或搜索服务化（解决 1–2 字符中文关键词只能顺序扫描的问题）。
+
+## 架构审计启动 + 实时/精度 P0 修复（2026-11-06，第 64 轮）
+
+按用户要求转入**架构级改进**阶段（明确不考虑向后兼容；spec 亦可按更优方案修订），
+先完成 6 个只读深审（持久化/DB、平台基础设施、实时/聊天、业务模块架构、spec 契约、
+工程效能），综合结论与分批执行计划见会话工作区 `.workwork/design/backend-improvement-plan.md`
+（审计原文在 `.workwork/audit/`，共约 3800 行，按域列 P0/P1/P2 与 file:line 证据）。
+
+本轮已修复（3 个提交）：
+
+1. **WS resume 回放丢事件**：断线积压超过连接出站队列（128）时，旧实现用非阻塞
+   `Send` 灌回放事件，队列满即丢且丢的是最新事件（恰是重连要补的）。改为带总时限的
+   阻塞入队，新增 200 条积压回归测试。
+2. **fanout 每连接重复编码**：广播改用 `websocket.PreparedMessage`，事件 JSON 与
+   permessage-deflate 结果按（服务端/压缩级别）只准备一次。
+3. **resume 基线取全局 LastSeq**：改用连接真正写入 TCP 的最大 `ServerSeq`
+   （全局 seq 会被其它用户事件推进，会把本用户未送达事件永久跳过）。
+4. **Hub 锁内 Close 慢连接**：逐出连接改为锁外关闭，消除单次最长 5s 的全 Hub 停顿；
+   `BroadcastToAll` 移除 1000 条 drop-tail 截断（万连接下公告只覆盖 10%）。
+5. **写路径时间戳秒级截断**：moments/comments 创建改为直接写 `time.Time`（timestamptz
+   微秒），对外展示仍按秒；相关 keyset 游标改为 RFC3339Nano。真实库契约测试当场复现
+   并确认了修复前「同秒评论翻页重复」缺陷（comments / notify 游标改为从行内真实时间编码）。
+6. 加固：block 关系缓存值解析防越界 panic；`verify-backend-ci.sh` 与
+   reception-bot 脚本在 macOS bash 3.2 下「全角括号紧邻 `$VAR`」被并入变量名的
+   展开错误（Linux CI 不复现，属本地/CI 行为分叉）。
+
+验证：`./scripts/verify-backend-ci.sh --with-db` → ALL CHECKS PASSED（含 race/覆盖率/
+真实库 IT/契约测试/迁移索引一致性）。
+
+后续批次（数据模型与迁移地基、架构收敛、性能体系、可观测性/契约/spec）见上述计划文件。
