@@ -9,6 +9,7 @@ import (
 
 	"hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/auth"
+	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/modules/groupmessages"
 	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/mapmodule"
@@ -16,6 +17,7 @@ import (
 	"hotspot/backend-go/internal/modules/moments"
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/modules/privatechats"
+	"hotspot/backend-go/internal/modules/privatemessages"
 	"hotspot/backend-go/internal/modules/reactions"
 	"hotspot/backend-go/internal/modules/reports"
 	"hotspot/backend-go/internal/modules/search"
@@ -98,6 +100,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	}
 	imageResolver := NewMomentImageResolver(mediaModule.Service)
 	momentsModule := moments.NewModule(factory, usersModule.Service, sharedAppConfig, imageResolver, notificationService)
+	// 评论是一等模块（架构审计 P1-6）：由 bootstrap 显式装配与挂载，不再由
+	// moments 模块内部构造；MomentProvider 依赖 moments.Service。
+	commentsModule := comments.NewModule(factory, momentsModule.Service, notificationService, usersModule.Service, sharedAppConfig)
 	// 附近新瞬间通知接线（spec api_spec_websocket.md NearbyNewMoment）：
 	// 目标查询（users 侧 nearby_moment_notify 开启者）+ 通知发布（notify 侧
 	// 落库 + WS 推送）。users.NearbyNotifyTarget → moments.NearbyNotifyTarget
@@ -126,7 +131,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	gmModule.Service.SetMemberCache(hotCache)
 	// 消息撤回时间窗接线（spec chat.md：AppConfig.limits.message_recall_window_seconds）
 	gmModule.Service.SetAppConfig(sharedAppConfig)
-	pcModule := privatechats.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
+	// 私聊消息是一等模块（架构审计 P1-6）：由 bootstrap 显式装配与挂载；
+	// privatechats 只消费其 ReadService 接口。
+	pmModule := privatemessages.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
+	pcModule := privatechats.NewModule(factory, sharedAppConfig, usersModule.Service, pmModule.MessageService())
 
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{
 		users:  usersModule.Service,
@@ -135,15 +143,15 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 
 	reactionProviders := []reactions.TargetProvider{
 		momentReactionProvider{moments: momentsModule.Service},
-		commentReactionProvider{comments: momentsModule.CommentsService(), moments: momentsModule.Service},
-		messageReactionProvider{groupMessages: gmModule.Service, privateMessages: pcModule.MessageService()},
+		commentReactionProvider{comments: commentsModule.Service, moments: momentsModule.Service},
+		messageReactionProvider{groupMessages: gmModule.Service, privateMessages: pmModule.MessageService()},
 	}
 	reactionsModule := reactions.NewModule(factory, reactionProviders, notificationService, usersModule.Service)
 	// 消息 reactions 聚合下发（spec api_spec_chat.md：消息项 reactions 恒在
 	// 数组，空数组 = 无）。reactionProviders 承担「对谁可反应」的正向鉴权，
 	// 这里是反向读路径：聊天消息拉取批量取聚合（reacted_by_me 按查看者）。
 	gmModule.Service.SetReactionsSource(groupMessageReactionsSource{svc: reactionsModule.Service})
-	pcModule.SetMessageReactionsSource(privateMessageReactionsSource{svc: reactionsModule.Service})
+	pmModule.SetMessageReactionsSource(privateMessageReactionsSource{svc: reactionsModule.Service})
 	// reaction emoji 白名单校验依赖 AppConfig.limits.reaction_emojis
 	reactionsModule.Service.SetAppConfig(sharedAppConfig)
 	// 内部互动热度维护（nearby/popular 排序的读侧加速）:
@@ -157,11 +165,11 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 首页/附近卡片上的「已关注」标注：查看者 → 作者的双向关系（spec MomentItem.author_relation）。
 	// 关系数据归 users 模块所有，经适配器转成 moments 侧的视图类型（同样为避免 import 循环）。
 	momentsModule.Service.SetFollowRelationReader(momentsFollowRelationReader{users: usersModule.Service})
-	momentsModule.CommentsService().SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
+	commentsModule.Service.SetReactionAggregator(commentReactionAggregator{reactions: reactionsModule.Service})
 	// 评论拉黑拦截（spec api_spec_authz.md comments/create：黑名单 → 10200 + blocked_by_user）。
 	// fn 签名无 ctx，此处用独立超时上下文单查双向拉黑表；查询出错向上返回错误
 	// （fail-closed，由 comments service 映射统一 10600）。双向任一成立即阻断。
-	momentsModule.CommentsService().SetBlockChecker(func(callerID, authorID string) (callerBlocked, authorBlocked bool, err error) {
+	commentsModule.Service.SetBlockChecker(func(callerID, authorID string) (callerBlocked, authorBlocked bool, err error) {
 		checkCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		// 双向任一成立即阻断（对齐 reaction/私聊/presence 口径；此前仅以后者
@@ -218,7 +226,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 群聊 + 私聊两个消息源在各自模块构造完成后注入 reports；mediaFiles 经
 	// factory 解析媒体元数据，使 snapshot_media 为完整 MessageMedia。
 	reportsModule := reports.NewModule(factory)
-	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pcModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
+	reportsModule.Service.SetMessageSnapshotSource(reports.NewMessageSnapshotSource(gmModule.Service, pmModule.MessageService(), reportsMediaSource{svc: mediaModule.Service}))
 	if svc := platformauth.DefaultService(); svc != nil {
 		svc.SetBanChecker(adminModule.Repo)
 		// 封禁缓存失效接线：admin 封禁/解封状态变更后即时失效平台 auth 的
@@ -273,8 +281,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		mapmodule.NewModule(factory),
 		mediaModule,
 		momentsModule,
+		commentsModule,
 		notify.NewModuleWithService(notificationService),
 		pcModule,
+		pmModule,
 		reactionsModule,
 		reportsModule,
 		searchModule,

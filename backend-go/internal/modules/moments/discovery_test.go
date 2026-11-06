@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"hotspot/backend-go/internal/modules/comments"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -328,13 +329,27 @@ func TestMomentsModuleMounting(t *testing.T) {
 	if mod == nil {
 		t.Fatal("expected non-nil moments module")
 	}
-	if mod.CommentsService() == nil {
-		t.Fatal("expected non-nil comments service attached to module")
-	}
 
 	r := chi.NewRouter()
 	mod.Mount(r)
 
 	pubR := chi.NewRouter()
 	mod.MountPublic(pubR)
+}
+
+// TestCommentsModuleMounting 评论路由/服务由独立模块装配（架构审计 P1-6：
+// 不再由 moments 模块内部构造），这里验证其可独立挂载。
+func TestCommentsModuleMounting(t *testing.T) {
+	fac := persistence.NewFactory(config.Config{})
+	mod := NewModule(fac, nil, nil, nil, nil)
+	commentMod := comments.NewModule(fac, mod.Service, nil, nil, nil)
+	if commentMod == nil || commentMod.Handler == nil || commentMod.Service == nil {
+		t.Fatal("expected comments module with handler and service")
+	}
+
+	r := chi.NewRouter()
+	commentMod.Mount(r)
+
+	pubR := chi.NewRouter()
+	commentMod.MountPublic(pubR)
 }

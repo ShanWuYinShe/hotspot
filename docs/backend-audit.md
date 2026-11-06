@@ -2203,3 +2203,24 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 
 未做（设计文档已记）：messages/reactions 分区与清理、软删内容 purge（需先统一
 deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--with-db ALL CHECKS PASSED。
+
+
+## Batch C（第一批）：模块边界一等化 + 可执行架构约束（2026-11-06）
+
+架构审计 P1-6（模块边界虚化）与 P0-4（数据所有权）的第一步：
+
+- **comments 升级为一等模块**：新增 `comments/module.go`（NewModule/Mount/
+  MountPublic），评论路由与服务由 bootstrap 显式装配；moments 模块不再在
+  NewModule 内部构造评论服务、不再挂载 /comments 路由。
+- **privatemessages 升级为一等模块**：新增 `privatemessages/module.go`，消息
+  路由/运行时由 bootstrap 装配；privatechats 只消费 `ReadService` 最小接口，
+  不再内部构造消息模块。
+- **新增 `internal/archtest` 可执行架构约束**（负例已验证会失败）：
+  1) 模块间 import 边 allowlist：新增未登记 import 立即失败；
+  2) 表归属登记必须覆盖 schema_manifest 全部 40 张表；
+  3) SQL 写表扫描：模块写非归属表必须命中带原因的 allowlist（23 条既有债务
+     已显式登记，清理后可直接删除条目）。
+- 路由清单不变（E2E 全量契约测试覆盖）；模块列表从 15 个增至 17 个。
+
+未做（后续）：admin→system 公告仓储隐藏副本、admin 10 处跨模块写改走归属模块
+管理接口、错误模型统一（P0-3）、全局单例 DI 收敛（P0-1）、repo_memory 迁测试。

@@ -1,8 +1,6 @@
 package privatechats
 
 import (
-	"context"
-
 	"github.com/go-chi/chi/v5"
 
 	"hotspot/backend-go/internal/modules/privatemessages"
@@ -15,35 +13,17 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
-// shareValidator 校验 share_code 有效性（由 share 模块实现，经 bootstrap 注入）。
-type shareValidator interface {
-	ValidateShareCode(ctx context.Context, shareCode string) error
-}
-
 type Module struct {
-	chatHandler    *Handler
-	messageHandler *privatemessages.Handler
-	messageRuntime *privatemessages.Runtime
+	chatHandler *Handler
 }
 
-func NewModule(factory *persistence.Factory, source appconfig.Source, shares shareValidator, userService *users.Service) *Module {
-	// userService 同时注入消息运行时与会话服务：privatemessages 消费 userReader
-	// 接口，与 bootstrap 共享同一 users.Service 实例（不再自建 repo，模块边界约定）。
-	messageRuntime := privatemessages.NewRuntime(factory, source, userService)
-	messageRuntime.SetShareValidator(shares)
-	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messageRuntime.ReadService(), userService)
-	return &Module{chatHandler: NewHandler(chatService, source), messageHandler: messageRuntime.Handler(), messageRuntime: messageRuntime}
+// NewModule 组装私聊会话模块。消息能力由 privatemessages 模块以 ReadService
+// 最小接口注入（模块边界：会话模块不构造消息模块，也不再私建其运行时）。
+func NewModule(factory *persistence.Factory, source appconfig.Source, userService *users.Service, messages privatemessages.ReadService) *Module {
+	chatService := NewServiceWithDeps(NewPostgresRepository(factory), messages, userService)
+	return &Module{chatHandler: NewHandler(chatService, source)}
 }
 
-func (m *Module) MessageService() privatemessages.ReadService {
-	return m.messageRuntime.ReadService()
-}
-
-// SetMessageReactionsSource 把消息表情反应聚合源转发给消息读服务
-// （open_the_door 的 recent_messages 与 private_messages/fetch 同源生效）。
-func (m *Module) SetMessageReactionsSource(src privatemessages.MessageReactionsSource) {
-	m.messageRuntime.SetReactionsSource(src)
-}
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_chats", func(chatRouter chi.Router) {
 		chatRouter.Group(func(group chi.Router) {
@@ -55,19 +35,6 @@ func (m *Module) Mount(r chi.Router) {
 			group.Post("/open_the_door", m.chatHandler.OpenTheDoor)
 			group.Post("/update_preferences", m.chatHandler.UpdateSettings)
 			group.Post("/delete", m.chatHandler.Delete)
-		})
-	})
-	r.Route("/api/v1/private_messages", func(messageRouter chi.Router) {
-		messageRouter.Group(func(group chi.Router) {
-			group.Use(platformauth.RequiredAuth)
-			group.Use(ratelimit.Middleware)
-			group.Use(resourceguard.Middleware)
-			group.Use(idempotency.Middleware)
-			group.Post("/send", m.messageHandler.Send)
-			group.Post("/fetch", m.messageHandler.List)
-			group.Post("/update", m.messageHandler.Update)
-			group.Post("/recall", m.messageHandler.Recall)
-			group.Post("/mark_read", m.messageHandler.MarkRead)
 		})
 	})
 }
