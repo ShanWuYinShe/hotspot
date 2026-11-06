@@ -228,3 +228,22 @@ func TestPostgresRepositoryListReturnsErrorOnQueryFailure(t *testing.T) {
 		t.Fatal("expected list error")
 	}
 }
+
+// EnsureChat 供 privatemessages 发消息事务内写会话身份行（P0-4）。
+func TestPostgresRepositoryEnsureChat(t *testing.T) {
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+	if err := repo.EnsureChat(context.Background(), "user_a:user_b", "user_a", "user_b", time.Now().UTC()); err != nil {
+		t.Fatalf("ensure chat: %v", err)
+	}
+	if _, ok := backend.chats["user_a:user_b"]; !ok {
+		t.Fatalf("expected chat row created, got %#v", backend.chats)
+	}
+
+	svc := NewServiceWithDeps(repo, &privateChatMessageReader{}, &privateChatUserReader{})
+	if err := svc.EnsureChat(context.Background(), "user_a:user_c", "user_a", "user_c", time.Now().UTC()); err != nil {
+		t.Fatalf("service ensure chat: %v", err)
+	}
+}

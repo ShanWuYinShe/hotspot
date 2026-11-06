@@ -135,6 +135,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// privatechats 只消费其 ReadService 接口。
 	pmModule := privatemessages.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, usersModule.Service, pmModule.MessageService())
+	pmModule.SetChatEnsurer(pcModule.Service())
 
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{
 		users:  usersModule.Service,

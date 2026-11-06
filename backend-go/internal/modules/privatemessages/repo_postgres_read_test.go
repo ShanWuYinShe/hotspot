@@ -79,8 +79,6 @@ func (b *privateMessageBackendStub) Exec(_ context.Context, query string, args .
 		return err
 	}
 	switch query {
-	case queryInsertPrivateChat:
-		return nil
 	case queryInsertPrivateMessage:
 		chatKey := args[1].(string)
 		record := privateMessageStubRecord{
@@ -393,6 +391,7 @@ func TestPostgresRepositorySendHistoryRecentAndLast(t *testing.T) {
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
+	repo.SetChatEnsurer(&fakeChatEnsurer{})
 
 	sent, err := repo.Send(context.Background(), "user_alice", "user_bob", SendPrivateMessageRequest{Type: "text", Content: "hello"})
 	if err != nil {

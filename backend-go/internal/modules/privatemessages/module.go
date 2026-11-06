@@ -39,6 +39,12 @@ func (m *Module) Service() *Service {
 	return nil
 }
 
+// SetChatEnsurer 注入 privatechats 的会话身份行写能力（发消息事务内经其写
+// private_chats，P0-4）。
+func (m *Module) SetChatEnsurer(ensurer ChatEnsurer) {
+	m.runtime.SetChatEnsurer(ensurer)
+}
+
 // SetMessageReactionsSource 接线消息 reactions 聚合源。
 func (m *Module) SetMessageReactionsSource(src MessageReactionsSource) {
 	m.runtime.SetReactionsSource(src)

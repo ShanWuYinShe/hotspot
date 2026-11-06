@@ -26,6 +26,12 @@ type MessageEventMeta struct {
 	Content      string
 }
 
+// ChatEnsurer 确保私聊会话身份行存在（private_chats 归属 privatechats 模块；
+// privatemessages 在发消息事务内经此写入，架构审计 P0-4）。
+type ChatEnsurer interface {
+	EnsureChat(ctx context.Context, chatKey, userAID, userBID string, createdAt time.Time) error
+}
+
 type Repository interface {
 	Send(context.Context, string, string, SendPrivateMessageRequest) (MessageSentResult, error)
 	History(context.Context, string, ListPrivateMessagesRequest) (PaginatedMessages, error)

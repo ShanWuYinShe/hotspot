@@ -1,11 +1,6 @@
 package privatemessages
 
 const (
-	queryInsertPrivateChat = `
-		INSERT INTO private_chats (chat_key, user_a_id, user_b_id, created_at)
-		VALUES ($1,$2,$3,$4)
-		ON CONFLICT (chat_key) DO NOTHING`
-
 	queryInsertPrivateMessage = `
 		INSERT INTO private_messages (message_id, chat_key, sender_user_id, type, content, file_id, share_code, reply_to_message_id, sent_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`

@@ -15,7 +15,7 @@ func TestPostgresIT_SendAndGetHistory(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		alice := testdb.InsertUser(t, txFactory, "pm_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_bob", "Bob")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		sent, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
 			TargetUserID: bob,
@@ -48,7 +48,7 @@ func TestPostgresIT_UpdateMessage(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		alice := testdb.InsertUser(t, txFactory, "pm_update_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_update_bob", "Bob")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		sent, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
 			TargetUserID: bob,
@@ -83,7 +83,7 @@ func TestPostgresIT_RecallMessage(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		alice := testdb.InsertUser(t, txFactory, "pm_recall_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_recall_bob", "Bob")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		sent, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
 			TargetUserID: bob,
@@ -115,7 +115,7 @@ func TestPostgresIT_MarkAsRead(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		alice := testdb.InsertUser(t, txFactory, "pm_read_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_read_bob", "Bob")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		sent, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
 			TargetUserID: bob,
@@ -142,7 +142,7 @@ func TestPostgresIT_MarkAsReadWithoutMessageID(t *testing.T) {
 	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
 		alice := testdb.InsertUser(t, txFactory, "pm_readall_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_readall_bob", "Bob")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		_, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
 			TargetUserID: bob,
@@ -178,7 +178,7 @@ func TestPostgresIT_MarkAllReadAcrossChats(t *testing.T) {
 		alice := testdb.InsertUser(t, txFactory, "pm_mall_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_mall_bob", "Bob")
 		carol := testdb.InsertUser(t, txFactory, "pm_mall_carol", "Carol")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		// Two separate chats: alice-bob and alice-carol
 		_, err := repo.Send(ctx, alice, bob, SendPrivateMessageRequest{
@@ -215,7 +215,7 @@ func TestPostgresIT_BatchLastAndUnreadByChatKeys(t *testing.T) {
 		alice := testdb.InsertUser(t, txFactory, "pm_bat_alice", "Alice")
 		bob := testdb.InsertUser(t, txFactory, "pm_bat_bob", "Bob")
 		carol := testdb.InsertUser(t, txFactory, "pm_bat_carol", "Carol")
-		repo := NewPostgresRepository(txFactory)
+		repo := newITRepo(txFactory)
 
 		if _, err := repo.Send(ctx, bob, alice, SendPrivateMessageRequest{TargetUserID: alice, Type: "text", Content: "first"}); err != nil {
 			t.Fatalf("Send first: %v", err)
@@ -283,4 +283,34 @@ func TestPostgresIT_BatchLastAndUnreadByChatKeys(t *testing.T) {
 			t.Fatalf("Recent limit=1: %#v", recent.Items)
 		}
 	})
+}
+
+// newITRepo 装配测试用 ChatEnsurer（private_chats 归属 privatechats 模块，
+// privatemessages 发消息经其写，P0-4）。
+func newITRepo(txFactory *persistence.Factory) *PostgresRepository {
+	repo := NewPostgresRepository(txFactory)
+	repo.SetChatEnsurer(&realChatEnsurer{factory: txFactory})
+	return repo
+}
+
+// fakeChatEnsurer 用于无真实库的仓储单测（不落 private_chats 行）。
+type fakeChatEnsurer struct{ calls int }
+
+func (f *fakeChatEnsurer) EnsureChat(context.Context, string, string, string, time.Time) error {
+	f.calls++
+	return nil
+}
+
+// realChatEnsurer 在真实库 IT 中落 private_chats 身份行（生产由 privatechats
+// 模块 Service 承担；测试直接 SQL 以保持跨模块仓储契约验证）。
+type realChatEnsurer struct{ factory *persistence.Factory }
+
+func (e *realChatEnsurer) EnsureChat(ctx context.Context, chatKey, userAID, userBID string, createdAt time.Time) error {
+	queryable, ok := persistence.RepoQueryable(ctx, e.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx,
+		"INSERT INTO private_chats (chat_key, user_a_id, user_b_id, created_at) VALUES ($1,$2,$3,$4) ON CONFLICT (chat_key) DO NOTHING",
+		chatKey, userAID, userBID, createdAt.UTC().Format(time.RFC3339Nano))
 }

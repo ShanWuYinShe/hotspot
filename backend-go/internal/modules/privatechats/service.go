@@ -2,6 +2,7 @@ package privatechats
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"hotspot/backend-go/internal/modules/privatemessages"
@@ -28,6 +29,25 @@ type Service struct {
 func NewServiceWithDeps(repo Repository, messages privatemessages.ReadService, userService userReader) *Service {
 	return &Service{repo: repo, messages: messages, users: userService}
 }
+
+// chatEnsurerRepository 是会话身份行写能力（PG 仓储实现；供 privatemessages
+// 在发消息事务内确保 private_chats 行存在，P0-4）。
+type chatEnsurerRepository interface {
+	EnsureChat(ctx context.Context, chatKey, userAID, userBID string, createdAt time.Time) error
+}
+
+var errChatEnsurerUnsupported = errors.New("privatechats: chat ensurer unsupported")
+
+// EnsureChat 在同一事务内确保会话身份行存在（private_chats 归属本模块；
+// privatemessages 发消息时经此写入，架构审计 P0-4）。
+func (s *Service) EnsureChat(ctx context.Context, chatKey, userAID, userBID string, createdAt time.Time) error {
+	store, ok := s.repo.(chatEnsurerRepository)
+	if !ok {
+		return errChatEnsurerUnsupported
+	}
+	return store.EnsureChat(ctx, chatKey, userAID, userBID, createdAt)
+}
+
 func (s *Service) OpenTheDoor(ctx context.Context, targetUserID string, recentLimit int) (PrivateChatOpenResult, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// 与 Delete/UpdateSettings 对齐：先确认目标用户存在，不存在按 10300

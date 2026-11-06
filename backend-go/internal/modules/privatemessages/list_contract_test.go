@@ -40,7 +40,9 @@ func TestPrivateMessagesRepositoryContract(t *testing.T) {
 				for _, uid := range []string{a, b, c} {
 					testdb.InsertUser(t, txFactory, uid, "nick_"+uid)
 				}
-				return NewPostgresRepository(txFactory), pmContractState{ctx: context.Background(), a: a, b: b, c: c}, cleanup
+				repo := NewPostgresRepository(txFactory)
+				repo.SetChatEnsurer(&realChatEnsurer{factory: txFactory})
+				return repo, pmContractState{ctx: context.Background(), a: a, b: b, c: c}, cleanup
 			},
 		},
 	}

@@ -14,7 +14,17 @@ import (
 
 type PostgresRepository struct {
 	factory *persistence.Factory
+	// chatEnsurer 是 privatechats 模块的会话身份行写能力（private_chats 归属
+	// privatechats，privatemessages 不再直写；架构审计 P0-4）。
+	chatEnsurer ChatEnsurer
 }
+
+// SetChatEnsurer 注入会话身份行写能力（bootstrap 传 privatechats.Service）。
+func (r *PostgresRepository) SetChatEnsurer(ensurer ChatEnsurer) {
+	r.chatEnsurer = ensurer
+}
+
+var errChatEnsurerNotWired = errors.New("privatemessages: chat ensurer not configured")
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
@@ -48,7 +58,10 @@ func (r *PostgresRepository) Send(ctx context.Context, senderID, targetUserID st
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		if err := queryable.Exec(txCtx, queryInsertPrivateChat, chatKey, userAID, userBID, now.Format(time.RFC3339Nano)); err != nil {
+		if r.chatEnsurer == nil {
+			return errChatEnsurerNotWired
+		}
+		if err := r.chatEnsurer.EnsureChat(txCtx, chatKey, userAID, userBID, now); err != nil {
 			return err
 		}
 		if req.ReplyToMessageID != "" {

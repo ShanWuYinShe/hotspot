@@ -2747,3 +2747,25 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   users 覆盖率 73.1%（新增能力覆盖后仍过门槛）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C（第十九批）：跨模块写债务收敛 5/5 — privatemessages:private_chats（2026-11-07）
+
+架构审计 P0-4 最后一项：privatemessages 发消息时 INSERT private_chats（会话表
+归属 privatechats 模块）。
+
+- privatemessages 定义 ChatEnsurer 最小端口（EnsureChat(ctx, chatKey,
+  userAID, userBID, createdAt)）；发消息事务内不再直写 private_chats，改调
+  注入的实现；未接线时显式报错（绝不静默跳过）。
+- privatechats 新增 EnsureChat 能力（PG 仓储沿用既有 upsert SQL；Service 经
+  可选仓储能力断言暴露），由 bootstrap 在 privatechats 模块装配后注入
+  privatemessages（pmModule.SetChatEnsurer(pcModule.Service())）。
+- 无 import 环：privatemessages 只持端口，privatechats 结构化实现；事务语义
+  不变（privatemessages txCtx 透传给 privatechats 仓储，聊天行 + 消息行仍同
+  事务回滚）。
+- **archtest 删除最后一条 allowlist：crossModuleWritesAllowlist 清空，P0-4
+  完成（跨模块 SQL 写表债务 0 条）**；扫描器继续生效，任何新增跨模块写会直接
+  失败，需显式登记原因。
+- 测试：真实库 IT/契约测试用 realChatEnsurer 落会话行；新增 privatechats
+  EnsureChat 仓储/服务用例；全量 --with-db 通过。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

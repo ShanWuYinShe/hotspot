@@ -39,6 +39,7 @@ type ReadService interface {
 type Runtime struct {
 	handler     *Handler
 	readService ReadService
+	repo        Repository
 }
 
 type userReader interface {
@@ -124,6 +125,15 @@ func NewRuntime(factory *persistence.Factory, source appconfig.Source, userServi
 	return &Runtime{
 		handler:     NewHandler(service),
 		readService: service,
+		repo:        repo,
+	}
+}
+
+// SetChatEnsurer 注入会话身份行写能力（bootstrap 传 privatechats.Service；
+// private_chats 归属 privatechats，P0-4）。
+func (r *Runtime) SetChatEnsurer(ensurer ChatEnsurer) {
+	if setter, ok := r.repo.(interface{ SetChatEnsurer(ChatEnsurer) }); ok {
+		setter.SetChatEnsurer(ensurer)
 	}
 }
 

@@ -16,6 +16,16 @@ func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
 	return &PostgresRepository{factory: factory}
 }
 
+// EnsureChat 确保会话身份行存在（供 privatemessages 发消息事务内调用；
+// private_chats 归属本模块，P0-4）。
+func (r *PostgresRepository) EnsureChat(ctx context.Context, chatKey, userAID, userBID string, createdAt time.Time) error {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return persistence.ErrNotImplemented
+	}
+	return queryable.Exec(ctx, queryInsertPrivateChat, chatKey, userAID, userBID, createdAt.UTC().Format(time.RFC3339Nano))
+}
+
 func (r *PostgresRepository) GetOrCreate(ctx context.Context, userID, targetUserID string) (time.Time, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
