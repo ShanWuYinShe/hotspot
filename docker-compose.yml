@@ -27,7 +27,9 @@ x-logging: &default_logging
 services:
   # ── Database ────────────────────────────────────────────────────
   postgres:
-    image: postgres:${POSTGRES_VERSION:-18.4}-alpine
+    # PGroonga 提供 CJK 短关键词子串索引（users/moments/groups 搜索性能）；
+    # 基于 PostgreSQL 18，扩展由 063 迁移启用。
+    image: groonga/pgroonga:4.0.6-alpine-18
     restart: always
     logging: *default_logging
     # pg_stat_statements：查询统计基线；log_min_duration_statement：500ms 以上

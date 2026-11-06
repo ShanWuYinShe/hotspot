@@ -2769,3 +2769,21 @@ deleted_at 模型）、周期任务多实例 jitter+分布式锁。验证：--wi
   EnsureChat 仓储/服务用例；全量 --with-db 通过。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D（第二批）：users/search 短中文关键词索引化（2026-11-07）
+
+D5 性能项：users/search 的 1–2 字符中文关键词无可用索引（pg_trgm 需 ≥3 字符），
+100k 用户合成库实测 seq scan 85ms。方案与实测：
+
+- 数据库镜像 postgres:18.4-alpine → groonga/pgroonga:4.0.6-alpine-18
+  （PostgreSQL 18 + PGroonga 官方镜像；dev/CI/生产/备份恢复文档同步）。
+- 迁移 063：启用 pgroonga 扩展；users.nickname/bio 各建 PGroonga GIN 索引
+  （pgroonga_text_full_text_search_ops_v2）；schema manifest 更新（125 索引）。
+- 搜索 SQL：非手机号 keyword 增加 (nickname &@ $kw OR bio &@ $kw) 预过滤
+  （1 字符起可走索引），保留原 ILIKE 精确复核，输出语义不变；手机号精确分支
+  保持不变。参数/测试同步更新。
+- 实测 100k 用户（keyword=游客，2 字符）：旧 85.3ms → 新 **2.1ms**
+  （BitmapAnd/BitmapOr 索引扫描）。
+
+验证：verify-backend-ci.sh --with-db ALL CHECKS PASSED（含 manifest 重放校验、
+真实库 IT、覆盖率）。后续可把同一索引策略推广到 moments/groups 搜索。

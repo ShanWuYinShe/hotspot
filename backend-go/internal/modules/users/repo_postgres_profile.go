@@ -243,23 +243,25 @@ func buildSearchUsersQuery(bounds geo.Bounds, keyword, tag string, radiusFilter 
 	}
 	if keyword != "" {
 		// 转义 LIKE 通配符：与内存实现 strings.Contains 字面语义一致
-		// （同 moments/search 先例；下方 phoneArg 为精确 = 比对不转义）。
-		args = append(args, textutil.EscapeLikePattern(keyword))
-		kwArg := len(args)
-		// keyword 为手机号格式（纯数字）时，对 phone_searchable=true 的用户做
-		// 登录手机号精确匹配（spec user.md → users/search keyword 说明）。手机号
-		// 真值在 auth 侧 auth_accounts.login_id（users.phone 由 account 回填但
-		// 以 login_id 为权威），经子查询跨表精确比对，与现有可见性过滤一致。
-		phoneArg := 0
+		// （同 moments/search 先例；pgroonga &@ 使用原始 keyword 做子串预过滤）。
+		escapedKeyword := textutil.EscapeLikePattern(keyword)
 		if isPhoneFormatKeyword(keyword) {
-			args = append(args, keyword)
-			phoneArg = len(args)
+			// 手机号格式：登录手机号精确匹配（spec user.md → users/search
+			// keyword 说明）。手机号真值在 auth_accounts.login_id（users.phone
+			// 只是回填），跨表 EXISTS 精确比对；同时保留昵称/bio 模糊匹配。
+			args = append(args, escapedKeyword, keyword)
+			kwArg := len(args) - 1
+			phoneArg := len(args)
+			builder.WriteString(fmt.Sprintf(" AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\' OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d)))", kwArg, kwArg, phoneArg))
+		} else {
+			// 短关键词（1-2 字符 CJK）无 pg_trgm 索引可用，此前全表扫描。
+			// PGroonga &@ 子串预过滤走 GIN 索引（1 字符起有效），外层 ILIKE
+			// 做精确复核，输出语义不变。
+			args = append(args, keyword, escapedKeyword)
+			rawArg := len(args) - 1
+			escapedArg := len(args)
+			builder.WriteString(fmt.Sprintf(" AND (u.nickname &@ $%d OR u.bio &@ $%d) AND ((us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\')", rawArg, rawArg, escapedArg, escapedArg))
 		}
-		builder.WriteString(fmt.Sprintf(" AND ($%d = '' OR (us.nickname_searchable = TRUE AND u.nickname ILIKE '%%' || $%d || '%%' ESCAPE '\\') OR u.bio ILIKE '%%' || $%d || '%%' ESCAPE '\\'", kwArg, kwArg, kwArg))
-		if phoneArg > 0 {
-			builder.WriteString(fmt.Sprintf(" OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d))", phoneArg))
-		}
-		builder.WriteString(")")
 	}
 	// tag 过滤下推 SQL（EXISTS user_profile_tags）：此前在 Go 层对全量候选逐个
 	// 比对，tag-only 搜索退化为全表加载。

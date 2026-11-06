@@ -172,7 +172,7 @@ jobs:
     runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:18.4-alpine
+        image: groonga/pgroonga:4.0.6-alpine-18
         env:
           POSTGRES_DB: hotspot_test
           POSTGRES_USER: postgres
@@ -214,7 +214,7 @@ jobs:
           go run ./cmd/migrate
           go run ./cmd/migrate -verify-only
           cd ..
-          PG_CONTAINER="$(docker ps --filter ancestor=postgres:18.4-alpine --format '{{.Names}}' | head -n1)"
+          PG_CONTAINER="$(docker ps --filter ancestor=groonga/pgroonga:4.0.6-alpine-18 --format '{{.Names}}' | head -n1)"
           test -n "$PG_CONTAINER"
           ./scripts/check-migration-indexes.sh --container "$PG_CONTAINER" --database hotspot_test
 
@@ -395,7 +395,7 @@ jobs:
       # 校验（ops 审计 P1-4：此前 CI 只 build 不 run，USER/CMD/探针/迁移路径
       # 只能在线上首次暴露）。
       postgres:
-        image: postgres:18.4-alpine
+        image: groonga/pgroonga:4.0.6-alpine-18
         env:
           POSTGRES_DB: hotspot_image_ci
           POSTGRES_USER: postgres

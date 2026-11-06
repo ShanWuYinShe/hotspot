@@ -22,8 +22,8 @@ access-controlled secret store.
 
 Run from the host that runs the compose stack. Output is a **custom-format**
 dump (`pg_dump -Fc`, 自带压缩、支持 `pg_restore` 选择性恢复) that can be
-restored into a fresh `postgres:18` container (compose pins
-`POSTGRES_VERSION=18.4`; keep major versions aligned).
+restored into a fresh PostgreSQL 18 容器（compose 固定 `groonga/pgroonga:4.0.6-alpine-18`
+镜像，内置 PGroonga 扩展；保留期/恢复须用同镜像，否则 063 迁移的搜索索引无法创建）。
 
 ```bash
 # Set these to match your deployment.

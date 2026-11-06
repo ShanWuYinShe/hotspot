@@ -68,8 +68,8 @@ func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 	if !strings.Contains(sql, "auth_accounts") || !strings.Contains(sql, "phone_searchable") {
 		t.Fatalf("expected phone exact-match branch in sql: %s", sql)
 	}
-	if len(args) < 3 {
-		t.Fatalf("expected keyword + phone + limit args, got %#v", args)
+	if len(args) != 3 {
+		t.Fatalf("expected escaped-keyword + keyword + limit args, got %#v", args)
 	}
 
 	// 非手机号 keyword：无 auth_accounts 分支
@@ -77,7 +77,10 @@ func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 	if strings.Contains(sql, "auth_accounts") {
 		t.Fatalf("non-numeric keyword must not include phone branch: %s", sql)
 	}
-	if len(args) != 2 {
-		t.Fatalf("expected keyword + limit args, got %#v", args)
+	if !strings.Contains(sql, "&@") {
+		t.Fatalf("non-numeric keyword must use pgroonga prefilter: %s", sql)
+	}
+	if len(args) != 3 {
+		t.Fatalf("expected raw-keyword + escaped-keyword + limit args, got %#v", args)
 	}
 }

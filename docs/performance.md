@@ -90,3 +90,24 @@ Batch D2/D5。
   填保守下限，非零退出即阻断发布自查。
 - 线上告警口径见 `docker/prometheus-alerts.yml`；采集栈启用方式见
   `docs/release-runbook.md` 与 `.env.example` 的 `OBSERVABILITY_ENABLED`。
+
+## 6. 短关键词搜索索引（PGroonga，2026-11）
+
+**问题**：中文姓名常见 1–2 字符关键词，pg_trgm 需要 ≥3 字符模式才能走 GIN
+索引；短关键词搜索退化为 users 全表 seq scan。100k 用户合成库实测
+（keyword=游客，2 字符）：**85 ms/次**（Seq Scan 100k 行）。
+
+**方案**：数据库镜像切换为 groonga/pgroonga:4.0.6-alpine-18（PostgreSQL 18 +
+PGroonga 扩展，官方公开镜像），迁移 063 启用扩展并为 users 昵称/简介建 PGroonga
+GIN 索引；搜索 SQL 先以 &@ 子串预过滤走索引，再保留原 ILIKE 精确复核，
+返回语义不变（1 字符起有效）。
+
+**实测**：同一 100k 库、同一 SQL 形状（keyword=游客）：
+
+| 版本 | 计划 | 执行时间 |
+|---|---|---|
+| 旧（trgm/seq scan） | Seq Scan on users | 85.3 ms |
+| 新（PGroonga + ILIKE 复核） | BitmapAnd(BitmapOr(nickname/bio pgroonga), ...) | **2.1 ms** |
+
+**运维约束**：所有环境（dev/CI/生产/备份恢复）必须使用同一 PostgreSQL 18 +
+PGroonga 镜像；只替换为官方 postgres:18 会导致 063 迁移失败、搜索索引缺失。
