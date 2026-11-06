@@ -47,7 +47,7 @@
 			class="fixed bottom-0 inset-x-0 z-[var(--cst-z-fixed)] pointer-events-none flex justify-center px-4 pb-[max(10px,env(safe-area-inset-bottom,10px))]"
 		>
 			<div
-				class="pointer-events-auto flex items-center justify-between w-full max-w-lg rounded-[28px] border border-border-default/70 bg-surface-island/92 p-1.5 shadow-[0_12px_36px_rgba(0,0,0,0.35)] backdrop-blur-2xl ring-1 ring-white/10 dark:ring-white/5"
+				class="pointer-events-auto flex items-center justify-between w-full max-w-lg rounded-[28px] border border-border-default/80 bg-surface-island/92 p-1.5 shadow-[0_14px_38px_rgba(0,0,0,0.38)] backdrop-blur-2xl ring-1 ring-black/5 dark:ring-white/10"
 			>
 				<!-- Slot 1: 首页 -->
 				<NavTab

@@ -75,12 +75,13 @@
 	const pageTitle = $derived(MODULE_HEADINGS[activeId] ?? '管理后台');
 </script>
 
-<StandardPageLayout contentClassName="pt-4 pb-6">
+<StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
 	{#snippet header()}
 		<!-- 岛 meta 收短为「平台管理」：完整 subtitle 含括号说明，进岛后会把 448px 岛挤满被截断；
 		     模块名已在 title，meta 只承担「这块是后台」的语境。 -->
 		<PageHeader
 			variant="integrated"
+			maxWidth="var(--cst-content-breath)"
 			title={pageTitle}
 			subtitle="平台管理（仅平台管理员可见）"
 			islandMeta="平台管理"

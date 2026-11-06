@@ -53,7 +53,7 @@
 		onclick={backToTop}
 		in:fade={{ duration: motionDuration(150) }}
 		out:fade={{ duration: motionDuration(150) }}
-		class="hover-btn focus-ring fixed right-4 bottom-24 z-[var(--cst-z-sticky)] flex size-11 items-center justify-center rounded-full border border-border-default bg-surface-primary/95 text-text-primary shadow-raised-md backdrop-blur-sm sm:bottom-6"
+		class="hover-btn focus-ring fixed right-4 bottom-28 z-[var(--cst-z-sticky)] flex size-11 items-center justify-center rounded-full border border-border-default bg-surface-primary/95 text-text-primary shadow-raised-md backdrop-blur-sm lg:bottom-8"
 	>
 		<ArrowUp class="size-5" strokeWidth={2} />
 	</button>

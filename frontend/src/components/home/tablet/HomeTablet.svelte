@@ -20,7 +20,7 @@
 	let { data }: { data: HomeFeedData } = $props();
 </script>
 
-<div class="flex flex-col flex-1 min-h-full pb-36 px-4 max-w-4xl mx-auto w-full">
+<div class="flex flex-col flex-1 min-h-full pb-36 px-4 max-w-4xl md:max-w-5xl mx-auto w-full">
 	<!-- 平板端顶栏：适度放大触控热区，宽屏居中，不占全宽大留白 -->
 	<div class="bg-surface-page/80 backdrop-blur-md sticky top-0 z-20 pb-3 pt-2">
 		<div class="flex items-center justify-between py-2">
@@ -69,7 +69,7 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-2 gap-4 pt-3"
+				class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3"
 			/>
 		{:else if data.currentError && data.currentItems.length === 0}
 			<LoadError message={data.currentError} onRetry={() => void data.reload()} />
@@ -86,8 +86,8 @@
 					{/each}
 				</div>
 			{:else}
-				<!-- 平板端稳定 2 列（宽平板 3 列）规整排列，保证卡片图幅视觉张力 -->
-				<div class="grid grid-cols-2 gap-4 pt-3">
+				<!-- 平板端自适应 2 列（宽平板 3 列）规整排列，保证卡片图幅视觉张力 -->
+				<div class="grid grid-cols-2 md:grid-cols-3 gap-4 pt-3">
 					{#each data.currentItems as moment, index (moment.moment_id)}
 						<HomeFeedItem
 							{moment}
