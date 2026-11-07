@@ -446,6 +446,21 @@ alert() {
   fi || echo "!! ALERT_WEBHOOK 推送失败"
 }
 
+# reload_nginx_when_ready：等待 nginx master 就绪（pid 已写出）后再执行 reload。
+# 部署时 nginx 容器可能因配置/挂载变更被 compose 重建，master 写 pid 需要一点时间，
+# 立即 `nginx -s reload` 会因 /var/run/nginx.pid 不存在而失败并中断部署（v1.7.3
+# 实测）。容器本来就是新起的情况下，reload 等价于 no-op，等待后执行同样安全。
+reload_nginx_when_ready() {
+  local i
+  for i in $(seq 1 30); do
+    if ssh "$SERVER" "docker exec $NGINX_CONTAINER test -s /var/run/nginx.pid && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null 2>&1"; then
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 # 自动回滚：仅重部署上一版本镜像（数据不回滚——迁移不可逆，需按 runbook 评估）。
 rollback() {
   echo "!! $1"
@@ -455,7 +470,7 @@ rollback() {
     # --scale frontend-build=0：frontend-build 只是 build target（复用 frontend
     # 镜像、CMD 以 sleep infinity 保活），被 up -d 连带拉起后会在生产常驻一个
     # 无作用容器（线上实测 Up 23h），显式缩容到 0。
-    if ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$PREVIOUS_TAG' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null"; then
+    if ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$PREVIOUS_TAG' $COMPOSE up -d --scale frontend-build=0" && reload_nginx_when_ready; then
       echo "✅ 已回滚至 ${PREVIOUS_TAG}。注意：镜像可回滚、数据迁移不可逆，若新版本已启动并执行迁移，按 docs/backup-restore.md 评估数据面。"
       alert "HotSpot 部署 ${TARGET} 校验失败，已自动回滚至 ${PREVIOUS_TAG}。原因：$1"
     else
@@ -483,7 +498,9 @@ echo "==> 独立迁移 job（一次性容器；失败则中止，不切换 backe
 ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile migrate run --rm -T migrate" \
   || rollback "独立迁移 job 失败（backend 未切换；检查迁移输出与备份）"
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
-ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null && echo 'nginx reloaded'"
+ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0"
+reload_nginx_when_ready || rollback "nginx reload 失败：容器重建后 30s 内未就绪（pid 缺失或 reload 报错）"
+echo "nginx reloaded"
 # nginx 主配置（/etc/nginx/nginx.conf）是 file bind-mount：新增/变更该挂载时
 # compose up 会重建 nginx 容器。这里在切流后复核「容器内主配置 == tag 版本」，
 # 防止容器已起但并发上限仍是镜像默认值（worker_connections 1024）。
