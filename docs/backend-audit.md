@@ -3524,3 +3524,31 @@ start..+ 一次拉取 user 流 + 最多 100 个 group 流（每流保留 2000 �
 - admin 包覆盖率 69.7%→70.0%（门禁阈值 70%）。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## 最终验证与结论（2026-11-07）
+
+经 80 轮持续审计与分批修复，后端本次改进工作收口。最终验证（worktree HEAD
+`2c888ff2`，已 ff-only 合并 main）：
+
+- `go test -race -short ./...`：全绿；
+- worktree `verify-backend-ci.sh --with-db`：**ALL CHECKS PASSED**（gofmt/vet/
+  staticcheck/单测/真实库 IT/schema manifest/archtest/覆盖率/路由快照/迁移校验）；
+- 主树 `verify-backend-ci.sh --with-e2e`（同一代码提交）：**ALL CHECKS PASSED**
+  （真实库 IT + HTTP E2E）；
+- `scripts/perf-budget.sh`：8 个读端点全部 **PERF BUDGET OK**；
+- 主环境 backend 重启后 health=200，PGroonga 预热日志与
+  `realtime_connections_rejected_total` 指标正常。
+
+本轮系列（64-80 轮）主要成果：13 条 P0/P1 缺陷修复、迁移体系加固与 schema
+manifest、计数列去冗余、模块边界 archtest、事务 aftercommit、统一业务错误出口、
+显式 DI（Hub/Logger/资源守卫）、契约 Public 类型收口、端点面快照门禁；
+性能侧 nearby 约 2.5x（480→~1190 rps，p99 81→~58-63ms）、users/search 全链路
+~2.8k→最高 5k rps（去冗余 ILIKE/轻量位置回退）、PGroonga 规划器预热；
+实时侧 WS 全局连接上限+拒绝指标、resume 分批回放（内存峰值常数级）。
+
+**已知可选的后续架构升级**（非缺陷，规模/需求触发后再做）：
+1. 公告全量 fanout 虚拟化（announcements + per-user read 状态两表，替代每公告
+   N 行 notifications）；
+2. 通用 outbox（实时/通知投递的崩溃一致性）；
+3. 分片 Hub / 多实例广播压测；4. 短关键词（1-2 字）若产品要求高吞吐可评估
+   pg_bigm/独立搜索服务；5. 更大数据量下 users/search 密集关键词的候选上限策略。
