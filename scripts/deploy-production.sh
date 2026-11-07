@@ -316,7 +316,10 @@ for f in health-check.sh backup-postgres.sh backup-seaweedfs.sh; do
     REMOTE_MOVE="$REMOTE_MOVE && mkdir -p scripts && mv tmp-deploy-incoming/$f scripts/$f && chmod +x scripts/$f"
   fi
 done
-REMOTE_MOVE="$REMOTE_MOVE && rmdir tmp-deploy-incoming"
+# 用 rm -rf 而非 rmdir：grafana-provisioning 改为原位 cp 后，暂存目录里仍会
+# 留有该子目录（此前 mv 会把它移走），rmdir 会因非空失败导致部署中止（v1.7.2
+# auto-deploy 实测）。此处只清理本函数创建的暂存目录，安全可删。
+REMOTE_MOVE="$REMOTE_MOVE && rm -rf tmp-deploy-incoming"
 ssh "$SERVER" "$REMOTE_MOVE"
 
 # 同步结果校验（在动线上镜像之前 fail-fast）：file bind-mount 的容器只能看到创建时
