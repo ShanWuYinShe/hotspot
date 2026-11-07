@@ -153,6 +153,15 @@ func (h *Handler) SetHub(hub *Hub) {
 	}
 }
 
+// replayResumeBatch 优先走 ResumeStore 的分批回放能力；未实现时退化为一次
+// 全量 Replay（测试桩/旧实现），hasMore 恒 false。
+func (h *Handler) replayResumeBatch(userID string, groupIDs []string, fromSeq int64) ([]Event, bool) {
+	if batch, ok := h.resumeStore.(batchReplayer); ok {
+		return batch.ReplayBatch(userID, groupIDs, fromSeq, resumeReplayBatchMax)
+	}
+	return h.resumeStore.Replay(userID, groupIDs, fromSeq), false
+}
+
 // SetMaxConnections 设置 WS 全局连接上限（bootstrap 装配；<=0 表示不限）。
 func (h *Handler) SetMaxConnections(n int) {
 	if n > 0 {
@@ -560,21 +569,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// 非阻塞 Send 会在队列满时丢弃**最新**事件——恰好是客户端重连要补的
 			// 那批（审计 R-01）。改为带总时限的阻塞入队；客户端持续不读则放弃
 			// 回放并断开，由其重连退避后重试（数据仍在 resume 流中，不会丢）。
-			events := h.resumeStore.Replay(principal.UserID, snap.GroupIDs, state.LastSeq)
-			if len(events) > 0 {
-				replayCtx, cancelReplay := context.WithTimeout(context.Background(), resumeReplayTimeout)
+			// 分批回放（batchReplayer）：每批最多 resumeReplayBatchMax 条，从上一批
+			// 最后 seq 继续，避免一次性反序列化上百个流的全部积压（内存峰值）。
+			// 测试桩未实现 batchReplayer 时退化为一次 Replay。
+			replayCtx, cancelReplay := context.WithTimeout(context.Background(), resumeReplayTimeout)
+			fromSeq := state.LastSeq
+			replayed := 0
+			for {
+				events, hasMore := h.replayResumeBatch(principal.UserID, snap.GroupIDs, fromSeq)
+				if len(events) == 0 {
+					break
+				}
 				for _, ev := range events {
 					if err := sink.SendBlocking(replayCtx, ev); err != nil {
 						observability.L().Warn("ws: resume replay aborted",
 							"user_id", principal.UserID,
 							"connection_id", connectionID,
-							"replayed", len(events),
+							"replayed", replayed,
 							"error", err)
 						cancelReplay()
 						return
 					}
 				}
-				cancelReplay()
+				replayed += len(events)
+				fromSeq = events[len(events)-1].ServerSeq
+				if !hasMore {
+					break
+				}
+			}
+			cancelReplay()
+			if replayed > 0 {
+				observability.L().Debug("ws: resume replay completed",
+					"user_id", principal.UserID, "connection_id", connectionID, "replayed", replayed)
 			}
 		}
 	}

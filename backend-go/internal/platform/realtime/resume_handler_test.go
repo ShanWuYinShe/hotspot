@@ -68,6 +68,15 @@ func (f *fakeResumeStore) Replay(userID string, groupIDs []string, fromSeq int64
 	return mergeEvents(streams)
 }
 
+// ReplayBatch 供 Handler 分批回放路径使用（与 RedisResumeStore 同语义）。
+func (f *fakeResumeStore) ReplayBatch(userID string, groupIDs []string, fromSeq int64, limit int) ([]Event, bool) {
+	events := f.Replay(userID, groupIDs, fromSeq)
+	if limit > 0 && len(events) > limit {
+		return events[:limit], true
+	}
+	return events, false
+}
+
 func filterSeq(events []Event, fromSeq int64) []Event {
 	out := make([]Event, 0, len(events))
 	for _, e := range events {
@@ -603,5 +612,53 @@ func TestServerSeqSerializedAsString(t *testing.T) {
 		t.Fatalf("read event: %v", err)
 	} else if !strings.Contains(string(raw), `"server_seq":"1"`) {
 		t.Fatalf("event server_seq should serialize as JSON string \"1\", got %s", raw)
+	}
+}
+
+// TestResumeReplayDrainsMultipleBatches：断线积压超过单批上限时，Handler 应循环
+// 分批回放直至清空（每批从上一批最后 seq 继续），事件顺序与 seq 单调。
+func TestResumeReplayDrainsMultipleBatches(t *testing.T) {
+	SetDefaultHub(NewHub())
+	authService := platformauth.NewService(config.Config{AuthTokenSecret: "test-secret"})
+	result, err := authService.IssueSession(context.Background(), "user_batch")
+	if err != nil {
+		t.Fatalf("issue session: %v", err)
+	}
+	fake := newFakeResumeStore()
+	const total = resumeReplayBatchMax + 37
+	lastSeq := int64(0)
+	for i := 0; i < total; i++ {
+		lastSeq = fake.Record("user_batch", Event{Type: EventTypePrivateMessageNew, Payload: map[string]any{"i": i}})
+	}
+	token := "resume_batch_token"
+	fake.SaveState(token, ResumeState{UserID: "user_batch", LastSeq: 0, Subs: SubscriptionsSnapshotPayload{}})
+	handler := newRealtimeHandlerForTest(authService)
+	handler.SetResumeStore(fake)
+	DefaultHub().SetResumeStore(fake)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL(server.URL), nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+	if err := conn.WriteJSON(Event{Type: "Auth", Payload: AuthPayload{ClientType: "app", AccessToken: result.AccessToken, ResumeToken: token}}); err != nil {
+		t.Fatalf("write auth: %v", err)
+	}
+	ce := readEventWithTimeout(t, conn)
+	if ce.Type != EventTypeConnectionEstablished {
+		t.Fatalf("expected ConnectionEstablished, got %#v", ce)
+	}
+	wantSeq := int64(1)
+	for i := 0; i < total; i++ {
+		ev := readEventWithTimeout(t, conn)
+		if ev.ServerSeq != wantSeq {
+			t.Fatalf("event %d: seq=%d, want %d", i, ev.ServerSeq, wantSeq)
+		}
+		wantSeq++
+	}
+	if lastSeq != total {
+		t.Fatalf("last seq = %d, want %d", lastSeq, total)
 	}
 }

@@ -26,6 +26,12 @@ const DefaultResumeTTL = 60 * time.Second
 // 残余风险：单流 60 秒超 2000 事件的极端热点）。
 const resumeStreamMaxLen = 2000
 
+// resumeReplayBatchMax 是单次 resume 回放的最大事件数：断线积压可能远超连接
+// 出站队列，而 Replay 会把事件全部反序列化进内存。Handler 通过 batchReplayer
+// 分批回放（每批 500 条、从上一批最后 seq 继续），把峰值内存与单次阻塞写时长
+// 限制在常数级；Redis 不可用/旧实现退化为一次性回放（测试桩）。
+const resumeReplayBatchMax = 500
+
 // ResumeStore 维护 resume 增量恢复所需的跨实例状态（spec L156, L159）。
 //
 // seq 为全局单调（单一 INCR 计数器）：user 事件与 group 事件共享同一 seq 空间，
@@ -211,11 +217,32 @@ func (s *RedisResumeStore) recordAndPublishInto(streamKey, channel string, event
 	return seq, true
 }
 
-// Replay 回放 user 流 + groupIDs 各 group 流中 seq > fromSeq 的事件，跨流按全局
+// batchReplayer 是 ResumeStore 的可选分批回放能力：生产 Redis 实现之，
+// Handler 优先走分批回放；测试桩未实现时退化为一次 Replay。
+type batchReplayer interface {
+	// ReplayBatch 返回 seq > fromSeq 的最多 limit 条事件（跨流全局 seq 升序），
+	// hasMore 表示还有更多积压。
+	ReplayBatch(userID string, groupIDs []string, fromSeq int64, limit int) (events []Event, hasMore bool)
+}
+
+// Replay 回放全部 seq > fromSeq 的事件（诊断/测试路径；请求路径用 ReplayBatch）。
+func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int64) []Event {
+	events, _ := s.replay(userID, groupIDs, fromSeq, 0)
+	return events
+}
+
+// ReplayBatch 见 batchReplayer。
+func (s *RedisResumeStore) ReplayBatch(userID string, groupIDs []string, fromSeq int64, limit int) ([]Event, bool) {
+	return s.replay(userID, groupIDs, fromSeq, limit)
+}
+
+// replay 回放 user 流 + groupIDs 各 group 流中 seq > fromSeq 的事件，跨流按全局
 // seq 升序归并（k-way merge）。各流内部 XRANGE 已按 entry ID（=seq）升序，且全局
 // INCR 保证同一 seq 只写入一个流，故归并结果严格递增。groupIDs 上限由订阅上限
 // （spec：group ≤ 100）约束，resume 为低频操作，k ≤ 101 的归并可接受。
-func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int64) []Event {
+// limit > 0 时每条流最多取 limit+1 条（归并前 limit 条必然落在各流前 limit+1 条内），
+// 归并后截断到 limit 并返回 hasMore。
+func (s *RedisResumeStore) replay(userID string, groupIDs []string, fromSeq int64, limit int) ([]Event, bool) {
 	// 防御：fromSeq 来自服务端持久化的 resume 状态，正常非负；旧格式/损坏状态若
 	// 携带负值，XRANGE 会以非法 Stream ID 报错并让整个回放降级为空。钳到 0（从头
 	// 回放）既保持语义正确，也避免每个流刷一条错误日志。
@@ -223,7 +250,7 @@ func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int6
 		fromSeq = 0
 	}
 	if userID == "" {
-		return nil
+		return nil, false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -246,7 +273,11 @@ func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int6
 	pipe := s.rdb.Pipeline()
 	cmds := make([]*redis.XMessageSliceCmd, len(keys))
 	for i, key := range keys {
-		cmds[i] = pipe.XRange(ctx, key, start, "+")
+		if limit > 0 {
+			cmds[i] = pipe.XRangeN(ctx, key, start, "+", int64(limit+1))
+		} else {
+			cmds[i] = pipe.XRange(ctx, key, start, "+")
+		}
 	}
 	if _, err := pipe.Exec(ctx); err != nil {
 		// Exec 只报传输级错误；单键错误在各 cmd.Err() 中，下面按流降级。
@@ -273,7 +304,11 @@ func (s *RedisResumeStore) Replay(userID string, groupIDs []string, fromSeq int6
 		}
 		streams = append(streams, events)
 	}
-	return mergeEvents(streams)
+	merged := mergeEvents(streams)
+	if limit > 0 && len(merged) > limit {
+		return merged[:limit], true
+	}
+	return merged, false
 }
 
 // mergeEvents 对多个「按 ServerSeq 升序」的事件流做 k-way 归并。

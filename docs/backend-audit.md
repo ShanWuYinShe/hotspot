@@ -3489,3 +3489,21 @@ perf-budget 全部 OK。nearby 相比本轮系列优化前（~480rps/81ms）约 
   config env/default、rejected 指标值。
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch D4（第二批）：resume 回放分批化（内存峰值常数级）（2026-11-07）
+
+审计 D4「resume 回放上限+分页」落地。原 `RedisResumeStore.Replay` 用 XRANGE
+start..+ 一次拉取 user 流 + 最多 100 个 group 流（每流保留 2000 条），最坏
+101×2000≈20 万事件全部反序列化进内存后才开始写 WS——重连风暴/长时间断线时
+存在明显内存峰值与长阻塞。
+
+- ResumeStore 增加可选 `batchReplayer` 接口（不改现有接口，测试桩自动退化）；
+- RedisResumeStore 新增 `ReplayBatch(user, groups, fromSeq, limit)`：每流
+  `XRANGE ... COUNT limit+1`（归并前 limit 条必在各流前 limit+1 条内），归并后
+  截断并返回 hasMore；`Replay` 保持不变（诊断/测试用，内部走同一实现）；
+- Handler 回放循环：每批最多 500 条（`resumeReplayBatchMax`），从上一批最后
+  seq 继续直到清空；仍共用 20s 总回放时限，超时行为不变；
+- 测试：Redis 120 事件分批 drain（seq 连续、每批≤limit、hasMore 正确）；Handler
+  断线积压 537 条时跨批回放全部事件（顺序/seq 单调）；
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
