@@ -71,3 +71,48 @@ export function islandFlight(target: IslandRect, source: IslandRect): IslandFlig
 	const scaleY = clamp(source.height / Math.max(1, target.height), SCALE_Y_MIN, SCALE_Y_MAX);
 	return { dx, dy, scaleX, scaleY, distance: Math.hypot(dx, dy) };
 }
+
+/** 二维平面坐标点 */
+export interface BezierPoint {
+	x: number;
+	y: number;
+}
+
+/** 贝塞尔抛物线飞行轨道：起点、拱形控制点、终点 */
+export interface FlightCurve {
+	p0: BezierPoint;
+	p1: BezierPoint;
+	p2: BezierPoint;
+	arcLift: number;
+}
+
+/**
+ * 算出从「锚点矩形中心」到「顶栏灵动岛泊位中心」的贝塞尔拱形飞行曲线。
+ * 控制点向上微拱（缺省 48px），使流体粒子呈现如露珠轻盈升空的视觉抛物线。
+ */
+export function computeFlightCurve(source: IslandRect, target: IslandRect, arcLift = 48): FlightCurve {
+	const startX = source.x + source.width / 2;
+	const startY = source.y + source.height / 2;
+	const targetX = target.x + target.width / 2;
+	const targetY = target.y + target.height / 2;
+
+	const ctrlX = startX + (targetX - startX) * 0.35;
+	const ctrlY = Math.min(startY, targetY) - arcLift;
+
+	return {
+		p0: { x: startX, y: startY },
+		p1: { x: ctrlX, y: ctrlY },
+		p2: { x: targetX, y: targetY },
+		arcLift
+	};
+}
+
+/** 求二次贝塞尔曲线在参数 t ∈ [0, 1] 处的瞬时坐标 */
+export function evalBezier(curve: FlightCurve, t: number): BezierPoint {
+	const clampedT = Math.min(1, Math.max(0, t));
+	const inv = 1 - clampedT;
+	return {
+		x: inv * inv * curve.p0.x + 2 * inv * clampedT * curve.p1.x + clampedT * clampedT * curve.p2.x,
+		y: inv * inv * curve.p0.y + 2 * inv * clampedT * curve.p1.y + clampedT * clampedT * curve.p2.y
+	};
+}

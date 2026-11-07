@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+	computeFlightCurve,
+	evalBezier,
 	islandFlight,
 	islandRectOf,
 	islandTextRectOf,
@@ -75,5 +77,37 @@ describe('islandFlight', () => {
 		const huge = islandFlight(target, { x: 0, y: 0, width: 1200, height: 400 });
 		expect(huge.scaleX).toBeLessThanOrEqual(2.2);
 		expect(huge.scaleY).toBeLessThanOrEqual(2.0);
+	});
+});
+
+describe('computeFlightCurve & evalBezier', () => {
+	it('生成抛物线飞行轨道：起点、终点为中心对齐，控制点向上拱起', () => {
+		const source = { x: 200, y: 150, width: 100, height: 40 };
+		const target = { x: 600, y: 10, width: 200, height: 36 };
+		const curve = computeFlightCurve(source, target, 48);
+
+		expect(curve.p0).toEqual({ x: 250, y: 170 });
+		expect(curve.p2).toEqual({ x: 700, y: 28 });
+		// 拱起高度高过起点与终点的最高者
+		expect(curve.p1.y).toBe(28 - 48);
+	});
+
+	it('贝塞尔曲线插值：t=0 为起点，t=1 为终点，t=0.5 落在拱起高处', () => {
+		const source = { x: 200, y: 150, width: 100, height: 40 };
+		const target = { x: 600, y: 10, width: 200, height: 36 };
+		const curve = computeFlightCurve(source, target, 48);
+
+		const at0 = evalBezier(curve, 0);
+		expect(at0.x).toBeCloseTo(curve.p0.x, 5);
+		expect(at0.y).toBeCloseTo(curve.p0.y, 5);
+
+		const at1 = evalBezier(curve, 1);
+		expect(at1.x).toBeCloseTo(curve.p2.x, 5);
+		expect(at1.y).toBeCloseTo(curve.p2.y, 5);
+
+		const mid = evalBezier(curve, 0.5);
+		// 曲线中间位置高度显著高于线性插值
+		const linearMidY = (curve.p0.y + curve.p2.y) / 2;
+		expect(mid.y).toBeLessThan(linearMidY);
 	});
 });

@@ -846,16 +846,54 @@
     will-change: transform, opacity;
   }
 
-  /* 页面标题进岛微动效：与顶栏灵动岛起飞飞行严格同步，兼具位移形变与优雅渐隐 */
+  /* 页面标题进岛微动效：跨越阈值时，标题向球心聚缩渐隐；回顶时自然绽放复原 */
   [data-island-handoff] {
-    transition: opacity var(--cst-motion-standard) var(--cst-ease-standard),
-                transform var(--cst-motion-standard) var(--cst-ease-standard);
+    transition: opacity 160ms cubic-bezier(0.4, 0, 0.2, 1),
+                transform 160ms cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform, opacity;
   }
   [data-island-handoff="true"] {
     opacity: 0;
-    transform: translate3d(0, -8px, 0) scale(0.96);
+    transform: translate3d(16px, -8px, 0) scale(0.7);
     pointer-events: none;
+  }
+
+  /* 灵动岛舒展绽放动效：流体球抵达顶栏中央泊位时，由内向外绽放舒展为完整晶体胶囊 */
+  @keyframes cst-island-bloom {
+    0% {
+      transform: translate3d(0, 0, 0) scale(0.86);
+      opacity: 0.75;
+      box-shadow: 0 0 16px var(--color-accent-soft);
+    }
+    60% {
+      transform: translate3d(0, 0, 0) scale(1.008);
+      opacity: 1;
+      box-shadow: var(--shadow-raised-md);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 1;
+      box-shadow: var(--shadow-raised-sm);
+    }
+  }
+  .island-bloom {
+    animation: cst-island-bloom 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center center;
+    will-change: transform, opacity, box-shadow;
+  }
+
+  /* 灵动岛飞行流体光球粒子 */
+  .island-flight-orb {
+    position: fixed;
+    z-index: calc(var(--cst-z-chrome) + 20);
+    pointer-events: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--color-accent-default) 55%, var(--color-accent-default) 100%);
+    box-shadow: 0 0 16px var(--color-accent-default), 0 0 28px var(--color-accent-soft);
+    will-change: transform, opacity;
+    transform-origin: center center;
   }
 
   /* 灵动岛落地微动效（P1-7）：

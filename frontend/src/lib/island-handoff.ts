@@ -16,7 +16,13 @@
 //
 // 只动 transform / opacity / 内容层透明度；不读布局（锚点绝对位置由调用方缓存），
 // 因此每帧成本与一次 transform 写入相当。reduced-motion 下退化为「过闸即切换」。
-import { islandFlight, islandRectOf, type IslandRect } from './island-morph';
+import {
+	computeFlightCurve,
+	evalBezier,
+	islandFlight,
+	islandRectOf,
+	type IslandRect
+} from './island-morph';
 import { prefersReducedMotion } from './motion';
 
 /** 一次交接帧：滚动进度 + 锚点矩形（锚点跟手移动时每帧更新）。 */
@@ -160,6 +166,83 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	let initialized = false;
 	let landingTimer: ReturnType<typeof setTimeout> | null = null;
 	let animTimer: ReturnType<typeof setTimeout> | null = null;
+	let activeOrb: HTMLElement | null = null;
+	let orbRaf: number | null = null;
+
+	const clearOrb = () => {
+		if (orbRaf !== null) {
+			cancelAnimationFrame(orbRaf);
+			orbRaf = null;
+		}
+		if (activeOrb) {
+			if (activeOrb.parentElement) {
+				activeOrb.parentElement.removeChild(activeOrb);
+			}
+			activeOrb = null;
+		}
+	};
+
+	const runOrbFlight = (
+		sourceRect: IslandRect,
+		targetRect: IslandRect,
+		direction: 'enter' | 'exit',
+		onComplete?: () => void
+	) => {
+		clearOrb();
+		if (
+			typeof document === 'undefined' ||
+			typeof window === 'undefined' ||
+			typeof window.requestAnimationFrame !== 'function' ||
+			prefersReducedMotion()
+		) {
+			onComplete?.();
+			return;
+		}
+
+		// enter: 从 source 飞向 target；exit: 从 target 飞回 source
+		const curve =
+			direction === 'enter'
+				? computeFlightCurve(sourceRect, targetRect, 48)
+				: computeFlightCurve(targetRect, sourceRect, -32);
+
+		const orb = document.createElement('div');
+		orb.className = 'island-flight-orb';
+		const startPt = curve.p0;
+		orb.style.transform = `translate3d(${(startPt.x - 13).toFixed(1)}px, ${(startPt.y - 13).toFixed(1)}px, 0) scale(0.6)`;
+		orb.style.opacity = '0';
+		document.body.appendChild(orb);
+		activeOrb = orb;
+
+		const duration = 240;
+		const startTime = performance.now();
+
+		const step = (now: number) => {
+			const elapsed = now - startTime;
+			const progress = Math.min(1, Math.max(0, elapsed / duration));
+			// smoothstep 缓动
+			const ease = progress * progress * (3 - 2 * progress);
+			const pt = evalBezier(curve, ease);
+
+			let opacity = 1;
+			if (progress < 0.2) {
+				opacity = progress / 0.2;
+			} else if (progress > 0.8) {
+				opacity = (1 - progress) / 0.2;
+			}
+			const scale = 0.65 + 0.45 * Math.sin(progress * Math.PI);
+
+			orb.style.opacity = opacity.toFixed(3);
+			orb.style.transform = `translate3d(${(pt.x - 13).toFixed(1)}px, ${(pt.y - 13).toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
+
+			if (progress < 1) {
+				orbRaf = requestAnimationFrame(step);
+			} else {
+				clearOrb();
+				onComplete?.();
+			}
+		};
+		orbRaf = requestAnimationFrame(step);
+	};
 
 	const clearLanding = () => {
 		if (landingTimer !== null) {
@@ -178,11 +261,12 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	};
 
 	const clearFlightClasses = () => {
-		node.classList.remove('island-flight-enter', 'island-flight-exit');
+		node.classList.remove('island-flight-enter', 'island-flight-exit', 'island-bloom');
 		if (animTimer !== null) {
 			clearTimeout(animTimer);
 			animTimer = null;
 		}
+		clearOrb();
 	};
 
 	const triggerFlightEnter = (source: IslandRect | null) => {
@@ -225,15 +309,23 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		node.style.removeProperty('--cst-island-content');
 		triggerLanding();
 
+		if (source && target) {
+			runOrbFlight(source, target, 'enter', () => {
+				node.classList.remove('island-flight-enter');
+				node.classList.add('island-bloom');
+				triggerLanding();
+			});
+		}
+
 		// 终态微动效衔接：进入终态后清除动效类与自定义属性
 		animTimer = setTimeout(() => {
-			node.classList.remove('island-flight-enter');
+			node.classList.remove('island-flight-enter', 'island-bloom');
 			node.style.removeProperty('--flight-dx');
 			node.style.removeProperty('--flight-dy');
 			node.style.removeProperty('--flight-scale-x');
 			node.style.removeProperty('--flight-scale-y');
 			animTimer = null;
-		}, 290);
+		}, 320);
 	};
 
 	const triggerFlightExit = (source: IslandRect | null) => {
@@ -268,6 +360,10 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		void node.offsetWidth;
 		node.classList.add('island-flight-exit');
 
+		if (source && target) {
+			runOrbFlight(source, target, 'exit');
+		}
+
 		animTimer = setTimeout(() => {
 			node.classList.remove('island-flight-exit');
 			node.style.removeProperty('--flight-dx');
@@ -277,12 +373,14 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.style.removeProperty('transform');
 			node.style.removeProperty('--cst-island-content');
 			animTimer = null;
-		}, 230);
+		}, 260);
 	};
 
 	const onAnimationEnd = (e: AnimationEvent) => {
 		if (e.animationName === 'cst-island-land') {
 			clearLanding();
+		} else if (e.animationName === 'cst-island-bloom') {
+			node.classList.remove('island-bloom');
 		} else if (e.animationName === 'cst-island-flight-enter') {
 			node.classList.remove('island-flight-enter');
 			node.style.removeProperty('--flight-dx');
@@ -355,6 +453,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.removeEventListener('animationend', onAnimationEnd);
 			if (animTimer !== null) clearTimeout(animTimer);
 			clearLanding();
+			clearOrb();
 			ro?.disconnect();
 		}
 	};
