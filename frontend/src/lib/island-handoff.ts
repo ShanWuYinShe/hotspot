@@ -169,6 +169,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	let animTimer: ReturnType<typeof setTimeout> | null = null;
 	let activeCapsule: HTMLElement | null = null;
 	let capsuleRaf: number | null = null;
+	let capsuleDirection: 'enter' | 'exit' | null = null;
 
 	const clearCapsule = () => {
 		if (capsuleRaf !== null) {
@@ -181,6 +182,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			}
 			activeCapsule = null;
 		}
+		capsuleDirection = null;
 	};
 
 	const runCapsuleFlight = (
@@ -200,6 +202,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			return;
 		}
 
+		capsuleDirection = direction;
 		// enter: 从 source 飞向 target；exit: 从 target 飞回 source
 		const curve =
 			direction === 'enter'
@@ -221,7 +224,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		document.body.appendChild(el);
 		activeCapsule = el;
 
-		const duration = 380; // ms: 舒适人眼追踪节奏
+		const duration = 460; // ms: 舒适人眼追踪节奏，兼顾清晰可辨与敏捷轻盈
 		const startTime = performance.now();
 
 		const step = (now: number) => {
@@ -233,12 +236,12 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			const angle = evalBezierAngle(curve, ease);
 
 			let opacity = 1;
-			if (progress < 0.15) {
-				opacity = progress / 0.15;
-			} else if (progress > 0.85) {
-				opacity = (1 - progress) / 0.15;
+			if (progress < 0.12) {
+				opacity = progress / 0.12;
+			} else if (progress > 0.88) {
+				opacity = (1 - progress) / 0.12;
 			}
-			const stretch = 1.0 + 0.14 * Math.sin(progress * Math.PI);
+			const stretch = 1.0 + 0.12 * Math.sin(progress * Math.PI);
 
 			el.style.opacity = opacity.toFixed(3);
 			el.style.transform = `translate3d(${(pt.x - 24).toFixed(1)}px, ${(pt.y - 15).toFixed(1)}px, 0) rotate(${angle.toFixed(1)}deg) scale(${stretch.toFixed(3)}, ${(1 / stretch).toFixed(3)})`;
@@ -334,7 +337,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.style.removeProperty('--flight-scale-x');
 			node.style.removeProperty('--flight-scale-y');
 			animTimer = null;
-		}, 420);
+		}, 560);
 	};
 
 	const triggerFlightExit = (source: IslandRect | null) => {
@@ -382,7 +385,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.style.removeProperty('transform');
 			node.style.removeProperty('--cst-island-content');
 			animTimer = null;
-		}, 360);
+		}, 460);
 	};
 
 	const onAnimationEnd = (e: AnimationEvent) => {
@@ -462,7 +465,9 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.removeEventListener('animationend', onAnimationEnd);
 			if (animTimer !== null) clearTimeout(animTimer);
 			clearLanding();
-			clearCapsule();
+			if (capsuleDirection !== 'exit') {
+				clearCapsule();
+			}
 			ro?.disconnect();
 		}
 	};

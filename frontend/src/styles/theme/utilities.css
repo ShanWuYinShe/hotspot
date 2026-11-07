@@ -806,34 +806,44 @@
   }
 
   /* 灵动岛阈值起飞变形进场动效：
-     当滚动越过阈值时，胶囊从页面标题锚点（--flight-dx, --flight-dy, --flight-scale-x/y）
-     以 Apple 级自然缓动 280ms 完整滑翔、形变飞升进入顶栏中央泊位。 */
+     当滚动越过阈值时，微胶囊沿抛物线滑翔，灵动岛主体在着陆前保持隐蔽，
+     微胶囊抵达泊位瞬间（~60%）由内向外自然横向舒展绽放为完整晶体胶囊。 */
   @keyframes cst-island-flight-enter {
     0% {
       transform: translate3d(var(--flight-dx, 0px), var(--flight-dy, 0px), 0) scale(var(--flight-scale-x, 1), var(--flight-scale-y, 1));
-      opacity: 0.85;
+      opacity: 0;
     }
-    85% {
-      transform: translate3d(0, 0, 0) scale(1.006);
+    60% {
+      transform: translate3d(0, 0, 0) scale(0.65, 0.9);
+      opacity: 0;
+    }
+    82% {
+      transform: translate3d(0, 0, 0) scale(1.02, 1.01);
       opacity: 1;
+      box-shadow: var(--shadow-raised-md);
     }
     100% {
       transform: translate3d(0, 0, 0) scale(1);
       opacity: 1;
+      box-shadow: var(--shadow-raised-sm);
     }
   }
   .island-flight-enter {
-    animation: cst-island-flight-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cst-island-flight-enter 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
     transform-origin: center center;
     will-change: transform, opacity;
   }
 
   /* 灵动岛回滚退场动效：
-     当滚动回到阈值上方时，胶囊从顶栏中央以 220ms 优雅滑落回标题锚点并淡出。 */
+     当滚动回到阈值上方时，胶囊隐匿退场，由微胶囊滑翔飞回原标题位置并恢复。 */
   @keyframes cst-island-flight-exit {
     0% {
       transform: translate3d(0, 0, 0) scale(1, 1);
       opacity: 1;
+    }
+    20% {
+      transform: translate3d(0, 0, 0) scale(0.65, 0.9);
+      opacity: 0;
     }
     100% {
       transform: translate3d(var(--flight-dx, 0px), var(--flight-dy, 0px), 0) scale(var(--flight-scale-x, 1), var(--flight-scale-y, 1));
@@ -841,7 +851,7 @@
     }
   }
   .island-flight-exit {
-    animation: cst-island-flight-exit 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: cst-island-flight-exit 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
     transform-origin: center center;
     will-change: transform, opacity;
   }

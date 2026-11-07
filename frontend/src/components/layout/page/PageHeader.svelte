@@ -251,11 +251,12 @@ import {
 				);
 				return;
 			}
-			// 非吸顶页头：标题随内容滚进顶栏，在越过阈值后自动触发灵动岛转换动效（0 或 1，对齐主页阈值触发体验）。
+			// 非吸顶页头：标题随内容滚进顶栏，在标题接近顶栏（尚在视野上部清晰可见）时触发灵动岛流体转换动效。
 			if (!anchorBox || y < 1) measureAnchor(target);
 			const source = anchorSource(y);
-			const progress = source ? anchorHandoffProgress(source.y, source.height, barBottom()) : 0;
-			const isScrolled = progress >= 0.5;
+			const isScrolled = source
+				? source.y <= barBottom() + 38
+				: y > 40 * uiScale;
 			headerIsland.setHandoff(
 				islandToken,
 				isScrolled ? 1 : 0,

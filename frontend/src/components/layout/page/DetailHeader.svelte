@@ -27,7 +27,7 @@
 		author,
 		trailing,
 		onAuthorClick,
-		scrollThreshold = 160,
+		scrollThreshold = 48,
 		maxWidth,
 		class: className = '',
 		contentClassName = ''
@@ -79,6 +79,12 @@
 			const current = target.scrollTop;
 			const uiScale = Math.max(1, platform.uiScale);
 
+			// 未发生收缩前抓取准确未变形锚点
+			if (current < 16 * uiScale || !islandSource) {
+				const fresh = captureSource();
+				if (fresh) islandSource = fresh;
+			}
+
 			const isScrolled = current > scrollThreshold * uiScale;
 			scrolled = isScrolled;
 			islandSettled = isScrolled;
@@ -90,9 +96,6 @@
 
 			// 桌面端：在阈值直接用一个动画完成顶栏灵动岛交接（0 或 1），不再逐帧跟手变形
 			if (platform.platform !== 'desktop') return;
-			if (!islandSource) {
-				islandSource = captureSource();
-			}
 			headerIsland.setHandoff(
 				islandToken,
 				isScrolled ? 1 : 0,
@@ -186,6 +189,7 @@
 					<!-- 左侧：返回按键 + 桌面实体面包屑 -->
 					<div
 						data-detail-header-left
+						data-island-handoff={islandSettled ? 'true' : undefined}
 						class="pointer-events-auto flex items-center transition-[opacity,transform] duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
 					>
 						<ActionIconButton
