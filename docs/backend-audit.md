@@ -3604,3 +3604,12 @@ aftercommit 回调在进程崩溃于 COMMIT 与回调之间时会丢副作用（
   幂等领取）；admin 事务内入队单测；bootstrap handler 广播 payload 单测；
   archtest 登记 outbox_events 归属 platform；schema manifest 重建（42 表/389 列/134 索引）。
 - 门禁：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+outbox 运行时验证（main 环境，2026-11-07）：
+- 迁移 068 已应用；admin 通过 `/admin/api/v1/announcements/create`（Web cookie 鉴权，
+  Idempotency-Key 需合法字符集）创建 send_push=true 公告后，outbox_events 出现
+  TopicSystemAnnouncement 行；dispatcher 在 1s 轮询内处理，attempts=1、
+  processed_at 非空、pending=0。
+- 同一公告对「公告创建前已注册」的访客可见：notify/fetch 返回
+  `sysann_<announcement_id>` 虚拟行，证明 outbox 事务生产 + 读取合并链路。
+- 验证公告与 outbox 行已清理；outbox 无积压。
