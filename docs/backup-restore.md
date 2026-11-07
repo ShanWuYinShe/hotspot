@@ -87,6 +87,22 @@ custom format 输出 `.dump`、dump 后 `pg_restore -l` 完整性自检、保留
   失败即中止部署）；版本校验失败时自动回滚到上一版本并经 `ALERT_WEBHOOK`
   告警（仅回滚镜像，数据面见第 3 节警告）。
 
+### 2.1 异地副本（运维本机拉取）
+
+服务器 cron 只把备份写到同机磁盘（宿主磁盘故障时本地轮转救不了）；异地副本由
+运维机执行 `scripts/backup-pull.sh` 拉取（rsync 服务器 `backups/`，本地默认
+`~/work/hotspot-backups`，每类保留 7 份）：
+
+```bash
+./scripts/backup-pull.sh                        # 默认 workwork-server → ~/work/hotspot-backups
+DEST=/Volumes/Backup/hotspot ./scripts/backup-pull.sh
+```
+
+建议在本机定时执行（launchd / cron）以约束异地 RPO；实际 RPO = 拉取间隔 +
+服务器每日 03:30 备份间隔。恢复演练按第 3 节在**临时库**执行（不要直接恢复到
+生产库，除故障恢复外）；当前规模（DB 224MB / dump 128KB）实测恢复到临时库约
+3.5s，数据量增长后需重新测量并记录 RTO。
+
 ---
 
 ## 3. Restore procedure
