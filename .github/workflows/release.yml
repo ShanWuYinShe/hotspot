@@ -158,7 +158,7 @@ jobs:
           手动兜底：./scripts/deploy-production.sh $GIT_VERSION
           版本指纹：version=$GIT_VERSION commit=$GIT_COMMIT built=$GIT_BUILD_TIME" \
             "hotspot-images-${GIT_VERSION}.tar.gz" \
-            "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
+            "hotspot-images-${GIT_VERSION}.tar.gz.sha256" \
             "hotspot-images-${GIT_VERSION}.ids.txt"
 
   auto-deploy:
