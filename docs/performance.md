@@ -91,6 +91,13 @@ baseline JSON 的预算门禁全部 OK）。nearby 的 DB 往返已收敛为 4 �
   扩容判断优先看 `pgxpool_empty_acquire_total` 增长率与 p99 是否同步恶化。
 - 数据量增长会首先影响 nearby/search（索引选择与回表）；seed 规模无法代表线上，
   上线新体量前应在同构数据量上重跑本手册第 1 节命令并对比第 2 节基线。
+- 网关并发上限与后端对齐：nginx 主配置 `docker/nginx.main.conf` 为
+  `worker_connections 16384`/worker + `worker_rlimit_nofile 65535`，compose 对
+  nginx 与 backend 均设 `ulimits.nofile=65535`。每个 WS 在网关占 2 条连接
+  （客户端 + 上游），单实例 10k WS ≈ 20k+ 连接；只调大 `WS_MAX_CONNECTIONS`
+  而不改这些配置会在网关侧先触顶（镜像默认 1024 连接 ≈ 500 WS）。
+- 上量前复核：`docker exec hotspot-nginx-1 nginx -T | grep worker_connections`、
+  `docker exec hotspot-nginx-1 sh -c 'ulimit -n'`、后端容器 `ulimit -n`。
 
 ## 5. 回归纪律
 

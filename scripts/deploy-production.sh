@@ -266,7 +266,7 @@ echo "==> 从 tag ${TARGET} 导出部署配置（与镜像同源）…"
 CONFIG_STAGING="$STAGING/config"
 rm -rf "$CONFIG_STAGING"
 mkdir -p "$CONFIG_STAGING"
-CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.headers.inc docker/nginx.csp.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/prometheus-alerts.yml docker/grafana-provisioning scripts/health-check.sh scripts/backup-postgres.sh scripts/backup-seaweedfs.sh"
+CONFIG_PATHS="docker-compose.yml docker-compose.prod.yml docker/nginx.main.conf docker/nginx.headers.inc docker/nginx.csp.inc docker/nginx.proxy.inc docker/nginx.prod-tls.conf docker/prod-server.inc docker/prometheus.yml docker/prometheus-alerts.yml docker/grafana-provisioning scripts/health-check.sh scripts/backup-postgres.sh scripts/backup-seaweedfs.sh"
 ARCHIVE_PATHS=""
 for p in $CONFIG_PATHS; do
   if git -C "$REPO_ROOT" cat-file -e "${TARGET}:${p}" 2>/dev/null; then
@@ -280,7 +280,7 @@ git -C "$REPO_ROOT" archive "$TARGET" $ARCHIVE_PATHS | tar -x -C "$CONFIG_STAGIN
 
 echo "==> 同步部署配置与运维脚本（compose + nginx 片段 + observability 采集配置 + 备份/巡检脚本，非源码）…"
 SCP_LIST="$CONFIG_STAGING/docker-compose.yml $CONFIG_STAGING/docker-compose.prod.yml"
-for f in nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
+for f in nginx.main.conf nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
   [ -f "$CONFIG_STAGING/docker/$f" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/$f"
 done
 [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ] && SCP_LIST="$SCP_LIST $CONFIG_STAGING/docker/grafana-provisioning"
@@ -303,7 +303,7 @@ scp -q -r $SCP_LIST "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
 # 整目录替换。
 
 REMOTE_MOVE="cd $REMOTE_DIR && mkdir -p docker && mv tmp-deploy-incoming/docker-compose.yml tmp-deploy-incoming/docker-compose.prod.yml ."
-for f in nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
+for f in nginx.main.conf nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
   if [ -f "$CONFIG_STAGING/docker/$f" ]; then
     REMOTE_MOVE="$REMOTE_MOVE && cat tmp-deploy-incoming/$f > docker/$f"
   fi
@@ -484,6 +484,17 @@ ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' docker compose -f docker-co
   || rollback "独立迁移 job 失败（backend 未切换；检查迁移输出与备份）"
 echo "==> 滚动更新（IMAGE_TAG=${TARGET}；frontend 容器启动时自刷新静态卷）…"
 ssh "$SERVER" "cd $REMOTE_DIR && IMAGE_TAG='$TARGET' $COMPOSE up -d --scale frontend-build=0 && docker exec $NGINX_CONTAINER nginx -s reload >/dev/null && echo 'nginx reloaded'"
+# nginx 主配置（/etc/nginx/nginx.conf）是 file bind-mount：新增/变更该挂载时
+# compose up 会重建 nginx 容器。这里在切流后复核「容器内主配置 == tag 版本」，
+# 防止容器已起但并发上限仍是镜像默认值（worker_connections 1024）。
+if [ -f "$CONFIG_STAGING/docker/nginx.main.conf" ]; then
+  expected_main="$(sha256_of "$CONFIG_STAGING/docker/nginx.main.conf")"
+  actual_main="$(ssh "$SERVER" "docker exec $NGINX_CONTAINER sha256sum /etc/nginx/nginx.conf" 2>/dev/null | awk '{print $1}')"
+  if [ "$actual_main" != "$expected_main" ]; then
+    rollback "nginx 主配置未生效（期望 ${expected_main:0:12}…，容器实际 ${actual_main:0:12}…）"
+  fi
+  echo "    /etc/nginx/nginx.conf sha256=${expected_main:0:12}…"
+fi
 
 echo "==> 部署自校验（等待 health 就绪并核对版本指纹）…"
 backend_ok=""
