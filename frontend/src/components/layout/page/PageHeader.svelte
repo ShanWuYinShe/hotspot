@@ -240,12 +240,7 @@ import {
 			if (islandHandoffTrigger) {
 				if (!stickySource) {
 					const captured = islandTextRectOf(islandMorphEl) ?? islandRectOf(islandAnchorEl);
-					stickySource = captured
-						? {
-								...captured,
-								y: Math.min(captured.y, Math.max(0, (barBottom() - captured.height) / 2))
-							}
-						: null;
+					stickySource = captured;
 				}
 				const progress = scrollHandoffProgress(y, 120 * uiScale, 260 * uiScale);
 				const isScrolled = progress >= 0.5;
@@ -443,7 +438,7 @@ import {
 			     在线 chip 与副标题同时被压折行。） -->
 			<div
 				bind:this={islandAnchorEl}
-				data-island-handoff={islandHandoffTrigger && islandActive ? 'true' : undefined}
+				data-island-handoff={islandActive ? 'true' : undefined}
 				class="min-w-0 flex-1"
 			>
 				<h1 bind:this={islandMorphEl} class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>

@@ -38,7 +38,7 @@
 		<!-- 桌面端信息流分段器：随内容滚动；滚出视口后由顶栏灵动岛接手 -->
 		<div
 			use:islandAnchor={{ enabled: true, onProgress: handleHandoffProgress }}
-			class="flex justify-center pb-2 pt-1 pointer-events-none"
+			class="flex justify-center pb-2 pt-1 pointer-events-none transition-opacity duration-snappy ease-standard {homeFeed.islandVisible ? 'opacity-0' : 'opacity-100'}"
 		>
 			<div class="pointer-events-auto rounded-full bg-surface-primary/90 p-0.5 shadow-raised-sm backdrop-blur-md">
 				<TabBar

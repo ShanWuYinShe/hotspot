@@ -71,13 +71,7 @@
 		const captureSource = (): IslandRect | null => {
 			const targetEl = node.querySelector<HTMLElement>('[data-detail-header-left]');
 			if (!targetEl) return null;
-			const rect = islandRectOf(targetEl);
-			if (!rect) return null;
-			const uiScale = Math.max(1, platform.uiScale);
-			return {
-				...rect,
-				y: Math.min(rect.y, Math.max(0, (52 * uiScale - rect.height) / 2))
-			};
+			return islandRectOf(targetEl);
 		};
 
 		const apply = () => {

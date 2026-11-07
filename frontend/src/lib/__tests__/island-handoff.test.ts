@@ -171,4 +171,40 @@ describe('island-handoff 纯函数', () => {
 		action?.destroy?.();
 		node.remove();
 	});
+
+	it('阈值触发时执行完整的飞行动画：写入 --flight 属性并挂载 .island-flight-enter', () => {
+		const node = document.createElement('div');
+		node.getBoundingClientRect = () =>
+			({
+				x: 600,
+				y: 8,
+				left: 600,
+				top: 8,
+				width: 200,
+				height: 36,
+				right: 800,
+				bottom: 44,
+				toJSON: () => ({})
+			}) as DOMRect;
+		document.body.appendChild(node);
+		publishHandoff({ p: 0, source: null });
+		const cleanup = islandHandoff(node, {});
+		try {
+			// 跨越阈值从 0 直接跳到 1
+			publishHandoff({ p: 1, source: { x: 300, y: 76, width: 100, height: 28 } });
+			expect(node.classList.contains('island-flight-enter')).toBe(true);
+			expect(node.style.getPropertyValue('--flight-dx')).toBeTruthy();
+			expect(node.style.getPropertyValue('--flight-dy')).toBeTruthy();
+			expect(node.style.getPropertyValue('--flight-scale-x')).toBeTruthy();
+			expect(node.style.getPropertyValue('--flight-scale-y')).toBeTruthy();
+
+			// 反向滚动回到 0，触发退场飞行动画
+			publishHandoff({ p: 0, source: { x: 300, y: 76, width: 100, height: 28 } });
+			expect(node.classList.contains('island-flight-exit')).toBe(true);
+		} finally {
+			cleanup?.destroy();
+			node.remove();
+			publishHandoff({ p: 0, source: null });
+		}
+	});
 });

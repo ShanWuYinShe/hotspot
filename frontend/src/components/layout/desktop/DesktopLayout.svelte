@@ -282,16 +282,16 @@
 			{#if pathname === ROUTES.home && homeFeed.islandVisible}
 				<!-- 首页灵动岛：内容区分段器滚出视口后浮现，顶部不显示 -->
 				<div
-					out:fade={{ duration: motionDuration(180) }}
-					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center animate-in fade-in zoom-in-95 -translate-y-0.5 duration-snappy ease-bounce"
+					out:fade={{ duration: motionDuration(220) }}
+					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
 				>
 					<HomeFeedIsland progress={headerIsland.progress} />
 				</div>
 			{:else if headerIsland.visible && headerIsland.active}
 				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
 				<div
-					out:fade={{ duration: motionDuration(180) }}
-					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center animate-in fade-in zoom-in-95 -translate-y-0.5 duration-snappy ease-bounce"
+					out:fade={{ duration: motionDuration(220) }}
+					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
 				>
 					<PageIsland
 						title={headerIsland.title}

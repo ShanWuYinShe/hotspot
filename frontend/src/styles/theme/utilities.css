@@ -805,6 +805,56 @@
     animation: cst-state-pop var(--cst-motion-standard) var(--cst-ease-bounce);
   }
 
+  /* 灵动岛阈值起飞变形进场动效：
+     当滚动越过阈值时，胶囊从页面标题锚点（--flight-dx, --flight-dy, --flight-scale-x/y）
+     以 Apple 级自然缓动 280ms 完整滑翔、形变飞升进入顶栏中央泊位。 */
+  @keyframes cst-island-flight-enter {
+    0% {
+      transform: translate3d(var(--flight-dx, 0px), var(--flight-dy, 0px), 0) scale(var(--flight-scale-x, 1), var(--flight-scale-y, 1));
+      opacity: 0.85;
+    }
+    85% {
+      transform: translate3d(0, 0, 0) scale(1.006);
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 1;
+    }
+  }
+  .island-flight-enter {
+    animation: cst-island-flight-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+
+  /* 灵动岛回滚退场动效：
+     当滚动回到阈值上方时，胶囊从顶栏中央以 220ms 优雅滑落回标题锚点并淡出。 */
+  @keyframes cst-island-flight-exit {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1, 1);
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(var(--flight-dx, 0px), var(--flight-dy, 0px), 0) scale(var(--flight-scale-x, 1), var(--flight-scale-y, 1));
+      opacity: 0;
+    }
+  }
+  .island-flight-exit {
+    animation: cst-island-flight-exit 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+
+  /* 页面标题进岛淡出：与顶栏灵动岛起飞飞行严格同步 */
+  [data-island-handoff] {
+    transition: opacity var(--cst-motion-snappy) var(--cst-ease-standard);
+  }
+  [data-island-handoff="true"] {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   /* 灵动岛落地微动效（P1-7）：
      标题滚动交接抵达顶栏灵动岛（p 从 <1 抵达 1）瞬间，
      执行 80ms 极轻微 scale 1.006→1 与 accent 细边亮度回落一档，

@@ -156,7 +156,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	// 默认启用：胶囊永远走滚动交接；显式传 enabled:false 才跳过（测试/特殊场景）。
 	if (params.enabled === false) return;
 	let target = measureTarget(node);
-	let prevP = currentHandoff().p;
+	let prevP = 0;
 	let initialized = false;
 	let landingTimer: ReturnType<typeof setTimeout> | null = null;
 	let animTimer: ReturnType<typeof setTimeout> | null = null;
@@ -177,9 +177,115 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		landingTimer = setTimeout(clearLanding, 80);
 	};
 
+	const clearFlightClasses = () => {
+		node.classList.remove('island-flight-enter', 'island-flight-exit');
+		if (animTimer !== null) {
+			clearTimeout(animTimer);
+			animTimer = null;
+		}
+	};
+
+	const triggerFlightEnter = (source: IslandRect | null) => {
+		clearFlightClasses();
+		clearLanding();
+		if (!target) target = measureTarget(node);
+
+		// reduced-motion 或未测出目标矩形时直接到终态
+		if (prefersReducedMotion() || !target) {
+			node.style.removeProperty('transform');
+			node.style.opacity = '1';
+			node.style.removeProperty('--cst-island-content');
+			triggerLanding();
+			return;
+		}
+
+		if (source) {
+			const flight = islandFlight(target, source);
+			node.style.setProperty('--flight-dx', `${flight.dx.toFixed(2)}px`);
+			node.style.setProperty('--flight-dy', `${flight.dy.toFixed(2)}px`);
+			node.style.setProperty('--flight-scale-x', String(flight.scaleX.toFixed(4)));
+			node.style.setProperty('--flight-scale-y', String(flight.scaleY.toFixed(4)));
+		} else {
+			node.style.setProperty('--flight-dx', '0px');
+			node.style.setProperty('--flight-dy', '-4px');
+			node.style.setProperty('--flight-scale-x', '0.96');
+			node.style.setProperty('--flight-scale-y', '0.96');
+		}
+
+		// 强制触发 reflow 确保 CSS 变量与关键帧起点就绪
+		void node.offsetWidth;
+		node.classList.add('island-flight-enter');
+		node.style.removeProperty('transform');
+		node.style.opacity = '1';
+		node.style.removeProperty('--cst-island-content');
+		triggerLanding();
+
+		// 终态微动效衔接：进入终态后清除动效类与自定义属性
+		animTimer = setTimeout(() => {
+			node.classList.remove('island-flight-enter');
+			node.style.removeProperty('--flight-dx');
+			node.style.removeProperty('--flight-dy');
+			node.style.removeProperty('--flight-scale-x');
+			node.style.removeProperty('--flight-scale-y');
+			animTimer = null;
+		}, 290);
+	};
+
+	const triggerFlightExit = (source: IslandRect | null) => {
+		clearFlightClasses();
+		clearLanding();
+		if (!target) target = measureTarget(node);
+
+		if (prefersReducedMotion() || !target) {
+			node.style.removeProperty('transform');
+			node.style.removeProperty('--cst-island-content');
+			return;
+		}
+
+		if (source) {
+			const flight = islandFlight(target, source);
+			node.style.setProperty('--flight-dx', `${flight.dx.toFixed(2)}px`);
+			node.style.setProperty('--flight-dy', `${flight.dy.toFixed(2)}px`);
+			node.style.setProperty('--flight-scale-x', String(flight.scaleX.toFixed(4)));
+			node.style.setProperty('--flight-scale-y', String(flight.scaleY.toFixed(4)));
+		} else {
+			node.style.setProperty('--flight-dx', '0px');
+			node.style.setProperty('--flight-dy', '-4px');
+			node.style.setProperty('--flight-scale-x', '0.96');
+			node.style.setProperty('--flight-scale-y', '0.96');
+		}
+
+		void node.offsetWidth;
+		node.classList.add('island-flight-exit');
+
+		animTimer = setTimeout(() => {
+			node.classList.remove('island-flight-exit');
+			node.style.removeProperty('--flight-dx');
+			node.style.removeProperty('--flight-dy');
+			node.style.removeProperty('--flight-scale-x');
+			node.style.removeProperty('--flight-scale-y');
+			node.style.removeProperty('transform');
+			node.style.removeProperty('--cst-island-content');
+			animTimer = null;
+		}, 230);
+	};
+
 	const onAnimationEnd = (e: AnimationEvent) => {
 		if (e.animationName === 'cst-island-land') {
 			clearLanding();
+		} else if (e.animationName === 'cst-island-flight-enter') {
+			node.classList.remove('island-flight-enter');
+			node.style.removeProperty('--flight-dx');
+			node.style.removeProperty('--flight-dy');
+			node.style.removeProperty('--flight-scale-x');
+			node.style.removeProperty('--flight-scale-y');
+			triggerLanding();
+		} else if (e.animationName === 'cst-island-flight-exit') {
+			node.classList.remove('island-flight-exit');
+			node.style.removeProperty('--flight-dx');
+			node.style.removeProperty('--flight-dy');
+			node.style.removeProperty('--flight-scale-x');
+			node.style.removeProperty('--flight-scale-y');
 		}
 	};
 	node.addEventListener('animationend', onAnimationEnd);
@@ -189,10 +295,13 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 		// 阈值落位终态（p >= 1）：
 		if (s.p >= 1) {
-			node.style.removeProperty('transform');
-			node.style.opacity = '1';
-			node.style.removeProperty('--cst-island-content');
-			if (prevP < 1) triggerLanding();
+			if (prevP < 1) {
+				triggerFlightEnter(s.source);
+			} else {
+				node.style.removeProperty('transform');
+				node.style.opacity = '1';
+				node.style.removeProperty('--cst-island-content');
+			}
 			prevP = s.p;
 			initialized = true;
 			return;
@@ -200,11 +309,16 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 		// 回滚至阈值上方（p <= 0）：
 		if (s.p <= 0) {
-			initialized = true;
-			clearLanding();
-			node.style.removeProperty('transform');
-			node.style.removeProperty('--cst-island-content');
+			if (prevP > 0) {
+				triggerFlightExit(s.source);
+			} else {
+				clearLanding();
+				clearFlightClasses();
+				node.style.removeProperty('transform');
+				node.style.removeProperty('--cst-island-content');
+			}
 			prevP = s.p;
+			initialized = true;
 			return;
 		}
 
