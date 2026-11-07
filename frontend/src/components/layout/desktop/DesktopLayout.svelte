@@ -180,6 +180,24 @@
 				: '')
 	);
 
+	/** 空间地平线标语：根据当前路由派生当前空间的探索/沉浸语境（岛静止时呈现） */
+	const centerHorizonText = $derived.by(() => {
+		if (pathname === ROUTES.home) return '探索 · 身边坐标';
+		if (pathname === ROUTES.nearbyPeople) return '发现 · 身边同行者';
+		if (pathname === ROUTES.nearbyGroups) return '发现 · 兴趣圈子';
+		if (pathname === ROUTES.nearbyMoments) return '发现 · 瞬间切片';
+		if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return '消息 · 实时回响';
+		if (pathname === ROUTES.search) return '探索 · 全域检索';
+		if (pathname === ROUTES.notify) return '动态 · 互动通知';
+		if (pathname === ROUTES.settings) return '偏好 · 系统设置';
+		if (pathname === ROUTES.map) return '地图 · 空间漫游';
+		if (pathname === ROUTES.me || pathname.startsWith(`${ROUTES.me}/`)) return '个人 · 数字足迹';
+		if (pathname.startsWith('/users/')) return '空间 · 用户主页';
+		if (pathname.startsWith('/groups/')) return '圈子 · 群组详情';
+		if (pathname.startsWith('/moments/')) return '瞬间 · 细节阅览';
+		return 'HotSpot · 身边连接';
+	});
+
 	/** 点击岛标题：优先页面自定义回锚点；作者名片走作者主页；否则回到页首。 */
 	function handleIslandTitleClick() {
 		if (headerIsland.onTitleClick) return headerIsland.onTitleClick();
@@ -220,65 +238,70 @@
 	<!-- 整窗氛围画布（Round 2 去边框）：外壳根只挂一次，顶栏/侧栏/主内容共享同一世界层，
 	     不再按区域各挂一份（旧方案会在区域交界处出现渐变接缝）。 -->
 	<AmbientBackdrop />
-	<!-- HEADER — 52px 顶栏（连续画布：无边框、无白底，仅靠排版与留白分隔） -->
+	<!-- HEADER — 52px 顶栏：三岛悬浮空间美学（品牌微岛 · 动态地平线/灵动岛 · 统一控制枢纽） -->
 	<header
-		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center bg-transparent px-5 gap-2"
+		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center justify-between bg-transparent px-5"
 		style="height:var(--cst-desktop-header-height);"
 	>
-		<!-- Logo / 侧边栏开关：展开态分开（Logo 回首页 + 独立收起钮），折叠态
-		     「同一坑位」二合一——默认显示 Logo，hover 原位淡入展开图标，点击展开。
-		     Logo hover 不再套整片灰胶囊（hover-btn rounded-full 在图文组合上显笨重），
-		     展开态改为品牌式反馈：Logo 微放大 + 字色切 accent，本体变化一眼可辨。 -->
+		<!-- Left Brand Capsule (品牌与工作台微岛) -->
 		{#if isSidebarCollapsed}
-			<button
-				type="button"
-				class="group relative mr-3 flex size-9 shrink-0 select-none items-center justify-center rounded-full focus-ring hover:bg-interactive-hover"
-				aria-label="展开侧边栏"
-				aria-pressed={isSidebarCollapsed}
-				title="展开侧边栏"
-				onclick={() => (isSidebarCollapsed = false)}
+			<div
+				class="flex shrink-0 items-center rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
 			>
-				<img
-					src={imgHotSpot} decoding="async"
-					alt="HotSpot"
-					class="size-7 rounded-full object-cover transition-opacity duration-rapid group-hover:opacity-0"
-				/>
-				<PanelLeftOpen
-					size={18}
-					strokeWidth={1.75}
-					class="absolute text-text-secondary opacity-0 transition-opacity duration-rapid group-hover:text-accent-default group-hover:opacity-100"
-				/>
-			</button>
+				<button
+					type="button"
+					class="group relative flex size-7 shrink-0 select-none items-center justify-center rounded-full focus-ring hover:bg-interactive-hover transition-colors"
+					aria-label="展开侧边栏"
+					aria-pressed={isSidebarCollapsed}
+					title="展开侧边栏"
+					onclick={() => (isSidebarCollapsed = false)}
+				>
+					<img
+						src={imgHotSpot} decoding="async"
+						alt="HotSpot"
+						class="size-6 rounded-full object-cover transition-opacity duration-rapid group-hover:opacity-0"
+					/>
+					<PanelLeftOpen
+						size={16}
+						strokeWidth={1.75}
+						class="absolute text-text-secondary opacity-0 transition-opacity duration-rapid group-hover:text-accent-default group-hover:opacity-100"
+					/>
+				</button>
+			</div>
 		{:else}
-			<button
-				type="button"
-				class="group flex shrink-0 items-center gap-2 mr-1 select-none rounded-xl px-2 py-1 focus-ring hover:bg-interactive-hover"
-				title="返回首页"
-				onclick={() => {
-					activeNavId = 'home';
-					void goto(ROUTES.home);
-				}}
+			<div
+				class="flex shrink-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
 			>
-				<img src={imgHotSpot} decoding="async" alt="HotSpot Logo" class="rounded-full object-cover shrink-0 size-7 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
-				<span class="tracking-tight text-lg text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
-			</button>
+				<button
+					type="button"
+					class="group flex shrink-0 items-center gap-2 select-none rounded-full py-0.5 pl-1.5 pr-2.5 focus-ring hover:bg-interactive-hover transition-colors"
+					title="返回首页"
+					onclick={() => {
+						activeNavId = 'home';
+						void goto(ROUTES.home);
+					}}
+				>
+					<img src={imgHotSpot} decoding="async" alt="HotSpot Logo" class="size-6 rounded-full object-cover shrink-0 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
+					<span class="tracking-tight text-sm font-semibold text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
+				</button>
 
-			<!-- 侧边栏折叠开关：展开态独立存在；折叠态与 Logo 同坑位 hover 切换（见上） -->
-			<button
-				type="button"
-				class="header-action hit-slop flex size-9 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary"
-				aria-label="收起侧边栏"
-				aria-pressed={isSidebarCollapsed}
-				title="收起侧边栏"
-				onclick={() => (isSidebarCollapsed = true)}
-			>
-				<PanelLeftClose size={16} strokeWidth={1.75} />
-			</button>
+				<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
+
+				<button
+					type="button"
+					class="header-action hit-slop flex size-7 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary transition-colors hover:text-text-primary hover:bg-interactive-hover"
+					aria-label="收起侧边栏"
+					aria-pressed={isSidebarCollapsed}
+					title="收起侧边栏"
+					onclick={() => (isSidebarCollapsed = true)}
+				>
+					<PanelLeftClose size={15} strokeWidth={1.75} />
+				</button>
+			</div>
 		{/if}
 
-		<!-- Center Page Island — 页面锚点岛：当页面锚点（标题/身份）离开视口时展示，
-		     把会滚走的常驻信息固定到居中位置；点击标题回到锚点，绝不遮挡正文 -->
-		<div class="flex-1 min-w-0 h-full pointer-events-none">
+		<!-- Center Horizon & Page Island — 空间地平线与灵动岛栖息地 -->
+		<div class="relative flex-1 min-w-0 h-full pointer-events-none flex items-center justify-center">
 			{#if pathname === ROUTES.home && homeFeed.islandVisible}
 				<!-- 首页灵动岛：内容区分段器滚出视口后浮现，顶部不显示 -->
 				<div
@@ -305,48 +328,92 @@
 						progress={headerIsland.progress}
 					/>
 				</div>
+			{:else}
+				<!-- 空间地平线：静止态微光导引胶囊（消除视觉真空，契合地理探索语境） -->
+				<div
+					in:fade={{ duration: motionDuration(220) }}
+					out:fade={{ duration: motionDuration(180) }}
+					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+				>
+					<div class="flex items-center gap-2 rounded-full border border-border-default/35 bg-surface-primary/45 px-3 py-1 shadow-raised-sm backdrop-blur-md select-none transition-colors">
+						<span class="size-1.5 rounded-full bg-accent-default/70 animate-pulse" aria-hidden="true"></span>
+						<span class="text-xxs font-medium tracking-wider text-text-secondary/85 select-none uppercase">
+							{centerHorizonText}
+						</span>
+					</div>
+				</div>
 			{/if}
 		</div>
 
-		<!-- Right Actions -->
-		<div class="flex shrink-0 items-center gap-1.5">
-			<!-- 当前在搜索页时 accent 高亮（Gemini 审查 r11：顶栏入口缺当前页选中态） -->
-			<ActionIconButton
-				icon={Search}
-				label="搜索"
-				onClick={() => void goto(ROUTES.search)}
-				tone={pathname === ROUTES.search ? 'accent' : 'muted'}
-				variant="ghost"
-				size={36}
-				class="header-action"
-			/>
+		<!-- Right Sculpted Glass Control Dock (玻璃控制枢纽) -->
+		<div class="flex shrink-0 items-center gap-2">
+			<!-- 统一悬浮玻璃控制岛 (Control Dock) -->
+			<div
+				class="flex items-center gap-1 rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
+			>
+				<!-- 探索入口胶囊 -->
+				<button
+					type="button"
+					class="group flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring {pathname === ROUTES.search ? 'bg-interactive-hover text-accent-default font-medium' : ''}"
+					aria-label="搜索"
+					title="搜索"
+					onclick={() => void goto(ROUTES.search)}
+				>
+					<Search size={14} strokeWidth={2} class="shrink-0 transition-transform duration-rapid group-hover:scale-110 {pathname === ROUTES.search ? 'text-accent-default' : 'text-text-secondary'}" />
+					<span class="tracking-wide text-xs">探索</span>
+				</button>
 
-			<ActionIconButton
-				icon={Plus}
-				label="发布"
-				onClick={() => {
-					if (auth.status === 'authenticated') {
-						openComposer();
-						return;
-					}
-					requireAuth({ action: '发布瞬间', run: openComposer });
-				}}
-				variant="ghost"
-				size={36}
-				class="header-action"
-			/>
+				<!-- 创作明珠：发布按钮 -->
+				<button
+					type="button"
+					class="flex h-7 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-xs font-medium text-text-accent-on-soft shadow-raised-sm transition-all duration-rapid hover:bg-accent-default hover:text-text-on-accent hover:shadow-glow-sm active:scale-95 focus-ring"
+					aria-label="发布"
+					title="发布瞬间"
+					onclick={() => {
+						if (auth.status === 'authenticated') {
+							openComposer();
+							return;
+						}
+						requireAuth({ action: '发布瞬间', run: openComposer });
+					}}
+				>
+					<Plus size={14} strokeWidth={2.2} class="shrink-0" />
+					<span class="tracking-wide text-xs">发布</span>
+				</button>
 
-			<!-- 当前在通知页时铃铛 accent 高亮（Gemini UI 审查：顶栏入口缺当前页选中态） -->
-			<ActionIconButton icon={Bell} label="通知" badge={unread.notify} tone={pathname === ROUTES.notify ? 'accent' : 'muted'} onClick={() => guardNav('查看通知', ROUTES.notify)} variant="ghost" size={36} class="header-action" />
+				<div class="mx-0.5 h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 
-			<AppearanceMenu />
+				<!-- 通知 -->
+				<ActionIconButton
+					icon={Bell}
+					label="通知"
+					badge={unread.notify}
+					tone={pathname === ROUTES.notify ? 'accent' : 'muted'}
+					onClick={() => guardNav('查看通知', ROUTES.notify)}
+					variant="ghost"
+					size={32}
+					class="header-action"
+				/>
 
-			<ActionIconButton icon={Settings} label="设置" onClick={() => void goto(ROUTES.settings)} variant="ghost" size={36} class="header-action" />
+				<!-- 主题切换 -->
+				<AppearanceMenu size={32} />
 
+				<!-- 设置 -->
+				<ActionIconButton
+					icon={Settings}
+					label="设置"
+					onClick={() => void goto(ROUTES.settings)}
+					variant="ghost"
+					size={32}
+					class="header-action"
+				/>
+			</div>
+
+			<!-- 用户身份微岛 / 登录入口 -->
 			{#if auth.user}
 				<button
 					type="button"
-					class="hover-btn scale-btn hit-slop relative ml-2 shrink-0 rounded-full focus-ring size-8"
+					class="hover-btn scale-btn hit-slop relative shrink-0 rounded-full focus-ring size-8 transition-transform"
 					aria-label="打开个人主页"
 					title="个人主页"
 					onclick={() => guardNav('打开个人主页', ROUTES.me)}
@@ -360,16 +427,16 @@
 					/>
 				</button>
 			{:else}
-					<Button
-						type="button"
-						variant="primary"
-						size="sm"
-						class="ml-2 px-3"
-						aria-label="登录"
-						onclick={() => void goto(ROUTES.login)}
-					>
+				<Button
+					type="button"
+					variant="primary"
+					size="sm"
+					class="px-3"
+					aria-label="登录"
+					onclick={() => void goto(ROUTES.login)}
+				>
 					登录
-					</Button>
+				</Button>
 			{/if}
 		</div>
 	</header>

@@ -10,7 +10,7 @@
 	// 唯一的外观/模式控制。选择面板保持打开，仅显式完成、外部点击或 Escape 关闭。
 	// 弹层行为现由 bits-ui Popover 提供。
 
-	let { class: className = '' }: { class?: string } = $props();
+	let { class: className = '', size = 36 }: { class?: string; size?: 32 | 34 | 36 | 42 } = $props();
 
 	// 主题选项来自 theme store 的 THEME_OPTIONS（与设置页共用，避免两份配置漂移）
 
@@ -31,7 +31,7 @@
 			label="外观设置"
 			onClick={() => (open = !open)}
 			variant="ghost"
-			size={36}
+			size={size}
 			ariaExpanded={open}
 			ariaHasPopup="dialog"
 			class="header-action"

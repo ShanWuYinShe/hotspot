@@ -66,7 +66,7 @@
 	aria-label={ariaLabel}
 	style="contain: layout paint;"
 	use:islandHandoff
-	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center rounded-full border border-border-default/50 bg-surface-primary/90 px-2 text-text-primary shadow-raised-sm transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary focus-within:shadow-raised-md {className}"
+	class="group/island pointer-events-auto relative flex h-9 min-w-0 max-w-md items-center rounded-full border border-border-default/50 bg-surface-primary/80 backdrop-blur-xl px-2.5 text-text-primary shadow-raised-sm transition-[background-color,border-color,box-shadow,transform] duration-standard ease-standard hover:-translate-y-px hover:border-accent-border hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border focus-within:bg-surface-primary/95 focus-within:shadow-raised-md {className}"
 >
 	<!-- 内容层 -->
 	<div class="flex h-full min-w-0 items-center gap-1.5">

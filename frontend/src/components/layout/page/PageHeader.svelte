@@ -366,9 +366,9 @@ import {
 					{/if}
 					<h1 bind:this={islandMorphEl} class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
 					{#if subtitle}
-						<p class="flex min-w-0 items-center gap-1 text-xs text-text-secondary">
+						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-island/70 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-md shadow-raised-sm">
 							{#if subtitleIcon}
-								<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
+								<span class="flex shrink-0 items-center text-text-secondary">{@render subtitleIcon()}</span>
 							{/if}
 							<span class="truncate">{subtitle}</span>
 						</p>
@@ -443,12 +443,14 @@ import {
 			>
 				<h1 bind:this={islandMorphEl} class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
-					<p class="mt-1 flex min-w-0 items-center gap-1 text-text-secondary {SUBTITLE_SIZE_CLASS[subtitleSize]}">
-						{#if subtitleIcon}
-							<span class="flex shrink-0 items-center">{@render subtitleIcon()}</span>
-						{/if}
-						<span class="truncate">{subtitle}</span>
-					</p>
+					<div class="mt-1.5">
+						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-island/70 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-md shadow-raised-sm {SUBTITLE_SIZE_CLASS[subtitleSize]}">
+							{#if subtitleIcon}
+								<span class="flex shrink-0 items-center text-text-secondary">{@render subtitleIcon()}</span>
+							{/if}
+							<span class="truncate">{subtitle}</span>
+						</p>
+					</div>
 				{/if}
 			</div>
 			<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
