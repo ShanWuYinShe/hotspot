@@ -3787,3 +3787,13 @@ outbox 从系统公告扩展到举报裁决的实时通知：
   继续覆盖 dispatcher。
 - 门禁：`go test -short ./...` 全绿；worktree `verify-backend-ci.sh --with-db`
   ALL CHECKS PASSED。
+
+举报裁决 outbox 运行时验证（main，2026-11-07）：
+- 访客通过 `/api/v1/reports/create` 举报 seed 管理员 → admin 通过
+  `/admin/api/v1/reports/judge` dismiss；outbox_events 出现
+  TopicAdminReportHandled 行，dispatcher 1s 内处理（attempts=1、processed_at 非空）；
+- 举报人 notifications 表出现 1 条 report_dismissed（report_id 精确匹配），
+  证明「通知落库在裁决事务内 + WS 广播经 outbox 补投」；
+- 验证后 report/notification/outbox 行已清理，outbox pending=0；main backend healthy。
+- perf-budget（backend-test，c=10/warmup 2s/5s）：8 端点全部 OK；users/search
+  3156 rps / p99 21.18ms、notify/fetch 8983 rps / p99 3.39ms 等。
