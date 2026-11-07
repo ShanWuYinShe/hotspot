@@ -864,7 +864,7 @@
     {
       "method": "GET",
       "path": "/share/{code}",
-      "auth": "authenticated"
+      "auth": "anonymous"
     }
   ]
 }

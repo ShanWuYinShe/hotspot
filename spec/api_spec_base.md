@@ -44,7 +44,7 @@ HotSpot 的 API 按**调用者身份**划分为三个全局节点 + 一个守卫
 - 同一功能面向匿名与登录两类身份时，**拆分为两个端点**（匿名版在 `/public/v1`，登录版在 `/api/v1`），且 Request/Response 类型**各自独立、禁止共用**（见「强类型要求」）
 - 三处共用同一 token 体系、同一 envelope 与同一错误码空间；`/public/v1`（IP 维度）与 `/admin/api/v1`（独立反向代理）各自有限流策略（见「限流策略」）
 - WebSocket 端点为 `/ws/v1`，独立于 HTTP 节点，仅服务于注册用户的实时事件（连接后必须通过 `Auth` 事件完成鉴权，见 `api_spec_websocket.md`）
-- 顶级入口预留（全站约定）：`/admin/` 只给管理页面（SPA，由网关回落静态，不反代后端）；管理 JSON API 一律在 `/admin/api/v1/` 下；`GET /healthz` 为无鉴权存活探针（只回 status/version/commit/build_time，供 LB/容器健康检查与 ops 绿灯聚合），业务健康仍走 `POST /public/v1/system/health`。
+- 顶级入口预留（全站约定）：`/admin/` 只给管理页面（SPA，由网关回落静态，不反代后端）；管理 JSON API 一律在 `/admin/api/v1/` 下；`GET /healthz` 为无鉴权存活探针（只回 status/version/commit/build_time，供 LB/容器健康检查与 ops 绿灯聚合），`GET /readyz` 为无鉴权就绪探针（数据库不可达返回 503、Redis 不可达仅降级，供容器 healthcheck/LB 摘流），业务健康仍走 `POST /public/v1/system/health`。
 
 ### 统一路径结构
 
@@ -303,6 +303,7 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 | 端点 | 说明 |
 |------|------|
 | `GET /healthz` | 无鉴权存活探针（见「节点与路径架构」） |
+| `GET /readyz` | 无鉴权就绪探针：数据库不可达返回 503、Redis 不可达仅降级（仍 200），供容器 healthcheck/LB 摘流（见「节点与路径架构」） |
 | `GET /public/v1/media/avatars/{file_id}` | 匿名头像代理：302 到短时签名读 URL（见 `api_spec_media.md`） |
 | `GET /share/{code}` | 链接预览爬虫的 HTML 落地页（og 标签；真实用户走 SPA 路由，见 `api_spec_share.md`） |
 | `GET /metrics` | Prometheus 指标，仅内网可达、不属对外契约 |

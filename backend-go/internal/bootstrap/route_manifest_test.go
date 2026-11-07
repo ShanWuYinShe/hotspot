@@ -56,21 +56,33 @@ func TestRouteManifest(t *testing.T) {
 	if len(manifest.Routes) == 0 {
 		t.Fatal("no routes collected: 装配异常，端点面快照无意义")
 	}
-	// 快照自身健康约束：无重复、每条都有认证档、探针存在。
-	seen := map[string]bool{}
+	// 快照自身健康约束：无重复、每条都有认证档；登记的非 RPC 例外（见 spec
+	// api_spec_base.md「登记的非 RPC 例外」）必须存在，且认证档与真实中间件链一致。
+	seen := map[string]string{}
 	for _, r := range manifest.Routes {
 		key := r.Method + " " + r.Path
-		if seen[key] {
+		if _, ok := seen[key]; ok {
 			t.Fatalf("duplicate route in manifest: %s", key)
 		}
-		seen[key] = true
+		seen[key] = r.Auth
 		if r.Auth == "" {
 			t.Fatalf("route missing auth tier: %s", key)
 		}
 	}
-	for _, probe := range []string{"GET /healthz", "GET /readyz", "GET /metrics"} {
-		if !seen[probe] {
-			t.Fatalf("probe route missing from manifest: %s", probe)
+	nonRPCExceptions := map[string]string{
+		"GET /healthz":                           "probe",
+		"GET /readyz":                            "probe",
+		"GET /metrics":                           "probe",
+		"GET /public/v1/media/avatars/{file_id}": "anonymous",
+		"GET /share/{code}":                      "anonymous",
+	}
+	for route, wantAuth := range nonRPCExceptions {
+		gotAuth, ok := seen[route]
+		if !ok {
+			t.Fatalf("registered non-RPC exception missing from manifest: %s", route)
+		}
+		if gotAuth != wantAuth {
+			t.Fatalf("registered non-RPC exception auth tier mismatch: %s: got %q, want %q", route, gotAuth, wantAuth)
 		}
 	}
 
@@ -120,8 +132,9 @@ func collectRouteManifest(r *chi.Mux) []routeManifestEntry {
 }
 
 // routeAuthTier 按挂载前缀推导认证档：/public/v1 匿名、/admin/api/v1 管理员、
-// 探针独立、其余一律要求登录。该口径与路由树的实际中间件链一致（模块 Mount
-// 约定），任何认证档变化都会体现在快照 diff 中。
+// 探针独立、其余一律要求登录（与各模块 Mount 的中间件链一致）。根路径上的
+// 非 RPC 例外按真实挂载标注：/share/{code} 仅挂限流、匿名可访问（spec
+// api_spec_base.md「登记的非 RPC 例外」），任何认证档变化都会体现在快照 diff 中。
 func routeAuthTier(path string) string {
 	switch {
 	case strings.HasPrefix(path, "/public/v1/"):
@@ -130,6 +143,8 @@ func routeAuthTier(path string) string {
 		return "admin"
 	case path == "/healthz" || path == "/readyz" || path == "/metrics":
 		return "probe"
+	case path == "/share/{code}":
+		return "anonymous"
 	default:
 		return "authenticated"
 	}
