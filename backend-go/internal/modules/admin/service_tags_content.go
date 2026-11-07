@@ -129,7 +129,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	}
 	var item systemmodule.AnnouncementRecord
 	enqueued := false
-	if s.pushService != nil && req.SendPush && s.announcementOutbox != nil && s.runInTx != nil {
+	if s.pushService != nil && req.SendPush && s.eventOutbox != nil && s.runInTx != nil {
 		// 公告创建 + WS 广播事件入队同一事务：崩溃后 dispatcher 从 outbox
 		// 补投，消除「公告已落库但在线广播丢失」；事务外的直接广播仅在
 		// 未装配 outbox 时保留（单测/内存装配）。
@@ -140,7 +140,7 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 			}
 			item = created
 			enqueued = true
-			return s.announcementOutbox.Enqueue(txCtx, outbox.TopicSystemAnnouncement, AnnouncementBroadcastPayload{
+			return s.eventOutbox.Enqueue(txCtx, outbox.TopicSystemAnnouncement, AnnouncementBroadcastPayload{
 				Item:     created.PublicItem(),
 				NotifyID: systemmodule.AnnouncementNotifyID(created.AnnouncementID),
 			})

@@ -35,7 +35,7 @@ func TestCreateAnnouncementEnqueuesOutboxInTransaction(t *testing.T) {
 		return fn(ctx)
 	})
 	writer := &captureOutboxWriter{}
-	svc.SetAnnouncementOutbox(writer)
+	svc.SetEventOutbox(writer)
 	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "admin", SessionID: "sess_admin"})
 
 	created, apiErr, err := svc.CreateAnnouncement(ctx, CreateAnnouncementRequest{Title: "维护通知", Content: "今晚维护", Severity: AnnounceLevelInfo, SendPush: true})

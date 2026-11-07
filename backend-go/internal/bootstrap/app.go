@@ -9,6 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	adminmodule "hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/modules/system"
@@ -131,6 +132,7 @@ func NewApp(cfg config.Config) (*App, error) {
 	if persistenceFactory.DB != nil && cfg.PostgresDSN != "" {
 		dispatcher := outbox.NewDispatcher(persistenceFactory, logger)
 		dispatcher.Register(outbox.TopicSystemAnnouncement, systemAnnouncementOutboxHandler(hub))
+		dispatcher.Register(outbox.TopicAdminReportHandled, adminReportHandledOutboxHandler(hub))
 		dispatcher.Start(rootCtx)
 	}
 	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo, hub)
@@ -204,6 +206,39 @@ func systemAnnouncementOutboxHandler(hub *realtime.Hub) outbox.Handler {
 			return fmt.Errorf("bootstrap: invalid system announcement outbox payload")
 		}
 		hub.BroadcastToAll(notify.SystemAnnouncementRealtimeEvent(event.Item, event.NotifyID))
+		return nil
+	}
+}
+
+// adminReportHandledOutboxHandler 把举报裁决结果 WS 广播补投到举报人连接：
+// 通知行已在裁决事务内落库，这里只负责 COMMIT 后的实时投递（至少一次；
+// 客户端按 notify_id 去重）。payload 形状与同步路径完全一致。
+func adminReportHandledOutboxHandler(hub *realtime.Hub) outbox.Handler {
+	return func(_ context.Context, payload json.RawMessage) error {
+		var event adminmodule.ReportHandledBroadcastPayload
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return fmt.Errorf("bootstrap: decode admin report outbox payload: %w", err)
+		}
+		if event.ReporterUserID == "" || event.ReportID == "" {
+			return fmt.Errorf("bootstrap: invalid admin report outbox payload")
+		}
+		wsPayload := map[string]any{
+			"notify_id":   event.NotifyID,
+			"report_id":   event.ReportID,
+			"target_type": event.TargetType,
+			"target_id":   event.TargetID,
+		}
+		if event.Note != "" {
+			wsPayload["note"] = event.Note
+		}
+		eventType := realtime.EventTypeReportResolved
+		if event.Resolved {
+			wsPayload["resolved_at"] = event.OccurredAt
+		} else {
+			eventType = realtime.EventTypeReportDismissed
+			wsPayload["dismissed_at"] = event.OccurredAt
+		}
+		hub.BroadcastToUser(event.ReporterUserID, realtime.Event{Type: eventType, Payload: wsPayload})
 		return nil
 	}
 }

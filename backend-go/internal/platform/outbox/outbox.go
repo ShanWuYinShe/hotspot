@@ -16,6 +16,9 @@ import (
 // TopicSystemAnnouncement 是系统公告 WS 广播事件（admin 生产，bootstrap 订阅）。
 const TopicSystemAnnouncement = "realtime.system_announcement"
 
+// TopicAdminReportHandled 是举报裁决结果 WS 通知（admin 生产，bootstrap 订阅）。
+const TopicAdminReportHandled = "realtime.admin_report_handled"
+
 const (
 	defaultPollInterval = time.Second
 	defaultBatchSize    = 50

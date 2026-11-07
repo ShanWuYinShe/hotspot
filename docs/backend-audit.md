@@ -3749,3 +3749,41 @@ main（`55a58287`）执行发版前同级核验：`./scripts/verify-backend-ci.s
 - **ALL CHECKS PASSED**。
 说明：本轮五项升级（公告虚拟化、outbox、分片 Hub、短关键词 PGroonga、密集关键词
 ranked 分页）均已合并 main 并通过该全量门禁；perf-budget 8 端点 OK。
+
+## 搜索 10 万级密集关键词优化评估（2026-11-07，结论：保留现有实现）
+
+上一轮把 users/search 密集关键词改为 SQL ranked + keyset 全量分页后，100k 全命中
+worst case 实测 104ms。继续优化的尝试与结论：
+
+| 变体 | 100k 全命中页 1 实测 | 结论 |
+|---|---|---|
+| 当前 ranked 查询 | 104ms | 正确但扫描 10 万行 + 评分 + 排序 |
+| 内层去掉 user_settings JOIN（页外再过滤） | 89ms | 仅 ~15%，且需 over-fetch/回退保证页满，复杂度不值 |
+| 提高 max_parallel_workers_per_gather | 136ms | 并行扫描/排序在小表反而退化 |
+| 分桶 UNION + btree(last_online,user_id) 强制有序 | 625ms | 规划器仍选 bitmap，分桶额外重复扫描，显著更差 |
+
+根因：任意子串过滤必须由 PGroonga 扫出全部匹配行（100k），再做 rank 排序；
+这是「无独立搜索引擎 + 任意子串语义」的固有成本，不是 SQL 写法问题。安全做法
+仍然是：
+- 典型低/中密度关键词走 PGroonga 索引（perf-budget users/search 3270 rps /
+  p99 22.19ms）；
+- 10 万级全命中通过 rate limit/产品层关键词最小长度或独立搜索服务解决；
+- 不在应用层引入不可靠的 planner hint/density probe（会制造稀疏关键词长尾）。
+故本轮**不修改** ranked 实现，避免用错误结果或高复杂度换 marginal 收益。
+
+## Batch outbox 扩展：举报裁决通知广播（2026-11-07）
+
+outbox 从系统公告扩展到举报裁决的实时通知：
+
+- 举报结果通知行改为在**裁决事务内** append（原先在 aftercommit，进程崩溃会
+  永久丢通知）；WS 广播事件与裁决同事务写入 outbox（TopicAdminReportHandled）。
+- bootstrap dispatcher 新增 handler：解码 admin.ReportHandledBroadcastPayload，
+  经 App Hub 向举报人广播 ReportResolved/ReportDismissed；payload 键与旧同步
+  路径完全一致（notify_id/report_id/target_type/target_id/[note]/resolved_at 或
+  dismissed_at）。至少一次投递，客户端按 notify_id 去重。
+- 未装配 outbox 的单测/内存装配保留 aftercommit 同步回退（既有举报通知测试不变）。
+- 测试：admin 单测断言「append 在裁决事务内、outbox 事件入队、提交前不广播」；
+  bootstrap handler payload/事件类型断言；通用 outbox 真实库 IT（重试/幂等语义）
+  继续覆盖 dispatcher。
+- 门禁：`go test -short ./...` 全绿；worktree `verify-backend-ci.sh --with-db`
+  ALL CHECKS PASSED。

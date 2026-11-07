@@ -7,6 +7,7 @@ import (
 	"hotspot/backend-go/internal/platform/aftercommit"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/outbox"
 	"hotspot/backend-go/internal/platform/realtime"
 	"strings"
 	"time"
@@ -169,6 +170,31 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 		// 封禁时长进裁决审计：与 user.ban 审计互为印证，裁决记录自身可回答「禁了多久」。
 		judgeDetails["ban_duration_days"] = *req.BanDurationDays
 	}
+	// 举报结果通知的落库在裁决事务内完成（与举报终态同事务）；WS 广播走 outbox
+	// 在 COMMIT 后补投，进程崩溃不会丢广播。未装配 outbox 时保留同步回退。
+	notifyReporter := req.Action == ReportActionResolve || req.Action == ReportActionDismiss
+	useOutboxForReport := notifyReporter && s.eventOutbox != nil && s.pushService != nil && record.Item.Reporter.UserID != ""
+	if useOutboxForReport {
+		occurredAt := time.Now().UTC().Format(time.RFC3339)
+		resolved := req.Action == ReportActionResolve
+		notificationID, notifyErr := s.appendReportNotification(ctx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, resolved)
+		if notifyErr != nil {
+			return nil, notifyErr
+		}
+		event := ReportHandledBroadcastPayload{
+			NotifyID:       notificationID,
+			ReporterUserID: record.Item.Reporter.UserID,
+			ReportID:       req.ReportID,
+			TargetType:     string(record.Item.TargetType),
+			TargetID:       record.Item.TargetID,
+			Note:           note,
+			Resolved:       resolved,
+			OccurredAt:     occurredAt,
+		}
+		if enqueueErr := s.eventOutbox.Enqueue(ctx, outbox.TopicAdminReportHandled, event); enqueueErr != nil {
+			return nil, enqueueErr
+		}
+	}
 	// 审计/通知在事务 COMMIT 后执行（aftercommit）：回滚时不会有「内容已删但
 	// 审计/通知已发」的幻影副作用；无事务时 Register 立即执行，语义不变。
 	aftercommit.Register(ctx, func(postCtx context.Context) {
@@ -179,7 +205,7 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 		}
 		// Notify the reporter about the outcome (resolve/dismiss only; escalate
 		// keeps the report pending and does not notify).
-		if req.Action == ReportActionResolve || req.Action == ReportActionDismiss {
+		if notifyReporter && !useOutboxForReport {
 			s.notifyReportHandled(postCtx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, req.Action == ReportActionResolve)
 		}
 	})
@@ -196,31 +222,23 @@ func (s *Service) banReportedUser(ctx context.Context, actor AdminActor, targetU
 	return s.banUser(ctx, actor, targetUserID, note, banDays, true)
 }
 
-// notifyReportHandled persists the report_resolved/report_dismissed
-// notification and pushes the corresponding event to the reporter.
-func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, reportID, targetType, targetID, note string, resolved bool) {
+// appendReportNotification 在裁决事务内落库举报结果通知（与举报终态同事务，
+// 回滚时不会出现「举报未处理但举报人已收到通知」）。空 reporter/pushService 跳过。
+func (s *Service) appendReportNotification(ctx context.Context, reporterUserID, reportID, targetType, targetID, note string, resolved bool) (string, error) {
 	if reporterUserID == "" || s.pushService == nil {
-		return
+		return "", nil
 	}
-	now := time.Now().UTC().Format(time.RFC3339)
-	notificationID := ""
 	if resolved {
-		id, err := s.pushService.AppendReportResolved(ctx, reporterUserID, reportID, targetType, targetID, note)
-		if err != nil {
-			observability.FromContext(ctx).Error("admin.report notify report_resolved failed", "error", err, "report_id", reportID)
-		} else {
-			notificationID = id
-		}
-	} else {
-		id, err := s.pushService.AppendReportDismissed(ctx, reporterUserID, reportID, targetType, targetID, note)
-		if err != nil {
-			observability.FromContext(ctx).Error("admin.report notify report_dismissed failed", "error", err, "report_id", reportID)
-		} else {
-			notificationID = id
-		}
+		return s.pushService.AppendReportResolved(ctx, reporterUserID, reportID, targetType, targetID, note)
 	}
+	return s.pushService.AppendReportDismissed(ctx, reporterUserID, reportID, targetType, targetID, note)
+}
+
+// reportHandledWSPayload 构造 ReportResolved/ReportDismissed 的 WS payload
+// （note 为空时省略键；时间键按 resolved/dismissed 区分）。
+func reportHandledWSPayload(notifyID, reportID, targetType, targetID, note string, resolved bool, occurredAt string) map[string]any {
 	payload := map[string]any{
-		"notify_id":   notificationID,
+		"notify_id":   notifyID,
 		"report_id":   reportID,
 		"target_type": targetType,
 		"target_id":   targetID,
@@ -228,14 +246,34 @@ func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, repor
 	if note != "" {
 		payload["note"] = note
 	}
+	if resolved {
+		payload["resolved_at"] = occurredAt
+	} else {
+		payload["dismissed_at"] = occurredAt
+	}
+	return payload
+}
+
+func (s *Service) broadcastReportHandled(ctx context.Context, reporterUserID string, payload map[string]any, resolved bool) {
 	eventType := realtime.EventTypeReportResolved
-	atKey := "resolved_at"
 	if !resolved {
 		eventType = realtime.EventTypeReportDismissed
-		atKey = "dismissed_at"
 	}
-	payload[atKey] = now
 	realtime.HubFromContext(ctx).BroadcastToUser(reporterUserID, realtime.Event{Type: eventType, Payload: payload})
+}
+
+// notifyReportHandled 是未装配 outbox 时的同步回退：事务提交后 append 通知并
+// WS 推送（bootstrap 生产路径走 outbox，本函数仅供单测/内存装配）。
+func (s *Service) notifyReportHandled(ctx context.Context, reporterUserID, reportID, targetType, targetID, note string, resolved bool) {
+	if reporterUserID == "" || s.pushService == nil {
+		return
+	}
+	occurredAt := time.Now().UTC().Format(time.RFC3339)
+	notificationID, err := s.appendReportNotification(ctx, reporterUserID, reportID, targetType, targetID, note, resolved)
+	if err != nil {
+		observability.FromContext(ctx).Error("admin.report notify append failed", "error", err, "report_id", reportID)
+	}
+	s.broadcastReportHandled(ctx, reporterUserID, reportHandledWSPayload(notificationID, reportID, targetType, targetID, note, resolved, occurredAt), resolved)
 }
 
 func (s *Service) banUser(ctx context.Context, actor AdminActor, userID, reason string, durationDays *int, appendAudit bool) (*httpx.APIError, error) {

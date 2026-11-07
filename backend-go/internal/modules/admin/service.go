@@ -45,11 +45,10 @@ type Service struct {
 	// 同一事务内提交；nil 时退化为直跑（单测/内存装配）。审计/通知等副作用
 	// 经 aftercommit 在 COMMIT 后执行。
 	runInTx persistence.TxRunner
-	// announcementOutbox 是系统公告 WS 广播的事件生产者（bootstrap 注入通用
-	// outbox writer）。非 nil 且事务可用时，公告创建与事件入队同事务提交，
-	// 进程在 COMMIT 后崩溃也能由后台 dispatcher 补投；nil 时退化为同步广播
-	//（单测/内存装配）。
-	announcementOutbox outboxWriter
+	// eventOutbox 是关键实时事件的事件生产者（bootstrap 注入通用 outbox
+	// writer）：公告创建/举报裁决与事件入队同事务提交，进程在 COMMIT 后崩溃
+	// 也能由后台 dispatcher 补投；nil 时退化为同步广播（单测/内存装配）。
+	eventOutbox outboxWriter
 }
 
 // outboxWriter 是平台 outbox.Writer 的最小消费接口（bootstrap 注入）。
@@ -57,14 +56,27 @@ type outboxWriter interface {
 	Enqueue(ctx context.Context, topic string, payload any) error
 }
 
-// SetAnnouncementOutbox 注入公告广播 outbox writer（bootstrap 装配）。
-func (s *Service) SetAnnouncementOutbox(w outboxWriter) { s.announcementOutbox = w }
+// SetEventOutbox 注入关键实时事件 outbox writer（bootstrap 装配）。
+func (s *Service) SetEventOutbox(w outboxWriter) { s.eventOutbox = w }
 
 // AnnouncementBroadcastPayload 是 outbox TopicSystemAnnouncement 的 payload
 // （admin 生产、bootstrap dispatcher handler 消费）。
 type AnnouncementBroadcastPayload struct {
 	Item     systemmodule.SystemAnnouncementItem `json:"item"`
 	NotifyID string                              `json:"notify_id"`
+}
+
+// ReportHandledBroadcastPayload 是 outbox TopicAdminReportHandled 的 payload：
+// 举报人通知（notify 行已在裁决事务内落库）的 WS 广播补投。
+type ReportHandledBroadcastPayload struct {
+	NotifyID       string `json:"notify_id"`
+	ReporterUserID string `json:"reporter_user_id"`
+	ReportID       string `json:"report_id"`
+	TargetType     string `json:"target_type"`
+	TargetID       string `json:"target_id"`
+	Note           string `json:"note,omitempty"`
+	Resolved       bool   `json:"resolved"`
+	OccurredAt     string `json:"occurred_at"`
 }
 
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；nil 时直跑）。

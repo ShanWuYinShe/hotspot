@@ -56,3 +56,39 @@ func TestSystemAnnouncementOutboxHandlerBroadcasts(t *testing.T) {
 		t.Fatal("invalid payload must return error")
 	}
 }
+
+func TestAdminReportHandledOutboxHandlerBroadcasts(t *testing.T) {
+	hub := realtime.NewHub()
+	sink := &outboxSinkCapture{}
+	hub.RegisterUser("user_reporter", "sess_report", sink)
+	payload, err := json.Marshal(admin.ReportHandledBroadcastPayload{
+		NotifyID:       "notif_report_1",
+		ReporterUserID: "user_reporter",
+		ReportID:       "report_1",
+		TargetType:     "moment",
+		TargetID:       "moment_9",
+		Note:           "违规内容已处理",
+		Resolved:       true,
+		OccurredAt:     "2026-11-07T14:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	handler := adminReportHandledOutboxHandler(hub)
+	if err := handler(context.Background(), payload); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeReportResolved {
+		t.Fatalf("unexpected broadcast: %#v", sink.events)
+	}
+	wsPayload, ok := sink.events[0].Payload.(map[string]any)
+	if !ok {
+		t.Fatalf("unexpected payload type %T", sink.events[0].Payload)
+	}
+	if wsPayload["notify_id"] != "notif_report_1" || wsPayload["report_id"] != "report_1" || wsPayload["note"] != "违规内容已处理" || wsPayload["resolved_at"] != "2026-11-07T14:00:00Z" {
+		t.Fatalf("unexpected ws payload: %#v", wsPayload)
+	}
+	if err := handler(context.Background(), []byte("{")); err == nil {
+		t.Fatal("invalid payload must return error")
+	}
+}

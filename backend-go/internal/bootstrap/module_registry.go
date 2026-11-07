@@ -224,7 +224,7 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	adminModule.Service.SetTxRunner(persistence.NewTxRunner(factory))
 	// 系统公告 WS 广播走通用 outbox（创建公告与事件入队同事务，dispatcher 在
 	// 主 bootstrap 启动后补投）；writer 无事务上下文时退化为池直写。
-	adminModule.Service.SetAnnouncementOutbox(outbox.NewWriter(factory))
+	adminModule.Service.SetEventOutbox(outbox.NewWriter(factory))
 	// 举报裁决的内容删除/消息撤回走归属模块服务（admin 不再直接写
 	// moments/comments/group_messages/private_messages 表）。
 	adminModule.Service.SetMomentModerator(momentsModule.Service)
