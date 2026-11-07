@@ -3740,3 +3740,12 @@ relevance/距离排序与游标分页：
   **users/search 3270 rps / p50 2.28ms / p99 22.19ms**（上一轮同环境 1657 rps /
   p99 36.99ms；本机波动大，但相持平/更优），其余端点均在预算内。
 - main backend 已重启并 healthy；验证后 backend-test 已停止。
+
+## 五项架构升级合并后全量门禁（2026-11-07）
+
+main（`55a58287`）执行发版前同级核验：`./scripts/verify-backend-ci.sh --all`
+（静态 + race + 模块覆盖率 + 真实库 IT/契约测试 + HTTP E2E + govulncheck）：
+- `govulncheck`：No vulnerabilities found；
+- **ALL CHECKS PASSED**。
+说明：本轮五项升级（公告虚拟化、outbox、分片 Hub、短关键词 PGroonga、密集关键词
+ranked 分页）均已合并 main 并通过该全量门禁；perf-budget 8 端点 OK。
