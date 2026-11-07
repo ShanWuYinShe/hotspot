@@ -20,6 +20,18 @@ server_tokens off;
 include /etc/nginx/conf.d/headers.inc;
 include /etc/nginx/conf.d/csp.inc;
 
+# ── 限流超限统一响应 ──────────────────────────────────────────
+# limit_req 默认返回 503 HTML；改为 429 + 与后端同形的 {"code":10500,...}
+# 响应体 + Retry-After，前端 core.ts 会按 Retry-After（≤10s）自动重试一次。
+# proxy_intercept_errors 默认为 off，后端自己返回的 429（WS 握手）原样透传。
+error_page 429 = @rate_limited;
+location @rate_limited {
+    default_type application/json;
+    add_header Retry-After 1 always;
+    add_header Cache-Control "no-store" always;
+    return 429 '{"code":10500,"message":"请求过于频繁"}';
+}
+
 # 存活探针（全站约定 GET /healthz）：无鉴权、无限流，直通后端。
 location = /healthz {
     proxy_pass http://backend;
@@ -34,6 +46,24 @@ location = /healthz {
 
 location /api/ {
     limit_req zone=api burst=20 nodelay;
+    # JSON API 体量上限：后端 MaxRequestBodyBytes=1MB，nginx 只兜住极端值
+    # （server 级 100m 留给 /s3/ 直传）。
+    client_max_body_size 2m;
+    proxy_pass http://backend;
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-ID $hotspot_request_id;
+}
+
+# ── 头像代理（/public/v1/media/avatars/{file_id} → 302 签名 URL）──
+# 单独限流桶：单页可能一口气加载几十张头像，共享 api 桶（burst 20）会误伤
+# （2026-11-08 受控实测 60 并发 → 22 通过 / 38×503）；这是廉价 302，给更宽的桶。
+location /public/v1/media/avatars/ {
+    limit_req zone=avatar burst=60 nodelay;
     proxy_pass http://backend;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
@@ -46,6 +76,7 @@ location /api/ {
 
 location /public/ {
     limit_req zone=api burst=20 nodelay;
+    client_max_body_size 2m;
     proxy_pass http://backend;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
@@ -61,6 +92,7 @@ location /public/ {
 # 会被整段代理给 Go 后端返回 404。
 location /admin/api/v1/ {
     limit_req zone=admin burst=10 nodelay;
+    client_max_body_size 2m;
     proxy_pass http://backend;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
