@@ -110,4 +110,11 @@ describe('computeFlightCurve & evalBezier', () => {
 		const linearMidY = (curve.p0.y + curve.p2.y) / 2;
 		expect(mid.y).toBeLessThan(linearMidY);
 	});
+
+	it('快速滚动导致负视口坐标时安全保护：起点纵坐标回退至顶栏下沿', () => {
+		const fastScrollSource = { x: 200, y: -120, width: 100, height: 40 };
+		const target = { x: 600, y: 10, width: 200, height: 36 };
+		const curve = computeFlightCurve(fastScrollSource, target, 48);
+		expect(curve.p0.y).toBe(56 + 20);
+	});
 });

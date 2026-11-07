@@ -92,9 +92,10 @@ export interface FlightCurve {
  */
 export function computeFlightCurve(source: IslandRect, target: IslandRect, arcLift = 48): FlightCurve {
 	const startX = source.x + source.width / 2;
-	const startY = source.y + source.height / 2;
+	// 若起点为标题且因快速滚动导致负视口坐标，回退至顶栏下沿安全位置（56px）
+	const startY = source.y < 0 ? 56 + source.height / 2 : source.y + source.height / 2;
 	const targetX = target.x + target.width / 2;
-	const targetY = target.y + target.height / 2;
+	const targetY = target.y < 0 ? 26 : target.y + target.height / 2;
 
 	const ctrlX = startX + (targetX - startX) * 0.35;
 	const ctrlY = Math.min(startY, targetY) - arcLift;
