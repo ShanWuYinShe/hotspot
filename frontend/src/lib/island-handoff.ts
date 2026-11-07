@@ -19,6 +19,7 @@
 import {
 	computeFlightCurve,
 	evalBezier,
+	evalBezierAngle,
 	islandFlight,
 	islandRectOf,
 	type IslandRect
@@ -166,29 +167,29 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 	let initialized = false;
 	let landingTimer: ReturnType<typeof setTimeout> | null = null;
 	let animTimer: ReturnType<typeof setTimeout> | null = null;
-	let activeOrb: HTMLElement | null = null;
-	let orbRaf: number | null = null;
+	let activeCapsule: HTMLElement | null = null;
+	let capsuleRaf: number | null = null;
 
-	const clearOrb = () => {
-		if (orbRaf !== null) {
-			cancelAnimationFrame(orbRaf);
-			orbRaf = null;
+	const clearCapsule = () => {
+		if (capsuleRaf !== null) {
+			cancelAnimationFrame(capsuleRaf);
+			capsuleRaf = null;
 		}
-		if (activeOrb) {
-			if (activeOrb.parentElement) {
-				activeOrb.parentElement.removeChild(activeOrb);
+		if (activeCapsule) {
+			if (activeCapsule.parentElement) {
+				activeCapsule.parentElement.removeChild(activeCapsule);
 			}
-			activeOrb = null;
+			activeCapsule = null;
 		}
 	};
 
-	const runOrbFlight = (
+	const runCapsuleFlight = (
 		sourceRect: IslandRect,
 		targetRect: IslandRect,
 		direction: 'enter' | 'exit',
 		onComplete?: () => void
 	) => {
-		clearOrb();
+		clearCapsule();
 		if (
 			typeof document === 'undefined' ||
 			typeof window === 'undefined' ||
@@ -202,46 +203,54 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		// enter: 从 source 飞向 target；exit: 从 target 飞回 source
 		const curve =
 			direction === 'enter'
-				? computeFlightCurve(sourceRect, targetRect, 48)
-				: computeFlightCurve(targetRect, sourceRect, -32);
+				? computeFlightCurve(sourceRect, targetRect, 22)
+				: computeFlightCurve(targetRect, sourceRect, -18);
 
-		const orb = document.createElement('div');
-		orb.className = 'island-flight-orb';
+		const el = document.createElement('div');
+		el.className = 'island-flight-capsule island-flight-orb';
+		const dot = document.createElement('span');
+		dot.className = 'flight-capsule-dot';
+		const bar = document.createElement('span');
+		bar.className = 'flight-capsule-bar';
+		el.appendChild(dot);
+		el.appendChild(bar);
+
 		const startPt = curve.p0;
-		orb.style.transform = `translate3d(${(startPt.x - 13).toFixed(1)}px, ${(startPt.y - 13).toFixed(1)}px, 0) scale(0.6)`;
-		orb.style.opacity = '0';
-		document.body.appendChild(orb);
-		activeOrb = orb;
+		el.style.transform = `translate3d(${(startPt.x - 24).toFixed(1)}px, ${(startPt.y - 15).toFixed(1)}px, 0) scale(0.6)`;
+		el.style.opacity = '0';
+		document.body.appendChild(el);
+		activeCapsule = el;
 
-		const duration = 240;
+		const duration = 380; // ms: 舒适人眼追踪节奏
 		const startTime = performance.now();
 
 		const step = (now: number) => {
 			const elapsed = now - startTime;
 			const progress = Math.min(1, Math.max(0, elapsed / duration));
 			// smoothstep 缓动
-			const ease = progress * progress * (3 - 2 * progress);
+			const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 			const pt = evalBezier(curve, ease);
+			const angle = evalBezierAngle(curve, ease);
 
 			let opacity = 1;
-			if (progress < 0.2) {
-				opacity = progress / 0.2;
-			} else if (progress > 0.8) {
-				opacity = (1 - progress) / 0.2;
+			if (progress < 0.15) {
+				opacity = progress / 0.15;
+			} else if (progress > 0.85) {
+				opacity = (1 - progress) / 0.15;
 			}
-			const scale = 0.65 + 0.45 * Math.sin(progress * Math.PI);
+			const stretch = 1.0 + 0.14 * Math.sin(progress * Math.PI);
 
-			orb.style.opacity = opacity.toFixed(3);
-			orb.style.transform = `translate3d(${(pt.x - 13).toFixed(1)}px, ${(pt.y - 13).toFixed(1)}px, 0) scale(${scale.toFixed(3)})`;
+			el.style.opacity = opacity.toFixed(3);
+			el.style.transform = `translate3d(${(pt.x - 24).toFixed(1)}px, ${(pt.y - 15).toFixed(1)}px, 0) rotate(${angle.toFixed(1)}deg) scale(${stretch.toFixed(3)}, ${(1 / stretch).toFixed(3)})`;
 
 			if (progress < 1) {
-				orbRaf = requestAnimationFrame(step);
+				capsuleRaf = requestAnimationFrame(step);
 			} else {
-				clearOrb();
+				clearCapsule();
 				onComplete?.();
 			}
 		};
-		orbRaf = requestAnimationFrame(step);
+		capsuleRaf = requestAnimationFrame(step);
 	};
 
 	const clearLanding = () => {
@@ -266,7 +275,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			clearTimeout(animTimer);
 			animTimer = null;
 		}
-		clearOrb();
+		clearCapsule();
 	};
 
 	const triggerFlightEnter = (source: IslandRect | null) => {
@@ -310,7 +319,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		triggerLanding();
 
 		if (source && target) {
-			runOrbFlight(source, target, 'enter', () => {
+			runCapsuleFlight(source, target, 'enter', () => {
 				node.classList.remove('island-flight-enter');
 				node.classList.add('island-bloom');
 				triggerLanding();
@@ -325,7 +334,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.style.removeProperty('--flight-scale-x');
 			node.style.removeProperty('--flight-scale-y');
 			animTimer = null;
-		}, 320);
+		}, 420);
 	};
 
 	const triggerFlightExit = (source: IslandRect | null) => {
@@ -361,7 +370,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 		node.classList.add('island-flight-exit');
 
 		if (source && target) {
-			runOrbFlight(source, target, 'exit');
+			runCapsuleFlight(source, target, 'exit');
 		}
 
 		animTimer = setTimeout(() => {
@@ -373,7 +382,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.style.removeProperty('transform');
 			node.style.removeProperty('--cst-island-content');
 			animTimer = null;
-		}, 260);
+		}, 360);
 	};
 
 	const onAnimationEnd = (e: AnimationEvent) => {
@@ -453,7 +462,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 			node.removeEventListener('animationend', onAnimationEnd);
 			if (animTimer !== null) clearTimeout(animTimer);
 			clearLanding();
-			clearOrb();
+			clearCapsule();
 			ro?.disconnect();
 		}
 	};

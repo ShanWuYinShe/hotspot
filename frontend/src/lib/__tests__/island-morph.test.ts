@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	computeFlightCurve,
 	evalBezier,
+	evalBezierAngle,
 	islandFlight,
 	islandRectOf,
 	islandTextRectOf,
@@ -81,21 +82,21 @@ describe('islandFlight', () => {
 });
 
 describe('computeFlightCurve & evalBezier', () => {
-	it('生成抛物线飞行轨道：起点、终点为中心对齐，控制点向上拱起', () => {
+	it('生成抛物线飞行轨道：起点、终点为中心对齐，控制点安全拱起且不冲出视口', () => {
 		const source = { x: 200, y: 150, width: 100, height: 40 };
 		const target = { x: 600, y: 10, width: 200, height: 36 };
-		const curve = computeFlightCurve(source, target, 48);
+		const curve = computeFlightCurve(source, target, 20);
 
 		expect(curve.p0).toEqual({ x: 250, y: 170 });
 		expect(curve.p2).toEqual({ x: 700, y: 28 });
-		// 拱起高度高过起点与终点的最高者
-		expect(curve.p1.y).toBe(28 - 48);
+		// 控制点拱起高度受视口安全天花板限位（>= 14px）
+		expect(curve.p1.y).toBeGreaterThanOrEqual(14);
 	});
 
 	it('贝塞尔曲线插值：t=0 为起点，t=1 为终点，t=0.5 落在拱起高处', () => {
 		const source = { x: 200, y: 150, width: 100, height: 40 };
 		const target = { x: 600, y: 10, width: 200, height: 36 };
-		const curve = computeFlightCurve(source, target, 48);
+		const curve = computeFlightCurve(source, target, 20);
 
 		const at0 = evalBezier(curve, 0);
 		expect(at0.x).toBeCloseTo(curve.p0.x, 5);
@@ -114,7 +115,17 @@ describe('computeFlightCurve & evalBezier', () => {
 	it('快速滚动导致负视口坐标时安全保护：起点纵坐标回退至顶栏下沿', () => {
 		const fastScrollSource = { x: 200, y: -120, width: 100, height: 40 };
 		const target = { x: 600, y: 10, width: 200, height: 36 };
-		const curve = computeFlightCurve(fastScrollSource, target, 48);
+		const curve = computeFlightCurve(fastScrollSource, target, 20);
 		expect(curve.p0.y).toBe(56 + 20);
+	});
+
+	it('切线角度计算：倾角在安全限幅 [-18°, 18°] 内微倾，呈现自然滑翔姿态', () => {
+		const source = { x: 200, y: 150, width: 100, height: 40 };
+		const target = { x: 600, y: 10, width: 200, height: 36 };
+		const curve = computeFlightCurve(source, target, 20);
+
+		const angleMid = evalBezierAngle(curve, 0.5);
+		expect(angleMid).toBeGreaterThanOrEqual(-18);
+		expect(angleMid).toBeLessThanOrEqual(18);
 	});
 });

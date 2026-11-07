@@ -88,17 +88,23 @@ export interface FlightCurve {
 
 /**
  * 算出从「锚点矩形中心」到「顶栏灵动岛泊位中心」的贝塞尔拱形飞行曲线。
- * 控制点向上微拱（缺省 48px），使流体粒子呈现如露珠轻盈升空的视觉抛物线。
+ * 严格施加视口天花板限位（缺省 minViewportY=14px），确保流体微胶囊始终在可见视口内优雅滑翔，绝不飞出屏幕上边界。
  */
-export function computeFlightCurve(source: IslandRect, target: IslandRect, arcLift = 48): FlightCurve {
+export function computeFlightCurve(
+	source: IslandRect,
+	target: IslandRect,
+	arcLift = 22,
+	minViewportY = 14
+): FlightCurve {
 	const startX = source.x + source.width / 2;
 	// 若起点为标题且因快速滚动导致负视口坐标，回退至顶栏下沿安全位置（56px）
 	const startY = source.y < 0 ? 56 + source.height / 2 : source.y + source.height / 2;
 	const targetX = target.x + target.width / 2;
 	const targetY = target.y < 0 ? 26 : target.y + target.height / 2;
 
-	const ctrlX = startX + (targetX - startX) * 0.35;
-	const ctrlY = Math.min(startY, targetY) - arcLift;
+	const ctrlX = startX + (targetX - startX) * 0.38;
+	const rawCtrlY = Math.min(startY, targetY) - arcLift;
+	const ctrlY = Number.isFinite(minViewportY) ? Math.max(minViewportY, rawCtrlY) : rawCtrlY;
 
 	return {
 		p0: { x: startX, y: startY },
@@ -116,4 +122,15 @@ export function evalBezier(curve: FlightCurve, t: number): BezierPoint {
 		x: inv * inv * curve.p0.x + 2 * inv * clampedT * curve.p1.x + clampedT * clampedT * curve.p2.x,
 		y: inv * inv * curve.p0.y + 2 * inv * clampedT * curve.p1.y + clampedT * clampedT * curve.p2.y
 	};
+}
+
+/** 算出贝塞尔曲线在参数 t 处的瞬时切线倾角（角度制 deg，限幅在 ±18° 内，使微胶囊随轨道自然流体微倾） */
+export function evalBezierAngle(curve: FlightCurve, t: number): number {
+	const clampedT = Math.min(1, Math.max(0, t));
+	// 一阶导数（瞬时速度矢量）：B'(t) = 2*(1-t)*(p1 - p0) + 2*t*(p2 - p1)
+	const dx = 2 * (1 - clampedT) * (curve.p1.x - curve.p0.x) + 2 * clampedT * (curve.p2.x - curve.p1.x);
+	const dy = 2 * (1 - clampedT) * (curve.p1.y - curve.p0.y) + 2 * clampedT * (curve.p2.y - curve.p1.y);
+	const rad = Math.atan2(dy, dx);
+	const deg = (rad * 180) / Math.PI;
+	return Math.max(-18, Math.min(18, deg));
 }
