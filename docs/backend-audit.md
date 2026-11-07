@@ -3619,3 +3619,30 @@ outbox 合并后性能门禁（backend-test / hotspot_test，c=10，warmup=2s，
 - 关键端点：notify/fetch 8713 rps / p99 3.21ms；users/search 1402 rps / p99 48.38ms；
   moments/fetch_nearby 874 rps / p99 61.36ms（均在 baseline 的 60% rps 下限与
   2.5x p99 上限内）。outbox 不在读热路径，公告广播为低频写。
+
+## Batch 实时 Hub 分片 + 多实例广播压测（2026-11-07）
+
+原 Hub 用单把全局 `sync.RWMutex` 保护 byUser/bySession/byUserWatchers/byGroup：
+广播是读锁、连接注册/注销/订阅重建是写锁，连接抖动会让所有广播等写锁；在线规模
+上来后注册风暴直接拖慢全部实时推送。
+
+- **32 shard 锁条带化**：user/session/watch/group key 经 FNV-1a 散列到独立 shard，
+  各 shard 自有 RWMutex+注册表；不同用户/群组的广播与连接抖动互不阻塞。
+  广播路径只复合同 shard sink 快照，绝不在持锁时做网络写（沿用原锁外 Close 纪律）。
+- **sink 反向索引去全局锁**：`subsBySink`/`sessionBySink` 改 `sync.Map`；
+  `subEntry` 自带互斥锁 + closed 标记，订阅重建与连接注销并发时不会把死连接
+  重新写回路由表。
+- **全量广播单趟快照**：新增近似 sessionCount 容量提示，`BroadcastToAll`/
+  `DrainConnections` 每 shard 只持一次读锁复制，避免两趟扫描；大在线量下
+  BroadcastToAll 比旧实现更快。
+- **多实例广播压测**：新增 `TestRedisBridgeMultiInstanceBroadcastBurst`
+  （miniredis 双实例，8 用户 × 1000 条并发跨实例事件）：8000 条恰好一次投递，
+  实测约 4.0 万 events/s（Apple M1 本机）；同时作为跨实例路由/缓冲回归测试。
+- **Benchmark（Apple M1，8 vCPU，`go test -run '^$' -bench 'BenchmarkHub'`）**：
+  | 场景 | 分片前 | 分片后 | 变化 |
+  |---|---|---|---|
+  | 并发广播不同用户 | 1632 ns/op | 1473 ns/op | -9.7% |
+  | 广播 + 连接注册/注销混合 | 1537 ns/op | 938 ns/op | **-39%** |
+  | BroadcastToAll（512 连接） | 13110 ns/op | 10370 ns/op | **-21%** |
+- 验证：realtime 包 `-race` 全绿、`-count=5` 稳定；`go test -short ./...` 全绿；
+  worktree `verify-backend-ci.sh --with-db` ALL CHECKS PASSED。

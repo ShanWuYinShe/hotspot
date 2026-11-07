@@ -12,15 +12,18 @@ import (
 //   - groups:   被订阅的群组数
 //   - userSubs: user 类型订阅的 (user, sink) 对数
 func (h *Hub) Stats() (sessions, users, groups, userSubs int) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	for _, sinks := range h.bySession {
-		sessions += len(sinks)
-	}
-	users = len(h.byUser)
-	groups = len(h.byGroup)
-	for _, sinks := range h.byUserWatchers {
-		userSubs += len(sinks)
+	for i := range h.shards {
+		shard := &h.shards[i]
+		shard.mu.RLock()
+		for _, sinks := range shard.bySession {
+			sessions += len(sinks)
+		}
+		users += len(shard.byUser)
+		groups += len(shard.byGroup)
+		for _, sinks := range shard.byUserWatchers {
+			userSubs += len(sinks)
+		}
+		shard.mu.RUnlock()
 	}
 	return sessions, users, groups, userSubs
 }

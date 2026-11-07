@@ -12,22 +12,17 @@ import (
 	"hotspot/backend-go/internal/platform/observability"
 )
 
+// FanoutSink 是广播目标（生产为 socketSink，测试可用轻量桩）。
 type FanoutSink interface {
 	Send(Event) error
 	Close() error
 }
 
 // preparedMessageSink 由支持「一次准备、多连接复用」的 sink 实现（socketSink）。
-// 广播热路径把事件 JSON（及开启压缩后的 deflate 结果）只准备一次，避免每个连接
-// 一次 json.Marshal + 一次 permessage-deflate 压缩。
 type preparedMessageSink interface {
 	SendPrepared(pm *websocket.PreparedMessage, seq int64) error
 }
 
-// broadcastSinks 向一组 sink 投递同一事件：JSON 与 wire 表示只准备一次
-// （websocket.PreparedMessage 按「服务端/压缩/压缩级别」缓存），实现
-// preparedMessageSink 的连接走复用路径，测试桩等回退到普通 Send。
-// 投递仍是非阻塞 best-effort：慢消费者由各自输出队列丢弃并计入指标。
 func broadcastSinks(sinks []FanoutSink, event Event) {
 	if len(sinks) == 0 {
 		return
@@ -57,22 +52,46 @@ func broadcastSinks(sinks []FanoutSink, event Event) {
 // (memory + broadcast fan-out amplification).
 const maxConnectionsPerUser = 20
 
-type Hub struct {
+// hubShardCount 是注册表分片数：广播/注册/注销按 user/group/session key
+// 散列到独立 shard，不再共享一把全局 RWMutex。幂次便于取模。
+const hubShardCount = 32
+
+// hubShard 是一组注册表 + 独立读写锁。同一 shard 内的操作仍串行，但不同
+// user/group/session 的广播与连接抖动互不阻塞；单 key 的热点仍由该 shard
+// 的 RWMutex 保护（RWMutex 本身支持并发读）。
+type hubShard struct {
 	mu             sync.RWMutex
 	byUser         map[string][]FanoutSink
 	bySession      map[string][]FanoutSink
 	byUserWatchers map[string][]FanoutSink
 	byGroup        map[string][]FanoutSink
-	// subsBySink 反向索引（审计 perf P3-5）：每个 sink 登记过的订阅 keys，
-	// Set*Subscriptions 全量重建与 UnregisterUser 清理时按记录精确删除，
-	// 取代此前对 byUserWatchers/byGroup 的全表扫描。
-	subsBySink map[FanoutSink]*subEntry
-	// sessionBySink 反向索引（审计 perf P1-8）：sink → 注册时的 sessionID。
-	// 踢最旧连接时 O(1) 定位其 session，取代对 bySession 的全表扫描——
-	// 该扫描持写锁，大在线量下会阻塞所有广播/注册/注销（全局停顿）。
-	sessionBySink map[FanoutSink]string
-	publisher     EventPublisher
-	resumeStore   ResumeStore
+}
+
+// subEntry 记录单个 sink 在订阅表中的 keys 集合（所有权归 Hub）。entry 自身
+// 用互斥锁保护：订阅重建与注销可能并发（连接关闭与 subscription 更新竞争），
+// 不能依赖全局 Hub 锁。closed 标记注销后不再接受订阅重建，避免注销清理后
+// SetSubscriptions 把死连接重新写回路由表。
+type subEntry struct {
+	mu        sync.Mutex
+	closed    bool
+	userKeys  map[string]struct{}
+	groupKeys map[string]struct{}
+}
+
+type Hub struct {
+	shards [hubShardCount]hubShard
+	// subsBySink / sessionBySink 是 sink 维度反向索引（sync.Map：注册/注销
+	// 并发下无锁读，避免与 shard 锁交叉）。FanoutSink 以接口值作 key，
+	// 实现方必须可比较（生产 socketSink 与测试桩均为指针）。
+	subsBySink    sync.Map // map[FanoutSink]*subEntry
+	sessionBySink sync.Map // map[FanoutSink]string
+	// sessionCount 是当前注册 sink 的近似计数，仅用于 snapshot 预分配容量
+	//（精确值由 shard 内 map 决定；Load 仅供建 slice 的容量提示）。
+	sessionCount atomic.Int64
+	// cfgMu 只保护低频写入的 publisher/resumeStore；广播热路径用 RLock。
+	cfgMu       sync.RWMutex
+	publisher   EventPublisher
+	resumeStore ResumeStore
 	// rejectedConnections 是全局连接上限触发的拒绝计数（HubCollector 暴露）。
 	rejectedConnections atomic.Int64
 }
@@ -87,15 +106,30 @@ type recordPublisher interface {
 	RecordGroupAndPublish(groupID, channel string, event Event) (seq int64, published bool)
 }
 
-// subEntry 记录单个 sink 在订阅表中的 keys 集合（所有权归 Hub：创建/更新/
-// 销毁都发生在 Hub 持锁的方法内）。
-type subEntry struct {
-	userKeys  map[string]struct{}
-	groupKeys map[string]struct{}
+func NewHub() *Hub {
+	h := &Hub{}
+	for i := range h.shards {
+		h.shards[i].byUser = map[string][]FanoutSink{}
+		h.shards[i].bySession = map[string][]FanoutSink{}
+		h.shards[i].byUserWatchers = map[string][]FanoutSink{}
+		h.shards[i].byGroup = map[string][]FanoutSink{}
+	}
+	return h
 }
 
-func NewHub() *Hub {
-	return &Hub{byUser: map[string][]FanoutSink{}, bySession: map[string][]FanoutSink{}, byUserWatchers: map[string][]FanoutSink{}, byGroup: map[string][]FanoutSink{}, subsBySink: map[FanoutSink]*subEntry{}, sessionBySink: map[FanoutSink]string{}}
+// shardFor 用 FNV-1a 散列 key；前缀区分 user/session/watch/group 四种命名空间，
+// 避免不同类型 key 在分布上相关。
+func (h *Hub) shardFor(key string) *hubShard {
+	const (
+		offset32 = 2166136261
+		prime32  = 16777619
+	)
+	var hash uint32 = offset32
+	for i := 0; i < len(key); i++ {
+		hash ^= uint32(key[i])
+		hash *= prime32
+	}
+	return &h.shards[hash%hubShardCount]
 }
 
 // NoteConnectionRejected 记录一次因全局连接上限被拒的 WS 连接。
@@ -105,82 +139,145 @@ func (h *Hub) NoteConnectionRejected() { h.rejectedConnections.Add(1) }
 func (h *Hub) RejectedConnections() int64 { return h.rejectedConnections.Load() }
 
 func (h *Hub) SetPublisher(p EventPublisher) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.cfgMu.Lock()
+	defer h.cfgMu.Unlock()
 	h.publisher = p
 }
 
-// SetResumeStore 注入 resume 增量恢复存储（spec L156, L159）。nil 时 BroadcastToUser
-// 不分配 seq（降级为客户端全量重放，spec L161）。由 bootstrap 在 Redis 可用时注入
-// RedisResumeStore；多实例共享同一 Redis，跨实例 resume 一致。
 func (h *Hub) SetResumeStore(store ResumeStore) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.cfgMu.Lock()
+	defer h.cfgMu.Unlock()
 	h.resumeStore = store
 }
 
+func (h *Hub) getResumeStore() ResumeStore {
+	h.cfgMu.RLock()
+	defer h.cfgMu.RUnlock()
+	return h.resumeStore
+}
+
 func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
-	var evicted []FanoutSink
-	h.mu.Lock()
-	if len(h.byUser[userID]) >= maxConnectionsPerUser {
+	userShard := h.shardFor("user:" + userID)
+	var evicted FanoutSink
+	var first bool
+	userShard.mu.Lock()
+	if len(userShard.byUser[userID]) >= maxConnectionsPerUser {
 		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
-		oldest := h.byUser[userID][0]
-		if evictedSession, ok := h.sessionBySink[oldest]; ok {
-			h.removeSinkFromSliceAt(h.bySession, evictedSession, oldest)
-			delete(h.sessionBySink, oldest)
-		}
-		// 订阅反向索引同步清理（与 UnregisterUser 同口径）：等读循环退出再清，
-		// 窗口期内群播会向死 sink 白付一次写系统调用。
-		if entry, ok := h.subsBySink[oldest]; ok {
-			for key := range entry.userKeys {
-				removeSinkFromSlice(h.byUserWatchers, key, oldest)
-			}
-			for key := range entry.groupKeys {
-				removeSinkFromSlice(h.byGroup, key, oldest)
-			}
-			delete(h.subsBySink, oldest)
-		}
-		h.removeSinkFromSliceAt(h.byUser, userID, oldest)
-		evicted = append(evicted, oldest)
+		oldest := userShard.byUser[userID][0]
+		evicted = oldest
+		removeSinkFromSlice(userShard.byUser, userID, oldest)
 	}
-	first := len(h.byUser[userID]) == 0
-	h.byUser[userID] = append(h.byUser[userID], sink)
-	h.bySession[sessionID] = append(h.bySession[sessionID], sink)
-	h.sessionBySink[sink] = sessionID
-	h.mu.Unlock()
-	// 关闭被逐出连接必须在释放 h.mu 之后：socketSink.Close/closeWithCode 会做
-	// 网络 Close 并最多等待写超时（5s），持全局写锁关闭单个慢连接会阻塞所有
-	// 注册/注销/广播（万连接下的全局停顿）。
-	for _, evictedSink := range evicted {
-		_ = evictedSink.Close()
+	first = len(userShard.byUser[userID]) == 0
+	userShard.byUser[userID] = append(userShard.byUser[userID], sink)
+	userShard.mu.Unlock()
+
+	sessionShard := h.shardFor("session:" + sessionID)
+	sessionShard.mu.Lock()
+	sessionShard.bySession[sessionID] = append(sessionShard.bySession[sessionID], sink)
+	sessionShard.mu.Unlock()
+	h.sessionBySink.Store(sink, sessionID)
+	h.sessionCount.Add(1)
+
+	// 逐出连接的清理必须在释放 shard 锁之后：socketSink.Close/closeWithCode
+	// 会做网络 Close 并最多等待写超时（5s），持锁关闭会阻塞同 shard 广播。
+	if evicted != nil {
+		h.dropSink(evicted)
 	}
 	return first
 }
 
-func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.removeSinkFromSliceAt(h.bySession, sessionID, sink)
-	delete(h.sessionBySink, sink)
-	// 订阅表同步清理：按反向索引记录的 keys 精确删除（O(k)），不再全表扫描。
-	// sink 只在 Set*Subscriptions 注册；断连时若订阅表残留，之后每次群播都会
-	// 向死连接白付一次写系统调用。
-	if entry, ok := h.subsBySink[sink]; ok {
-		for key := range entry.userKeys {
-			removeSinkFromSlice(h.byUserWatchers, key, sink)
+// dropSink 从全部注册表/反向索引移除 sink（逐出或注销共用）。清理逻辑不持
+// 任何 shard 写锁跨多个 shard，避免锁顺序问题。
+func (h *Hub) dropSink(sink FanoutSink) {
+	if sessionID, ok := h.sessionBySink.LoadAndDelete(sink); ok {
+		h.sessionCount.Add(-1)
+		if id, ok := sessionID.(string); ok {
+			sessionShard := h.shardFor("session:" + id)
+			sessionShard.mu.Lock()
+			removeSinkFromSlice(sessionShard.bySession, id, sink)
+			sessionShard.mu.Unlock()
 		}
-		for key := range entry.groupKeys {
-			removeSinkFromSlice(h.byGroup, key, sink)
-		}
-		delete(h.subsBySink, sink)
 	}
-	return h.removeSinkFromSliceAt(h.byUser, userID, sink)
+	if entryAny, ok := h.subsBySink.LoadAndDelete(sink); ok {
+		if entry, ok := entryAny.(*subEntry); ok {
+			entry.mu.Lock()
+			entry.closed = true
+			userKeys := make([]string, 0, len(entry.userKeys))
+			for key := range entry.userKeys {
+				userKeys = append(userKeys, key)
+			}
+			groupKeys := make([]string, 0, len(entry.groupKeys))
+			for key := range entry.groupKeys {
+				groupKeys = append(groupKeys, key)
+			}
+			entry.mu.Unlock()
+			for _, key := range userKeys {
+				shard := h.shardFor("watch:" + key)
+				shard.mu.Lock()
+				removeSinkFromSlice(shard.byUserWatchers, key, sink)
+				shard.mu.Unlock()
+			}
+			for _, key := range groupKeys {
+				shard := h.shardFor("group:" + key)
+				shard.mu.Lock()
+				removeSinkFromSlice(shard.byGroup, key, sink)
+				shard.mu.Unlock()
+			}
+		}
+	}
 }
 
-// removeSinkFromSliceAt 从 m[key] 移除 sink；返回该 key 下是否因此变空
-// （保留「最后一个连接」语义）。调用方必须持有 h.mu。
-func (h *Hub) removeSinkFromSliceAt(m map[string][]FanoutSink, key string, sink FanoutSink) bool {
-	return removeSinkFromSlice(m, key, sink)
+func (h *Hub) UnregisterUser(userID, sessionID string, sink FanoutSink) bool {
+	userShard := h.shardFor("user:" + userID)
+	userShard.mu.Lock()
+	empty := removeSinkFromSlice(userShard.byUser, userID, sink)
+	userShard.mu.Unlock()
+
+	sessionShard := h.shardFor("session:" + sessionID)
+	sessionShard.mu.Lock()
+	removeSinkFromSlice(sessionShard.bySession, sessionID, sink)
+	sessionShard.mu.Unlock()
+	if _, existed := h.sessionBySink.LoadAndDelete(sink); existed {
+		h.sessionCount.Add(-1)
+	}
+	h.dropSinkSubscriptions(sink)
+	return empty
+}
+
+// dropSinkSubscriptions 移除 sink 的订阅反向索引；session/user 已由调用方
+// 精确清理，这里只处理订阅 key。
+func (h *Hub) dropSinkSubscriptions(sink FanoutSink) {
+	entryAny, ok := h.subsBySink.LoadAndDelete(sink)
+	if !ok {
+		return
+	}
+	entry, ok := entryAny.(*subEntry)
+	if !ok {
+		return
+	}
+	entry.mu.Lock()
+	entry.closed = true
+	userKeys := make([]string, 0, len(entry.userKeys))
+	for key := range entry.userKeys {
+		userKeys = append(userKeys, key)
+	}
+	groupKeys := make([]string, 0, len(entry.groupKeys))
+	for key := range entry.groupKeys {
+		groupKeys = append(groupKeys, key)
+	}
+	entry.mu.Unlock()
+	for _, key := range userKeys {
+		shard := h.shardFor("watch:" + key)
+		shard.mu.Lock()
+		removeSinkFromSlice(shard.byUserWatchers, key, sink)
+		shard.mu.Unlock()
+	}
+	for _, key := range groupKeys {
+		shard := h.shardFor("group:" + key)
+		shard.mu.Lock()
+		removeSinkFromSlice(shard.byGroup, key, sink)
+		shard.mu.Unlock()
+	}
 }
 
 // removeSinkFromSlice 原地过滤 m[key] 中的 sink，清空时删除 key。
@@ -216,19 +313,20 @@ func (h *Hub) DrainConnections(timeout time.Duration) int {
 	// 写 close 帧属无必要系统调用，不配合的客户端由 deadline 统一兜底。
 	closed := make(map[FanoutSink]struct{})
 	for {
-		h.mu.RLock()
-		if len(h.sessionBySink) == 0 {
-			h.mu.RUnlock()
-			return 0
-		}
-		sinks := make([]FanoutSink, 0, len(h.sessionBySink))
-		for sink := range h.sessionBySink {
-			if _, done := closed[sink]; !done {
-				sinks = append(sinks, sink)
-			}
-		}
-		h.mu.RUnlock()
+		sinks := h.snapshotSessions()
+		remaining := 0
+		pending := sinks[:0]
 		for _, sink := range sinks {
+			if _, done := closed[sink]; done {
+				remaining++
+				continue
+			}
+			pending = append(pending, sink)
+		}
+		if len(pending) == 0 {
+			return remaining
+		}
+		for _, sink := range pending {
 			if ws, ok := sink.(interface {
 				closeWithCode(code int, reason string) error
 			}); ok {
@@ -239,18 +337,35 @@ func (h *Hub) DrainConnections(timeout time.Duration) int {
 			closed[sink] = struct{}{}
 		}
 		if time.Now().After(deadline) {
-			h.mu.RLock()
-			defer h.mu.RUnlock()
-			return len(h.sessionBySink)
+			return len(h.snapshotSessions())
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
 }
 
+// snapshotSessions 返回当前全部在线 sink 快照（每个 shard 只持读锁复制）。
+func (h *Hub) snapshotSessions() []FanoutSink {
+	hint := h.sessionCount.Load()
+	if hint < 0 {
+		hint = 0
+	}
+	sinks := make([]FanoutSink, 0, hint)
+	for i := range h.shards {
+		shard := &h.shards[i]
+		shard.mu.RLock()
+		for _, sessionSinks := range shard.bySession {
+			sinks = append(sinks, sessionSinks...)
+		}
+		shard.mu.RUnlock()
+	}
+	return sinks
+}
+
 func (h *Hub) closeSessionLocal(sessionID string, event Event) {
-	h.mu.RLock()
-	sinks := append([]FanoutSink(nil), h.bySession[sessionID]...)
-	h.mu.RUnlock()
+	sessionShard := h.shardFor("session:" + sessionID)
+	sessionShard.mu.RLock()
+	sinks := append([]FanoutSink(nil), sessionShard.bySession[sessionID]...)
+	sessionShard.mu.RUnlock()
 	broadcastSinks(sinks, event)
 	for _, sink := range sinks {
 		// SessionRevoked（登出/改密/撤销会话）按 spec 以 close code 4001 断开，
@@ -265,42 +380,65 @@ func (h *Hub) closeSessionLocal(sessionID string, event Event) {
 	}
 }
 
-// entryForSinkLocked 返回 sink 的反向索引条目，缺失时创建。
-func (h *Hub) entryForSinkLocked(sink FanoutSink) *subEntry {
-	entry, ok := h.subsBySink[sink]
-	if !ok {
-		entry = &subEntry{userKeys: map[string]struct{}{}, groupKeys: map[string]struct{}{}}
-		h.subsBySink[sink] = entry
+// entryForSink 返回 sink 的订阅反向索引条目，缺失时创建（sync.Map 无锁读）。
+func (h *Hub) entryForSink(sink FanoutSink) *subEntry {
+	if entryAny, ok := h.subsBySink.Load(sink); ok {
+		if entry, ok := entryAny.(*subEntry); ok {
+			return entry
+		}
+	}
+	entry := &subEntry{userKeys: map[string]struct{}{}, groupKeys: map[string]struct{}{}}
+	actual, _ := h.subsBySink.LoadOrStore(sink, entry)
+	if stored, ok := actual.(*subEntry); ok {
+		return stored
 	}
 	return entry
 }
 
 func (h *Hub) SetUserSubscriptions(userIDs []string, sink FanoutSink) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	entry := h.entryForSinkLocked(sink)
+	entry := h.entryForSink(sink)
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.closed {
+		return
+	}
 	// 全量重建语义：先按反向索引删掉该 sink 的旧 user keys（O(旧 keys)），
 	// 不再全表扫描（审计 perf P3-5）。
 	for key := range entry.userKeys {
-		removeSinkFromSlice(h.byUserWatchers, key, sink)
+		shard := h.shardFor("watch:" + key)
+		shard.mu.Lock()
+		removeSinkFromSlice(shard.byUserWatchers, key, sink)
+		shard.mu.Unlock()
 	}
 	entry.userKeys = make(map[string]struct{}, len(userIDs))
 	for _, uid := range userIDs {
-		h.byUserWatchers[uid] = append(h.byUserWatchers[uid], sink)
+		shard := h.shardFor("watch:" + uid)
+		shard.mu.Lock()
+		shard.byUserWatchers[uid] = append(shard.byUserWatchers[uid], sink)
+		shard.mu.Unlock()
 		entry.userKeys[uid] = struct{}{}
 	}
 }
 
 func (h *Hub) SetGroupSubscriptions(groupIDs []string, sink FanoutSink) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	entry := h.entryForSinkLocked(sink)
+	entry := h.entryForSink(sink)
+	entry.mu.Lock()
+	defer entry.mu.Unlock()
+	if entry.closed {
+		return
+	}
 	for key := range entry.groupKeys {
-		removeSinkFromSlice(h.byGroup, key, sink)
+		shard := h.shardFor("group:" + key)
+		shard.mu.Lock()
+		removeSinkFromSlice(shard.byGroup, key, sink)
+		shard.mu.Unlock()
 	}
 	entry.groupKeys = make(map[string]struct{}, len(groupIDs))
 	for _, gid := range groupIDs {
-		h.byGroup[gid] = append(h.byGroup[gid], sink)
+		shard := h.shardFor("group:" + gid)
+		shard.mu.Lock()
+		shard.byGroup[gid] = append(shard.byGroup[gid], sink)
+		shard.mu.Unlock()
 		entry.groupKeys[gid] = struct{}{}
 	}
 }
@@ -309,9 +447,7 @@ func (h *Hub) BroadcastToUser(userID string, event Event) {
 	// resume enrich（spec L173）：为事件分配全局单调 seq 并写入跨实例 user 事件流。
 	// 这是 resume 续传的唯一收口——BroadcastToUser 同时掌握 userID 与事件投递，
 	// 断线期间（无在线 sink）仍能按 user 累积事件。
-	h.mu.RLock()
-	store := h.resumeStore
-	h.mu.RUnlock()
+	store := h.getResumeStore()
 	// 组合路径（审计 perf P1-4）：seq 分配 + Stream 写入 + 跨实例 PUBLISH 在
 	// 一次 Redis 往返内完成。组合已含发布时跳过独立 publish；脚本失败时回退
 	// 独立 publish（此时 seq 为 0，与既有 record 失败降级语义一致）。
@@ -344,9 +480,10 @@ func (h *Hub) BroadcastToUserNoRecord(userID string, event Event) {
 }
 
 func (h *Hub) deliverUserLocal(userID string, event Event) {
-	h.mu.RLock()
-	sinks := append([]FanoutSink(nil), h.byUser[userID]...)
-	h.mu.RUnlock()
+	shard := h.shardFor("user:" + userID)
+	shard.mu.RLock()
+	sinks := append([]FanoutSink(nil), shard.byUser[userID]...)
+	shard.mu.RUnlock()
 	broadcastSinks(sinks, event)
 }
 
@@ -358,9 +495,10 @@ func (h *Hub) BroadcastToUserSubscribers(userID string, event Event) {
 }
 
 func (h *Hub) deliverUserSubscribersLocal(userID string, event Event) {
-	h.mu.RLock()
-	sinks := append([]FanoutSink(nil), h.byUserWatchers[userID]...)
-	h.mu.RUnlock()
+	shard := h.shardFor("watch:" + userID)
+	shard.mu.RLock()
+	sinks := append([]FanoutSink(nil), shard.byUserWatchers[userID]...)
+	shard.mu.RUnlock()
 	broadcastSinks(sinks, event)
 }
 
@@ -384,21 +522,28 @@ func (h *Hub) RevokeGroupSubscription(userID, groupID string) {
 }
 
 // revokeGroupLocal 摘除本实例内该用户全部连接的群订阅，并经 sink 回调同步连接层
-// 订阅快照。回调在锁外调用：其内部触碰连接侧 subscriptions（自有锁），与 h.mu
-// 无交集，避免锁序耦合。
+// 订阅快照。回调在锁外调用：其内部触碰连接侧 subscriptions（自有锁），与 hub
+// 锁无交集，避免锁序耦合。
 func (h *Hub) revokeGroupLocal(userID, groupID string) {
-	h.mu.Lock()
-	affected := make([]FanoutSink, 0, 1)
-	for _, sink := range h.byUser[userID] {
-		if entry, ok := h.subsBySink[sink]; ok {
-			if _, subscribed := entry.groupKeys[groupID]; subscribed {
-				delete(entry.groupKeys, groupID)
-				affected = append(affected, sink)
-			}
+	userShard := h.shardFor("user:" + userID)
+	userShard.mu.RLock()
+	userSinks := append([]FanoutSink(nil), userShard.byUser[userID]...)
+	userShard.mu.RUnlock()
+
+	affected := make([]FanoutSink, 0, len(userSinks))
+	for _, sink := range userSinks {
+		entry := h.entryForSink(sink)
+		entry.mu.Lock()
+		if _, subscribed := entry.groupKeys[groupID]; subscribed {
+			delete(entry.groupKeys, groupID)
+			affected = append(affected, sink)
 		}
+		entry.mu.Unlock()
 	}
 	if len(affected) > 0 {
-		byGroup := h.byGroup[groupID]
+		groupShard := h.shardFor("group:" + groupID)
+		groupShard.mu.Lock()
+		byGroup := groupShard.byGroup[groupID]
 		out := byGroup[:0]
 		for _, sink := range byGroup {
 			revoked := false
@@ -413,12 +558,12 @@ func (h *Hub) revokeGroupLocal(userID, groupID string) {
 			}
 		}
 		if len(out) == 0 {
-			delete(h.byGroup, groupID)
+			delete(groupShard.byGroup, groupID)
 		} else {
-			h.byGroup[groupID] = out
+			groupShard.byGroup[groupID] = out
 		}
+		groupShard.mu.Unlock()
 	}
-	h.mu.Unlock()
 	for _, sink := range affected {
 		if revoker, ok := sink.(subscriptionRevoker); ok {
 			revoker.revokeSubscription("group", groupID)
@@ -434,15 +579,17 @@ func (h *Hub) DropGroup(groupID string) {
 }
 
 func (h *Hub) dropGroupLocal(groupID string) {
-	h.mu.Lock()
-	sinks := h.byGroup[groupID]
-	delete(h.byGroup, groupID)
+	groupShard := h.shardFor("group:" + groupID)
+	groupShard.mu.Lock()
+	sinks := append([]FanoutSink(nil), groupShard.byGroup[groupID]...)
+	delete(groupShard.byGroup, groupID)
+	groupShard.mu.Unlock()
 	for _, sink := range sinks {
-		if entry, ok := h.subsBySink[sink]; ok {
-			delete(entry.groupKeys, groupID)
-		}
+		entry := h.entryForSink(sink)
+		entry.mu.Lock()
+		delete(entry.groupKeys, groupID)
+		entry.mu.Unlock()
 	}
-	h.mu.Unlock()
 	for _, sink := range sinks {
 		if revoker, ok := sink.(subscriptionRevoker); ok {
 			revoker.revokeSubscription("group", groupID)
@@ -456,9 +603,7 @@ func (h *Hub) BroadcastToGroup(groupID string, event Event) {
 	// 成员解析（成员查询放热路径会放大写压力，且 Hub 路由层不应依赖业务 repo）。
 	// 组合路径语义与 BroadcastToGroupUser 对应的 user 版相同（审计 perf P1-4，
 	// 单次 Redis 往返；失败回退独立 publish）。
-	h.mu.RLock()
-	store := h.resumeStore
-	h.mu.RUnlock()
+	store := h.getResumeStore()
 	if rp, ok := store.(recordPublisher); ok {
 		seq, published := rp.RecordGroupAndPublish(groupID, "group:"+groupID, event)
 		if seq > 0 {
@@ -487,45 +632,30 @@ func (h *Hub) BroadcastToGroupNoRecord(groupID string, event Event) {
 }
 
 func (h *Hub) deliverGroupLocal(groupID string, event Event) {
-	h.mu.RLock()
-	sinks := append([]FanoutSink(nil), h.byGroup[groupID]...)
-	h.mu.RUnlock()
+	shard := h.shardFor("group:" + groupID)
+	shard.mu.RLock()
+	sinks := append([]FanoutSink(nil), shard.byGroup[groupID]...)
+	shard.mu.RUnlock()
 	broadcastSinks(sinks, event)
 }
 
 // BroadcastToAll sends event to every connected session. It is O(n) for all
-// connections — it collects a snapshot of all sinks under RLock then iterates
-// outside the lock. This is used for rare system-wide events only; it should
-// not be called on hot paths.
+// connections — it collects a snapshot of all sinks under per-shard RLock then
+// iterates outside the locks. This is used for rare system-wide events only; it
+// should not be called on hot paths.
 func (h *Hub) BroadcastToAll(event Event) {
-	h.deliverAllLocal(event)
+	broadcastSinks(h.snapshotSessions(), event)
 	h.publish("all", event)
 }
 
-// deliverAllLocal collects a snapshot of every connected sink under RLock and
-// then delivers to each outside the lock. O(n) for all active connections;
-// BroadcastToAll is reserved for rare system-wide events. The previous
-// drop-tail cap (1000) was removed: silently skipping sessions means system
-// announcements never reach most users on a large deployment, which is worse
-// than the short allocation spike it avoided.
 func (h *Hub) deliverAllLocal(event Event) {
-	h.mu.RLock()
-	total := 0
-	for _, sessionSinks := range h.bySession {
-		total += len(sessionSinks)
-	}
-	sinks := make([]FanoutSink, 0, total)
-	for _, sessionSinks := range h.bySession {
-		sinks = append(sinks, sessionSinks...)
-	}
-	h.mu.RUnlock()
-	broadcastSinks(sinks, event)
+	broadcastSinks(h.snapshotSessions(), event)
 }
 
 func (h *Hub) publish(channel string, event Event) {
-	h.mu.RLock()
+	h.cfgMu.RLock()
 	p := h.publisher
-	h.mu.RUnlock()
+	h.cfgMu.RUnlock()
 	if p != nil {
 		// 1s 硬 deadline（审计 perf P2-5）：publish 在广播热路径上，Redis 卡死
 		// 时不能继承无界 ctx 拖住广播方；超时按发布失败降级处理。不用请求 ctx：
