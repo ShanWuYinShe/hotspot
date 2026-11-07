@@ -246,7 +246,7 @@
 		<!-- Left Brand Capsule (品牌与工作台微岛) -->
 		{#if isSidebarCollapsed}
 			<div
-				class="flex shrink-0 items-center rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
+				class="flex shrink-0 items-center rounded-full border border-border-default/30 bg-surface-primary/60 p-1 shadow-xs backdrop-blur-2xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/50 hover:bg-surface-primary/80"
 			>
 				<button
 					type="button"
@@ -270,11 +270,11 @@
 			</div>
 		{:else}
 			<div
-				class="flex shrink-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
+				class="flex shrink-0 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-primary/60 px-2 py-1 shadow-xs backdrop-blur-2xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/50 hover:bg-surface-primary/80"
 			>
 				<button
 					type="button"
-					class="group flex shrink-0 items-center gap-2 select-none rounded-full py-0.5 pl-1.5 pr-2.5 focus-ring hover:bg-interactive-hover transition-colors"
+					class="group flex shrink-0 items-center gap-2 select-none rounded-full py-0.5 pl-1 pr-1.5 focus-ring hover:bg-interactive-hover transition-colors"
 					title="返回首页"
 					onclick={() => {
 						activeNavId = 'home';
@@ -282,20 +282,18 @@
 					}}
 				>
 					<img src={imgHotSpot} decoding="async" alt="HotSpot Logo" class="size-6 rounded-full object-cover shrink-0 transition-transform duration-rapid group-hover:scale-105 group-active:scale-95" />
-					<span class="tracking-tight text-sm font-semibold text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
+					<span class="tracking-wider text-xs font-semibold uppercase text-text-primary transition-colors group-hover:text-accent-default">HotSpot</span>
 				</button>
-
-				<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 
 				<button
 					type="button"
-					class="header-action hit-slop flex size-7 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary transition-colors hover:text-text-primary hover:bg-interactive-hover"
+					class="header-action hit-slop flex size-6.5 shrink-0 items-center justify-center rounded-full focus-ring text-text-secondary/70 transition-colors hover:text-text-primary hover:bg-interactive-hover"
 					aria-label="收起侧边栏"
 					aria-pressed={isSidebarCollapsed}
 					title="收起侧边栏"
 					onclick={() => (isSidebarCollapsed = true)}
 				>
-					<PanelLeftClose size={15} strokeWidth={1.75} />
+					<PanelLeftClose size={14} strokeWidth={1.75} />
 				</button>
 			</div>
 		{/if}
@@ -335,9 +333,9 @@
 					out:fade={{ duration: motionDuration(180) }}
 					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
 				>
-					<div class="flex items-center gap-2 rounded-full border border-border-default/35 bg-surface-primary/45 px-3 py-1 shadow-raised-sm backdrop-blur-md select-none transition-colors">
-						<span class="size-1.5 rounded-full bg-accent-default/70 animate-pulse" aria-hidden="true"></span>
-						<span class="text-xxs font-medium tracking-wider text-text-secondary/85 select-none uppercase">
+					<div class="flex items-center gap-2 rounded-full border border-border-default/25 bg-surface-primary/40 px-3.5 py-1 shadow-xs backdrop-blur-xl select-none transition-colors">
+						<span class="size-1.5 rounded-full bg-accent-default/80 animate-pulse" aria-hidden="true"></span>
+						<span class="text-xxs font-mono tracking-widest text-text-secondary/85 select-none uppercase">
 							{centerHorizonText}
 						</span>
 					</div>
@@ -347,42 +345,41 @@
 
 		<!-- Right Sculpted Glass Control Dock (玻璃控制枢纽) -->
 		<div class="flex shrink-0 items-center gap-2">
-			<!-- 统一悬浮玻璃控制岛 (Control Dock) -->
-			<div
-				class="flex items-center gap-1 rounded-full border border-border-default/40 bg-surface-primary/75 p-1 shadow-raised-sm backdrop-blur-xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/60 hover:bg-surface-primary/90"
+			<!-- 探索检索入口 -->
+			<button
+				type="button"
+				class="group flex h-8 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-primary/60 px-2.5 text-xs text-text-secondary backdrop-blur-2xl shadow-xs transition-all hover:border-border-default/50 hover:bg-surface-primary/85 hover:text-text-primary focus-ring {pathname === ROUTES.search ? 'border-accent-border/50 bg-surface-primary/90 text-accent-default font-medium' : ''}"
+				aria-label="搜索"
+				title="搜索 (⌘K)"
+				onclick={() => void goto(ROUTES.search)}
 			>
-				<!-- 探索入口胶囊 -->
-				<button
-					type="button"
-					class="group flex h-7 items-center gap-1.5 rounded-full px-2.5 text-xs text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary focus-ring {pathname === ROUTES.search ? 'bg-interactive-hover text-accent-default font-medium' : ''}"
-					aria-label="搜索"
-					title="搜索"
-					onclick={() => void goto(ROUTES.search)}
-				>
-					<Search size={14} strokeWidth={2} class="shrink-0 transition-transform duration-rapid group-hover:scale-110 {pathname === ROUTES.search ? 'text-accent-default' : 'text-text-secondary'}" />
-					<span class="tracking-wide text-xs">探索</span>
-				</button>
+				<Search size={13} strokeWidth={2} class="shrink-0 transition-transform duration-rapid group-hover:scale-110 {pathname === ROUTES.search ? 'text-accent-default' : 'text-text-secondary'}" />
+				<span class="tracking-wide text-xs">探索</span>
+				<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary/70 select-none">⌘K</kbd>
+			</button>
 
-				<!-- 创作明珠：发布按钮 -->
-				<button
-					type="button"
-					class="flex h-7 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-xs font-medium text-text-accent-on-soft shadow-raised-sm transition-all duration-rapid hover:bg-accent-default hover:text-text-on-accent hover:shadow-glow-sm active:scale-95 focus-ring"
-					aria-label="发布"
-					title="发布瞬间"
-					onclick={() => {
-						if (auth.status === 'authenticated') {
-							openComposer();
-							return;
-						}
-						requireAuth({ action: '发布瞬间', run: openComposer });
-					}}
-				>
-					<Plus size={14} strokeWidth={2.2} class="shrink-0" />
-					<span class="tracking-wide text-xs">发布</span>
-				</button>
+			<!-- 创作明珠：发布按钮 -->
+			<button
+				type="button"
+				class="flex h-8 items-center gap-1.5 rounded-full bg-accent-soft px-3 text-xs font-medium text-text-accent-on-soft border border-accent-border/40 shadow-raised-sm transition-all duration-rapid hover:bg-accent-default hover:text-text-on-accent hover:shadow-glow-sm active:scale-95 focus-ring"
+				aria-label="发布"
+				title="发布瞬间"
+				onclick={() => {
+					if (auth.status === 'authenticated') {
+						openComposer();
+						return;
+					}
+					requireAuth({ action: '发布瞬间', run: openComposer });
+				}}
+			>
+				<Plus size={14} strokeWidth={2.2} class="shrink-0" />
+				<span class="tracking-wide text-xs">发布</span>
+			</button>
 
-				<div class="mx-0.5 h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
-
+			<!-- 统一悬浮玻璃工具簇 (通知 / 主题 / 设置) -->
+			<div
+				class="flex items-center gap-0.5 rounded-full border border-border-default/30 bg-surface-primary/60 p-0.5 shadow-xs backdrop-blur-2xl transition-[border-color,background-color] duration-standard hover:border-border-default/50 hover:bg-surface-primary/85"
+			>
 				<!-- 通知 -->
 				<ActionIconButton
 					icon={Bell}
@@ -431,7 +428,7 @@
 					type="button"
 					variant="primary"
 					size="sm"
-					class="px-3"
+					class="px-3.5"
 					aria-label="登录"
 					onclick={() => void goto(ROUTES.login)}
 				>

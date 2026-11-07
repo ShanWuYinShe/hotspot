@@ -366,7 +366,7 @@ import {
 					{/if}
 					<h1 bind:this={islandMorphEl} class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
 					{#if subtitle}
-						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-island/70 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-md shadow-raised-sm">
+						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-island/60 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-xl shadow-xs">
 							{#if subtitleIcon}
 								<span class="flex shrink-0 items-center text-text-secondary">{@render subtitleIcon()}</span>
 							{/if}
@@ -444,7 +444,7 @@ import {
 				<h1 bind:this={islandMorphEl} class="text-text-primary font-semibold leading-none {TITLE_SIZE_CLASS[titleSize]}">{title}</h1>
 				{#if subtitle}
 					<div class="mt-1.5">
-						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/40 bg-surface-island/70 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-md shadow-raised-sm {SUBTITLE_SIZE_CLASS[subtitleSize]}">
+						<p class="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-island/60 px-2.5 py-0.5 text-xs text-text-secondary backdrop-blur-xl shadow-xs {SUBTITLE_SIZE_CLASS[subtitleSize]}">
 							{#if subtitleIcon}
 								<span class="flex shrink-0 items-center text-text-secondary">{@render subtitleIcon()}</span>
 							{/if}

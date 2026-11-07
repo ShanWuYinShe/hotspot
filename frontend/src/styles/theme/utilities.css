@@ -846,12 +846,15 @@
     will-change: transform, opacity;
   }
 
-  /* 页面标题进岛淡出：与顶栏灵动岛起飞飞行严格同步 */
+  /* 页面标题进岛微动效：与顶栏灵动岛起飞飞行严格同步，兼具位移形变与优雅渐隐 */
   [data-island-handoff] {
-    transition: opacity var(--cst-motion-snappy) var(--cst-ease-standard);
+    transition: opacity var(--cst-motion-standard) var(--cst-ease-standard),
+                transform var(--cst-motion-standard) var(--cst-ease-standard);
+    will-change: transform, opacity;
   }
   [data-island-handoff="true"] {
     opacity: 0;
+    transform: translate3d(0, -8px, 0) scale(0.96);
     pointer-events: none;
   }
 

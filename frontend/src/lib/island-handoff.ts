@@ -201,10 +201,15 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 		if (source) {
 			const flight = islandFlight(target, source);
-			node.style.setProperty('--flight-dx', `${flight.dx.toFixed(2)}px`);
-			node.style.setProperty('--flight-dy', `${flight.dy.toFixed(2)}px`);
-			node.style.setProperty('--flight-scale-x', String(flight.scaleX.toFixed(4)));
-			node.style.setProperty('--flight-scale-y', String(flight.scaleY.toFixed(4)));
+			// 视觉缩放与位移保护：避免极窄文本让整颗灵动岛在起飞瞬间被压成极扁切片导致内部文字失真拉伸
+			const safeScaleX = Math.max(0.82, Math.min(1.15, flight.scaleX));
+			const safeScaleY = Math.max(0.82, Math.min(1.15, flight.scaleY));
+			const safeDx = Math.max(-140, Math.min(140, flight.dx * 0.4));
+			const safeDy = Math.max(-180, Math.min(60, flight.dy * 0.7));
+			node.style.setProperty('--flight-dx', `${safeDx.toFixed(2)}px`);
+			node.style.setProperty('--flight-dy', `${safeDy.toFixed(2)}px`);
+			node.style.setProperty('--flight-scale-x', String(safeScaleX.toFixed(4)));
+			node.style.setProperty('--flight-scale-y', String(safeScaleY.toFixed(4)));
 		} else {
 			node.style.setProperty('--flight-dx', '0px');
 			node.style.setProperty('--flight-dy', '-4px');
@@ -244,10 +249,15 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 
 		if (source) {
 			const flight = islandFlight(target, source);
-			node.style.setProperty('--flight-dx', `${flight.dx.toFixed(2)}px`);
-			node.style.setProperty('--flight-dy', `${flight.dy.toFixed(2)}px`);
-			node.style.setProperty('--flight-scale-x', String(flight.scaleX.toFixed(4)));
-			node.style.setProperty('--flight-scale-y', String(flight.scaleY.toFixed(4)));
+			// 视觉缩放与位移保护：避免极窄文本让整颗灵动岛在起飞瞬间被压成极扁切片导致内部文字失真拉伸
+			const safeScaleX = Math.max(0.82, Math.min(1.15, flight.scaleX));
+			const safeScaleY = Math.max(0.82, Math.min(1.15, flight.scaleY));
+			const safeDx = Math.max(-140, Math.min(140, flight.dx * 0.4));
+			const safeDy = Math.max(-180, Math.min(60, flight.dy * 0.7));
+			node.style.setProperty('--flight-dx', `${safeDx.toFixed(2)}px`);
+			node.style.setProperty('--flight-dy', `${safeDy.toFixed(2)}px`);
+			node.style.setProperty('--flight-scale-x', String(safeScaleX.toFixed(4)));
+			node.style.setProperty('--flight-scale-y', String(safeScaleY.toFixed(4)));
 		} else {
 			node.style.setProperty('--flight-dx', '0px');
 			node.style.setProperty('--flight-dy', '-4px');
