@@ -137,9 +137,11 @@ type announcementPushService interface {
 	AppendReportDismissed(ctx context.Context, targetUserID string, reportID string, targetType string, targetID string, note string) (string, error)
 }
 
+// NewService 要求显式注入 ModerationStore（bootstrap 装配）：生产不允许回退
+// 内存实现（架构审计 C1「生产代码 fail-fast」），缺失即编程错误。
 func NewService(repo Repository, provider Provider, moderationStore ModerationStore, pushService announcementPushService) *Service {
 	if moderationStore == nil {
-		moderationStore = NewInMemoryModerationStore()
+		panic("admin.NewService: moderationStore is required")
 	}
 	return &Service{repo: repo, provider: provider, moderationStore: moderationStore, pushService: pushService}
 }

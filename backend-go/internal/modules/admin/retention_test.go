@@ -21,7 +21,7 @@ func TestPruneRetentionOnceRemovesExpiredRows(t *testing.T) {
 		"report_resolved_old": {Item: AdminReportItem{ReportID: "report_resolved_old", Status: ReportStatusResolved, HandledAt: &handledOld}},
 		"report_pending_old":  {Item: AdminReportItem{ReportID: "report_pending_old", Status: ReportStatusPending}},
 	}
-	service := NewService(repo, nil, nil, nil)
+	service := NewService(repo, nil, NewInMemoryModerationStore(), nil)
 	service.SetReportAdminStore(testReportAdminStore{store: repo})
 
 	service.pruneRetentionOnce(ctx, 365, 365)
@@ -45,7 +45,7 @@ func TestStartRetentionSweeperDisabledWhenBothRetentionZero(t *testing.T) {
 	retentionSweepStarted = false
 	retentionSweepMu.Unlock()
 
-	service := NewService(NewInMemoryRepository(), nil, nil, nil)
+	service := NewService(NewInMemoryRepository(), nil, NewInMemoryModerationStore(), nil)
 	service.StartRetentionSweeper(context.Background(), 0, 0)
 	if retentionSweepStarted {
 		t.Fatal("sweeper must not start when both retention windows are disabled")
@@ -60,7 +60,7 @@ func TestStartRetentionSweeperIdempotentAndStopsOnCancel(t *testing.T) {
 	retentionSweepInterval = time.Hour
 	t.Cleanup(func() { retentionSweepInterval = oldInterval })
 
-	service := NewService(NewInMemoryRepository(), nil, nil, nil)
+	service := NewService(NewInMemoryRepository(), nil, NewInMemoryModerationStore(), nil)
 	sweepCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	service.StartRetentionSweeper(sweepCtx, 365, 365)

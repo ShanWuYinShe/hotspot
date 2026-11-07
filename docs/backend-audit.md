@@ -3507,3 +3507,20 @@ start..+ 一次拉取 user 流 + 最多 100 个 group 流（每流保留 2000 �
   断线积压 537 条时跨批回放全部事件（顺序/seq 单调）；
 
 验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+## Batch C1（收尾）：admin 生产代码去内存仓储回退（fail-fast）（2026-11-07）
+
+审计 C1「repo_memory 迁 *_test.go，生产要求 DB（fail-fast）」最后一块：admin
+的 `InMemoryModerationStore` 此前仍在生产代码中作为「无 DB/无公告适配器」回退，
+生产包藏 209 行内存实现且语义与 DB 分叉。
+
+- `moderation_store_memory.go` 改名 `_test.go`（生产包不再包含内存实现，仅测试
+  构造使用；生产代码对 InMemoryModerationStore 引用 = 0）；
+- `PersistenceModerationStore` 删除 memory 字段与全部回退：queryable 不可用返回
+  `persistence.ErrNotImplemented`；announcements 未注入时公告方法返回同一错误；
+- `NewService` 缺失 moderationStore 直接 panic（编程错误，bootstrap 必须装配）；
+- 测试更新：模块/handler/retention 显式注入内存 store；新增 fail-fast 单测覆盖
+  标签与 5 个公告方法在缺 DB/适配器时的错误路径；
+- admin 包覆盖率 69.7%→70.0%（门禁阈值 70%）。
+
+验证：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。

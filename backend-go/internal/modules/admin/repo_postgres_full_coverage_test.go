@@ -484,10 +484,10 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 	if _, err := store.SearchTags(ctx, TagSearchFilter{}); err == nil {
 		t.Fatal("search tags tail error must propagate")
 	}
-	// 回退内存路径（queryable 不可用，内存 store 含预置标签）
+	// DB 不可用（未配置 factory）：生产仓储 fail-fast，不再回退内存实现。
 	store = NewPersistenceModerationStore(&persistence.Factory{}, nil, nil)
-	if page, err := store.SearchTags(ctx, TagSearchFilter{Limit: 5}); err != nil {
-		t.Fatalf("search tags fallback: %#v err=%v", page, err)
+	if _, err := store.SearchTags(ctx, TagSearchFilter{Limit: 5}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("search tags without db must fail fast, got %v", err)
 	}
 
 	// SetTagBan 分支：无引用 → not found；已屏蔽 → 幂等；硬删 + 屏蔽；解屏蔽
@@ -524,8 +524,8 @@ func TestAdminModerationStorePersistence(t *testing.T) {
 		t.Fatal("ban tag query error must propagate")
 	}
 
-	// 公告方法走 system adapter（NewPersistenceModerationStore 第二个参数 nil 时自动创建）
-	store = NewPersistenceModerationStore(store.factory, nil, nil)
+	// 公告方法走注入的 system adapter（测试用内存实现模拟 system 模块）
+	store = NewPersistenceModerationStore(store.factory, NewInMemoryModerationStore(), nil)
 	ann, err := store.CreateAnnouncement(ctx, systemmodule.AnnouncementCreateInput{Title: "公告", Content: "内容"})
 	if err != nil || ann.AnnouncementID == "" {
 		t.Fatalf("create announcement: %#v err=%v", ann, err)
@@ -623,3 +623,34 @@ func TestAdminStoreCursorHelpers(t *testing.T) {
 
 // 避免 import 未使用：strings 由 cursor helper 校验外的工具路径引用。
 var _ = strings.TrimSpace
+
+// TestPersistenceModerationStoreFailsFast：未配置 DB / system 公告适配器时，
+// 生产仓储对标签与公告方法均返回 ErrNotImplemented（不再回退内存实现）。
+func TestPersistenceModerationStoreFailsFast(t *testing.T) {
+	ctx := context.Background()
+	store := NewPersistenceModerationStore(&persistence.Factory{}, nil, nil)
+	if _, err := store.SearchTags(ctx, TagSearchFilter{Limit: 5}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("SearchTags must fail fast, got %v", err)
+	}
+	if _, _, err := store.GetTagDeleteState(ctx, "tag1"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("GetTagDeleteState must fail fast, got %v", err)
+	}
+	if err := store.SetTagBan(ctx, "tag1", true, false); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("SetTagBan must fail fast, got %v", err)
+	}
+	if _, err := store.SearchAnnouncements(ctx, systemmodule.AnnouncementSearchFilter{}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("SearchAnnouncements must fail fast, got %v", err)
+	}
+	if _, _, err := store.GetAnnouncement(ctx, "ann1"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("GetAnnouncement must fail fast, got %v", err)
+	}
+	if _, err := store.CreateAnnouncement(ctx, systemmodule.AnnouncementCreateInput{Title: "t", Content: "c"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("CreateAnnouncement must fail fast, got %v", err)
+	}
+	if _, err := store.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{AnnouncementID: "ann1"}); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("UpdateAnnouncement must fail fast, got %v", err)
+	}
+	if err := store.DeleteAnnouncement(ctx, "ann1"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("DeleteAnnouncement must fail fast, got %v", err)
+	}
+}

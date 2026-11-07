@@ -166,7 +166,7 @@ func (m testMessageModerator) RecallMessageByIDAsAdmin(_ context.Context, _, mes
 func newTestModuleWithStore() (*Module, *InMemoryRepository) {
 	store := NewInMemoryRepository()
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
-	module := NewModuleWithDeps(store, provider, nil, nil)
+	module := NewModuleWithDeps(store, provider, NewInMemoryModerationStore(), nil)
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetReportAdminStore(testReportAdminStore{store: store})
@@ -182,7 +182,7 @@ func newTestModuleWithPushStore() (*Module, *InMemoryRepository, *notifytest.Rep
 	provider := NewAppConfigProvider(appconfig.NewStaticSource(config.Load()))
 	notificationRepo := notifytest.New()
 	pushService := notify.NewServiceWithRepo(notificationRepo)
-	module := NewModuleWithDeps(store, provider, nil, pushService)
+	module := NewModuleWithDeps(store, provider, NewInMemoryModerationStore(), pushService)
 	module.Service.SetMomentModerator(testMomentModerator{store: store})
 	module.Service.SetCommentModerator(testCommentModerator{store: store})
 	module.Service.SetMessageModerators(testMessageModerator{store: store}, testMessageModerator{store: store})

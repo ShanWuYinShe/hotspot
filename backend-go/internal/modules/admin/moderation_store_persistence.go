@@ -15,18 +15,16 @@ type PersistenceModerationStore struct {
 	// announcements 由 system 模块实现（只暴露公告管理最小接口）：公告数据
 	// 归 system 所有，admin 不再自建 system.Repository 副本。
 	announcements systemmodule.AnnouncementAdminStore
-	memory        *InMemoryModerationStore
 }
 
+// NewPersistenceModerationStore 生产仓储：标签/公告全部经 DB 与 system 模块
+// 注入的公告适配器读写。bootstrap 必须注入 announcements；缺失时公告方法返回
+// ErrNotImplemented（不再回退内存实现——生产 fail-fast，内存 store 仅测试使用）。
 func NewPersistenceModerationStore(factory *persistence.Factory, announcements systemmodule.AnnouncementAdminStore, momentTags momentTagStore) *PersistenceModerationStore {
-	if announcements == nil {
-		announcements = NewInMemoryModerationStore()
-	}
 	return &PersistenceModerationStore{
 		factory:       factory,
 		announcements: announcements,
 		momentTags:    momentTags,
-		memory:        NewInMemoryModerationStore(),
 	}
 }
 
@@ -37,7 +35,7 @@ func (s *PersistenceModerationStore) queryable(ctx context.Context) (persistence
 func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagSearchFilter) (TagPage, error) {
 	queryable, ok := s.queryable(ctx)
 	if !ok {
-		return s.memory.SearchTags(ctx, filter)
+		return TagPage{}, persistence.ErrNotImplemented
 	}
 	limit := normalizeCursorLimit(filter.Limit)
 	cursorUsageCount := any(nil)
@@ -77,7 +75,7 @@ func (s *PersistenceModerationStore) SearchTags(ctx context.Context, filter TagS
 func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name string) (bool, bool, error) {
 	queryable, ok := s.queryable(ctx)
 	if !ok {
-		return s.memory.GetTagDeleteState(ctx, name)
+		return false, false, persistence.ErrNotImplemented
 	}
 	tagName := normalizeTagName(name)
 	var isBlocked bool
@@ -99,7 +97,7 @@ func (s *PersistenceModerationStore) GetTagDeleteState(ctx context.Context, name
 // 解屏蔽后同名标签恢复可创建/命中）。
 func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string, active bool, hardDelete bool) error {
 	if _, ok := s.queryable(ctx); !ok {
-		return s.memory.SetTagBan(ctx, name, active, hardDelete)
+		return persistence.ErrNotImplemented
 	}
 	tagName := normalizeTagName(name)
 	if !active {
@@ -137,22 +135,37 @@ func (s *PersistenceModerationStore) SetTagBan(ctx context.Context, name string,
 }
 
 func (s *PersistenceModerationStore) SearchAnnouncements(ctx context.Context, filter systemmodule.AnnouncementSearchFilter) (systemmodule.AnnouncementPage, error) {
+	if s.announcements == nil {
+		return systemmodule.AnnouncementPage{}, persistence.ErrNotImplemented
+	}
 	return s.announcements.SearchAnnouncements(ctx, filter)
 }
 
 func (s *PersistenceModerationStore) GetAnnouncement(ctx context.Context, announcementID string) (systemmodule.AnnouncementRecord, bool, error) {
+	if s.announcements == nil {
+		return systemmodule.AnnouncementRecord{}, false, persistence.ErrNotImplemented
+	}
 	return s.announcements.GetAnnouncement(ctx, announcementID)
 }
 
 func (s *PersistenceModerationStore) CreateAnnouncement(ctx context.Context, input systemmodule.AnnouncementCreateInput) (systemmodule.AnnouncementRecord, error) {
+	if s.announcements == nil {
+		return systemmodule.AnnouncementRecord{}, persistence.ErrNotImplemented
+	}
 	return s.announcements.CreateAnnouncement(ctx, input)
 }
 
 func (s *PersistenceModerationStore) UpdateAnnouncement(ctx context.Context, input systemmodule.AnnouncementUpdateInput) (systemmodule.AnnouncementRecord, error) {
+	if s.announcements == nil {
+		return systemmodule.AnnouncementRecord{}, persistence.ErrNotImplemented
+	}
 	return s.announcements.UpdateAnnouncement(ctx, input)
 }
 
 func (s *PersistenceModerationStore) DeleteAnnouncement(ctx context.Context, announcementID string) error {
+	if s.announcements == nil {
+		return persistence.ErrNotImplemented
+	}
 	return s.announcements.DeleteAnnouncement(ctx, announcementID)
 }
 
