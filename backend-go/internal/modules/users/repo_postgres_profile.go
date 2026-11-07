@@ -146,6 +146,14 @@ func (r *PostgresRepository) SearchProfiles(ctx context.Context, req SearchUsers
 	// radius 语义（spec user.md → users/search）：显式提供才按半径过滤；缺省不过滤（全球匹配）
 	radiusFilter := req.Radius != nil && *req.Radius > 0
 	radius := normalizeSearchRadius(req.Radius)
+	// 密集关键词候选策略（审计 S5）：无半径 + 有关键词 + relevance/newest 时，
+	// 排序与 keyset 分页下推 SQL，不再先取 500 个 created_at 候选再在 Go 侧重排——
+	// 后者在关键词命中上万用户时结果只覆盖「最新 500」，深分页直接断路。
+	// distance 排序需要 Go 侧精确距离（S2 覆盖仅是包围盒），radius 需要精确圆过滤，
+	// 两者保留原候选路径（地理范围天然有界）。
+	if keyword := strings.ToLower(strings.TrimSpace(req.Keyword)); keyword != "" && !radiusFilter && normalizeSearchSort(req.SortBy) != "distance" {
+		return r.searchProfilesRanked(ctx, queryable, req, keyword)
+	}
 	refPt := geo.Point{Latitude: req.ReferencePoint.Latitude, Longitude: req.ReferencePoint.Longitude}
 	var bounds geo.Bounds
 	if radiusFilter {

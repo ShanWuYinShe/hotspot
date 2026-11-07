@@ -142,10 +142,12 @@ type searchCursor struct {
 	Distance   int    `json:"distance,omitempty"`
 	CreatedAt  string `json:"created_at,omitempty"`
 	LastOnline string `json:"last_online,omitempty"`
+	// RelevanceScore 仅 relevance 排序的 SQL keyset 分页使用（旧候选路径不依赖）。
+	RelevanceScore int `json:"relevance_score,omitempty"`
 }
 
 func searchCursorForItem(item searchProfileCandidate) searchCursor {
-	return searchCursor{SortBy: item.SortBy, UserID: item.Profile.UserID, Distance: item.Distance, CreatedAt: item.Profile.CreatedAt, LastOnline: item.Profile.LastOnline}
+	return searchCursor{SortBy: item.SortBy, UserID: item.Profile.UserID, Distance: item.Distance, CreatedAt: item.Profile.CreatedAt, LastOnline: item.Profile.LastOnline, RelevanceScore: item.RelevanceScore}
 }
 
 func encodeSearchCursor(item searchProfileCandidate) string {

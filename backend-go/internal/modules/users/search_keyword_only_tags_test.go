@@ -9,14 +9,14 @@ import (
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
-// TestSearchProfilesKeywordOnlyLoadsTagsForPage 覆盖 keyword-only 搜索路径：
-// 主查询不带标签列（避免 500 候选逐行 array_agg），分页后按页面 ID 批量补标签。
+// TestSearchProfilesKeywordOnlyLoadsTagsForPage 覆盖密集关键词 ranked 路径：
+// SQL 直接按 relevance/keyset 返回页（不再有 500 候选上限），主查询按页内
+// 用户内联标签数组（页大小受 MaxPageSize 约束，array_agg 成本可忽略）。
 func TestSearchProfilesKeywordOnlyLoadsTagsForPage(t *testing.T) {
 	backend := &userBackendStub{
 		queryRowByQuery: map[string]persistence.Row{},
 		queryRowsByQuery: map[string][][]any{
-			"FROM users u":           {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Now().UTC(), time.Now().UTC(), false, true, true, true}},
-			"FROM user_profile_tags": {{"user_alice", "美食"}, {"user_alice", "摄影"}},
+			"FROM users u": {{"user_alice", "Alice", "", "normal", "bio", "", "", "", "南天门", 35.0, 112.0, "online", time.Now().UTC(), time.Now().UTC(), false, []string{"美食", "摄影"}, true, true, true}},
 		},
 		queryErrs: map[string]error{},
 		execErrs:  map[string]error{},
@@ -33,7 +33,7 @@ func TestSearchProfilesKeywordOnlyLoadsTagsForPage(t *testing.T) {
 		t.Fatalf("items = %d, want 1", len(page.Items))
 	}
 	if len(page.Items[0].Tags) != 2 {
-		t.Fatalf("page tags = %v, want 2 (loaded after pagination)", page.Items[0].Tags)
+		t.Fatalf("page tags = %v, want 2 inline", page.Items[0].Tags)
 	}
 	if page.Settings == nil || !page.Settings["user_alice"].PresenceVisible {
 		t.Fatalf("inline settings = %#v, want presence visible", page.Settings)

@@ -3698,3 +3698,37 @@ Hub 分片合并后门禁与性能（2026-11-07）：
   (p99 4.44ms)、notify/fetch 7817 rps (p99 3.90ms)、users/search 1657 rps
   (p99 36.99ms)、moments/fetch_nearby 960 rps (p99 53.56ms) 等。
 - 验证后 backend-test 已停止；main backend 保持 latest + healthy。
+
+## Batch 搜索 S5：users/search 密集关键词候选策略（2026-11-07）
+
+### 旧策略问题
+原实现 SQL 固定 `ORDER BY created_at DESC LIMIT 500` 取候选，再在 Go 侧做
+relevance/距离排序与游标分页：
+- 关键词命中 >500 用户时，结果只覆盖「最新 500」，relevance 排序在截断集内做，
+  真正的精确/前缀命中可能被排除；
+- 深分页超过 500 候选后直接断路（cursor 无法定位下一页），且客户端无法感知。
+
+### 新策略（无半径 + 有关键词 + relevance/newest）
+- 排序、relevance 评分、keyset 分页全部下推 SQL，**不再有 500 候选上限**；
+- 内层只排 `(user_id, last_online/created_at, score)` 小行（避免 10 万命中时
+  排序宽度过大），外层仅 JOIN 页内 ≤MaxPageSize 行的完整画像/标签；
+- SQL 评分与 Go `searchRelevanceScore` 严格同分（昵称精确 6/前缀 4/包含 3、
+  bio 包含 2、tag 过滤 3），游标新增 `relevance_score` 并校验 sort_by 绑定，
+  跨排序复用游标返回 invalid_cursor；
+- 时间 tie-breaker 统一 `date_trunc('second', …)`：与响应里的 RFC3339 秒级
+  时间字符串一致，避免微秒精度造成翻页跳行/重复；
+- distance 排序（需 Go 精确圆距离）与 radius 过滤（S2 覆盖仅是包围盒）保留原
+  有界候选路径——地理范围天然有界，不在本轮范围。
+
+### 验证
+- 真实库 IT：650 个前缀命中 + exact/prefix/contains/bio 共 654 行，relevance
+  与 newest 各翻 ≥6 页，跨页无重复、无遗漏；exact→prefix→contains→bio 全序；
+  relevance 游标请求 newest 返回 invalid_cursor；tags 按页内联；
+- 单测：既有搜索/分页/仓库桩全绿（ranked 路径主查询内联标签，页大小有上界）。
+
+### 性能取舍（hotspot_it 合成 100k 全命中）
+- 新全量 ranked 页（LIMIT 21）：**104ms**（BitmapOr 扫 10 万行 + external sort）；
+- 旧 500 候选页：45.7ms，但结果只含最新 500、深分页断路（错误结果换来的快）；
+- 结论：真实低/中密度关键词走 PGroonga 索引后是毫秒级；**10 万级全命中**属于
+  搜索语义的最坏情况，需独立搜索服务/前缀限制才可能再降一个量级。本机
+  perf-budget 的种子数据密度远低于此，合并后实测见下节。
