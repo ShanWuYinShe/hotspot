@@ -335,18 +335,27 @@ for repo in hotspot-backend hotspot-frontend; do
 done
 
 # 镜像 ID 清单核对（Release 资产 .ids.txt；旧版本无该资产时告警放行）：
-# docker load 后镜像 Id 由清单锁定，进一步约束「发布包内容与 CI 构建产物一致」。
+# 每行格式 <ref> <config_digest> [<manifest_digest>]（新版双列，旧版单列兼容）。
+# docker inspect .Id 的语义取决于镜像存储后端：经典 graph driver 为 config digest，
+# containerd 存储（Docker 29+）docker load 后为 OCI manifest digest；任一匹配即通过，
+# 仍能约束「发布包内容与 CI 构建产物一致」。
 IDS_FILE="$STAGING/hotspot-images-$TARGET.ids.txt"
 if [ -f "$IDS_FILE" ]; then
   echo "==> 核对已加载镜像 ID（发布包清单）…"
-  while read -r ref expected_id; do
+  while read -r ref expected_config expected_manifest; do
     [ -n "$ref" ] || continue
     loaded_id="$(ssh "$SERVER" "docker inspect $ref --format '{{.Id}}'" 2>/dev/null || true)"
-    [ "$loaded_id" = "$expected_id" ] || {
-      echo "!! ${ref} 加载后 Id=${loaded_id:-<空>}，与发布清单 ${expected_id} 不符（资产被替换/损坏），中止部署"
+    matched=""
+    if [ -n "$loaded_id" ] && [ "$loaded_id" = "$expected_config" ]; then
+      matched="config-digest"
+    elif [ -n "$loaded_id" ] && [ -n "$expected_manifest" ] && [ "$expected_manifest" != "-" ] && [ "$loaded_id" = "$expected_manifest" ]; then
+      matched="manifest-digest"
+    fi
+    [ -n "$matched" ] || {
+      echo "!! ${ref} 加载后 Id=${loaded_id:-<空>}，与发布清单（config=${expected_config} manifest=${expected_manifest:--}）均不符（资产被替换/损坏），中止部署"
       exit 1
     }
-    echo "    ${ref} id=${loaded_id:0:19}…"
+    echo "    ${ref} id=${loaded_id:0:19}…（${matched}）"
   done < "$IDS_FILE"
 else
   echo "!! 注意：Release ${TARGET} 未提供 .ids.txt（多为旧版本发布包），跳过镜像 ID 核对"

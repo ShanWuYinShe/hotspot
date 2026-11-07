@@ -61,7 +61,7 @@ gh run watch <run-id> --exit-status
 部署脚本内部按序执行：
 
 - **加锁**：服务器 `~/hotspot/.deploy.lock` 原子 mkdir，占锁失败即中止（TTL 6h 后可接管陈旧锁）；
-- **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；加载后若存在 `.ids.txt`（镜像 Id 清单）则逐一核对 `docker inspect .Id`，锁定「发布包内容 == CI 构建产物」；
+- **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；加载后若存在 `.ids.txt`（镜像身份清单）则逐一核对 `docker inspect .Id`，锁定「发布包内容 == CI 构建产物」。清单同时记录 config digest 与 OCI manifest digest：`docker inspect .Id` 的语义取决于镜像存储后端（经典 graph driver 为 config digest，containerd 存储如 Docker 29 为 manifest digest），任一匹配即通过；
 - **配置同源**：compose / nginx 片段从**被部署的 tag** 用 `git archive` 导出，不取工作树内容（否则本地 HEAD 领先 tag 时会把未发布的配置带上线）；
 - **核对镜像指纹**：`version` 必须等于 tag、`revision` 必须等于该 tag 的 commit；
 - **数据库快照**：`pg_dump -Fc` 到服务器 `backups/` + 本机 `.workwork/`，失败即中止；
@@ -182,6 +182,7 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 | tag 推了但 CI 没触发 | Release 页没有新版本 | 每个 tag 单独推送并逐个确认（批量推超过 3 个 tag 时 GitHub 不产生 push 事件）；漏触发时删本地与远程 tag 后重推 |
 | Release 工作流失败 | Actions 红 | 修问题 → 升 patch 版本重新打 tag；**不要**移动已推送的 tag |
 | Release 已创建但资产不全 / auto-deploy 被跳过 | Release 页缺 `.ids.txt` 或镜像包；部署历史无该版本 | 镜像 Id 清单可按服务器已加载镜像 `docker inspect` 重建后 `gh release upload` 补齐；镜像包完整时用 `./scripts/deploy-production.sh <tag>` 手动兜底（同一条部署链路），镜像包缺失则升 patch 版本重发 |
+| 部署报「加载后 Id 与发布清单不符」 | 加载后 `docker inspect .Id` 与 `.ids.txt` 不一致，但 tar sha256 与 OCI 标签均正确 | 多为镜像存储后端语义差异：CI 写 config digest、Docker 29 containerd 写 OCI manifest digest。用镜像包 `index.json` 的 manifest digest 重建 `.ids.txt` 后 `gh release upload --clobber` 重传，再重跑 auto-deploy；**auto-deploy 用 tag 内旧脚本时只能写单列 manifest digest**（旧脚本把续行当整串比较），新版脚本兼容双列 |
 | 部署提示 tag 不在 main 上 | 前置校验失败 | 该 tag 打在未合并提交上；合并进 main 后重打版本 |
 | 部署提示锁被占用 | `另一个部署正在进行` | 确认无并发部署后 `ssh <server> 'rm -rf ~/hotspot/.deploy.lock'`；陈旧锁（>6h）脚本会自行接管 |
 | 部署卡在版本校验 | 三级校验之一不通过 | 脚本已自动回滚 + 告警；查 `docker logs <backend>`、`docker exec <nginx> wget -qO- http://127.0.0.1/version.json` |
@@ -212,7 +213,7 @@ backend 副本 + nginx upstream 切换 + 迁移兼容窗口评估，收益主要
 零停机 SLA、或单实例发布窗口成为用户可感知事件时再实施（届时迁移必须保持
 向前兼容，独立 migrate job 可直接复用）。
 
-**供应链签名（部分实施）**：当前已具备 tar sha256、镜像 Id 清单（.ids.txt）、
+**供应链签名（部分实施）**：当前已具备 tar sha256、镜像身份清单（.ids.txt，config + OCI manifest 双摘要）、
 OCI version/revision/created 标签与 GH Release 资产来源；下一步 cosign keyless
 签名（GitHub OIDC）需要额外证书透明与验签步骤（部署端安装 cosign 并在加载前
 验签），收益是把「资产来源可信」从 GitHub 账户安全提升到签名身份级别。待

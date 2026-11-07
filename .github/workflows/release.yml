@@ -135,12 +135,35 @@ jobs:
           # 校验和随包发布：部署端下载后强制校验（sha256sum 的两空格输出格式对
           # shasum -a 256 -c 与 sha256sum -c 都兼容），挡住传输损坏与资产替换。
           sha256sum "hotspot-images-${GIT_VERSION}.tar.gz" > "hotspot-images-${GIT_VERSION}.tar.gz.sha256"
-          # docker load 后镜像 Id（config digest）清单：部署脚本加载后据此核对
-          # 「发布包内容 == CI 构建产物」，与 tar sha256 一起形成内容级约束。
-          {
-            printf "%s %s\n" "$IMAGE_BACKEND:${GIT_VERSION}" "$(docker inspect "$IMAGE_BACKEND:${GIT_VERSION}" --format '{{.Id}}')"
-            printf "%s %s\n" "$IMAGE_FRONTEND:${GIT_VERSION}" "$(docker inspect "$IMAGE_FRONTEND:${GIT_VERSION}" --format '{{.Id}}')"
-          } > "hotspot-images-${GIT_VERSION}.ids.txt"
+          # 镜像身份清单：同时记录 config digest 与（归档为 OCI 格式时的）manifest digest。
+          # 原因：docker inspect .Id 的语义取决于镜像存储后端——经典 graph driver 返回
+          # config digest，containerd 存储（GitHub runner 与生产 Docker 29 都是）在
+          # docker load 后返回 OCI manifest digest。只写一种会导致跨环境校验必然失败
+          # （v1.7.1 实测：CI 写 f963…、服务器加载后是 fef6…）。部署脚本对一行内任一
+          # 摘要匹配即通过；老版本单列格式仍然兼容。
+          python3 - > "hotspot-images-${GIT_VERSION}.ids.txt" <<'PY'
+          import json, os, subprocess, tarfile
+
+          version = os.environ["GIT_VERSION"]
+          archive = "hotspot-images-" + version + ".tar.gz"
+          refs = ["hotspot-backend:" + version, "hotspot-frontend:" + version]
+          manifest_by_ref = {}
+          with tarfile.open(archive, "r:gz") as tar:
+              names = tar.getnames()
+              if "index.json" in names:
+                  index = json.load(tar.extractfile("index.json"))
+                  for manifest in index.get("manifests", []):
+                      annotation = (manifest.get("annotations") or {}).get("io.containerd.image.name", "")
+                      digest = manifest.get("digest", "")
+                      if annotation and digest:
+                          manifest_by_ref[annotation.removeprefix("docker.io/library/")] = digest
+          for ref in refs:
+              config_id = subprocess.run(
+                  ["docker", "inspect", ref, "--format", "{{.Id}}"],
+                  capture_output=True, text=True, check=True,
+              ).stdout.strip()
+              print(ref, config_id, manifest_by_ref.get(ref, "-"))
+          PY
           ls -lh "hotspot-images-${GIT_VERSION}.tar.gz"*
 
       - name: Create GitHub Release and attach images
