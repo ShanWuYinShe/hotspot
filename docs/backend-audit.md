@@ -3613,3 +3613,9 @@ outbox 运行时验证（main 环境，2026-11-07）：
 - 同一公告对「公告创建前已注册」的访客可见：notify/fetch 返回
   `sysann_<announcement_id>` 虚拟行，证明 outbox 事务生产 + 读取合并链路。
 - 验证公告与 outbox 行已清理；outbox 无积压。
+
+outbox 合并后性能门禁（backend-test / hotspot_test，c=10，warmup=2s，5s）：
+- 8 个读端点全部 code=0；PERF BUDGET OK。
+- 关键端点：notify/fetch 8713 rps / p99 3.21ms；users/search 1402 rps / p99 48.38ms；
+  moments/fetch_nearby 874 rps / p99 61.36ms（均在 baseline 的 60% rps 下限与
+  2.5x p99 上限内）。outbox 不在读热路径，公告广播为低频写。
