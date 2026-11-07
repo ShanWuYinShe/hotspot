@@ -63,6 +63,7 @@ gh run watch <run-id> --exit-status
 - **加锁**：服务器 `~/hotspot/.deploy.lock` 原子 mkdir，占锁失败即中止（TTL 6h 后可接管陈旧锁）；
 - **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；加载后若存在 `.ids.txt`（镜像身份清单）则逐一核对 `docker inspect .Id`，锁定「发布包内容 == CI 构建产物」。清单同时记录 config digest 与 OCI manifest digest：`docker inspect .Id` 的语义取决于镜像存储后端（经典 graph driver 为 config digest，containerd 存储如 Docker 29 为 manifest digest），任一匹配即通过；
 - **配置同源**：compose / nginx 片段从**被部署的 tag** 用 `git archive` 导出，不取工作树内容（否则本地 HEAD 领先 tag 时会把未发布的配置带上线）；
+- **配置生效校验**：nginx 配置是 file bind-mount（容器创建时锁定 inode），同步必须**原位写入**（`cat >`）——`rm+mv` 换掉宿主 inode 后，运行中的容器仍读旧文件，`nginx -s reload` 会静默不生效（2026-11-07 实测线上 nginx 配置自 11/04 起与仓库漂移）。同步后在动镜像前逐文件比对「容器内配置 sha256 == tag 内配置」，不一致立即中止并提示重建 nginx 容器；
 - **核对镜像指纹**：`version` 必须等于 tag、`revision` 必须等于该 tag 的 commit；
 - **数据库快照**：`pg_dump -Fc` 到服务器 `backups/` + 本机 `.workwork/`，失败即中止；
 - **独立迁移 job**：滚动更新前先在服务器跑一次性容器
@@ -187,6 +188,7 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 | 部署提示锁被占用 | `另一个部署正在进行` | 确认无并发部署后 `ssh <server> 'rm -rf ~/hotspot/.deploy.lock'`；陈旧锁（>6h）脚本会自行接管 |
 | 部署卡在版本校验 | 三级校验之一不通过 | 脚本已自动回滚 + 告警；查 `docker logs <backend>`、`docker exec <nginx> wget -qO- http://127.0.0.1/version.json` |
 | 部署后版本对但页面异常 | 边缘/缓存问题 | 查 nginx 日志与 Cloudflare 缓存；`curl /version.json` 核对边缘实际产物 |
+| 部署成功但网关行为/样式仍旧（配置未生效） | `docker exec <nginx> sha256sum /etc/nginx/conf.d/default.conf` 与 tag 内文件不一致；nginx 容器启动时间早于本次部署 | file bind-mount inode 漂移（旧脚本用 `rm+mv` 换掉了宿主 inode）。先 `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx` 重建容器（数秒中断），再重跑部署；新版脚本已原位写入并在动镜像前 fail-fast |
 | 需回滚但上一版本镜像已回收 | `docker inspect` 找不到镜像 | 用 `rollback-production.sh`（会重新下载并 load），或临时调大 `DEPLOY_KEEP_IMAGES` |
 
 ---

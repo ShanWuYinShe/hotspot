@@ -296,14 +296,20 @@ ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
 # shellcheck disable=SC2086  # 同上
 scp -q -r $SCP_LIST "$SERVER:$REMOTE_DIR/tmp-deploy-incoming/"
 
+# nginx 配置是 file bind-mount：docker 在容器创建时锁定 inode，rm+mv 替换宿主文件后
+# 运行中的容器仍指向旧 inode，nginx -s reload 读到的还是旧配置（2026-11-07 实测：
+# 线上 nginx 配置自 11/04 起未生效，边缘限流行为与仓库配置静默漂移）。因此这些
+# 文件必须原位写入（cat > 保留 inode）；目录挂载（grafana-provisioning）同理不能
+# 整目录替换。
+
 REMOTE_MOVE="cd $REMOTE_DIR && mkdir -p docker && mv tmp-deploy-incoming/docker-compose.yml tmp-deploy-incoming/docker-compose.prod.yml ."
 for f in nginx.headers.inc nginx.csp.inc nginx.proxy.inc nginx.prod-tls.conf prod-server.inc prometheus.yml prometheus-alerts.yml; do
   if [ -f "$CONFIG_STAGING/docker/$f" ]; then
-    REMOTE_MOVE="$REMOTE_MOVE && rm -rf docker/$f && mv tmp-deploy-incoming/$f docker/$f"
+    REMOTE_MOVE="$REMOTE_MOVE && cat tmp-deploy-incoming/$f > docker/$f"
   fi
 done
 if [ -d "$CONFIG_STAGING/docker/grafana-provisioning" ]; then
-  REMOTE_MOVE="$REMOTE_MOVE && rm -rf docker/grafana-provisioning && mv tmp-deploy-incoming/grafana-provisioning docker/grafana-provisioning"
+  REMOTE_MOVE="$REMOTE_MOVE && mkdir -p docker/grafana-provisioning && cp -R tmp-deploy-incoming/grafana-provisioning/. docker/grafana-provisioning/"
 fi
 for f in health-check.sh backup-postgres.sh backup-seaweedfs.sh; do
   if [ -f "$CONFIG_STAGING/scripts/$f" ]; then
@@ -312,9 +318,43 @@ for f in health-check.sh backup-postgres.sh backup-seaweedfs.sh; do
 done
 REMOTE_MOVE="$REMOTE_MOVE && rmdir tmp-deploy-incoming"
 ssh "$SERVER" "$REMOTE_MOVE"
+
+# 同步结果校验（在动线上镜像之前 fail-fast）：file bind-mount 的容器只能看到创建时
+# 锁定的 inode；上面的原位写入是前提，这里再逐文件比对「容器内可见内容 == 发布配置」，
+# 拦住任何形式的漂移（挂载错位、inode 被替换、同步失败），避免「部署成功但网关仍旧」。
+echo "==> 校验容器内 nginx 配置与发布配置一致…"
+sha256_of() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    shasum -a 256 "$1" | awk '{print $1}'
+  fi
+}
+verify_mounted_config() {
+  local container_path="$1" staged="$2" expected actual
+  if [ ! -f "$CONFIG_STAGING/docker/$staged" ]; then
+    echo "    跳过 $container_path（tag 中无 docker/$staged）"
+    return 0
+  fi
+  expected="$(sha256_of "$CONFIG_STAGING/docker/$staged")"
+  actual="$(ssh "$SERVER" "docker exec $NGINX_CONTAINER sha256sum $container_path" 2>/dev/null | awk '{print $1}')"
+  if [ "$actual" = "$expected" ]; then
+    echo "    ${container_path} sha256=${expected:0:12}…"
+  else
+    echo "!! ${container_path} 与发布配置 docker/$staged 不一致（期望 ${expected:0:12}…，容器实际 ${actual:0:12}…）"
+    echo "!! 多为 file bind-mount inode 漂移：请重建 nginx 容器后重新部署："
+    echo "!!   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --no-deps --force-recreate nginx"
+    exit 1
+  fi
+}
+verify_mounted_config /etc/nginx/conf.d/default.conf nginx.prod-tls.conf
+verify_mounted_config /etc/nginx/conf.d/server.inc prod-server.inc
+verify_mounted_config /etc/nginx/conf.d/headers.inc nginx.headers.inc
+verify_mounted_config /etc/nginx/conf.d/csp.inc nginx.csp.inc
+verify_mounted_config /etc/nginx/conf.d/proxy.inc nginx.proxy.inc
 # observability 分发说明：prometheus.yml 与 grafana-provisioning/ 是 --profile
 # observability 的 bind-mount 源，缺失会导致 up 时 prometheus/grafana 起不来，
-# 故随部署配置一并分发（grafana-provisioning 整目录替换，服务器侧无本地定制）。
+# 故随部署配置一并分发（目录挂载同样不能整目录替换，按原位覆盖同步；服务器侧无本地定制）。
 
 echo "==> 上传镜像包并 docker load（${TARGET}）…"
 ssh "$SERVER" "mkdir -p $REMOTE_DIR/tmp-deploy-incoming"
