@@ -94,7 +94,7 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 
 以种子账号真实登录（默认 `qa@hotspot.local`，seed 未注入时降级访客/未登录）自动巡检：横向溢出 / 坏图 / h1 数量 / TabBar 数量 / 控制台错误，
 逐页截图并生成报告。输出统一在仓库根 `.workwork/browser-check/qa-<时间戳>/`
-（已 gitignore，不提交）。
+（已 gitignore，不提交）。页面打开/评估失败时脚本以非零退出（报告仍会落盘），可直接作为发布前门禁。
 
 沙盒/受限环境两个坑：
 1. 脚本按 `command -v agent-browser` 找二进制，沙盒内可能解析到绕过 wrapper 的裸

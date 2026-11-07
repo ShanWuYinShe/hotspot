@@ -47,6 +47,8 @@ require_backend
 OUT="${QA_OUT_DIR:-$REPO_ROOT/.workwork/browser-check}/qa-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT/screenshots"
 REPORT="$OUT/report.txt"
+# 页面打开/评估失败计数：任何页面失败最终都会让脚本非零退出，避免「全挂仍绿」。
+FAILED_PAGES=0
 echo "HotSpot 浏览器巡检 $(date '+%Y-%m-%d %H:%M:%S')" | tee "$REPORT"
 echo "BASE=$BASE SESSION=$SESSION MOBILE=$MOBILE" | tee -a "$REPORT"
 
@@ -71,10 +73,21 @@ run_pages() {
 	local idx=0
 	for path in "$@"; do
 		idx=$((idx + 1))
-		ab open "$BASE$path" >/dev/null 2>&1 || { echo "OPEN FAIL $path" | tee -a "$REPORT"; continue; }
+		if ! ab open "$BASE$path" >/dev/null 2>&1; then
+			echo "OPEN FAIL $path" | tee -a "$REPORT"
+			FAILED_PAGES=$((FAILED_PAGES + 1))
+			continue
+		fi
 		ab wait --load networkidle >/dev/null 2>&1
 		echo "=== $label $path ===" | tee -a "$REPORT"
-		ab eval "$audit_js" 2>&1 | tee -a "$REPORT"
+		local eval_out
+		if eval_out="$(ab eval "$audit_js" 2>&1)"; then
+			printf '%s\n' "$eval_out" | tee -a "$REPORT"
+		else
+			printf '%s\n' "$eval_out" | tee -a "$REPORT"
+			echo "EVAL FAIL $path" | tee -a "$REPORT"
+			FAILED_PAGES=$((FAILED_PAGES + 1))
+		fi
 		ab screenshot "$OUT/screenshots/$(printf '%02d' "$idx")-${label}-${path//\//_}.png" 2>&1 | tail -1
 	done
 }
@@ -103,5 +116,10 @@ fi
 echo "=== console errors ===" | tee -a "$REPORT"
 ab errors 2>&1 | tee -a "$REPORT" || true
 ab close >/dev/null 2>&1
+
+if [ "$FAILED_PAGES" -gt 0 ]; then
+	echo "✗ 巡检失败：$FAILED_PAGES 个页面打开/评估失败（详见 $REPORT）" | tee -a "$REPORT"
+	exit 1
+fi
 
 echo "完成：$OUT" | tee -a "$REPORT"
