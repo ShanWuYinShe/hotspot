@@ -490,19 +490,28 @@ Web 端的 CSRF 防护**完全依赖 auth Cookie 的 `SameSite=Strict` 属性**�
 
 | 接口类型 | 限流维度 | 策略 | 默认限制值 | `RateLimitConfig` 对应字段 |
 |---------|---------|------|--------|--------------------------|
-| 登录/注册/游客/重置 | IP | 滑动窗口 | 10次/10分钟 | `auth_signin_per_10minutes` 等 |
+| 登录/注册/游客/重置 | IP | 滑动窗口 | 登录 60、注册 20、游客 60、重置 20（每 10 分钟） | `auth_signin_per_10minutes` 等 |
+| 验证码发送（注册码/重置码） | IP + 目标账号 | 滑动窗口 | 各不同（与对应 auth_* 同值） | `auth_register_per_10minutes` / `auth_reset_per_10minutes` |
 | 搜索类 | 用户（`/api/v1`）；IP（`/public/v1` 匿名版） | 令牌桶 | 60次/分钟 | `search_per_minute` |
 | 通用写操作 | 用户 | 滑动窗口 | 30次/分钟 | `write_per_minute` |
 | 业务写操作（动态/评论/举报） | 用户 | 滑动窗口 | 各不同 | `moments_create_per_minute` 等 |
 | 文件上传 presign | 用户（按 files 内文件数计） | 滑动窗口 | 100次/小时 | `upload_presign_per_hour` |
 | WebSocket 订阅 | 连接 | 固定窗口 | 10次/秒 | `ws_subscribe_per_second` |
 | WebSocket 握手（升级请求） | IP | 固定窗口 | 60次/分钟 | `ws_handshake_per_minute` |
-| 平台管理查询（/admin/api/v1 读） | 用户 | 令牌桶 | 100次/分钟 | `admin_read_per_minute` |
-| 平台管理写（/admin/api/v1 写） | 用户 | 滑动窗口 | 30次/分钟 | `admin_write_per_minute` |
-| 全局限流（所有请求兜底） | IP+用户 | 固定窗口 | 服务端配置 | `global_per_hour` |
-| 用户级全局限流 | 用户 | 固定窗口 | 服务端配置 | `user_per_hour` |
+| 平台管理查询（/admin/api/v1 读） | 用户 | 令牌桶 | 120次/分钟 | `admin_read_per_minute` |
+| 平台管理写（/admin/api/v1 写） | 用户 | 滑动窗口 | 60次/分钟 | `admin_write_per_minute` |
+| 全局限流（所有请求兜底） | IP+用户 | 固定窗口 | 10000次/小时 | `global_per_hour` |
+| 用户级全局限流 | 用户（`/admin/api/v1` 除外） | 固定窗口 | 1000次/小时 | `user_per_hour` |
 
 > 各字段的完整定义和取值范围见 `api_spec_admin.md` 的 `RateLimitConfig`。
+>
+> `/admin/api/v1` 管理请求不叠加 `user_per_hour`：管理面已有独立读写桶（默认
+> 120/60 次每分钟，名义预算高于 1000/小时），叠加小时桶会先把分钟桶截断，导致
+> 实际阈值与配置语义不符；管理请求仍受 `global_per_hour` IP 兜底。
+>
+> 验证码发送（`send_register_code` / `forgot_password`）除 IP 维度外，还按**目标
+> `login_id`** 维度独立计量（账号键归一化后共享配额），防止分布式 IP 轮换轰炸同一
+> 邮箱/手机号。
 
 **匿名请求限流**：`/public/v1` 节点请求（节点本身不解析 Token，一律按匿名处理）按 **IP 维度**限流，防止爬虫批量拉取公开数据。登录请求（`/api/v1`、`/admin/api/v1`）按用户维度限流；两种维度独立计费、分别触发。
 

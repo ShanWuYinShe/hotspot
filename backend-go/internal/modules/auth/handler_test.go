@@ -17,6 +17,7 @@ import (
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
+	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/resourceguard"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -407,6 +408,52 @@ func TestRequestPasswordResetDoesNotExposeUnknownLoginID(t *testing.T) {
 	}
 	if int(resp2["code"].(float64)) != 0 {
 		t.Fatalf("unexpected throttled response: %#v", resp2)
+	}
+}
+
+// TestRequestPasswordResetThrottledPerAccount 验证验证码发送的账号维度限流：
+// 同一目标 login_id 超过 auth_reset_per_10minutes 后返回 10500 + Retry-After
+// （IP 维度由中间件负责，这里直连 handler 只验证账号维度）。
+func TestRequestPasswordResetThrottledPerAccount(t *testing.T) {
+	source := appconfig.NewStaticSource(config.Config{})
+	if _, err := source.Update(context.Background(), func(cfg appconfig.AppConfig) appconfig.AppConfig {
+		cfg.RateLimits.AuthResetPer10Minutes = 2
+		return cfg
+	}); err != nil {
+		t.Fatalf("configure source: %v", err)
+	}
+	ratelimit.SetSource(source)
+	t.Cleanup(func() { ratelimit.SetSource(appconfig.NewStaticSource(config.Config{})) })
+
+	handler := newTestHandler()
+	loginID := fmt.Sprintf("throttle_reset_%d", time.Now().UnixNano())
+	send := func() *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/request_password_reset",
+			strings.NewReader(fmt.Sprintf(`{"login_id":%q,"client_type":"app"}`, loginID)))
+		rr := httptest.NewRecorder()
+		handler.RequestPasswordReset(rr, req)
+		return rr
+	}
+	for i := 0; i < 2; i++ {
+		rr := send()
+		var resp map[string]any
+		if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
+			t.Fatalf("decode response: %v", err)
+		}
+		if int(resp["code"].(float64)) != 0 {
+			t.Fatalf("request %d should pass, got %#v", i, resp)
+		}
+	}
+	limited := send()
+	if limited.Header().Get("Retry-After") == "" {
+		t.Fatal("throttled response must carry Retry-After")
+	}
+	var resp map[string]any
+	if err := json.NewDecoder(limited.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode throttled response: %v", err)
+	}
+	if int(resp["code"].(float64)) != int(httpx.CodeRateLimited) {
+		t.Fatalf("expected 10500, got %#v", resp)
 	}
 }
 

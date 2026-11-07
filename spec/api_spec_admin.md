@@ -543,10 +543,10 @@ interface ContentDefaults {
 }
 
 interface RateLimitConfig {
-  // 全局
+  // 全局（user_per_hour 不叠加到 /admin/api/v1 管理请求，见 api_spec_base.md）
   global_per_hour: number;
   user_per_hour: number;
-  // 认证类（IP 维度）
+  // 认证类（IP 维度；auth_register/auth_reset 另按目标账号维度叠加计量）
   auth_register_per_10minutes: number;
   auth_signin_per_10minutes: number;
   auth_guest_per_10minutes: number;

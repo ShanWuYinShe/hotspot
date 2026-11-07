@@ -1,9 +1,12 @@
 package ratelimit
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -139,4 +142,57 @@ func serveLimited(handler http.Handler, request *http.Request) *httptest.Respons
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, request)
 	return recorder
+}
+
+// TestAdminRoutesSkipUserPerHour 验证 /admin/api/v1 请求不叠加 user_per_hour：
+// 管理面已有独立读写桶，叠加小时桶会把 admin_read 120/min 名义预算截断成
+// ~16/min（user_per_hour 默认 1000/h）。普通登录请求仍受 user_per_hour 限制。
+func TestAdminRoutesSkipUserPerHour(t *testing.T) {
+	resetStores()
+	SetSource(newTestSource(func(cfg *appconfig.AppConfig) {
+		cfg.RateLimits.UserPerHour = 1
+		cfg.RateLimits.AdminReadPerMinute = 60
+	}))
+	t.Cleanup(func() { SetSource(newTestSource(nil)) })
+	handler := passThrough()
+	for i := 0; i < 3; i++ {
+		recorder := serveLimited(handler, withPrincipal(newRequest("7.7.7.7", "/admin/api/v1/users/search"), "admin_a"))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("admin read %d should skip user_per_hour, got %d", i, recorder.Code)
+		}
+	}
+	// 对照组：普通登录路由第二次即被 user_per_hour 拦截。
+	if recorder := serveLimited(handler, withPrincipal(newRequest("7.7.7.7", "/api/v1/moments/fetch_nearby"), "normal_a")); recorder.Code != http.StatusOK {
+		t.Fatalf("first normal request should pass, got %d", recorder.Code)
+	}
+	second := serveLimited(handler, withPrincipal(newRequest("7.7.7.7", "/api/v1/moments/fetch_nearby"), "normal_a"))
+	if code := testdb.DecodeAPICode(t, second); code != httpx.CodeRateLimited {
+		t.Fatalf("expected user_per_hour on normal route, got code %d", code)
+	}
+}
+
+// TestAllowCodeSendPerAccountIsPerAccount 验证验证码发送的账号维度限流：
+// 账号键大小写/首尾空格归一后共享配额，不同账号独立计量；limit<=0 不生效。
+func TestAllowCodeSendPerAccountIsPerAccount(t *testing.T) {
+	resetStores()
+	login := fmt.Sprintf("Throttle_%d@Example.com", time.Now().UnixNano())
+	if _, limited := AllowCodeSendPerAccount(login, 2); limited {
+		t.Fatal("first send should pass")
+	}
+	if _, limited := AllowCodeSendPerAccount(strings.ToUpper(login), 2); limited {
+		t.Fatal("second send (case-normalized) should pass")
+	}
+	retry, limited := AllowCodeSendPerAccount("  "+login+"  ", 2)
+	if !limited {
+		t.Fatal("third send (space-normalized) should be limited")
+	}
+	if retry < 1 {
+		t.Fatalf("retry_after should be >= 1, got %d", retry)
+	}
+	if _, limited := AllowCodeSendPerAccount(login+"x", 2); limited {
+		t.Fatal("different account should be independent")
+	}
+	if _, limited := AllowCodeSendPerAccount(login, 0); limited {
+		t.Fatal("limit<=0 should disable per-account limiting")
+	}
 }

@@ -238,6 +238,25 @@ func rateLimitBypass() bool {
 	return os.Getenv("RATE_LIMIT_BYPASS") == "1"
 }
 
+// AllowCodeSendPerAccount 按目标 login_id 计量验证码发送（注册验证码 /
+// 忘记密码），与中间件的 per-IP 桶叠加：分布式 IP 轮换下仍能限制对同一邮箱/
+// 手机号的轰炸。limit 复用现有 auth_register/auth_reset_per_10minutes 配置值
+// （不新增配置字段）；账号键做小写+去空格归一，避免按大小写绕开计数。
+func AllowCodeSendPerAccount(loginID string, limit int) (int, bool) {
+	loginID = strings.ToLower(strings.TrimSpace(loginID))
+	if limit <= 0 || loginID == "" {
+		return 0, false
+	}
+	return redisAllow(time.Now().UTC(), rule{
+		name:     "auth_code_per_account",
+		strategy: "sliding",
+		limit:    limit,
+		window:   10 * time.Minute,
+		scope:    "account",
+		key:      "login:" + loginID,
+	})
+}
+
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if rateLimitBypass() {
@@ -289,7 +308,12 @@ func classifyRules(r *http.Request, cfg appconfig.RateLimitConfig) []rule {
 	if cfg.GlobalPerHour > 0 && ip != "" {
 		rules = append(rules, rule{name: "global_per_hour", strategy: "sliding", limit: cfg.GlobalPerHour, window: time.Hour, scope: "ip", key: ip})
 	}
-	if cfg.UserPerHour > 0 && hasPrincipal && principal.UserID != "" {
+	// 管理面不叠加 user_per_hour：admin_read/admin_write 名义预算（默认 120/60
+	// 次每分钟 ≈ 7200/3600 次每小时）会被 user_per_hour（默认 1000/h）先截断，
+	// 实际阈值退化为 ~16.7/min，配置语义与文档不符。管理请求仍有独立读写桶 +
+	// global_per_hour IP 兜底（spec api_spec_base.md「限流策略」）。
+	adminRoute := route.adminOnly && hasPrincipal && principal.UserID != ""
+	if cfg.UserPerHour > 0 && hasPrincipal && principal.UserID != "" && !adminRoute {
 		rules = append(rules, rule{name: "user_per_hour", strategy: "sliding", limit: cfg.UserPerHour, window: time.Hour, scope: "user", key: principal.UserID})
 	}
 	if matched := appendAuthRules(&rules, path, ip, cfg); matched {

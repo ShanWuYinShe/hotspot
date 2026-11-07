@@ -11,6 +11,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/idempotency"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/requestmeta"
 )
@@ -21,6 +22,24 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+// throttleCodeSendPerAccount 验证码发送的账号维度限流（IP 维度由中间件
+// auth_register/auth_reset_per_10minutes 负责）：分布式 IP 轮换下仍限制对
+// 同一目标邮箱/手机号的轰炸。阈值复用对应端点现有配置，不新增配置字段。
+func (h *Handler) throttleCodeSendPerAccount(w http.ResponseWriter, r *http.Request, loginID string, limit int, method string) bool {
+	retryAfter, limited := ratelimit.AllowCodeSendPerAccount(loginID, limit)
+	if !limited {
+		return true
+	}
+	if retryAfter < 1 {
+		retryAfter = 1
+	}
+	observability.FromContext(r.Context()).Warn("auth code send throttled per account",
+		"method", method, "retry_after", retryAfter)
+	w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+	httpx.WriteCodeError(w, r, httpx.CodeRateLimited, "请求过于频繁")
+	return false
 }
 
 // GetStatus 查询当前会话状态（spec auth.md → auth/session，必须认证节点）。
@@ -263,6 +282,9 @@ func (h *Handler) SendRegisterCode(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
+	if !h.throttleCodeSendPerAccount(w, r, req.LoginID, ratelimit.CurrentRateLimits(r.Context()).AuthRegisterPer10Minutes, "SendRegisterCode") {
+		return
+	}
 	if err := h.service.SendRegisterCode(r.Context(), req); err != nil {
 		writeAuthError(w, r, "SendRegisterCode", err)
 		return
@@ -280,8 +302,11 @@ func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return
 	}
-	// 幂等语义（spec api_spec_auth.md）：本接口靠 IP 限流保护，无需
-	// Idempotency-Key。重复请求重新触发 service（防账号枚举 + 限流），不缓存。
+	if !h.throttleCodeSendPerAccount(w, r, req.LoginID, ratelimit.CurrentRateLimits(r.Context()).AuthResetPer10Minutes, "RequestPasswordReset") {
+		return
+	}
+	// 幂等语义（spec api_spec_auth.md）：本接口靠 IP + 目标账号双维度限流保护，
+	// 无需 Idempotency-Key。重复请求重新触发 service（防账号枚举 + 限流），不缓存。
 	if err := h.service.RequestPasswordReset(r.Context(), req); err != nil {
 		writeAuthError(w, r, "RequestPasswordReset", err)
 		return

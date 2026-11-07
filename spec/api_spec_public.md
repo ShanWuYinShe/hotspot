@@ -298,7 +298,7 @@ interface PublicBootstrapData {
 **安全说明**：
 - 无论 `login_id` 是否已被注册，均返回成功响应，不暴露账号存在性（与 `forgot_password` 防枚举策略一致）；已占用的 `login_id` 对应验证码无效，注册最终仍以 `10400` 拒绝
 - 仅手机号/邮箱型 `login_id` 支持本端点；用户名型（不含 '@' 且非纯数字）请求失败（10000）
-- 发送频率由 `AppConfig.rate_limits.auth_register_per_10minutes` 控制（与注册共用限流桶）；验证码有效期由服务端内部配置决定（不对外暴露）
+- 发送频率由 `AppConfig.rate_limits.auth_register_per_10minutes` 控制（与注册共用限流桶），并**按目标 `login_id` 维度独立计量**（防分布式 IP 轮换轰炸同一邮箱/手机号）；验证码有效期由服务端内部配置决定（不对外暴露）
 
 **Request**: `SendRegisterCodeRequest`
 ```typescript
@@ -434,7 +434,7 @@ interface RefreshTokenRequest {
 
 **安全说明**：
 - 无论 `login_id` 是否存在，均返回成功响应，不暴露账号是否注册
-- 验证码发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制；验证码有效期由服务端内部配置决定（不对外暴露）
+- 验证码发送频率由 `AppConfig.rate_limits.auth_reset_per_10minutes` 控制，并**按目标 `login_id` 维度独立计量**（防分布式 IP 轮换轰炸同一邮箱/手机号）；验证码有效期由服务端内部配置决定（不对外暴露）
 
 **Request**: `ForgotPasswordRequest`
 ```typescript
