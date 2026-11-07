@@ -3646,3 +3646,11 @@ outbox 合并后性能门禁（backend-test / hotspot_test，c=10，warmup=2s，
   | BroadcastToAll（512 连接） | 13110 ns/op | 10370 ns/op | **-21%** |
 - 验证：realtime 包 `-race` 全绿、`-count=5` 稳定；`go test -short ./...` 全绿；
   worktree `verify-backend-ci.sh --with-db` ALL CHECKS PASSED。
+
+Hub 分片合并后门禁与性能（2026-11-07）：
+- worktree `verify-backend-ci.sh --with-db` ALL CHECKS PASSED；主树 `--with-e2e`
+  ALL CHECKS PASSED；realtime 包 `-race`/`-count=5` 稳定。
+- perf-budget（backend-test，c=10/warmup 2s/5s）：8 端点全部 OK；
+  users/account 9644 rps（p99 2.87ms）、notify/fetch 10014 rps（p99 3.01ms）、
+  users/search 2109 rps（p99 35.66ms）、moments/fetch_nearby 1114 rps（p99 56.06ms）。
+- 运行环境 main backend 已重启并 healthy；验证后 backend-test 已停止。
