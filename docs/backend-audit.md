@@ -3687,3 +3687,14 @@ Hub 分片合并后门禁与性能（2026-11-07）：
 - tags 2 字 `&@ '目标'`（069 后索引可用）：**Index Only Scan，0.09ms**（约 80x）；
 - users 1 字 `ILIKE '%林%'` / `&@ '林'` 均走已有 `idx_users_nickname_pgroonga`：
   ~0.22–0.27ms（0 命中）；说明主搜索早已受益，缺口只在 tags + suggest 统一路径。
+
+搜索短关键词合并后验证（2026-11-07）：
+- 主树 `--with-e2e` ALL CHECKS PASSED；main 重启后 migration 069 已应用。
+- 运行时 `/public/v1/search/suggest`：prefix=`林` 默认 5km 半径下按契约过滤掉
+  5km 外种子用户（0 结果）；显式 radius=100000 时返回「林小满/林一」等用户，
+  说明 1 字匹配与 radius 过滤均正常（非索引问题）。语义/索引由真实库 IT 覆盖。
+- perf-budget：首次在宿主 load≈15 时 8 端点全部 REGRESSION（环境噪声，非代码
+  回归）；load 回落到 ~3.7 后重跑 **PERF BUDGET OK**：users/account 6803 rps
+  (p99 4.44ms)、notify/fetch 7817 rps (p99 3.90ms)、users/search 1657 rps
+  (p99 36.99ms)、moments/fetch_nearby 960 rps (p99 53.56ms) 等。
+- 验证后 backend-test 已停止；main backend 保持 latest + healthy。
