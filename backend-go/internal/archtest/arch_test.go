@@ -72,6 +72,7 @@ var tableOwners = map[string]string{
 	"moment_tags":                      "moments",
 	"moments":                          "moments",
 	"notifications":                    "notify",
+	"outbox_events":                    "platform",
 	"private_chat_read_state":          "privatemessages",
 	"private_chat_user_state":          "privatechats",
 	"private_chats":                    "privatechats",

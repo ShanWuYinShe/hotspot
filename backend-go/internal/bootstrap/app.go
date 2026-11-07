@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -9,6 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"hotspot/backend-go/internal/modules/groups"
+	"hotspot/backend-go/internal/modules/notify"
+	"hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/modules/users"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/config"
@@ -18,6 +21,7 @@ import (
 	platformmigrate "hotspot/backend-go/internal/platform/migrate"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/outbox"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/realtime"
@@ -121,6 +125,14 @@ func NewApp(cfg config.Config) (*App, error) {
 	// 应用级实时 Hub：本 App 独占实例，经根中间件注入请求 context；
 	// 不再依赖模块隐式读取进程级 DefaultHub。
 	hub := realtime.NewHub()
+	// 通用 outbox dispatcher：业务事务内写入的事件在 COMMIT 后由后台投递；
+	// 进程崩溃重启后未处理行仍会补投。当前接入系统公告 WS 广播（topic 见
+	// outbox.TopicSystemAnnouncement）。
+	if persistenceFactory.DB != nil && cfg.PostgresDSN != "" {
+		dispatcher := outbox.NewDispatcher(persistenceFactory, logger)
+		dispatcher.Register(outbox.TopicSystemAnnouncement, systemAnnouncementOutboxHandler(hub))
+		dispatcher.Start(rootCtx)
+	}
 	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo, hub)
 	// /metrics 自定义采集器装配：WS 连接/订阅规模 + DB 连接池统计
 	//（HTTP 请求指标经 RequestMetricsMiddleware 在路由层采集）。
@@ -174,6 +186,26 @@ func NewApp(cfg config.Config) (*App, error) {
 		hotCache:    hotCache,
 		rootCancel:  rootCancel,
 	}, nil
+}
+
+// systemAnnouncementOutboxHandler 解码 admin 生产的公告广播 payload 并做一次
+// 全体在线广播（与同步路径共用 notify.SystemAnnouncementRealtimeEvent，
+// 保证 WS payload 结构一致）。
+func systemAnnouncementOutboxHandler(hub *realtime.Hub) outbox.Handler {
+	return func(_ context.Context, payload json.RawMessage) error {
+		var event struct {
+			Item     system.SystemAnnouncementItem `json:"item"`
+			NotifyID string                        `json:"notify_id"`
+		}
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return fmt.Errorf("bootstrap: decode system announcement outbox payload: %w", err)
+		}
+		if event.Item.AnnouncementID == "" || event.NotifyID == "" {
+			return fmt.Errorf("bootstrap: invalid system announcement outbox payload")
+		}
+		hub.BroadcastToAll(notify.SystemAnnouncementRealtimeEvent(event.Item, event.NotifyID))
+		return nil
+	}
 }
 
 func (a *App) Router() http.Handler {

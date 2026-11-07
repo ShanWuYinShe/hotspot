@@ -5,6 +5,7 @@ import (
 	"errors"
 	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/outbox"
 	"strings"
 	"time"
 )
@@ -126,11 +127,35 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		Title: title, Content: strings.TrimSpace(req.Content), Severity: req.Severity,
 		ActionURL: strings.TrimSpace(req.ActionURL), SendPush: req.SendPush,
 	}
-	item, err := s.moderationStore.CreateAnnouncement(ctx, input)
-	if err != nil {
-		return AdminAnnouncementItem{}, nil, err
+	var item systemmodule.AnnouncementRecord
+	enqueued := false
+	if s.pushService != nil && req.SendPush && s.announcementOutbox != nil && s.runInTx != nil {
+		// 公告创建 + WS 广播事件入队同一事务：崩溃后 dispatcher 从 outbox
+		// 补投，消除「公告已落库但在线广播丢失」；事务外的直接广播仅在
+		// 未装配 outbox 时保留（单测/内存装配）。
+		txErr := s.runInTx(ctx, func(txCtx context.Context) error {
+			created, createErr := s.moderationStore.CreateAnnouncement(txCtx, input)
+			if createErr != nil {
+				return createErr
+			}
+			item = created
+			enqueued = true
+			return s.announcementOutbox.Enqueue(txCtx, outbox.TopicSystemAnnouncement, AnnouncementBroadcastPayload{
+				Item:     created.PublicItem(),
+				NotifyID: systemmodule.AnnouncementNotifyID(created.AnnouncementID),
+			})
+		})
+		if txErr != nil {
+			return AdminAnnouncementItem{}, nil, txErr
+		}
+	} else {
+		created, createErr := s.moderationStore.CreateAnnouncement(ctx, input)
+		if createErr != nil {
+			return AdminAnnouncementItem{}, nil, createErr
+		}
+		item = created
 	}
-	if s.pushService != nil && req.SendPush {
+	if s.pushService != nil && req.SendPush && !enqueued {
 		// 公告通知改为虚拟模型（notify_id 稳定 = sysann_<announcement_id>）：
 		// 不再向 notifications 表 per-user fanout，读取时由 notify 模块按
 		// system 模块注入的公告来源合并；这里只做一次全体在线广播。

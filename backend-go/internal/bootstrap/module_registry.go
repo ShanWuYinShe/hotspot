@@ -31,6 +31,7 @@ import (
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/modulekit"
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/outbox"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/ratelimit"
 	"hotspot/backend-go/internal/platform/types"
@@ -221,6 +222,9 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	adminModule := admin.NewModule(factory, sharedAppConfig, notificationService, systemModule.Service(), momentsModule.Service)
 	// 举报裁决跨模块编排（删内容/封禁/举报终态）包事务；审计/通知 aftercommit。
 	adminModule.Service.SetTxRunner(persistence.NewTxRunner(factory))
+	// 系统公告 WS 广播走通用 outbox（创建公告与事件入队同事务，dispatcher 在
+	// 主 bootstrap 启动后补投）；writer 无事务上下文时退化为池直写。
+	adminModule.Service.SetAnnouncementOutbox(outbox.NewWriter(factory))
 	// 举报裁决的内容删除/消息撤回走归属模块服务（admin 不再直接写
 	// moments/comments/group_messages/private_messages 表）。
 	adminModule.Service.SetMomentModerator(momentsModule.Service)

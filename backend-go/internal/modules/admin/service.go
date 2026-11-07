@@ -45,6 +45,26 @@ type Service struct {
 	// 同一事务内提交；nil 时退化为直跑（单测/内存装配）。审计/通知等副作用
 	// 经 aftercommit 在 COMMIT 后执行。
 	runInTx persistence.TxRunner
+	// announcementOutbox 是系统公告 WS 广播的事件生产者（bootstrap 注入通用
+	// outbox writer）。非 nil 且事务可用时，公告创建与事件入队同事务提交，
+	// 进程在 COMMIT 后崩溃也能由后台 dispatcher 补投；nil 时退化为同步广播
+	//（单测/内存装配）。
+	announcementOutbox outboxWriter
+}
+
+// outboxWriter 是平台 outbox.Writer 的最小消费接口（bootstrap 注入）。
+type outboxWriter interface {
+	Enqueue(ctx context.Context, topic string, payload any) error
+}
+
+// SetAnnouncementOutbox 注入公告广播 outbox writer（bootstrap 装配）。
+func (s *Service) SetAnnouncementOutbox(w outboxWriter) { s.announcementOutbox = w }
+
+// AnnouncementBroadcastPayload 是 outbox TopicSystemAnnouncement 的 payload
+// （admin 生产、bootstrap dispatcher handler 消费）。
+type AnnouncementBroadcastPayload struct {
+	Item     systemmodule.SystemAnnouncementItem `json:"item"`
+	NotifyID string                              `json:"notify_id"`
 }
 
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；nil 时直跑）。

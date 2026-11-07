@@ -3582,3 +3582,25 @@ fanout 非原子、表膨胀且无法区分公告本体与已读状态。改为�
   `notify/mark_read`（scope=ids，注意 Idempotency-Key 必须为合法字符集）返回 0 后
   announcement_reads 行数 = 1、unread total=0，虚拟行 is_read=true；
 - 注册早于公告的用户可见性符合旧 fanout 口径（种子旧公告对新访客不可见）。
+
+## Batch outbox：通用事务外盒 + 系统公告广播接入（2026-11-07）
+
+aftercommit 回调在进程崩溃于 COMMIT 与回调之间时会丢副作用（实时广播/通知）。
+新增平台通用 outbox：
+
+- 迁移 068 `outbox_events(event_id, topic, payload, available_at, attempts,
+  last_error, processed_at)`；部分索引 `(available_at,event_id) WHERE
+  processed_at IS NULL` 供 dispatcher 领取。
+- `internal/platform/outbox`：
+  - Writer.Enqueue：ctx 带事务时**与业务写同事务**提交（无事务退化为池直写）；
+  - Dispatcher：事务内 `FOR UPDATE SKIP LOCKED` 批量领取，handler 投递，
+    失败指数退避（最多 10 次后 dead-letter 保留 last_error），后台随 rootCtx 退出；
+  - DrainOnce 供测试与后台循环共用。
+- 首个生产接入：admin 创建系统公告时「公告落库 + WS 广播事件入队」同事务
+  （TopicSystemAnnouncement）；bootstrap 注册 handler 解码 admin payload 后经
+  App Hub 广播，与同步路径共用 notify.SystemAnnouncementRealtimeEvent，
+  payload 形状不漂移。未装配 outbox 的单测/内存装配仍走同步广播。
+- 测试：outbox 真实库 IT（事务回滚不落事件、成功投递一次、失败重试/attempts、
+  幂等领取）；admin 事务内入队单测；bootstrap handler 广播 payload 单测；
+  archtest 登记 outbox_events 归属 platform；schema manifest 重建（42 表/389 列/134 索引）。
+- 门禁：go test -short 全绿；verify-backend-ci.sh --with-db ALL CHECKS PASSED。
