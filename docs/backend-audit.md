@@ -3572,3 +3572,13 @@ fanout 非原子、表膨胀且无法区分公告本体与已读状态。改为�
 - 测试：system 公告虚拟读/已读状态真实库 IT；notify 合并分页/过滤/未读/mark_read
   路由真实库 IT + 单测；admin 公告测试改为断言「不落 notifications 行 + 稳定 notify_id」。
 - 门禁：go test -short 全绿；worktree verify-backend-ci.sh --with-db ALL CHECKS PASSED。
+
+运行时验证（main 环境，2026-11-07）：
+- 迁移 067 已应用，主库旧 system_announcement fanout 行清理完成；
+- 新建访客（注册后）插入一条 system_announcements 后：
+  `notify/fetch` 返回虚拟行 `sysann_<announcement_id>`（type=system_announcement，
+  payload 含 title/severity），notifications 表对应行数 = 0；
+  `notify/unread_summary` system=1/total=1；
+  `notify/mark_read`（scope=ids，注意 Idempotency-Key 必须为合法字符集）返回 0 后
+  announcement_reads 行数 = 1、unread total=0，虚拟行 is_read=true；
+- 注册早于公告的用户可见性符合旧 fanout 口径（种子旧公告对新访客不可见）。
