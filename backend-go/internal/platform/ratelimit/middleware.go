@@ -210,7 +210,7 @@ func AllowWebsocketHandshake(ctx context.Context, ip string) (int, bool) {
 // and WS clients surface the HTTP status directly).
 func WebsocketHandshakeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("APP_ENV") == "test" {
+		if rateLimitBypass() {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -227,18 +227,22 @@ func WebsocketHandshakeMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// testBypassWarnOnce 保证「APP_ENV=test 关闭限流」只告警一次：限流被关闭
-// 必须可观测（P3-1），防止环境变量误配导致部署悄悄跑在无限流状态。逐请求
-// 告警会淹没日志，One-shot 足以暴露配置问题。测试基建（docker dev/e2e）
-// 依赖 APP_ENV=test 绕过限流，故保留该开关而非新增专用变量。
-var testBypassWarnOnce sync.Once
+// bypassWarnOnce 保证「显式关闭限流」只告警一次：限流被关闭必须可观测（P3-1），
+// 防止配置误用导致部署悄悄跑在无限流状态。逐请求告警会淹没日志，One-shot 足够。
+// 测试基建（docker backend-test / CI e2e）统一通过 RATE_LIMIT_BYPASS=1 显式开启；
+// 不再用 APP_ENV=test 隐式推断——APP_ENV 一旦误配，生产会静默失去限流。
+var bypassWarnOnce sync.Once
+
+// rateLimitBypass 报告是否显式关闭限流（仅测试基建使用，生产不得设置）。
+func rateLimitBypass() bool {
+	return os.Getenv("RATE_LIMIT_BYPASS") == "1"
+}
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if os.Getenv("APP_ENV") == "test" {
-			testBypassWarnOnce.Do(func() {
-				observability.L().Warn("rate limiting DISABLED: APP_ENV=test bypass is active",
-					"env", os.Getenv("APP_ENV"))
+		if rateLimitBypass() {
+			bypassWarnOnce.Do(func() {
+				observability.L().Warn("rate limiting DISABLED: RATE_LIMIT_BYPASS=1 is active (test infrastructure only)")
 			})
 			next.ServeHTTP(w, r)
 			return

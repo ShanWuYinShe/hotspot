@@ -172,7 +172,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		bridge = initRedisBridgeFromClient(cfg, logger, redisClient, instanceID, hub)
 	}
 	// 握手 per-IP 限流（审查 L-6）：升级请求发生在鉴权之前，须与其他 HTTP
-	// 入口同样限流；APP_ENV=test 同口径绕过。
+	// 入口同样限流；测试基建经 RATE_LIMIT_BYPASS=1 显式绕过。
 	rootMux.Handle("/ws/v1", ratelimit.WebsocketHandshakeMiddleware(realtimeHandler))
 
 	return &App{

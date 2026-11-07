@@ -14,7 +14,7 @@
 | Prometheus/Grafana（线上） | 持续 RPS/延迟/连接池/Redis fail-open | `OBSERVABILITY_ENABLED=1` 部署后查看「HotSpot 后端总览」 |
 
 ```bash
-# 1) 启动 APP_ENV=test 的 backend-test（跳过限流，避免压测把租户/IP 桶打满）
+# 1) 启动 RATE_LIMIT_BYPASS=1 的 backend-test（跳过后端限流，避免压测把租户/IP 桶打满）
 docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test
 
 # 2) 给 hotspot_test 灌种子数据——否则 nearby/search 测到的是空结果集（历史失真根因）。

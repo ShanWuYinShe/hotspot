@@ -1,7 +1,7 @@
 // Command loadgen 是后端压测/容量基线用的小工具（仅 stdlib）：
 // 固定并发持续打一个 HTTP 端点，输出 RPS、状态码/业务码分布与延迟分位数。
 //
-// 用法示例（dev 环境请对 APP_ENV=test 的 backend-test 实例压测，避免消耗
+// 用法示例（dev 环境请对 RATE_LIMIT_BYPASS=1 的 backend-test 实例压测，避免消耗
 // 生产限流桶；localhost:8082 为 docker compose test profile 映射端口）：
 //
 //	go run ./cmd/loadgen -url http://localhost:8082/healthz -c 50 -d 10s

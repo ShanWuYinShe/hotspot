@@ -260,9 +260,11 @@ jobs:
           S3_BUCKET: hotspot
           S3_ACCESS_KEY: ci
           S3_SECRET_KEY: ci-secret-key
-          # test 环境：中间件跳过限流（与 docker-compose.dev.yml 的 backend-test 一致），
-          # 避免 ~90 个用例互相触发限流桶。
+          # 测试环境：显式关闭限流（与 docker-compose.dev.yml 的 backend-test 一致），
+          # 避免 ~90 个用例互相触发限流桶。注意是 RATE_LIMIT_BYPASS 而不是 APP_ENV
+          # 隐式旁路——生产误配 APP_ENV 不会静默失去限流。
           APP_ENV: test
+          RATE_LIMIT_BYPASS: "1"
         run: |
           cd backend-go
           go run ./cmd/server > /tmp/backend.log 2>&1 &

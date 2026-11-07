@@ -17,7 +17,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test
   BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/
   ```
-  `backend-test` 为独立测试后端（`APP_ENV=test` 跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
+  `backend-test` 为独立测试后端（`RATE_LIMIT_BYPASS=1` 显式跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
 
 ### 推送前门禁（硬性）：`./scripts/verify-backend-ci.sh`
 
