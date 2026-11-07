@@ -509,6 +509,7 @@
     "moment_mentions:idx_moment_mentions_user_id_created_at",
     "moment_mentions:moment_mentions_pkey",
     "moment_tags:idx_moment_tags_name_created_at",
+    "moment_tags:idx_moment_tags_name_pgroonga",
     "moment_tags:idx_moment_tags_name_trgm",
     "moment_tags:moment_tags_pkey",
     "moments:idx_moments_description_pgroonga",

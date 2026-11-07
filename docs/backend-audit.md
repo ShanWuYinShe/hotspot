@@ -3654,3 +3654,36 @@ Hub 分片合并后门禁与性能（2026-11-07）：
   users/account 9644 rps（p99 2.87ms）、notify/fetch 10014 rps（p99 3.01ms）、
   users/search 2109 rps（p99 35.66ms）、moments/fetch_nearby 1114 rps（p99 56.06ms）。
 - 运行环境 main backend 已重启并 healthy；验证后 backend-test 已停止。
+
+## Batch 搜索短关键词（1–2 字）PGroonga 收口（2026-11-07）
+
+### 现状与缺口
+- users/moments/groups 的主搜索（migrations 063/064）已用 PGroonga `&@`：1 字符起
+  可走 GIN，且 PGroonga opclass 也能加速 `ILIKE '%kw%'`（实测 20k 行 users 的
+  ILIKE 计划直接走 `idx_users_nickname_pgroonga`，非顺序扫描）。
+- 仍有两处缺口：
+  1. `search/suggest` 的 4 类查询仍是 leading-wildcard ILIKE（用户/群/瞬间/标签）；
+  2. `moment_tags.tag_name` 只有 pg_trgm GIN——pg_trgm 需要 >=3 字符模式，
+     1–2 字（尤其中文）标签联想只能顺序扫描。
+
+### 方案对比（1–2 字符子串搜索）
+| 方案 | 支持 1–2 字 | 本项目可用性 | 结论 |
+|---|---|---|---|
+| pg_trgm | 否（<3 字符退化为 seq scan） | 已启用 | 不可用于短关键词 |
+| pg_bigm | 是（2-gram） | 未安装，需要新增扩展/镜像改造 | 引入新扩展成本高，收益与 PGroonga 重叠 |
+| **PGroonga** | 是（1 字符起走 GIN，NormalizerNFKC 归一） | 已启用（063/064），运维/索引模式已存在 | **选择**：补齐 tags 索引 + suggest 统一 `&@` |
+
+### 改动
+- 迁移 069：`idx_moment_tags_name_pgroonga`（`moment_tags(tag_name)` PGroonga GIN），
+  与 users/moments/groups 的短关键词索引同一方案；schema manifest 更新（135 索引）。
+- `search/suggest` 四类匹配统一改 `&@ $prefix`（tags/users/groups/moments），
+  不再对 prefix 做 LIKE 通配符转义；与主搜索模块语义/索引路径一致。
+- 真实库 IT：1 字中文同时命中 user/group/moment/tag；2 字精确命中目标用户；
+  PGroonga case-insensitive 与旧 ILIKE 一致；`EXPLAIN` 断言 users/tags 均走
+  PGroonga 索引（3k+ 无关行下仍选索引）。
+
+### 实测（hotspot_it，20k 无关行 + 1 目标行，事务回滚）
+- tags 2 字 `ILIKE '%目标%'`（069 前，无 PGroonga tags 索引）：**Seq Scan，7.42ms**；
+- tags 2 字 `&@ '目标'`（069 后索引可用）：**Index Only Scan，0.09ms**（约 80x）；
+- users 1 字 `ILIKE '%林%'` / `&@ '林'` 均走已有 `idx_users_nickname_pgroonga`：
+  ~0.22–0.27ms（0 命中）；说明主搜索早已受益，缺口只在 tags + suggest 统一路径。

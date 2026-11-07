@@ -1,9 +1,8 @@
 package search
 
-// maxSuggestRows bounds the result set of each suggest query. The suggest
-// queries use leading-wildcard ILIKE (unanchored, non-indexable), so a short
-// or common keyword would otherwise scan and return the whole table. This cap
-// keeps autocomplete fast and memory bounded.
+// maxSuggestRows bounds the result set of each suggest query。suggest 的匹配
+// 谓词统一走 PGroonga &@（1 字符起走 GIN 索引；ILIKE '%kw%' 需要全表扫描，
+// 短关键词/热门词会退化为顺序扫描）。LIMIT 仍是必要的内存/响应上界。
 const maxSuggestRows = 20
 
 const (
@@ -13,7 +12,7 @@ FROM moment_tags mt
 JOIN moments m ON m.moment_id = mt.moment_id
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
-  AND mt.tag_name ILIKE '%' || $1 || '%'
+  AND mt.tag_name &@ $1
 GROUP BY mt.tag_name
 ORDER BY usage_count DESC
 LIMIT $2`
@@ -45,8 +44,8 @@ FROM (
       AND u.is_deleted = FALSE
       AND us.privacy_level = 'public'
       AND (
-        u.nickname ILIKE '%' || $1 || '%'
-        OR (us.nickname_searchable = TRUE AND u.bio ILIKE '%' || $1 || '%')
+        u.nickname &@ $1
+        OR (us.nickname_searchable = TRUE AND u.bio &@ $1)
       )
       -- S2 粗筛（审查 P2-10）：此前先 LIMIT 再在 Go 侧按 radius 过滤，小半径下
       -- 候选被无关行占满导致结果系统性偏少；且无 ORDER BY 时 LIMIT 行集任意。
@@ -104,7 +103,7 @@ LEFT JOIN LATERAL (
 LEFT JOIN group_members gm ON gm.group_id = g.group_id
 WHERE g.deleted_at IS NULL
   AND g.is_searchable = TRUE
-  AND g.name ILIKE '%' || $1 || '%'
+  AND g.name &@ $1
   -- S2 粗筛 + 确定性排序，动机同 querySearchSuggestUsers（审查 P2-10）。
   AND (COALESCE(cardinality($3::bigint[]), 0) = 0
        OR EXISTS (SELECT 1 FROM unnest($3::bigint[], $4::bigint[]) AS t(lo, hi)
@@ -138,7 +137,7 @@ LEFT JOIN LATERAL (
 ) cover ON TRUE
 WHERE m.privacy_level = 'public'
   AND m.is_deleted = FALSE
-  AND m.description ILIKE '%' || $1 || '%'
+  AND m.description &@ $1
   -- S2 粗筛，动机同 querySearchSuggestUsers（审查 P2-10）；tie-breaker 保证
   -- popularity 相同时的行序确定（弱一致契约要求稳定 tie-breaker）。
   AND (COALESCE(cardinality($3::bigint[]), 0) = 0
