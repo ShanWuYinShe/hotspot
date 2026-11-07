@@ -181,6 +181,7 @@ gh run list --workflow=release.yml --branch v1.1.11 --limit 1   # 确认触发�
 | **gitleaks 命中** | CI Secret scan 报 leaks found | 先判断是真凭据还是测试 fixture：真凭据**必须轮换并实测失效**后才能把指纹登记进 `.gitleaksignore`（附轮换依据），禁止直接忽略；fixture 假值可直接登记。接待机器人账号口令的处置见 `reception-bot/scripts/rotate-credentials.sh` 与 `.gitleaksignore` 顶部注释 |
 | tag 推了但 CI 没触发 | Release 页没有新版本 | 每个 tag 单独推送并逐个确认（批量推超过 3 个 tag 时 GitHub 不产生 push 事件）；漏触发时删本地与远程 tag 后重推 |
 | Release 工作流失败 | Actions 红 | 修问题 → 升 patch 版本重新打 tag；**不要**移动已推送的 tag |
+| Release 已创建但资产不全 / auto-deploy 被跳过 | Release 页缺 `.ids.txt` 或镜像包；部署历史无该版本 | 镜像 Id 清单可按服务器已加载镜像 `docker inspect` 重建后 `gh release upload` 补齐；镜像包完整时用 `./scripts/deploy-production.sh <tag>` 手动兜底（同一条部署链路），镜像包缺失则升 patch 版本重发 |
 | 部署提示 tag 不在 main 上 | 前置校验失败 | 该 tag 打在未合并提交上；合并进 main 后重打版本 |
 | 部署提示锁被占用 | `另一个部署正在进行` | 确认无并发部署后 `ssh <server> 'rm -rf ~/hotspot/.deploy.lock'`；陈旧锁（>6h）脚本会自行接管 |
 | 部署卡在版本校验 | 三级校验之一不通过 | 脚本已自动回滚 + 告警；查 `docker logs <backend>`、`docker exec <nginx> wget -qO- http://127.0.0.1/version.json` |

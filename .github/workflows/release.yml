@@ -160,6 +160,16 @@ jobs:
             "hotspot-images-${GIT_VERSION}.tar.gz" \
             "hotspot-images-${GIT_VERSION}.tar.gz.sha256" \
             "hotspot-images-${GIT_VERSION}.ids.txt"
+          # 资产完整性断言：上面多行参数若少续行，gh 仍会成功创建 Release 但少传资产，
+          # 部署端就缺镜像包/镜像 Id 清单（v1.7.0 实测）。缺资产必须让本 job 失败，
+          # 阻断 auto-deploy，而不是带病上线。
+          expected_assets=3
+          actual_assets="$(gh release view "$GIT_VERSION" --json assets --jq '.assets | length')"
+          if [ "$actual_assets" -ne "$expected_assets" ]; then
+            echo "::error::Release ${GIT_VERSION} 资产数=${actual_assets}，期望=${expected_assets}（镜像包 / sha256 / ids.txt 必须齐全）"
+            exit 1
+          fi
+          echo "release assets verified: ${actual_assets}/${expected_assets}"
 
   auto-deploy:
     name: Auto Deploy to Production
