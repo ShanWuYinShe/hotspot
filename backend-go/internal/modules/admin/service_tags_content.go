@@ -130,35 +130,11 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 	if err != nil {
 		return AdminAnnouncementItem{}, nil, err
 	}
-	if s.pushService != nil {
-		// 全量 fanout 按 user_id 升序 keyset 分批：此前复用 SearchUsers
-		// （limit 被 NormalizeLimit 钳到 100），公告只落库给前 100 个用户。
-		const fanoutBatch = 500
-		afterUserID := ""
-		// 整条公告共用一个 notify_id（跨批次复用）：契约要求 WS 的 notify_id
-		// 与 notify/fetch 的主键一致，客户端据此去重与 mark_read。若每批各自
-		// 生成 id，只有最后一批能被客户端命中（审计 F-06）。
-		notificationID := s.pushService.NewAnnouncementNotifyID()
-		for {
-			batch, listErr := s.repo.ListUserIDsAfter(ctx, afterUserID, fanoutBatch)
-			if listErr != nil {
-				return AdminAnnouncementItem{}, nil, listErr
-			}
-			if len(batch) == 0 {
-				break
-			}
-			if _, err := s.pushService.AppendSystemAnnouncementWithID(ctx, notificationID, batch, item.PublicItem()); err != nil {
-				return AdminAnnouncementItem{}, nil, err
-			}
-			if len(batch) < fanoutBatch {
-				break
-			}
-			afterUserID = batch[len(batch)-1]
-		}
-		// BroadcastToAll 是一次全体在线广播，必须移出批次循环（否则广播 N 次）。
-		if req.SendPush && notificationID != "" {
-			s.pushService.PushSystemAnnouncement(ctx, item.PublicItem(), notificationID)
-		}
+	if s.pushService != nil && req.SendPush {
+		// 公告通知改为虚拟模型（notify_id 稳定 = sysann_<announcement_id>）：
+		// 不再向 notifications 表 per-user fanout，读取时由 notify 模块按
+		// system 模块注入的公告来源合并；这里只做一次全体在线广播。
+		s.pushService.PushSystemAnnouncement(ctx, item.PublicItem(), systemmodule.AnnouncementNotifyID(item.AnnouncementID))
 	}
 	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
 		return AdminAnnouncementItem{}, nil, err

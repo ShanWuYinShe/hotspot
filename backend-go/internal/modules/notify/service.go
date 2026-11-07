@@ -202,43 +202,6 @@ func (s *Service) AppendMutualFollow(ctx context.Context, targetUserID string, a
 	return id, err
 }
 
-// AppendSystemAnnouncement records a system_announcement notify for each
-// user and returns the generated notify_id. The same id is shared by all
-// recipients and is embedded as the first field of the broadcast
-// SystemAnnouncement payload (spec api_spec_websocket.md).
-func (s *Service) AppendSystemAnnouncement(ctx context.Context, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error) {
-	return s.AppendSystemAnnouncementWithID(ctx, newNotifyID(), userIDs, item)
-}
-
-// NewAnnouncementNotifyID 预生成一条系统公告的 notify_id。全量 fanout 会按
-// 用户分批落库，但整条公告必须共用同一个 notify_id（契约：WS notify_id 与
-// notify/fetch 主键一致，客户端据此去重与 mark_read）。
-func (s *Service) NewAnnouncementNotifyID() string { return newNotifyID() }
-
-// AppendSystemAnnouncementWithID 是 AppendSystemAnnouncement 的显式 id 版本。
-// 全量 fanout 公告按 user_id keyset 分批落库（每批 500 人），但契约要求 WS 的
-// notify_id 与 notify/fetch 的主键一致，且**整条公告**（而非某一批）对应同一
-// 逻辑通知——因此调用方先 newNotifyID 一次，各批次复用同一个 id。
-// 若每批各自生成 id，客户端拿到的 WS notify_id 只能命中最后一批，
-// 其余批次的通知既无法按 id 去重也无法 mark_read（审计 F-06）。
-func (s *Service) AppendSystemAnnouncementWithID(ctx context.Context, id string, userIDs []string, item systemmodule.SystemAnnouncementItem) (string, error) {
-	if id == "" {
-		id = newNotifyID()
-	}
-	err := s.repo.AppendMany(ctx, userIDs, NotifyItem{
-		NotifyID: id,
-		Type:     "system_announcement",
-		IsRead:   false,
-		Payload: map[string]any{
-			"type":            "system_announcement",
-			"announcement_id": item.AnnouncementID,
-			"title":           item.Title, // spec notify.md：客户端直接渲染通知行
-			"severity":        item.Severity,
-		},
-	})
-	return id, err
-}
-
 // AppendGroupInviteReceived records a group_invite_received notify and
 // returns the generated notify_id (embedded as the first field of the
 // pushed GroupInviteReceived payload, spec api_spec_websocket.md).

@@ -24,20 +24,6 @@ func (r *InMemoryRepository) Append(_ context.Context, userID string, item Notif
 	return nil
 }
 
-func (r *InMemoryRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
-	for _, userID := range userIDs {
-		if userID == "" {
-			continue
-		}
-		if err := r.Append(ctx, userID, item); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// AppendBatchPerUser 逐条落库（内存实现无批量收益），userIDs 与 items 按位
-// 对应、长度必须相等，语义与 Postgres 实现一致。
 func (r *InMemoryRepository) AppendBatchPerUser(ctx context.Context, userIDs []string, items []NotifyItem) error {
 	if len(userIDs) != len(items) {
 		return errors.New("notify.AppendBatchPerUser: userIDs/items 长度不一致")

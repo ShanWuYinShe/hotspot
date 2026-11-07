@@ -6,11 +6,19 @@ import (
 	"fmt"
 	"time"
 
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/persistence"
 )
 
 type PostgresRepository struct {
-	factory *persistence.Factory
+	factory       *persistence.Factory
+	announcements AnnouncementNotificationSource
+}
+
+// SetAnnouncementNotificationSource 注入 system 模块的公告虚拟通知能力
+// （bootstrap 装配）。未注入时通知列表现有行为不变。
+func (r *PostgresRepository) SetAnnouncementNotificationSource(source AnnouncementNotificationSource) {
+	r.announcements = source
 }
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
@@ -38,43 +46,6 @@ func (r *PostgresRepository) Append(ctx context.Context, userID string, item Not
 	return queryable.Exec(ctx, queryInsertNotify, item.NotifyID, userID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
 }
 
-func (r *PostgresRepository) AppendMany(ctx context.Context, userIDs []string, item NotifyItem) error {
-	// 与单条 Append 的降级语义一致：显式报告未实现，而非静默丢弃公告。
-	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
-		return persistence.ErrNotImplemented
-	}
-	// Filter empty ids up front so the batch insert doesn't waste a row.
-	targets := make([]string, 0, len(userIDs))
-	for _, uid := range userIDs {
-		if uid != "" {
-			targets = append(targets, uid)
-		}
-	}
-	if len(targets) == 0 {
-		return nil
-	}
-	item = normalizeNotifyItem(item)
-	payloadJSON, err := json.Marshal(item.Payload)
-	if err != nil {
-		return err
-	}
-	// Insert all rows in a single transaction (and a single round trip). The
-	// previous per-user loop would commit partial fan-out on a mid-loop
-	// failure, leaving some members notified and others not. Each row gets a
-	// distinct notify_id derived from the shared id prefix, since the
-	// table's PK is notify_id alone and a shared id would collide.
-	return persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
-		txQueryable, ok := r.txQueryable(txCtx)
-		if !ok {
-			return persistence.ErrNotImplemented
-		}
-		return txQueryable.Exec(txCtx, queryInsertNotifysBatch, targets, item.NotifyID, item.Type, item.IsRead, item.CreatedAt, string(payloadJSON))
-	})
-}
-
-// AppendBatchPerUser 一次往返落库多用户各自独立的通知（@ 提及场景：每个
-// 用户独立 notify_id 与 payload，落库结果与逐人 Append 一致）。userIDs 与
-// items 按位对应、长度必须相等；空 user_id 跳过（与 AppendMany 一致）。
 func (r *PostgresRepository) AppendBatchPerUser(ctx context.Context, userIDs []string, items []NotifyItem) error {
 	// 与单条 Append 的降级语义一致：显式报告未实现，而非静默丢弃通知。
 	if _, ok := persistence.RepoQueryable(ctx, r.factory); !ok {
@@ -120,17 +91,44 @@ func (r *PostgresRepository) AppendBatchPerUser(ctx context.Context, userIDs []s
 }
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) error {
+	// 公告虚拟通知的 notify_id（sysann_ 前缀）路由到 system 模块的公告已读表；
+	// 其余 ID 走 notifications 表。两类可同时出现（mark_read scope=ids）。
+	persisted := ids
+	var announcementIDs []string
+	if r.announcements != nil {
+		persisted = make([]string, 0, len(ids))
+		for _, id := range ids {
+			if announcementID, ok := systemmodule.ParseAnnouncementNotifyID(id); ok {
+				announcementIDs = append(announcementIDs, announcementID)
+				continue
+			}
+			persisted = append(persisted, id)
+		}
+		if len(announcementIDs) > 0 {
+			if err := r.announcements.MarkAnnouncementRead(ctx, userID, announcementIDs); err != nil {
+				return err
+			}
+		}
+		if len(persisted) == 0 {
+			return nil
+		}
+	}
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	return queryable.Exec(ctx, queryMarkNotifysRead, userID, ids)
+	return queryable.Exec(ctx, queryMarkNotifysRead, userID, persisted)
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return persistence.ErrNotImplemented
+	}
+	if r.announcements != nil {
+		if err := r.announcements.MarkAllAnnouncementsRead(ctx, userID); err != nil {
+			return err
+		}
 	}
 	return queryable.Exec(ctx, queryMarkAllNotifysRead, userID)
 }

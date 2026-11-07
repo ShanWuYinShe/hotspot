@@ -128,8 +128,6 @@ func (r *PostgresRepository) IsBanned(ctx context.Context, userID string) (bool,
 	return !state.Expired(time.Now().UTC()), nil
 }
 
-// ListUserIDsAfter 按 user_id 升序 keyset 取一批未注销用户 id（公告 fanout
-// 全量遍历用，limit 由调用方控制不受 NormalizeLimit 约束）。
 func (r *PostgresRepository) ListUserIDsAfter(ctx context.Context, afterUserID string, limit int) ([]string, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

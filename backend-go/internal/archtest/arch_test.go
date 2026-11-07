@@ -49,6 +49,7 @@ var tableOwners = map[string]string{
 	"admin_roles":                      "admin",
 	"admin_user_roles":                 "admin",
 	"admin_users":                      "admin",
+	"announcement_reads":               "system",
 	"app_configs":                      "platform",
 	"auth_accounts":                    "auth",
 	"auth_password_reset_requests":     "auth",

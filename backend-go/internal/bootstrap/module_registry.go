@@ -77,9 +77,15 @@ func BuildModules(cfg config.Config, factory *persistence.Factory) []modulekit.M
 func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory *persistence.Factory, rdb *redis.Client, hotCache *hotcache.Cache, platformAuth *platformauth.Service) ([]modulekit.Module, admin.Repository) {
 	sharedAppConfig := appconfig.NewPersistenceSource(cfg, factory)
 	ratelimit.SetSource(sharedAppConfig)
+	// system 模块先于 notify 构建：公告通知已虚拟化，notify 读取公告列表/已读
+	// 状态必须经 system 模块的所有者接口（不再直查 system_announcements）。
+	systemModule := system.NewModule(factory, sharedAppConfig)
+	systemModule.SetHealthRedisPinger(redisPinger(rdb))
 	// 通知服务全应用单一实例：此前 moments/groups/users/admin 各自再建一份
-	// notify.Service（共 5 个实例并存），装配属 bootstrap 职责，现统一注入。
-	notificationService := notify.NewServiceWithRepo(notify.NewPostgresRepository(factory))
+	// notify.Service（共 5 个实例），装配属 bootstrap 职责，现统一注入。
+	notificationRepo := notify.NewPostgresRepository(factory)
+	notificationRepo.SetAnnouncementNotificationSource(systemModule.AnnouncementNotificationStore())
+	notificationService := notify.NewServiceWithRepo(notificationRepo)
 	// 通知后台清理（NOTIFY_PRUNE_ENABLED，默认开启）：每 24h 删除已读超 90 天
 	// 的通知，防止表无限增长；goroutine 绑定 ctx 随优雅停机退出。
 	if cfg.NotifyPruneEnabled {
@@ -119,9 +125,6 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 		return out, nil
 	})
 	momentsModule.Service.SetNearbyNotifyPublisher(notificationService)
-	systemModule := system.NewModule(factory, sharedAppConfig)
-	systemModule.SetHealthRedisPinger(redisPinger(rdb))
-
 	shareModule := share.NewModule(factory)
 	// share 创建成功后维护 moments.interaction_count（模块自身不再私建 moments 服务实例）。
 	shareModule.Service.SetInteractionCounter(momentsModule.Service)

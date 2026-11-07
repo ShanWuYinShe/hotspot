@@ -8,7 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	systemmodule "hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/platform/realtime"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -302,31 +301,6 @@ func TestAppendMentionedBuildsNotifyID(t *testing.T) {
 		t.Fatalf("unexpected type: %#v", item)
 	}
 }
-
-func TestAppendSystemAnnouncementBuildsNotifyID(t *testing.T) {
-	repo := &notifyListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
-	notifyID, err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload)
-	if err != nil {
-		t.Fatalf("append system announcement: %v", err)
-	}
-	if notifyID == "" {
-		t.Fatal("expected generated notify_id, got empty")
-	}
-	if len(repo.appendMany) != 2 || len(repo.appended) != 1 {
-		t.Fatalf("unexpected append-many capture: %#v", repo)
-	}
-	item := repo.appended[0]
-	if item.NotifyID != notifyID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notifyID, item.NotifyID)
-	}
-	if item.Type != "system_announcement" || item.Payload["type"] != "system_announcement" || item.Payload["announcement_id"] != "ann_1" {
-		t.Fatalf("unexpected system notify item: %#v", item)
-	}
-}
-
-// --- PublishNearbyNewMoment + SetNearbyNotifyProvider ---
 
 func TestPublishNearbyNewMomentNoProviderAppendsAndPushes(t *testing.T) {
 	repo := &notifyListCaptureRepo{}

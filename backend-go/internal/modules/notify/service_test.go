@@ -216,29 +216,6 @@ func TestPushSystemAnnouncementFansOut(t *testing.T) {
 	}
 }
 
-func TestAppendSystemAnnouncementBuildsNotifysForUsers(t *testing.T) {
-	repo := &notifyListCaptureRepo{}
-	service := NewServiceWithRepo(repo)
-	payload := systemmodule.SystemAnnouncementItem{AnnouncementID: "ann_1", Title: "维护通知", Content: "今晚维护", Severity: systemmodule.AnnounceLevelInfo, CreatedAt: "2026-03-26T00:00:00Z"}
-	notifyID, err := service.AppendSystemAnnouncement(context.Background(), []string{"user_alice", "user_bob"}, payload)
-	if err != nil {
-		t.Fatalf("append system announcement: %v", err)
-	}
-	if notifyID == "" {
-		t.Fatal("expected generated notify_id, got empty")
-	}
-	if len(repo.appendMany) != 2 || len(repo.appended) != 1 {
-		t.Fatalf("unexpected append-many capture: %#v", repo)
-	}
-	item := repo.appended[0]
-	if item.NotifyID != notifyID {
-		t.Fatalf("expected item.NotifyID=%q, got %q", notifyID, item.NotifyID)
-	}
-	if item.Type != "system_announcement" || item.Payload["announcement_id"] != "ann_1" || item.Payload["type"] != "system_announcement" {
-		t.Fatalf("unexpected system notify item: %#v", item)
-	}
-}
-
 func TestServiceListNormalizesPaginationAndCursor(t *testing.T) {
 	repo := &notifyListCaptureRepo{list: PaginatedNotify{Items: []NotifyItem{{NotifyID: "notif_1"}}}}
 	service := NewServiceWithRepo(repo)

@@ -16,6 +16,7 @@ import (
 	groupsmodule "hotspot/backend-go/internal/modules/groups"
 	"hotspot/backend-go/internal/modules/notify"
 	notifytest "hotspot/backend-go/internal/modules/notify/notifytest"
+	systemmodule "hotspot/backend-go/internal/modules/system"
 	usersmodule "hotspot/backend-go/internal/modules/users"
 	"hotspot/backend-go/internal/platform/appconfig"
 	platformauth "hotspot/backend-go/internal/platform/auth"
@@ -1079,16 +1080,17 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	if adminPayload.NotifyID == "" || adminPayload.NotifyID != alicePayload.NotifyID {
 		t.Fatalf("expected shared non-empty notification_id in broadcast payloads: %#v %#v", adminPayload, alicePayload)
 	}
-	adminNotifications, err := notificationRepo.List(context.Background(), "admin", notify.NotifyListRequest{})
-	if err != nil || len(adminNotifications.Items) != 1 || adminNotifications.Items[0].Type != "system_announcement" {
-		t.Fatalf("unexpected admin notifications: %#v err=%v", adminNotifications, err)
+	// 公告通知虚拟化：不再向 notifications 表 per-user fanout；广播 notify_id
+	// 稳定为 sysann_<announcement_id>，读取时由 notify 合并 system 公告来源。
+	for _, userID := range []string{"admin", "user_alice"} {
+		page, err := notificationRepo.List(context.Background(), userID, notify.NotifyListRequest{})
+		if err != nil || len(page.Items) != 0 {
+			t.Fatalf("virtual announcement must not fan out notify rows for %s: %#v err=%v", userID, page, err)
+		}
 	}
-	aliceNotifications, err := notificationRepo.List(context.Background(), "user_alice", notify.NotifyListRequest{})
-	if err != nil || len(aliceNotifications.Items) != 1 || aliceNotifications.Items[0].Type != "system_announcement" {
-		t.Fatalf("unexpected alice notifications: %#v err=%v", aliceNotifications, err)
-	}
-	if adminNotifications.Items[0].NotifyID != adminPayload.NotifyID || aliceNotifications.Items[0].NotifyID != adminPayload.NotifyID {
-		t.Fatalf("expected stored notification_id to match broadcast payload: broadcast=%v stored admin=%q alice=%q", adminPayload.NotifyID, adminNotifications.Items[0].NotifyID, aliceNotifications.Items[0].NotifyID)
+	wantNotifyID := systemmodule.AnnouncementNotifyID(createResp.Data.AnnouncementID)
+	if adminPayload.NotifyID != wantNotifyID || alicePayload.NotifyID != wantNotifyID {
+		t.Fatalf("expected stable virtual notify_id %q, got admin=%q alice=%q", wantNotifyID, adminPayload.NotifyID, alicePayload.NotifyID)
 	}
 
 	searchReq := adminContext(httptest.NewRequest(http.MethodPost, "/admin/api/v1/announcements/list", strings.NewReader(`{"severity":"warning","pagination":{"limit":10}}`)), "admin", true)

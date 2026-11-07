@@ -19,20 +19,7 @@ LIMIT $6`
 INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
 VALUES ($1, $2, $3, $4, $5, $6::jsonb)`
 
-	// queryInsertNotifysBatch fans out one notify to many users in a single
-	// round trip。主键为 (notification_id, user_id)（050 迁移），因此同一逻辑
-	// 通知的所有收件人**共用同一个 notification_id**——这是契约要求
-	// （spec api_spec_websocket.md「消息可靠性与去重」：WS 的 notify_id 与
-	// notify/fetch 的 NotifyItem.notify_id 为同一主键，客户端据此去重与
-	// mark_read）。此前每行用 `$2 || '_' || row_number()` 造独立主键，服务层
-	// 却只下发不含后缀的基础 id，导致 mark_read 落空、公告去重失效（审计 F-06）。
-	queryInsertNotifysBatch = `
-INSERT INTO notifications (notification_id, user_id, type, is_read, created_at, payload)
-SELECT $2, uid, $3, $4, $5, $6::jsonb
-FROM unnest($1::text[]) AS uid
-ON CONFLICT (notification_id, user_id) DO NOTHING`
-
-	// queryInsertNotifysBatchPerUser 与 queryInsertNotifysBatch 的区别：每行
+	// queryInsertNotifysBatchPerUser 与逐人插入的区别：每行
 	// 携带**各自独立**的 notify_id 与 payload（@ 提及场景：payload 内嵌各自
 	// 的 notify_id，语义与逐人 Append 一致），六个同长数组按位 unnest 成行、
 	// 单次往返插入。created_at 以 RFC3339 文本传入、显式 cast 为 timestamptz

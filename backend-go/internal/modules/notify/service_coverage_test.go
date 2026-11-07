@@ -41,15 +41,6 @@ func (s *pruneRepoErrStub) PruneReadBefore(context.Context, time.Time) (int64, e
 	return 0, s.pruneErr
 }
 
-func TestNewAnnouncementNotifyIDGeneratesUniqueIDs(t *testing.T) {
-	service := NewService()
-	first := service.NewAnnouncementNotifyID()
-	second := service.NewAnnouncementNotifyID()
-	if first == "" || second == "" || first == second {
-		t.Fatalf("expected unique non-empty ids, got %q / %q", first, second)
-	}
-}
-
 func TestAppendMentionedBatchFansOutPerUser(t *testing.T) {
 	repo := NewInMemoryRepository()
 	service := NewServiceWithRepo(repo)

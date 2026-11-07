@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	systemmodule "hotspot/backend-go/internal/modules/system"
 	platformauth "hotspot/backend-go/internal/platform/auth"
 	"hotspot/backend-go/internal/platform/httpx"
 	"hotspot/backend-go/internal/platform/types"
@@ -144,7 +143,6 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	_, _ = svc.AppendNewFollower(context.Background(), "user_alice", types.UserInfo{UserID: "charlie", Nickname: "Charlie"}, "", "")
 	_, _ = svc.AppendReactionAdded(context.Background(), "user_alice", types.UserInfo{UserID: "bob", Nickname: "Bob"}, "moment", "m1", "👍")
 	_, _ = svc.AppendGroupInviteReceived(context.Background(), "user_alice", types.UserInfo{UserID: "bob", Nickname: "Bob"}, "grp1", "Group One", "inv1", nil)
-	_, _ = svc.AppendSystemAnnouncement(context.Background(), []string{"user_alice"}, systemmodule.SystemAnnouncementItem{AnnouncementID: "ann1", Title: "Test", Content: "Test content", Severity: systemmodule.AnnounceLevelInfo})
 
 	req := withPrincipal(httptest.NewRequest(http.MethodPost, "/unread_summary", strings.NewReader(`{}`)))
 	rr := httptest.NewRecorder()
@@ -160,8 +158,8 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	if resp.Code != 0 {
 		t.Fatalf("expected code 0, got %#v", resp)
 	}
-	if resp.Data.Total != 5 {
-		t.Fatalf("expected total 5, got %d", resp.Data.Total)
+	if resp.Data.Total != 4 {
+		t.Fatalf("expected total 4, got %d", resp.Data.Total)
 	}
 	if resp.Data.ByType.Social != 2 {
 		t.Fatalf("expected by_type.social=2, got %d", resp.Data.ByType.Social)
@@ -172,8 +170,8 @@ func TestUnreadCountReturnsByTypeBreakdown(t *testing.T) {
 	if resp.Data.ByType.Group != 1 {
 		t.Fatalf("expected by_type.group=1, got %d", resp.Data.ByType.Group)
 	}
-	if resp.Data.ByType.System != 1 {
-		t.Fatalf("expected by_type.system=1, got %d", resp.Data.ByType.System)
+	if resp.Data.ByType.System != 0 {
+		t.Fatalf("expected by_type.system=0, got %d", resp.Data.ByType.System)
 	}
 }
 

@@ -3552,3 +3552,23 @@ manifest、计数列去冗余、模块边界 archtest、事务 aftercommit、统
 2. 通用 outbox（实时/通知投递的崩溃一致性）；
 3. 分片 Hub / 多实例广播压测；4. 短关键词（1-2 字）若产品要求高吞吐可评估
    pg_bigm/独立搜索服务；5. 更大数据量下 users/search 密集关键词的候选上限策略。
+
+## Batch D3：系统公告通知虚拟化（2026-11-07）
+
+原实现发布公告时向 notifications 表 per-user fanout（100k 用户=10 万行/公告），
+fanout 非原子、表膨胀且无法区分公告本体与已读状态。改为虚拟模型：
+
+- 新迁移 067：`announcement_reads(announcement_id,user_id,read_at)` 记录稀疏已读状态；
+  旧 fanout 行中 is_read=TRUE 的状态迁入新表后删除全部旧 system_announcement 通知行。
+  可见性口径与旧 fanout 对齐：仅公告创建时已注册用户可见（读侧 join users.created_at）。
+- notify_id 稳定为 `sysann_<announcement_id>`：WS SystemAnnouncement 与 notify/fetch
+  共用同一 ID；notify/mark_read 按前缀把公告 ID 路由到 system 模块已读表。
+- system 模块新增 `AnnouncementNotificationStore`（列表/未读计数/标记已读/全部已读），
+  经 bootstrap 注入 notify；notify 不再直查 system_announcements（数据所有权保持）。
+- notify 列表把「持久化通知行 + 公告虚拟行」按 (created_at DESC, notify_id DESC)
+  全序归并后统一分页；unread_summary 合并 system 未读数。
+- admin 发布公告不再 fanout，只做一次全体 WS 广播（SendPush 控制）；删除
+  AppendMany/NewAnnouncementNotifyID 等 fanout API 与 admin ListUserIDsAfter。
+- 测试：system 公告虚拟读/已读状态真实库 IT；notify 合并分页/过滤/未读/mark_read
+  路由真实库 IT + 单测；admin 公告测试改为断言「不落 notifications 行 + 稳定 notify_id」。
+- 门禁：go test -short 全绿；worktree verify-backend-ci.sh --with-db ALL CHECKS PASSED。

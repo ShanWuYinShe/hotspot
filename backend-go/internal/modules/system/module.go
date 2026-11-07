@@ -25,6 +25,16 @@ func NewModule(factory *persistence.Factory, source appconfig.Source) *Module {
 
 func (m *Module) Service() *Service { return m.service }
 
+// AnnouncementNotificationStore 暴露公告虚拟通知读能力（所有者接口，bootstrap
+// 注入 notify 模块）：notify 不再直查 system_announcements。
+func (m *Module) AnnouncementNotificationStore() AnnouncementNotificationStore {
+	if m == nil || m.service == nil {
+		return nil
+	}
+	store, _ := m.service.repo.(AnnouncementNotificationStore)
+	return store
+}
+
 // SetHealthRedisPinger wires an optional redis liveness probe used by the
 // health endpoint. Bootstrap calls this when a redis client is configured.
 func (m *Module) SetHealthRedisPinger(p func(ctx context.Context) error) {
