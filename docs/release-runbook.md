@@ -63,7 +63,7 @@ gh run watch <run-id> --exit-status
 - **加锁**：服务器 `~/hotspot/.deploy.lock` 原子 mkdir，占锁失败即中止（TTL 6h 后可接管陈旧锁）；
 - **校验发布包**：Release 的 `.sha256` 资产（旧版本无此资产时告警放行）；加载后若存在 `.ids.txt`（镜像身份清单）则逐一核对 `docker inspect .Id`，锁定「发布包内容 == CI 构建产物」。清单同时记录 config digest 与 OCI manifest digest：`docker inspect .Id` 的语义取决于镜像存储后端（经典 graph driver 为 config digest，containerd 存储如 Docker 29 为 manifest digest），任一匹配即通过；
 - **配置同源**：compose / nginx 片段从**被部署的 tag** 用 `git archive` 导出，不取工作树内容（否则本地 HEAD 领先 tag 时会把未发布的配置带上线）；
-- **配置生效校验**：nginx 配置是 file bind-mount（容器创建时锁定 inode），同步必须**原位写入**（`cat >`）——`rm+mv` 换掉宿主 inode 后，运行中的容器仍读旧文件，`nginx -s reload` 会静默不生效（2026-11-07 实测线上 nginx 配置自 11/04 起与仓库漂移）。同步后在动镜像前逐文件比对「容器内配置 sha256 == tag 内配置」，不一致立即中止并提示重建 nginx 容器；
+- **配置生效校验**：nginx 配置是 file bind-mount（容器创建时锁定 inode），同步必须**原位写入**（`cat >`）——`rm+mv` 换掉宿主 inode 后，运行中的容器仍读旧文件，`nginx -s reload` 会静默不生效（2026-11-07 实测线上 nginx 配置自 11/04 起与仓库漂移）。同步后在动镜像前逐文件比对「容器内配置 sha256 == tag 内配置」，不一致立即中止并提示重建 nginx 容器（若本次发布**新增**了 nginx 挂载文件，旧容器尚未挂载该文件也会触发该提示：先重建 nginx 容器——此时宿主机 compose 已是 tag 版本——再重跑部署）；
 - **核对镜像指纹**：`version` 必须等于 tag、`revision` 必须等于该 tag 的 commit；
 - **数据库快照**：`pg_dump -Fc` 到服务器 `backups/` + 本机 `.workwork/`，失败即中止；
 - **独立迁移 job**：滚动更新前先在服务器跑一次性容器
