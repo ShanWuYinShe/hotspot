@@ -98,23 +98,25 @@ describe('PageHeader 灵动岛（桌面端，滚动驱动交接）', () => {
 		expect(headerIsland.visible).toBe(false);
 	});
 
-	it('吸顶页头：交接进行中不隐藏页头（scroll-linked，没有中途跳变），落位后才隐去', async () => {
+	it('吸顶页头：滚动越过阈值后触发灵动岛并隐去页头，回到顶部完全恢复', async () => {
 		const scroller = createScroller();
 		const comp = mount(PageHeader, { target: scroller, props: { title: '设置', subtitle: '账号 · 外观' } });
 		mounted.push(() => void unmount(comp));
 		await tick();
 		const header = scroller.querySelector('header') as HTMLElement;
 
-		// 交接窗口 120→260：180 落在半途，p≈0.43 → 岛可见但页头仍可交互（尚未落位）
-		scroller.scrollTop = 180;
+		// 滚动未达阈值（scrollTop=100）：岛不显示、页头不隐去
+		scroller.scrollTop = 100;
 		scroller.dispatchEvent(new Event('scroll'));
 		await pump();
-		expect(headerIsland.visible).toBe(true);
+		expect(headerIsland.visible).toBe(false);
 		expect(header.dataset.islandBandHidden).toBeUndefined();
 
+		// 滚动跨过阈值（scrollTop=300）：触发灵动岛落位、页头整条隐去
 		scroller.scrollTop = 300;
 		scroller.dispatchEvent(new Event('scroll'));
 		await pump();
+		expect(headerIsland.visible).toBe(true);
 		expect(header.dataset.islandBandHidden).toBe('true');
 		expect(header.getAttribute('aria-hidden')).toBe('true');
 		// Svelte 以 DOM 属性方式落 inert（浏览器会反射为同名属性；jsdom 不反射，只留属性值）

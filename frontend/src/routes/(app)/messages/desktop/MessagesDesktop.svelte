@@ -23,7 +23,7 @@
 <div class="flex h-full flex-1 gap-3 overflow-hidden bg-surface-page p-3">
 	<!-- Left: chat list column (w-80 = 320px) -->
 	<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-xs">
-		<PageHeader title="消息" sticky titleSize="xl" contentClassName="px-4">
+		<PageHeader title="消息" sticky titleSize="xl" contentClassName="px-4" island={false}>
 			{#snippet trailing()}
 				{#if !data.needsAuth}
 					<div class="flex items-center gap-2">

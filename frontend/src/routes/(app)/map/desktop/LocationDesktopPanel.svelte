@@ -78,7 +78,7 @@
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => smartBack()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" titleSize="xl" />
+	<PageHeader title="位置选择" onBack={() => smartBack()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" titleSize="xl" island={false} />
 </div>
 
 <!-- Search -->

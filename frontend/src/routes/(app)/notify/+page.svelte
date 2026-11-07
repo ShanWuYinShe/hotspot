@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Bell, CheckCheck, Heart, UserPlus, Users } from '@lucide/svelte';
+	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
@@ -36,9 +37,14 @@
 	{#snippet header()}
 		<PageHeader
 			title="通知"
+			subtitle={!data.needsAuth && data.unread > 0 ? `${data.unread} 条未读消息` : '暂无新通知'}
+			islandMeta={!data.needsAuth ? (data.unread > 0 ? `${data.unread} 条未读` : '全部已读') : ''}
 			titleSize="xl"
 			onBack={() => smartBack()}
 		>
+			{#snippet islandIcon()}
+				<Bell class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet trailing()}
 				{#if !data.needsAuth && data.unread > 0}
 					<Button
@@ -51,6 +57,18 @@
 						<CheckCheck size={14} class="text-text-secondary" />
 						全部已读
 					</Button>
+				{/if}
+			{/snippet}
+			{#snippet islandTrailing()}
+				{#if !data.needsAuth && data.unread > 0}
+					<ActionIconButton
+						icon={CheckCheck}
+						label="全部已读"
+						variant="ghost"
+						tone="muted"
+						size={32}
+						onClick={() => data.markAllRead()}
+					/>
 				{/if}
 			{/snippet}
 			{#snippet below()}

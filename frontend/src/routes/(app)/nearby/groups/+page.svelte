@@ -40,6 +40,9 @@
 			subtitle={data.pageSubtitle}
 			islandMeta={data.islandMetaText}
 		>
+			{#snippet islandIcon()}
+				<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
+			{/snippet}
 			{#snippet subtitleIcon()}
 				<MapPin class="size-2.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}

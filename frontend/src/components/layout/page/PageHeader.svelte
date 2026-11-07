@@ -247,19 +247,23 @@ import {
 							}
 						: null;
 				}
+				const progress = scrollHandoffProgress(y, 120 * uiScale, 260 * uiScale);
+				const isScrolled = progress >= 0.5;
 				headerIsland.setHandoff(
 					islandToken,
-					scrollHandoffProgress(y, 120 * uiScale, 260 * uiScale),
+					isScrolled ? 1 : 0,
 					stickySource
 				);
 				return;
 			}
-			// 非吸顶页头：标题随内容滚进顶栏，进度由锚点矩形相对顶栏的位置直接算出。
+			// 非吸顶页头：标题随内容滚进顶栏，在越过阈值后自动触发灵动岛转换动效（0 或 1，对齐主页阈值触发体验）。
 			if (!anchorBox || y < 1) measureAnchor(target);
 			const source = anchorSource(y);
+			const progress = source ? anchorHandoffProgress(source.y, source.height, barBottom()) : 0;
+			const isScrolled = progress >= 0.5;
 			headerIsland.setHandoff(
 				islandToken,
-				source ? anchorHandoffProgress(source.y, source.height, barBottom()) : 0,
+				isScrolled ? 1 : 0,
 				source
 			);
 		};
@@ -327,9 +331,9 @@ import {
 	aria-hidden={islandBandHidden ? 'true' : undefined}
 	inert={islandBandHidden}
 	class={cn(
-		// 入岛退场由 handoffRecede 逐帧写 opacity（与滚动同源、可逆）；这里不再挂 transition-opacity：
-		// 时长过渡会与滚动进度打架（滞后一拍），正是「不跟手」的来源。
+		// 阈值触发交接：吸顶页头淡出增加 180ms snappy 过渡，与顶栏灵动岛 180ms 入场动效严格对称
 		'shrink-0',
+		islandHandoffTrigger && 'transition-opacity duration-snappy ease-standard',
 		integrated
 			? 'max-sm:sticky max-sm:top-0 max-sm:z-[var(--cst-z-sticky)] max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:pb-1.5'
 			: floating
