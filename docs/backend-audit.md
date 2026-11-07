@@ -3732,3 +3732,11 @@ relevance/距离排序与游标分页：
 - 结论：真实低/中密度关键词走 PGroonga 索引后是毫秒级；**10 万级全命中**属于
   搜索语义的最坏情况，需独立搜索服务/前缀限制才可能再降一个量级。本机
   perf-budget 的种子数据密度远低于此，合并后实测见下节。
+
+密集关键词 ranked 路径合并后验证（2026-11-07）：
+- 主树 `--with-e2e` ALL CHECKS PASSED；go test -short 全绿；
+  worktree `--with-db` ALL CHECKS PASSED。
+- perf-budget（backend-test，c=10/warmup 2s/5s，load≈5.0）：8 端点全部 OK；
+  **users/search 3270 rps / p50 2.28ms / p99 22.19ms**（上一轮同环境 1657 rps /
+  p99 36.99ms；本机波动大，但相持平/更优），其余端点均在预算内。
+- main backend 已重启并 healthy；验证后 backend-test 已停止。
