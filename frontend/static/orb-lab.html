@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* ──── 方案 A：液态毛玻璃微胶囊 ──── */
+    .mini-capsule-runner {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+      display: none;
+      height: 28px;
+      width: 44px;
+      border-radius: 9999px;
+      background: rgba(30, 36, 45, 0.85);
+      border: 1px solid rgba(255, 107, 53, 0.45);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35), 0 0 16px rgba(255, 107, 53, 0.2);
+      backdrop-filter: blur(12px);
+      transform-origin: center center;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .mini-capsule-runner .capsule-dot {
+      width: 5px; height: 5px; border-radius: 9999px; background: #ff6b35;
+    }
+    .mini-capsule-runner .capsule-bar {
+      width: 16px; height: 3px; border-radius: 9999px; background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* ──── 方案 B：高透晶莹水滴 ──── */
+    .dewdrop-runner {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+      display: none;
+      width: 28px; height: 28px;
+      border-radius: 9999px;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 35%, rgba(255,107,53,0.15) 75%, rgba(255,107,53,0.3) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3), inset 0 1px 3px rgba(255,255,255,0.8), 0 0 14px rgba(255, 107, 53, 0.25);
+      backdrop-filter: blur(8px);
+      transform-origin: center center;
+    }
+
+    /* ──── 方案 D：共享容器变形框 ──── */
+    .morph-box-runner {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+      display: none;
+      border-radius: 12px;
+      background: rgba(24, 28, 35, 0.9);
+      border: 1px solid rgba(255, 107, 53, 0.35);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      backdrop-filter: blur(16px);
+      transform-origin: top left;
+      overflow: hidden;
+      align-items: center;
+      padding: 0 12px;
+    }
+
+    /* 胶囊横向展开 */
+    @keyframes capsule-unfurl {
+      0% {
+        width: 44px;
+        opacity: 0.9;
+        transform: translate(-50%, -50%) scale(0.95);
+      }
+      65% {
+        width: 330px;
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.015);
+      }
+      100% {
+        width: 310px;
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    .capsule-blooming {
+      animation: capsule-unfurl 360ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-2">
+  <div class="bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-2xl shadow-xl overflow-hidden relative flex flex-col">
+    <!-- 控制栏 -->
+    <div class="px-4 py-3 bg-[var(--background)]/60 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
+        <span class="font-semibold text-sm">灵动岛 4 种高阶变形方案体验台</span>
+      </div>
+
+      <!-- 速率切换 -->
+      <div class="flex items-center gap-1 bg-[var(--card)] p-1 rounded-lg border border-[var(--border)] text-xs">
+        <button id="w-speed-10" onclick="setSpeed(1.0)" class="px-2 py-1 rounded bg-orange-500 text-white font-medium text-xs transition">1.0x 标准</button>
+        <button id="w-speed-05" onclick="setSpeed(0.5)" class="px-2 py-1 rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium text-xs transition">0.5x 慢放</button>
+        <button id="w-speed-02" onclick="setSpeed(0.25)" class="px-2 py-1 rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium text-xs transition">0.25x 逐帧</button>
+      </div>
+
+      <!-- 触发按钮 -->
+      <div class="flex items-center gap-1.5">
+        <button onclick="playForward()" class="px-3.5 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shadow-sm active:scale-95 transition flex items-center gap-1">
+          ▶ 触发变形
+        </button>
+        <button onclick="playReverse()" class="px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-xs font-medium text-[var(--foreground)] active:scale-95 transition">
+          ↺ 复原
+        </button>
+      </div>
+    </div>
+
+    <!-- 方案选择 Tabs -->
+    <div class="grid grid-cols-4 gap-1.5 p-2 bg-[var(--background)]/40 border-b border-[var(--border)] text-xs">
+      <button id="w-tab-A" onclick="switchScheme('A')" class="py-1.5 px-1 rounded-lg text-center font-medium bg-orange-500/15 border border-orange-500/40 text-orange-500 transition">
+        <div class="font-semibold text-xs">方案 A · 毛玻璃胶囊</div>
+        <div class="text-[11px] opacity-75">推荐 · 自然克制</div>
+      </button>
+      <button id="w-tab-B" onclick="switchScheme('B')" class="py-1.5 px-1 rounded-lg text-center font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+        <div class="font-semibold text-xs">方案 B · 晶莹水滴</div>
+        <div class="text-[11px] opacity-75">通透空灵 · 无硬色块</div>
+      </button>
+      <button id="w-tab-C" onclick="switchScheme('C')" class="py-1.5 px-1 rounded-lg text-center font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+        <div class="font-semibold text-xs">方案 C · 引力光带</div>
+        <div class="text-[11px] opacity-75">东方气韵 · 墨迹微流</div>
+      </button>
+      <button id="w-tab-D" onclick="switchScheme('D')" class="py-1.5 px-1 rounded-lg text-center font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition">
+        <div class="font-semibold text-xs">方案 D · 几何蜕变</div>
+        <div class="text-[11px] opacity-75">极简工业 · 容器形变</div>
+      </button>
+    </div>
+
+    <!-- 方案解读 -->
+    <div id="w-scheme-desc" class="px-4 py-2 bg-orange-500/5 border-b border-[var(--border)] text-xs text-[var(--muted-foreground)]">
+      <span class="text-orange-500 font-semibold">方案 A · 液态毛玻璃胶囊：</span> 抛弃实体橙色球！标题收拢为半透明微胶囊，沿弧线自然滑入顶栏，抵泊后横向舒展为灵动岛。
+    </div>
+
+    <!-- 视口模拟区 (高度 280px) -->
+    <div id="sim-viewport" class="relative h-[280px] bg-[var(--background)] overflow-hidden select-none">
+      <!-- 顶栏模拟 -->
+      <div class="absolute top-0 left-0 right-0 h-[52px] border-b border-[var(--border)] bg-[var(--card)]/90 backdrop-blur-md z-40 flex items-center justify-between px-6">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500/50 flex items-center justify-center text-xs font-bold text-orange-500">HS</div>
+          <span class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">HotSpot</span>
+        </div>
+
+        <div id="w-dock" class="relative w-72 h-9 flex items-center justify-center">
+          <div id="w-capsule" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-9 items-center rounded-full border border-orange-500/40 bg-[var(--card)] px-3 shadow-lg overflow-hidden">
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center text-xs text-orange-500">●</span>
+              <span class="text-xs font-semibold text-[var(--foreground)]">附近的人</span>
+              <span class="text-xs text-[var(--muted-foreground)]">· 24 个活跃</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs text-[var(--muted-foreground)]">顶栏区</div>
+      </div>
+
+      <!-- 页面标题栏区域 -->
+      <div id="w-header" class="absolute top-[80px] left-8 right-8 py-3 border-b border-[var(--border)] flex items-center justify-between transition-all duration-200">
+        <div id="w-title-wrap" class="flex items-baseline gap-2.5">
+          <h1 id="w-title" class="text-xl font-bold text-[var(--foreground)]">附近的人</h1>
+          <span class="text-xs text-[var(--muted-foreground)]">共 24 位同好在线</span>
+        </div>
+        <div class="text-xs px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--muted-foreground)]">筛选</div>
+      </div>
+
+      <!-- 动效载体 -->
+      <div id="w-runner-capsule" class="mini-capsule-runner">
+        <div class="capsule-dot"></div>
+        <div class="capsule-bar"></div>
+      </div>
+      <div id="w-runner-dewdrop" class="dewdrop-runner"></div>
+      <div id="w-runner-morph-box" class="morph-box-runner">
+        <span class="text-xs font-semibold text-white">附近的人</span>
+      </div>
+
+      <!-- SVG 曲线 / 光束 -->
+      <svg id="w-svg" class="absolute inset-0 pointer-events-none z-30 w-full h-full">
+        <path id="w-path" d="" fill="none" stroke="rgba(255, 107, 53, 0.45)" stroke-width="2" stroke-dasharray="4 4"></path>
+        <path id="w-light-beam" d="" fill="none" stroke="url(#w-beam-grad)" stroke-width="3" stroke-linecap="round" style="display: none;"></path>
+        <defs>
+          <linearGradient id="w-beam-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#ff6b35" stop-opacity="0" />
+            <stop offset="50%" stop-color="#ff854f" stop-opacity="0.8" />
+            <stop offset="100%" stop-color="#ffffff" stop-opacity="1" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </div>
+
+  <script>
+    let currentScheme = 'A';
+    let speed = 1.0;
+
+    const capsule = document.getElementById('w-capsule');
+    const titleWrap = document.getElementById('w-title-wrap');
+    const path = document.getElementById('w-path');
+    const lightBeam = document.getElementById('w-light-beam');
+    const viewport = document.getElementById('sim-viewport');
+    const schemeDesc = document.getElementById('w-scheme-desc');
+
+    const runnerCapsule = document.getElementById('w-runner-capsule');
+    const runnerDewdrop = document.getElementById('w-runner-dewdrop');
+    const runnerMorphBox = document.getElementById('w-runner-morph-box');
+
+    let animId = null;
+
+    const DESCRIPTIONS = {
+      'A': '<span class="text-orange-500 font-semibold">方案 A · 液态毛玻璃胶囊（推荐）：</span> 彻底抛弃突兀的实体橙色球！标题收拢为微毛玻璃微胶囊（与灵动岛同质），沿抛物线优雅滑入顶栏并横向舒展为灵动岛。',
+      'B': '<span class="text-orange-500 font-semibold">方案 B · 晶莹微透水滴：</span> 绝无刺眼的大实心橙球！70% 高透玻璃水滴，带高光折射与白边，像晨雾里的水露轻盈升空，融入灵动岛，通透空灵。',
+      'C': '<span class="text-orange-500 font-semibold">方案 C · 引力光带与气韵流动：</span> 完全不具象成球或硬块！标题文字微化为一道晶莹流光光束，顺着抛物线优雅注入顶栏中央，灵动岛向两侧舒展展开。',
+      'D': '<span class="text-orange-500 font-semibold">方案 D · 纯净容器几何蜕变：</span> 纯正工业极简设计（Linear 级）。标题外围的微底座直接沿着弧线连续变形升维，平滑变换尺寸与位置，纯粹靠几何形变。'
+    };
+
+    function switchScheme(s) {
+      currentScheme = s;
+      ['A', 'B', 'C', 'D'].forEach(k => {
+        const btn = document.getElementById('w-tab-' + k);
+        if (k === s) {
+          btn.className = 'py-1.5 px-1 rounded-lg text-center font-medium bg-orange-500/15 border border-orange-500/40 text-orange-500 transition';
+        } else {
+          btn.className = 'py-1.5 px-1 rounded-lg text-center font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition';
+        }
+      });
+      schemeDesc.innerHTML = DESCRIPTIONS[s];
+      playReverse();
+    }
+
+    function setSpeed(v) {
+      speed = v;
+      ['10', '05', '02'].forEach(k => {
+        const btn = document.getElementById('w-speed-' + k);
+        btn.className = 'px-2 py-1 rounded text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium text-xs transition';
+      });
+      const activeId = v === 1.0 ? '10' : v === 0.5 ? '05' : '02';
+      document.getElementById('w-speed-' + activeId).className = 'px-2 py-1 rounded bg-orange-500 text-white font-medium text-xs transition';
+    }
+
+    function evalBezier(p0, p1, p2, t) {
+      const inv = 1 - t;
+      return {
+        x: inv * inv * p0.x + 2 * inv * t * p1.x + t * t * p2.x,
+        y: inv * inv * p0.y + 2 * inv * t * p1.y + t * t * p2.y
+      };
+    }
+
+    function playForward() {
+      if (animId) cancelAnimationFrame(animId);
+      capsule.classList.remove('capsule-blooming');
+      capsule.style.display = 'none';
+      runnerCapsule.style.display = 'none';
+      runnerDewdrop.style.display = 'none';
+      runnerMorphBox.style.display = 'none';
+      lightBeam.style.display = 'none';
+
+      const vRect = viewport.getBoundingClientRect();
+      const tRect = titleWrap.getBoundingClientRect();
+      const dRect = document.getElementById('w-dock').getBoundingClientRect();
+
+      const startPt = {
+        x: tRect.left - vRect.left + tRect.width / 2,
+        y: tRect.top - vRect.top + tRect.height / 2
+      };
+      const endPt = {
+        x: dRect.left - vRect.left + dRect.width / 2,
+        y: 26
+      };
+
+      const ctrlX = startPt.x + (endPt.x - startPt.x) * 0.38;
+      const ctrlY = Math.max(14, Math.min(startPt.y, endPt.y) - 20);
+
+      path.setAttribute('d', 'M ' + startPt.x + ' ' + startPt.y + ' Q ' + ctrlX + ' ' + ctrlY + ' ' + endPt.x + ' ' + endPt.y);
+
+      if (currentScheme === 'A') {
+        runA(startPt, { x: ctrlX, y: ctrlY }, endPt);
+      } else if (currentScheme === 'B') {
+        runB(startPt, { x: ctrlX, y: ctrlY }, endPt);
+      } else if (currentScheme === 'C') {
+        runC(startPt, { x: ctrlX, y: ctrlY }, endPt);
+      } else if (currentScheme === 'D') {
+        runD(vRect, tRect, dRect, startPt, { x: ctrlX, y: ctrlY }, endPt);
+      }
+    }
+
+    function runA(startPt, ctrlPt, endPt) {
+      titleWrap.style.transition = 'transform ' + (200 / speed) + 'ms cubic-bezier(0.4, 0, 0.2, 1), opacity ' + (200 / speed) + 'ms ease';
+      titleWrap.style.transform = 'scale(0.35) translate3d(20px, -8px, 0)';
+      titleWrap.style.opacity = '0';
+
+      setTimeout(() => {
+        runnerCapsule.style.display = 'flex';
+        const flightDuration = 420 / speed;
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const p = Math.min(1, elapsed / flightDuration);
+          const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+          const pt = evalBezier(startPt, ctrlPt, endPt, ease);
+
+          const stretch = 1.0 + 0.14 * Math.sin(p * Math.PI);
+          const angle = -10 * Math.sin(p * Math.PI);
+          runnerCapsule.style.left = (pt.x - 22) + 'px';
+          runnerCapsule.style.top = (pt.y - 14) + 'px';
+          runnerCapsule.style.transform = 'rotate(' + angle + 'deg) scale(' + stretch + ', ' + (1 / stretch) + ')';
+
+          if (p < 1) {
+            animId = requestAnimationFrame(step);
+          } else {
+            runnerCapsule.style.display = 'none';
+            capsule.style.display = 'flex';
+            capsule.classList.add('capsule-blooming');
+          }
+        }
+        animId = requestAnimationFrame(step);
+      }, 160 / speed);
+    }
+
+    function runB(startPt, ctrlPt, endPt) {
+      titleWrap.style.transition = 'transform ' + (200 / speed) + 'ms cubic-bezier(0.4, 0, 0.2, 1), opacity ' + (200 / speed) + 'ms ease';
+      titleWrap.style.transform = 'scale(0.3) translate3d(20px, -8px, 0)';
+      titleWrap.style.opacity = '0';
+
+      setTimeout(() => {
+        runnerDewdrop.style.display = 'block';
+        const flightDuration = 420 / speed;
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const p = Math.min(1, elapsed / flightDuration);
+          const ease = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+          const pt = evalBezier(startPt, ctrlPt, endPt, ease);
+
+          const stretch = 1.0 + 0.16 * Math.sin(p * Math.PI);
+          runnerDewdrop.style.left = (pt.x - 14) + 'px';
+          runnerDewdrop.style.top = (pt.y - 14) + 'px';
+          runnerDewdrop.style.transform = 'scale(' + stretch + ', ' + (1 / stretch) + ')';
+
+          if (p < 1) {
+            animId = requestAnimationFrame(step);
+          } else {
+            runnerDewdrop.style.display = 'none';
+            capsule.style.display = 'flex';
+            capsule.classList.add('capsule-blooming');
+          }
+        }
+        animId = requestAnimationFrame(step);
+      }, 160 / speed);
+    }
+
+    function runC(startPt, ctrlPt, endPt) {
+      titleWrap.style.transition = 'transform ' + (180 / speed) + 'ms ease, opacity ' + (180 / speed) + 'ms ease';
+      titleWrap.style.transform = 'scale(0.8) translateY(-8px)';
+      titleWrap.style.opacity = '0';
+
+      const dStr = 'M ' + startPt.x + ' ' + startPt.y + ' Q ' + ctrlPt.x + ' ' + ctrlPt.y + ' ' + endPt.x + ' ' + endPt.y;
+      lightBeam.setAttribute('d', dStr);
+      const totalLen = lightBeam.getTotalLength();
+      lightBeam.style.strokeDasharray = totalLen;
+      lightBeam.style.strokeDashoffset = totalLen;
+      lightBeam.style.display = 'block';
+
+      setTimeout(() => {
+        const flightDuration = 420 / speed;
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = now - startTime;
+          const p = Math.min(1, elapsed / flightDuration);
+          const ease = p * (2 - p);
+
+          lightBeam.style.strokeDashoffset = totalLen * (1 - ease);
+
+          if (p < 1) {
+            animId = requestAnimationFrame(step);
+          } else {
+            setTimeout(() => { lightBeam.style.display = 'none'; }, 100);
+            capsule.style.display = 'flex';
+            capsule.classList.add('capsule-blooming');
+          }
+        }
+        animId = requestAnimationFrame(step);
+      }, 120 / speed);
+    }
+
+    function runD(vRect, tRect, dRect, startPt, ctrlPt, endPt) {
+      titleWrap.style.opacity = '0';
+
+      const relLeft = tRect.left - vRect.left;
+      const relTop = tRect.top - vRect.top;
+      runnerMorphBox.style.display = 'flex';
+      runnerMorphBox.style.left = relLeft + 'px';
+      runnerMorphBox.style.top = relTop + 'px';
+      runnerMorphBox.style.width = tRect.width + 'px';
+      runnerMorphBox.style.height = tRect.height + 'px';
+
+      const targetX = dRect.left - vRect.left + dRect.width / 2 - 150;
+      const targetY = 8;
+      const targetW = 300;
+      const targetH = 36;
+
+      const duration = 520 / speed;
+      const startTime = performance.now();
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const p = Math.min(1, elapsed / duration);
+        const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+        const curX = relLeft + (targetX - relLeft) * ease;
+        const curY = relTop + (targetY - relTop) * ease;
+        const curW = tRect.width + (targetW - tRect.width) * ease;
+        const curH = tRect.height + (targetH - tRect.height) * ease;
+        const curR = 12 + (18 - 12) * ease;
+
+        runnerMorphBox.style.left = curX + 'px';
+        runnerMorphBox.style.top = curY + 'px';
+        runnerMorphBox.style.width = curW + 'px';
+        runnerMorphBox.style.height = curH + 'px';
+        runnerMorphBox.style.borderRadius = curR + 'px';
+
+        if (p < 1) {
+          animId = requestAnimationFrame(step);
+        } else {
+          runnerMorphBox.style.display = 'none';
+          capsule.style.display = 'flex';
+          capsule.style.width = '300px';
+        }
+      }
+      animId = requestAnimationFrame(step);
+    }
+
+    function playReverse() {
+      if (animId) cancelAnimationFrame(animId);
+      capsule.classList.remove('capsule-blooming');
+      capsule.style.display = 'none';
+      runnerCapsule.style.display = 'none';
+      runnerDewdrop.style.display = 'none';
+      runnerMorphBox.style.display = 'none';
+      lightBeam.style.display = 'none';
+
+      titleWrap.style.transition = 'transform ' + (280 / speed) + 'ms cubic-bezier(0.16, 1, 0.3, 1), opacity ' + (280 / speed) + 'ms ease';
+      titleWrap.style.transform = 'scale(1) translate3d(0, 0, 0)';
+      titleWrap.style.opacity = '1';
+      path.setAttribute('d', '');
+    }
+  </script>
+</body>
+</html>
