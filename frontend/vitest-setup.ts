@@ -1,4 +1,16 @@
+import { afterAll, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+
+// bits-ui 的 dialog/dropdown-menu 等在释放 body-scroll-lock 时会安排约 24ms 的延迟
+// 清理定时器；若它在本测试文件结束、jsdom 环境拆除之后才触发，回调访问 document
+// 会抛 ReferenceError: document is not defined，并让整个 vitest 运行失败（v1.7.0
+// 发布时 CI 连续两次复现，触发文件为 MomentActionMenu 用例）。统一在每个测试文件
+// 收尾前等一拍：先恢复真实定时器（避免用例遗留的假定时器让等待永不返回），60ms
+// 远大于 24ms，等待期间 jsdom 仍存活，清理可正常落地。
+afterAll(async () => {
+	vi.useRealTimers();
+	await new Promise((resolve) => setTimeout(resolve, 60));
+});
 
 // Node 25+ 的原生 Web Storage 全局会遮蔽 jsdom 的 localStorage/sessionStorage
 //（vitest-dev/vitest#8757）。vite.config 通过 worker execArgv 传
