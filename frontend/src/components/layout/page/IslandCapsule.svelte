@@ -2,7 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
-	import { ChevronDown } from '@lucide/svelte';
+	import { ChevronDown, X } from '@lucide/svelte';
 	import { motionDuration } from '@/lib/motion';
 
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
@@ -155,14 +155,21 @@
 			{/if}
 
 			{#if expanded}
-				<!-- 展开/收起引导箭头 -->
+				<!-- 展开/收起交互控件：常驻态为低饱和度微下指箭头；展开态重构为极简圆形关闭 (X) 钮，彻底消除粗暴向上箭头 -->
 				<button
 					type="button"
-					class="flex size-6 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors duration-snappy"
+					class="flex size-6 shrink-0 items-center justify-center rounded-full transition-all duration-snappy {isExpanded
+						? 'bg-surface-subtle/80 text-text-secondary/70 hover:bg-interactive-hover hover:text-text-primary active:scale-90 border border-border-default/20'
+						: 'text-text-secondary/45 hover:text-text-primary hover:bg-interactive-hover'}"
 					onclick={toggleExpand}
 					aria-label={isExpanded ? '收起控制面板' : '展开控制面板'}
+					title={isExpanded ? '收起 (Esc)' : '展开控制面板'}
 				>
-					<ChevronDown class="size-3.5 transition-transform duration-relaxed ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
+					{#if isExpanded}
+						<X class="size-3.5 transition-transform duration-snappy animate-fade-in" />
+					{:else}
+						<ChevronDown class="size-3 transition-colors duration-snappy" />
+					{/if}
 				</button>
 			{/if}
 
