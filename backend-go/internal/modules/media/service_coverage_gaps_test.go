@@ -213,6 +213,9 @@ func TestValidatePresignUploadRequestBoundaryBranches(t *testing.T) {
 	if err := callValidate(PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "   ", Category: CategoryAvatar}); !errors.Is(err, ErrInvalidMediaRequest) {
 		t.Fatalf("blank mime type must be rejected, got %v", err)
 	}
+	if err := callValidate(PresignFileInput{FileName: "a.png", FileSize: 100, MimeType: "image/png", Category: MediaCategory("bogus")}); !errors.Is(err, ErrInvalidMediaRequest) {
+		t.Fatalf("unknown category must be rejected, got %v", err)
+	}
 	if isAllowedMediaCategory(MediaCategory("bogus")) {
 		t.Fatal("unknown category must not be allowed")
 	}
@@ -432,6 +435,13 @@ func TestServiceAvatarReadURLAndGroupAvatar(t *testing.T) {
 	avatarID := seedCompletedAvatar(t, repo, "mediacov_avatar_service", "u1", CategoryAvatar)
 	groupAvatarID := seedCompletedAvatar(t, repo, "mediacov_group_avatar_service", "u1", CategoryGroupAvatar)
 	momentID := seedCompletedAvatar(t, repo, "mediacov_moment_service", "u1", CategoryMomentImage)
+
+	if err := svc.ResolveAvatarImage(ctx, avatarID, "u1"); err != nil {
+		t.Fatalf("own completed avatar must resolve, got %v", err)
+	}
+	if err := svc.ResolveAvatarImage(ctx, avatarID, "u2"); !errors.Is(err, ErrMediaNotOwned) {
+		t.Fatalf("foreign avatar must be rejected, got %v", err)
+	}
 
 	if err := svc.ResolveGroupAvatarImage(ctx, groupAvatarID, "u1"); err != nil {
 		t.Fatalf("own completed group avatar must resolve, got %v", err)
