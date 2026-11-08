@@ -126,6 +126,29 @@ func TestHandlerGuestWebServiceErrorCov(t *testing.T) {
 	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
 		t.Fatalf("expected 10600, got %d", code)
 	}
+
+	// App 端失败同样走 errorResponse 分支。
+	appReq := httptest.NewRequest(http.MethodPost, "/guest", strings.NewReader(`{"nickname":"AppGuest","client_type":"app","device_id":"cov-guest-app"}`))
+	appReq.Header.Set("Idempotency-Key", covUniqueKey(t))
+	appRR := httptest.NewRecorder()
+	handler.Guest(appRR, appReq)
+	if code := testdb.DecodeAPICode(t, appRR); code != httpx.CodeInternalUnavailable {
+		t.Fatalf("app guest error: expected 10600, got %d", code)
+	}
+}
+
+func TestHandlerRevokeSessionServerErrorCov(t *testing.T) {
+	cfg := testConfig()
+	authSvc := platformauth.NewServiceWithStores(cfg, covFailingSessionStore{}, platformauth.NewInMemoryRefreshStore())
+	svc := newCovServiceWithAuth(authSvc, &stubAuthRepo{})
+	handler := NewHandler(svc)
+	req := httptest.NewRequest(http.MethodPost, "/revoke_session", strings.NewReader(`{"session_id":"other-session"}`))
+	req = req.WithContext(platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1", SessionID: "current-session"}))
+	rr := httptest.NewRecorder()
+	handler.RevokeSession(rr, req)
+	if code := testdb.DecodeAPICode(t, rr); code != httpx.CodeInternalUnavailable {
+		t.Fatalf("expected 10600 for infrastructure error, got %d", code)
+	}
 }
 
 func TestHandlerRefreshTokenBranchesCov(t *testing.T) {

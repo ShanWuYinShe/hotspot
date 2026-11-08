@@ -1,10 +1,14 @@
 package auth
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/httpx"
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 func TestAPIErrorMappingAdditionalSentinelsCov(t *testing.T) {
@@ -104,5 +108,34 @@ func TestModuleAccessorsCov(t *testing.T) {
 	}
 	if m.PlatformAuth() == nil || m.Service() == nil {
 		t.Fatal("expected module accessors to return wired dependencies")
+	}
+}
+func TestPostgresRepositoryNilFactoryFailsClosedCov(t *testing.T) {
+	repo := NewPostgresRepository(nil)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	cases := []struct {
+		name string
+		fn   func() error
+	}{
+		{"Register", func() error {
+			_, err := repo.Register(ctx, RegisterParams{LoginID: "alice", Password: "password1"})
+			return err
+		}},
+		{"AttachCredential", func() error { return repo.AttachCredential(ctx, "u1", "alice", "password1") }},
+		{"Authenticate", func() error { _, err := repo.Authenticate(ctx, "alice", "password1"); return err }},
+		{"CreatePasswordReset", func() error { _, err := repo.CreatePasswordReset(ctx, "alice", now); return err }},
+		{"ResetPassword", func() error { _, err := repo.ResetPassword(ctx, "alice", "123456", "password1"); return err }},
+		{"ChangePassword", func() error { return repo.ChangePassword(ctx, "u1", "old", "password1") }},
+		{"CreateRegisterCode", func() error { _, err := repo.CreateRegisterCode(ctx, "alice", now); return err }},
+		{"VerifyRegisterCode", func() error { return repo.VerifyRegisterCode(ctx, "alice", "123456") }},
+		{"ConsumeRegisterCode", func() error { return repo.ConsumeRegisterCode(ctx, "alice", "123456") }},
+		{"PurgeUserData", func() error { return repo.PurgeUserData(ctx, "u1") }},
+		{"SweepRetention", func() error { _, err := repo.SweepRetention(ctx, now, time.Hour, time.Hour); return err }},
+	}
+	for _, tc := range cases {
+		if err := tc.fn(); !errors.Is(err, persistence.ErrNotImplemented) {
+			t.Fatalf("%s: expected ErrNotImplemented, got %v", tc.name, err)
+		}
 	}
 }
