@@ -17,6 +17,10 @@ import (
 type covRepo struct {
 	*groupErrorRepo
 
+	createResult GroupItem
+	joinResult   EnterGroupResult
+	listMembers  []GroupMemberItem
+
 	dismissAsAdminHit bool
 	dismissAsAdminErr error
 
@@ -56,6 +60,27 @@ type covRepo struct {
 	countCommonGroupsErr   error
 	countOwnedGroups       int
 	countOwnedGroupsErr    error
+}
+
+func (r *covRepo) Create(ctx context.Context, userID string, req CreateGroupRequest) (GroupItem, error) {
+	if r.createErr != nil {
+		return GroupItem{}, r.createErr
+	}
+	return r.createResult, nil
+}
+
+func (r *covRepo) ListMembers(ctx context.Context, groupID string, role *GroupRole, limit int, cursor string) ([]GroupMemberItem, string, error) {
+	if r.listMembersErr != nil {
+		return nil, "", r.listMembersErr
+	}
+	return r.listMembers, "", nil
+}
+
+func (r *covRepo) JoinGroup(ctx context.Context, userID, groupID string, message *string) (EnterGroupResult, error) {
+	if r.joinGroupErr != nil {
+		return EnterGroupResult{}, r.joinGroupErr
+	}
+	return r.joinResult, nil
 }
 
 func (r *covRepo) DismissAsAdmin(context.Context, string) (bool, error) {
