@@ -233,7 +233,7 @@ func TestHandlerCreateAnnouncementInnerErrorBranches(t *testing.T) {
 	t.Run("service error", func(t *testing.T) {
 		handler := NewHandler(newCovService(covActorErrRepo{NewInMemoryRepository()}))
 		req := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(body)), "admin", true)
-		req.Header.Set("Idempotency-Key", "covann1234abcd1234abcd1234abcd12x")
+		req.Header.Set("Idempotency-Key", "covann0001covann0001covann0001covann0")
 		rr := httptest.NewRecorder()
 		handler.CreateAnnouncement(rr, req)
 		resp := decodeResponse[struct{}](t, rr)
@@ -245,7 +245,7 @@ func TestHandlerCreateAnnouncementInnerErrorBranches(t *testing.T) {
 	t.Run("business error", func(t *testing.T) {
 		handler := newTestHandler()
 		req := adminContext(httptest.NewRequest(http.MethodPost, "/announcements/create", strings.NewReader(body)), "user_bob", false)
-		req.Header.Set("Idempotency-Key", "covann5678abcd1234abcd1234abcd12x")
+		req.Header.Set("Idempotency-Key", "covann0002covann0002covann0002covann0")
 		rr := httptest.NewRecorder()
 		handler.CreateAnnouncement(rr, req)
 		resp := decodeResponse[struct{}](t, rr)

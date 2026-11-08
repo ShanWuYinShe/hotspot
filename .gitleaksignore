@@ -66,3 +66,6 @@ f0b8614e4119a86955ec3e11c74b2b3de1ab3681:.github/workflows/ci.yml:generic-api-ke
 # 运行时随机生成密钥，仅历史提交 f94692ee 需要豁免。
 f94692ee1502198e4c646b214232f8be6c0db5d9:scripts/verify-backend-ci.sh:generic-api-key:85
 f94692ee1502198e4c646b214232f8be6c0db5d9:scripts/verify-backend-ci.sh:generic-api-key:86
+# 覆盖率测试的幂等键测试串被 generic-api-key 误判（2026-11-08 已改为低熵值；旧提交指纹豁免）
+4467d1fde9af9dfa1658db2c20049d723cc4d907:backend-go/internal/modules/admin/coverage_extra_handler_test.go:generic-api-key:236
+4467d1fde9af9dfa1658db2c20049d723cc4d907:backend-go/internal/modules/admin/coverage_extra_handler_test.go:generic-api-key:248
