@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, ArrowUp } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -59,10 +59,10 @@
 </script>
 
 {#snippet defaultAuthorPanel()}
-	<div class="flex flex-col gap-3 py-1">
+	<div class="flex flex-col gap-2.5">
 		<div class="flex items-center justify-between gap-3">
 			<div class="flex min-w-0 items-center gap-2.5">
-				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={34} class="shrink-0 ring-1 ring-border-default/40" />
+				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={36} class="shrink-0 ring-2 ring-accent-border/30" />
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-1.5">
 						<span class="truncate text-xs font-semibold text-text-primary">{author?.name}</span>
@@ -86,22 +86,26 @@
 				</Button>
 			</div>
 		</div>
-		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-			<span>已常驻于顶栏中枢</span>
+		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+			<div class="flex items-center gap-1.5 text-text-secondary/70">
+				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+				<span>收起</span>
+			</div>
 			<button
 				type="button"
-				class="text-accent-default hover:underline"
+				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
 				onclick={() => onTitleClick?.()}
 			>
-				平滑回顶 ↑
+				<span>平滑回顶</span>
+				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
 			</button>
 		</div>
 	</div>
 {/snippet}
 
 {#snippet defaultPagePanel()}
-	<div class="flex flex-col gap-2.5 py-1">
-		<div class="flex items-center justify-between text-xs text-text-secondary">
+	<div class="flex flex-col gap-2.5">
+		<div class="flex items-center justify-between text-xs text-text-secondary pb-0.5">
 			<span class="font-medium text-text-primary">页面控制与导航</span>
 			{#if metaText}
 				<span class="font-mono text-xxs text-accent-default">{metaText}</span>
@@ -112,14 +116,18 @@
 				{@render trailing()}
 			</div>
 		{/if}
-		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-			<span>轻触回顶或点击任意处收起</span>
+		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+			<div class="flex items-center gap-1.5 text-text-secondary/70">
+				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+				<span>收起</span>
+			</div>
 			<button
 				type="button"
-				class="text-accent-default hover:underline"
+				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
 				onclick={() => onTitleClick?.()}
 			>
-				平滑回顶 ↑
+				<span>平滑回顶</span>
+				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
 			</button>
 		</div>
 	</div>

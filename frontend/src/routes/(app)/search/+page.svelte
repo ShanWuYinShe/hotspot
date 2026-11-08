@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Search as SearchIcon, X } from '@lucide/svelte';
+	import { ArrowUp, Clock, Flame, Search as SearchIcon, X } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import { headerIsland } from '@/stores/header-island.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
@@ -131,8 +131,8 @@
 {/snippet}
 
 {#snippet islandSearchExpanded()}
-	<div class="flex flex-col gap-2.5 py-1">
-		<div class="flex items-center justify-between text-xs text-text-secondary">
+	<div class="flex flex-col gap-2.5">
+		<div class="flex items-center justify-between text-xs pb-0.5">
 			<span class="font-medium text-text-primary">搜索控制中枢</span>
 			<span class="font-mono text-xxs text-accent-default">
 				{data.keyword ? `共 ${data.resultsTotal} 条结果` : '即时探索与分类'}
@@ -140,7 +140,7 @@
 		</div>
 
 		<!-- 搜索分类切换 -->
-		<div class="flex justify-center w-full">
+		<div class="flex justify-center w-full py-0.5">
 			<TabBar
 				variant="segmented"
 				size="sm"
@@ -157,12 +157,15 @@
 		<!-- 热门推荐词快速选择 -->
 		{#if data.hotTopics.length > 0}
 			<div class="flex flex-col gap-1.5 pt-0.5">
-				<span class="text-xxs font-medium text-text-secondary">热门话题</span>
+				<div class="flex items-center gap-1.5 text-xxs font-medium text-text-secondary">
+					<Flame class="size-3 text-accent-default" />
+					<span>热门话题</span>
+				</div>
 				<div class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto no-scrollbar">
 					{#each data.hotTopics.slice(0, 6) as topic (topic)}
 						<button
 							type="button"
-							class="rounded-full border border-border-default/30 bg-surface-subtle/60 px-2 py-0.5 text-xxs text-text-secondary hover:border-accent-border/40 hover:text-text-primary transition-colors active:scale-95"
+							class="rounded-full border border-border-default/30 bg-surface-subtle/70 px-2.5 py-0.5 text-xxs text-text-secondary hover:border-accent-border/50 hover:bg-accent-soft hover:text-text-accent-on-soft transition-all active:scale-95 cursor-pointer"
 							onclick={() => data.chooseTopic(topic)}
 						>
 							#{topic}
@@ -176,10 +179,13 @@
 		{#if data.recent.length > 0}
 			<div class="flex flex-col gap-1.5 pt-0.5">
 				<div class="flex items-center justify-between">
-					<span class="text-xxs font-medium text-text-secondary">历史搜索</span>
+					<div class="flex items-center gap-1.5 text-xxs font-medium text-text-secondary">
+						<Clock class="size-3 text-text-secondary/70" />
+						<span>历史搜索</span>
+					</div>
 					<button
 						type="button"
-						class="text-xxs text-text-secondary/70 hover:text-text-secondary transition-colors"
+						class="text-xxs text-text-secondary/60 hover:text-accent-default transition-colors"
 						onclick={() => (data.recent = [])}
 					>
 						清空
@@ -189,7 +195,7 @@
 					{#each data.recent.slice(0, 5) as r (r)}
 						<button
 							type="button"
-							class="rounded-full border border-border-default/20 bg-surface-subtle/40 px-2 py-0.5 text-xxs text-text-secondary hover:text-text-primary transition-colors active:scale-95"
+							class="rounded-full border border-border-default/20 bg-surface-subtle/40 px-2.5 py-0.5 text-xxs text-text-secondary hover:text-text-primary hover:border-border-default/40 transition-all active:scale-95 cursor-pointer"
 							onclick={() => data.choose(r)}
 						>
 							{r}
@@ -200,14 +206,21 @@
 		{/if}
 
 		<!-- 快捷操作与回顶 -->
-		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-			<span>按 Enter 检索 · Esc 收起</span>
+		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+			<div class="flex items-center gap-1.5 text-text-secondary/70">
+				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">↵</kbd>
+				<span>检索</span>
+				<span class="text-border-default/40">·</span>
+				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+				<span>收起</span>
+			</div>
 			<button
 				type="button"
-				class="text-accent-default hover:underline text-xxs"
+				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
 				onclick={scrollToTop}
 			>
-				平滑回顶 ↑
+				<span>平滑回顶</span>
+				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
 			</button>
 		</div>
 	</div>

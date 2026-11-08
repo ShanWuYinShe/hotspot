@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Plus, MessageSquare, Users, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
+	import { ArrowUp, Plus, MessageSquare, Users, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
@@ -47,8 +47,8 @@
 			{/snippet}
 
 			{#snippet islandExpanded()}
-				<div class="flex flex-col gap-2.5 py-1">
-					<div class="flex items-center justify-between text-xs text-text-secondary">
+				<div class="flex flex-col gap-2.5">
+					<div class="flex items-center justify-between text-xs pb-0.5">
 						<span class="font-medium text-text-primary">消息与会话</span>
 						<span class="font-mono text-xxs text-accent-default">
 							{data.totalUnread > 0 ? `${data.totalUnread} 条未读` : '全部已读'}
@@ -97,9 +97,12 @@
 							</Button>
 						</div>
 					{/if}
-					<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-						<span>即时消息与群聊互动</span>
-						<span class="text-text-secondary/70">实时回响</span>
+					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+						<div class="flex items-center gap-1.5 text-text-secondary/70">
+							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+							<span>收起</span>
+						</div>
+						<span class="text-text-secondary/60">实时回响</span>
 					</div>
 				</div>
 			{/snippet}

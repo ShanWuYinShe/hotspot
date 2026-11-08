@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { formatCount } from '@/lib/utils';
-	import { Map as MapIcon, MapPin, Search, Users, LogOut } from '@lucide/svelte';
+	import { ArrowUp, Map as MapIcon, MapPin, Search, Users, LogOut } from '@lucide/svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { goto } from '$app/navigation';
 	import { platform } from '@/stores/platform.svelte';
@@ -58,6 +58,44 @@
 						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} />
 						<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} />
 					{/if}
+				</div>
+			{/snippet}
+			{#snippet islandExpanded()}
+				<div class="flex flex-col gap-2.5">
+					<div class="flex items-center justify-between text-xs pb-0.5">
+						<span class="font-medium text-text-primary">圈子分类</span>
+						{#if data.totalOnline > 0}
+							<span class="inline-flex items-center gap-1 text-xxs text-text-status-online-on-soft">
+								<span class="size-1.5 rounded-full bg-status-online"></span>
+								<span>{formatCount(data.totalOnline)} 人在线</span>
+							</span>
+						{/if}
+					</div>
+					<div class="w-full overflow-x-auto no-scrollbar py-0.5">
+						<TabBar
+							items={NEARBY_CATEGORIES.map((c) => ({ id: c, label: c }))}
+							value={data.activeCategory}
+							onChange={(id) => data.setCategory(id)}
+							class="pr-1 whitespace-nowrap"
+						/>
+					</div>
+					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+						<div class="flex items-center gap-1.5 text-text-secondary/70">
+							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+							<span>收起</span>
+						</div>
+						<button
+							type="button"
+							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
+							onclick={() => {
+								const scroller = document.getElementById('main-content');
+								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
+							}}
+						>
+							<span>平滑回顶</span>
+							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
+						</button>
+					</div>
 				</div>
 			{/snippet}
 			{#snippet below()}

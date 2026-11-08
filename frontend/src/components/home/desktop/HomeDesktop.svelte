@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { TrendingUp, Users, LogIn, Sparkles, MapPin, Radio, ChevronRight, RotateCcw } from '@lucide/svelte';
+	import { ArrowUp, TrendingUp, Users, LogIn, Sparkles, MapPin, Radio, ChevronRight, RotateCcw } from '@lucide/svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { headerIsland } from '@/stores/header-island.svelte';
 	import { ROUTES } from '@/lib/routes';
@@ -75,14 +75,14 @@
 {/snippet}
 
 {#snippet islandExpanded()}
-	<div class="flex flex-col gap-3 py-1">
-		<div class="flex items-center justify-between text-xs text-text-secondary">
-			<span class="font-medium text-text-primary">信息流切换</span>
+	<div class="flex flex-col gap-2.5">
+		<div class="flex items-center justify-between text-xs pb-0.5">
+			<span class="font-medium text-text-primary">信息流频道</span>
 			<span class="font-mono text-xxs text-accent-default">{islandMeta}</span>
 		</div>
 
 		<!-- 分段选择器 -->
-		<div class="flex justify-center w-full">
+		<div class="flex justify-center w-full py-0.5">
 			<TabBar
 				variant="segmented"
 				size="sm"
@@ -99,22 +99,29 @@
 		</div>
 
 		<!-- 快捷操作与回顶 -->
-		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
 			<button
 				type="button"
-				class="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors text-xxs"
+				class="group flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-xxs"
 				onclick={() => void data.reload()}
 			>
-				<RotateCcw class="size-3" />
+				<RotateCcw class="size-3 transition-transform duration-snappy group-active:-rotate-90" />
 				<span>刷新动态</span>
 			</button>
-			<button
-				type="button"
-				class="text-accent-default hover:underline text-xxs"
-				onclick={scrollToTop}
-			>
-				平滑回顶 ↑
-			</button>
+			<div class="flex items-center gap-3">
+				<div class="flex items-center gap-1 text-text-secondary/70">
+					<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+					<span>收起</span>
+				</div>
+				<button
+					type="button"
+					class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
+					onclick={scrollToTop}
+				>
+					<span>平滑回顶</span>
+					<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
+				</button>
+			</div>
 		</div>
 	</div>
 {/snippet}

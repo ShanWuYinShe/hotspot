@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin, X, ChevronRight, Check, Heart, RotateCcw } from '@lucide/svelte';
+	import { ArrowLeft, MapPin, X, ChevronRight, Check, Heart, RotateCcw } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Button from '@/components/ui/button.svelte';
@@ -93,8 +93,8 @@
 		{/snippet}
 
 		{#snippet islandExpanded()}
-			<div class="flex flex-col gap-2.5 py-1">
-				<div class="flex items-center justify-between text-xs text-text-secondary">
+			<div class="flex flex-col gap-2.5">
+				<div class="flex items-center justify-between text-xs pb-0.5">
 					<span class="font-medium text-text-primary">位置与漫游锚点</span>
 					<span class="font-mono text-xxs text-accent-default">{locationName || defaultName || '全城'}</span>
 				</div>
@@ -106,7 +106,7 @@
 						onclick={onResetAnchor}
 					>
 						<RotateCcw class="size-3.5" />
-						<span>重置为默认位置</span>
+						<span>重置默认</span>
 					</Button>
 					<Button
 						variant="primary"
@@ -117,14 +117,18 @@
 						<span>完成返回</span>
 					</Button>
 				</div>
-				<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-					<span>已锚定当前地图探索坐标</span>
+				<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+					<div class="flex items-center gap-1.5 text-text-secondary/70">
+						<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+						<span>收起</span>
+					</div>
 					<button
 						type="button"
-						class="text-accent-default hover:underline"
+						class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
 						onclick={() => smartBack()}
 					>
-						返回上一页 ←
+						<span>返回上一页</span>
+						<ArrowLeft class="size-3 transition-transform group-hover:-translate-x-0.5" />
 					</button>
 				</div>
 			</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import { ArrowLeft } from '@lucide/svelte';
+	import { ArrowLeft, ArrowUp } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -326,15 +326,9 @@ import {
 </script>
 
 {#snippet defaultHeaderExpanded()}
-	<div class="flex flex-col gap-2.5 py-1">
-		<div class="flex items-center justify-between text-xs text-text-secondary">
-			<span class="font-medium text-text-primary">分类与快捷筛选</span>
-			{#if islandMeta || subtitle}
-				<span class="font-mono text-xxs text-accent-default">{islandMeta ?? subtitle}</span>
-			{/if}
-		</div>
+	<div class="flex flex-col gap-2.5">
 		{#if below}
-			<div class="w-full pt-0.5">
+			<div class="w-full">
 				{@render below()}
 			</div>
 		{/if}
@@ -347,17 +341,21 @@ import {
 				{/if}
 			</div>
 		{/if}
-		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
-			<span>轻触回顶或点击外部收起</span>
+		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+			<div class="flex items-center gap-1.5 text-text-secondary/70">
+				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+				<span>收起</span>
+			</div>
 			<button
 				type="button"
-				class="text-accent-default hover:underline text-xxs"
+				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
 				onclick={() => {
 					const scroller = document.getElementById('main-content');
 					scroller?.scrollTo({ top: 0, behavior: 'smooth' });
 				}}
 			>
-				平滑回顶 ↑
+				<span>平滑回顶</span>
+				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
 			</button>
 		</div>
 	</div>

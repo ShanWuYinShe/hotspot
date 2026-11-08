@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { slide } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import { ChevronDown } from '@lucide/svelte';
+	import { motionDuration } from '@/lib/motion';
 
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
 	// 现升级为「默认常驻 + 交互中枢」模型：
@@ -84,6 +87,14 @@
 			isExpanded = false;
 		}
 	}
+
+	// 标题或路径上下文改变时自动收起
+	$effect(() => {
+		title;
+		isExpanded = false;
+	});
+	const transitionDuration =
+		typeof process !== 'undefined' && process.env?.NODE_ENV === 'test' ? 0 : motionDuration(240);
 </script>
 
 <svelte:window
@@ -100,12 +111,12 @@
 	data-desktop-dynamic-island
 	role="group"
 	aria-label={ariaLabel}
-	class="group/island pointer-events-auto relative z-50 flex flex-col transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
-		? 'w-[440px] min-w-[360px] max-w-[520px] rounded-xl border border-accent-border/50 bg-surface-primary/95 shadow-modal backdrop-blur-2xl'
-		: `h-8 ${hasCenter ? 'w-[360px] sm:w-[420px] max-w-[500px]' : 'w-auto min-w-0 max-w-md'} rounded-full border border-border-default/35 bg-surface-primary/80 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md`} {className}"
+	class="group/island pointer-events-auto relative z-50 flex flex-col rounded-xl border transition-[width,background-color,border-color,box-shadow] duration-relaxed ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
+		? 'w-[460px] sm:w-[480px] max-w-[92vw] border-accent-border/50 bg-surface-primary/95 shadow-modal backdrop-blur-2xl'
+		: `${hasCenter ? 'w-[360px] sm:w-[400px]' : 'w-[270px] sm:w-[300px]'} border-border-default/35 bg-surface-primary/80 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md`} {className}"
 >
 	<!-- 顶行紧凑条（常驻可见；展开时为面板头部） -->
-	<div class="flex h-8 w-full min-w-0 items-center justify-between pl-1 pr-1 select-none">
+	<div class="flex h-8 w-full min-w-0 items-center justify-between pl-1 pr-1 select-none shrink-0">
 		<div class="flex h-full min-w-0 flex-1 items-center gap-1.5">
 			{#if leading}
 				<span class="flex shrink-0 items-center">{@render leading()}</span>
@@ -147,11 +158,11 @@
 				<!-- 展开/收起引导箭头 -->
 				<button
 					type="button"
-					class="flex size-5 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors duration-snappy"
+					class="flex size-6 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors duration-snappy"
 					onclick={toggleExpand}
 					aria-label={isExpanded ? '收起控制面板' : '展开控制面板'}
 				>
-					<ChevronDown class="size-3 transition-transform duration-standard ease-standard {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
+					<ChevronDown class="size-3.5 transition-transform duration-relaxed ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
 				</button>
 			{/if}
 
@@ -195,12 +206,17 @@
 		</div>
 	</div>
 
-	<!-- 展开态控制面板主体 -->
+	<!-- 展开态控制面板主体（Svelte 原生 slide 平滑展开，无几何跳变与圆角突变） -->
 	{#if isExpanded && expanded}
-		<div class="w-full animate-fade-in px-3.5 pb-3">
-			<div class="h-px w-full bg-border-default/20 mb-2 mt-0.5" aria-hidden="true"></div>
-			<div class="w-full pt-0.5 pb-0.5">
-				{@render expanded()}
+		<div
+			transition:slide={{ duration: transitionDuration, easing: cubicOut }}
+			class="w-full overflow-hidden"
+		>
+			<div class="w-full px-4 pb-3 pt-0.5 animate-fade-in">
+				<div class="h-px w-full bg-border-default/15 mb-2.5" aria-hidden="true"></div>
+				<div class="w-full">
+					{@render expanded()}
+				</div>
 			</div>
 		</div>
 	{/if}
