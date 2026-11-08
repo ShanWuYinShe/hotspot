@@ -8,7 +8,7 @@
 #
 # 用法：
 #   ./scripts/verify-backend-ci.sh              # 静态检查 + 单测(race/覆盖率门禁)
-#   ./scripts/verify-backend-ci.sh --with-db    # 追加真实库仓库集成测试(TestPostgresIT)
+#   ./scripts/verify-backend-ci.sh --with-db    # 追加真实库 IT + 模块覆盖率 >=90% 门禁
 #   ./scripts/verify-backend-ci.sh --with-e2e   # 追加 HTTP 全链路集成测试
 #   ./scripts/verify-backend-ci.sh --all        # 全部（含 govulncheck）
 #
@@ -77,7 +77,7 @@ fi
 step "check migration numbering"
 "$ROOT/scripts/check-migrations.sh"
 
-step "go test -race -cover（internal/modules 覆盖率 >=70% 门禁）"
+step "go test -race -cover（internal/modules 无 DB 单测覆盖率 >=70% 下限）"
 LOG=$(mktemp -t gotest.XXXXXX.log)
 cleanup_log() { rm -f "$LOG"; }
 trap cleanup_log EXIT
@@ -129,6 +129,20 @@ if [ "$WITH_DB" = "1" ]; then
   # -p 1：各包串行。真实库是共享数据库，IT 测试会提交 fixture 行（BeginScope 之外的
   # 用例），并行包会让「统计类」断言（如 admin 今日新增）采到其它包的行而偶发红灯。
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -p 1 -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
+
+  # 真实库口径覆盖率门禁（>=90%）：repo/IT/契约测试计入后，每个业务模块包
+  # 的语句覆盖率必须达标。无 DB 的默认阶段保留 70% 下限：没有真实库时
+  # repo 代码天然不可覆盖，90% 只在具备 Postgres 的本阶段校验。
+  step "模块覆盖率 >=90%（真实库口径，含 TestPostgresIT/Contract）"
+  COV_LOG=$(mktemp -t modulecov.XXXXXX.log)
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" \
+      go test -p 1 -count=1 -cover $(go list ./internal/modules/... | grep -v /notifytest) 2>&1 | tee "$COV_LOG" )
+  awk '/^ok .*coverage: [0-9.]+% of statements/ {
+    pkg = $2; cov = $0;
+    sub(/^.*coverage: /, "", cov); sub(/% of statements.*$/, "", cov);
+    if (pkg ~ /modules\\// && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
+  } END { if (failed) exit 1 }' "$COV_LOG" || die "模块覆盖率低于 90%（真实库口径）"
+  rm -f "$COV_LOG"
 fi
 
 if [ "$WITH_E2E" = "1" ]; then

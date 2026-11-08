@@ -28,7 +28,7 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 `go test -short` **不覆盖** CI 的以下检查，本地绿、CI 红常源于此
 （真实库 SQL/参数错误会造成红灯）：
 
-- `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁；
+- `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁（无 DB 单测口径下限）；
 - `TestPostgresIT` 真实库仓库集成测试（会暴露 SQL 列歧义、参数个数不符等
   stub 单测无法发现的问题——**改任何 repo SQL 后必须跑**）；
 - HTTP 全链路集成（`test/integration`，~100 用例，需 compose dev 栈）。
@@ -37,12 +37,16 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
 
 ```bash
 ./scripts/verify-backend-ci.sh              # 静态 + race + 覆盖率（默认）
-./scripts/verify-backend-ci.sh --with-db    # 改了 SQL/repo 时追加真实库 IT
+./scripts/verify-backend-ci.sh --with-db    # 追加真实库 IT + 模块覆盖率 ≥90% 门禁
 ./scripts/verify-backend-ci.sh --all        # 全量（含 E2E 与 govulncheck）
 ```
 
 脚本与 `.github/workflows/ci.yml` 的 backend / backend-integration job 逐条对齐；
 worktree 内执行时 DB/E2E 阶段自动回落到主工作树 compose（验证主树源码）。
+
+**覆盖率口径**：无 DB 的默认阶段要求 `internal/modules` 每包 ≥70%（repo 代码在无库时天然不可覆盖）；
+`--with-db` 与 CI backend-integration job 在真实库上跑全部模块测试（含 `TestPostgresIT|Contract`）
+并要求每包 **≥90%**。
 
 ## 潜在问题审计
 

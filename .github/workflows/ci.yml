@@ -232,6 +232,21 @@ jobs:
           # -p 1：共享真实库，IT 用例会提交 fixture，串行执行避免跨包统计断言偶发红灯。
           go test -p 1 -v -count=1 -run 'TestPostgresIT|Contract' ./internal/modules/...
 
+      # 模块覆盖率门禁（真实库口径 >=90%）：repo/IT/契约测试计入后每包必须
+      # 达标；无 DB 的 backend job 保留 70% 下限，本 job 具备 Postgres，
+      # 是 90% 的唯一校验点（避免无库阶段把 repo 代码天然不可覆盖算成缺口）。
+      - name: module coverage gate (DB, >=90%)
+        run: |
+          set -euo pipefail
+          cd backend-go
+          mapfile -t pkgs < <(go list ./internal/modules/... | grep -v /notifytest)
+          go test -p 1 -count=1 -cover "${pkgs[@]}" | tee /tmp/module-coverage.log
+          awk '/^ok .*coverage: [0-9.]+% of statements/ {
+            pkg = $2; cov = $0;
+            sub(/^.*coverage: /, "", cov); sub(/% of statements.*$/, "", cov);
+            if (pkg ~ /modules\// && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
+          } END { if (failed) exit 1 }' /tmp/module-coverage.log
+
       # ── HTTP 全链路集成（docker_test.go ~90 用例）─────────────────
       # 此前本 job 只跑 repo 级测试：docker_test 的 TestMain 在无 BACKEND_URL
       # 时整批静默 skip 且 CI 显示绿——陌生人私聊回归（3c63ea34 修复）即借此
