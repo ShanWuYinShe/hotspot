@@ -144,9 +144,9 @@
 			/>
 			<div class="mx-1 h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 		{:else if author}
-			<Avatar src={author.avatar} name={author.name} size={20} class="shrink-0" />
+			<Avatar src={author.avatar} name={author.name} size={24} class="shrink-0" />
 		{:else if icon}
-			<span class="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
+			<span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
 				{@render icon()}
 			</span>
 		{:else}

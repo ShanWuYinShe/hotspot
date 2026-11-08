@@ -180,24 +180,6 @@
 				: '')
 	);
 
-	/** 空间地平线标语：根据当前路由派生当前空间的探索/沉浸语境（岛静止时呈现） */
-	const centerHorizonText = $derived.by(() => {
-		if (pathname === ROUTES.home) return '探索 · 身边坐标';
-		if (pathname === ROUTES.nearbyPeople) return '发现 · 身边同行者';
-		if (pathname === ROUTES.nearbyGroups) return '发现 · 兴趣圈子';
-		if (pathname === ROUTES.nearbyMoments) return '发现 · 瞬间切片';
-		if (pathname === ROUTES.messages || pathname.startsWith(`${ROUTES.messages}/`)) return '消息 · 实时回响';
-		if (pathname === ROUTES.search) return '探索 · 全域检索';
-		if (pathname === ROUTES.notify) return '动态 · 互动通知';
-		if (pathname === ROUTES.settings) return '偏好 · 系统设置';
-		if (pathname === ROUTES.map) return '地图 · 空间漫游';
-		if (pathname === ROUTES.me || pathname.startsWith(`${ROUTES.me}/`)) return '个人 · 数字足迹';
-		if (pathname.startsWith('/users/')) return '空间 · 用户主页';
-		if (pathname.startsWith('/groups/')) return '圈子 · 群组详情';
-		if (pathname.startsWith('/moments/')) return '瞬间 · 细节阅览';
-		return 'HotSpot · 身边连接';
-	});
-
 	/** 点击岛标题：优先页面自定义回锚点；作者名片走作者主页；否则回到页首。 */
 	function handleIslandTitleClick() {
 		if (headerIsland.onTitleClick) return headerIsland.onTitleClick();
@@ -327,20 +309,6 @@
 						expanded={headerIsland.expanded}
 						progress={headerIsland.progress}
 					/>
-				</div>
-			{:else}
-				<!-- 空间地平线：静止态微光导引胶囊（消除视觉真空，契合地理探索语境） -->
-				<div
-					in:fade={{ duration: motionDuration(220) }}
-					out:fade={{ duration: motionDuration(180) }}
-					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-				>
-					<div class="flex items-center gap-2 rounded-full border border-border-default/25 bg-surface-primary/40 px-3.5 py-1 shadow-xs backdrop-blur-xl select-none transition-colors">
-						<span class="size-1.5 rounded-full bg-accent-default/80 animate-pulse" aria-hidden="true"></span>
-						<span class="text-xxs font-mono tracking-widest text-text-secondary/85 select-none uppercase">
-							{centerHorizonText}
-						</span>
-					</div>
 				</div>
 			{/if}
 		</div>

@@ -91,4 +91,32 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 		expect(dot).not.toBeNull();
 		expect(dot?.getAttribute('aria-hidden')).toBe('true');
 	});
+
+	it('点击展开面板后，点击外部或按 Escape 键自动收起', async () => {
+		const { container } = render(PageIsland, { props: { title: '附近的人' } });
+		const expandBtn = screen.getByRole('button', { name: '展开控制面板' });
+		expect(expandBtn).not.toBeNull();
+
+		// 点击展开
+		await fireEvent.click(expandBtn);
+		expect(screen.getByText('页面控制与导航')).not.toBeNull();
+		expect(screen.getByRole('button', { name: '收起控制面板' })).not.toBeNull();
+
+		// 点击外部空白区域（触发 window pointerdown）
+		const outside = document.createElement('div');
+		document.body.appendChild(outside);
+		await fireEvent.pointerDown(outside);
+		outside.remove();
+
+		// 面板已收起
+		expect(screen.queryByText('页面控制与导航')).toBeNull();
+		expect(screen.getByRole('button', { name: '展开控制面板' })).not.toBeNull();
+
+		// 再次展开并测试 Escape 键收起
+		await fireEvent.click(screen.getByRole('button', { name: '展开控制面板' }));
+		expect(screen.getByText('页面控制与导航')).not.toBeNull();
+
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		expect(screen.queryByText('页面控制与导航')).toBeNull();
+	});
 });

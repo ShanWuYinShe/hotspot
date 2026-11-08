@@ -6,8 +6,9 @@
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
 	// 现升级为「默认常驻 + 交互中枢」模型：
 	//   - 紧凑常驻态：严格 32px（h-8）极薄胶囊，居于 52px 顶栏正中央，无缝悬浮，不遮挡正文；
+	//   - 紧凑两侧贴合：左侧图表/头像与右侧圆环紧密贴合胶囊两端圆弧，无多余白边；
 	//   - 展开中枢态：点击展开为单向向下舒展的 400px 毛玻璃控制卡片，承载分类筛选、作者名片与操作；
-	//   - 零时序依赖：不再依赖脆弱的滚动飞行动画，可随时点击展开/收起，原生平滑；
+	//   - 干净四角与全域收起：去除破坏层叠上下文的内嵌 fixed 遮罩，全局 pointerdown 侦测点击任意外部立即收回；
 	//   - 阅读进度：最右侧集成 18px 极细圆环，随视口滚动严格同步。
 	let {
 		ariaLabel = '页面锚点与快捷操作',
@@ -45,6 +46,7 @@
 		class?: string;
 	} = $props();
 
+	let islandEl = $state<HTMLElement | undefined>(undefined);
 	let isExpanded = $state(false);
 
 	const safeProgress = $derived(
@@ -72,9 +74,19 @@
 			isExpanded = !isExpanded;
 		}
 	}
+
+	// 全局点击任意空白处收起灵动岛（解决 nested fixed 遮罩被父级 transform 限制并导致四个角发灰的缺陷）
+	function handleWindowPointerDown(e: PointerEvent) {
+		if (!isExpanded) return;
+		const target = e.target as Node | null;
+		if (islandEl && target && !islandEl.contains(target)) {
+			isExpanded = false;
+		}
+	}
 </script>
 
 <svelte:window
+	onpointerdown={handleWindowPointerDown}
 	onkeydown={(e) => {
 		if (e.key === 'Escape' && isExpanded) {
 			isExpanded = false;
@@ -82,28 +94,18 @@
 	}}
 />
 
-{#if isExpanded}
-	<!-- 背景遮罩：阻断并聚焦 -->
-	<div
-		class="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] transition-opacity duration-snappy"
-		onclick={() => (isExpanded = false)}
-		role="presentation"
-		aria-hidden="true"
-	></div>
-{/if}
-
 <div
+	bind:this={islandEl}
 	data-desktop-dynamic-island
 	role="group"
 	aria-label={ariaLabel}
-	style="contain: layout paint;"
 	use:islandHandoff={{ enabled: handoff }}
 	class="group/island pointer-events-auto relative z-50 flex transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
 		? 'w-[400px] min-w-[360px] max-w-[460px] flex-col items-stretch rounded-lg border border-accent-border/50 bg-surface-primary/95 px-3.5 pb-3 pt-1 shadow-modal backdrop-blur-2xl'
-		: 'h-8 min-w-0 max-w-md items-center rounded-full border border-border-default/35 bg-surface-primary/80 px-2.5 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"
+		: 'h-8 min-w-0 max-w-md items-center rounded-full border border-border-default/35 bg-surface-primary/80 pl-1 pr-1 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"
 >
 	<!-- 顶行紧凑条（常驻可见；展开时为头部） -->
-	<div class="flex h-8 w-full min-w-0 items-center justify-between gap-1.5 select-none">
+	<div class="flex h-8 w-full min-w-0 items-center justify-between gap-1 select-none">
 		<div class="flex h-full min-w-0 flex-1 items-center gap-1.5">
 			{#if leading}
 				<span class="flex shrink-0 items-center">{@render leading()}</span>
@@ -112,7 +114,7 @@
 			<!-- 中间：标题 + 一行 meta -->
 			<button
 				type="button"
-				class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1.5 py-0.5 text-left active:scale-[0.98]"
+				class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1 py-0.5 text-left active:scale-[0.98]"
 				onclick={handleTitleClick}
 				aria-label={titleAria ?? `回到「${title}」`}
 			>
@@ -127,7 +129,7 @@
 			</button>
 		</div>
 
-		<div class="flex shrink-0 items-center gap-1">
+		<div class="flex shrink-0 items-center gap-0.5">
 			{#if expanded}
 				<!-- 展开/收起引导箭头 -->
 				<button
@@ -141,15 +143,15 @@
 			{/if}
 
 			{#if trailing && !isExpanded}
-				<div class="h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
+				<div class="h-3.5 w-px shrink-0 bg-border-default/40 mx-0.5" aria-hidden="true"></div>
 				<div class="flex shrink-0 items-center gap-0.5">
 					{@render trailing()}
 				</div>
 			{/if}
 
-			<!-- 阅读进度圆环（最右侧） -->
+			<!-- 阅读进度圆环（最右侧，紧贴右边缘） -->
 			<span
-				class="ml-0.5 flex shrink-0 items-center"
+				class="flex shrink-0 items-center"
 				data-island-progress-ring
 				data-island-progress={safeProgress}
 				aria-hidden="true"
