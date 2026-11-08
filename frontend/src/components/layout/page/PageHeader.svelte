@@ -55,6 +55,7 @@ import {
 		island = true,
 		islandMeta,
 		islandIcon,
+		islandExpanded,
 		below,
 		sticky = true,
 		showBackOnDesktop = false,
@@ -89,6 +90,8 @@ import {
 		islandMeta?: string;
 		/** 桌面端顶栏灵动岛的左侧语义图标（可选；P1-4 视觉锚点）。 */
 		islandIcon?: Snippet;
+		/** 展开态控制中枢自定义内容（可选；未传且有 below 时自动把 below 映射进岛面板） */
+		islandExpanded?: Snippet;
 		below?: Snippet;
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
@@ -173,6 +176,7 @@ import {
 				meta: islandMeta ?? subtitle ?? '',
 				icon: islandIcon,
 				trailing: islandTrailing,
+				expanded: islandExpanded,
 				onBack: showBack ? onBack : undefined,
 				backLabel
 			}))
@@ -187,6 +191,7 @@ import {
 			meta: islandMeta ?? subtitle ?? '',
 			icon: islandIcon,
 			trailing: islandTrailing,
+			expanded: islandExpanded,
 			onBack: showBack ? onBack : undefined,
 			backLabel
 		});

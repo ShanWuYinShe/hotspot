@@ -308,11 +308,12 @@
 				>
 					<HomeFeedIsland progress={headerIsland.progress} />
 				</div>
-			{:else if headerIsland.visible && headerIsland.active}
-				<!-- 绝对居中于整条顶栏（而非 logo 与操作簇之间的剩余空间），与「灵动岛」的视觉中心一致 -->
+			{:else if headerIsland.active}
+				<!-- 默认常驻灵动岛：整条顶栏中央锚定，单向向下舒展展开 -->
 				<div
 					out:fade={{ duration: motionDuration(220) }}
-					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+					class="pointer-events-auto absolute left-1/2 z-50 -translate-x-1/2"
+					style="top: calc((var(--cst-desktop-header-height, 52px) - 32px) / 2);"
 				>
 					<PageIsland
 						title={headerIsland.title}
@@ -323,6 +324,7 @@
 						onTitleClick={handleIslandTitleClick}
 						icon={headerIsland.icon}
 						trailing={headerIsland.trailing}
+						expanded={headerIsland.expanded}
 						progress={headerIsland.progress}
 					/>
 				</div>

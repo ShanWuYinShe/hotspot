@@ -3,23 +3,15 @@
 	import type { Snippet } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import IslandCapsule from './IslandCapsule.svelte';
-		import type { AuthorInfo } from '@/stores/header-island.svelte';
+	import type { AuthorInfo } from '@/stores/header-island.svelte';
 
 	// PageIsland — 桌面端顶栏中央「页面锚点岛」的业务层（形态见 IslandCapsule）。
-	// 职责：把会随滚动离开视口、但随时可能需要的信息（标题/作者身份/状态）与页面主行动
-	//（≤2 个控件）以「紧凑胶囊」形态钉在 52px 顶栏中央，胶囊右侧显示阅读进度。
-	//
-	// 交互契约（唯一权威：docs/design-system.md §22）：
-	//   - 显隐由页面注册方决定（PageHeader / DetailHeader / 首页信息流），本组件只管形态与交互；
-	//   - 点击标题：回到页面锚点（吸顶页头回页首、非吸顶页头回到标题位置）；
-	//     详情页身份卡：点头像/名字进入作者主页（onTitleClick 由调用方给出语义）；
-	//   - 左侧返回：只有注册了 onBack 的二级页/详情页出现；
-	//   - hover / 键盘 focus-within：胶囊表面转实底 + accent 细边 + 抬升投影（不改变宽度）；
-	//   - 右侧进度环：随主滚动容器进度增长，纯展示、不参与交互；
-	//   - 键盘顺序：返回 → 标题/身份 → 行动区；全部控件有 aria-label 与 focus-ring；
-	//   - 进场/退场：由「标题 → 岛」的滚动交接进度逐帧驱动（lib/island-handoff.ts），
-	//     不播独立时长动画——滚动停在哪交接就停在哪，反向滚动完全可逆。
+	// 现升级为「默认常驻 + 交互中枢」模型：
+	//   - 默认常驻：页面只要注册即在顶栏中央稳定呈现，不再依赖滚动飞行动画；
+	//   - 交互中枢：点击胶囊可单向向下展开控制面板，承载分类切换、排序、作者互动与回顶；
+	//   - 紧凑尺寸：32px（h-8）极薄胶囊，彻底解放页面首屏内容。
 
 	let {
 		title = '',
@@ -30,7 +22,8 @@
 		onTitleClick,
 		progress = 0,
 		icon,
-		trailing
+		trailing,
+		expanded
 	}: {
 		/** 页面标题（作者身份模式下由 author.name 覆盖） */
 		title: string;
@@ -49,6 +42,8 @@
 		icon?: Snippet;
 		/** 右侧行动区（页面主行动，≤2 控件） */
 		trailing?: Snippet;
+		/** 展开态控制面板内容（可选） */
+		expanded?: Snippet;
 	} = $props();
 
 	const displayTitle = $derived(author?.name || title || '详情');
@@ -60,6 +55,73 @@
 	);
 </script>
 
+{#snippet defaultAuthorPanel()}
+	<div class="flex flex-col gap-3 py-1">
+		<div class="flex items-center justify-between gap-3">
+			<div class="flex min-w-0 items-center gap-2.5">
+				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={34} class="shrink-0 ring-1 ring-border-default/40" />
+				<div class="min-w-0 flex-1">
+					<div class="flex items-center gap-1.5">
+						<span class="truncate text-xs font-semibold text-text-primary">{author?.name}</span>
+						<span class="rounded bg-accent-soft px-1.5 py-0.2 text-[10px] font-medium text-text-accent-on-soft">作者</span>
+					</div>
+					{#if author?.location || author?.time}
+						<div class="truncate text-xxs font-mono text-text-secondary">
+							{[author.location, author.time].filter(Boolean).join(' · ')}
+						</div>
+					{/if}
+				</div>
+			</div>
+			<div class="flex shrink-0 items-center gap-1.5">
+				<Button
+					variant="primary"
+					size="sm"
+					shape="pill"
+					onclick={() => onTitleClick?.()}
+				>
+					查看资料
+				</Button>
+			</div>
+		</div>
+		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+			<span>已常驻于顶栏中枢</span>
+			<button
+				type="button"
+				class="text-accent-default hover:underline"
+				onclick={() => onTitleClick?.()}
+			>
+				平滑回顶 ↑
+			</button>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet defaultPagePanel()}
+	<div class="flex flex-col gap-2.5 py-1">
+		<div class="flex items-center justify-between text-xs text-text-secondary">
+			<span class="font-medium text-text-primary">页面控制与导航</span>
+			{#if metaText}
+				<span class="font-mono text-xxs text-accent-default">{metaText}</span>
+			{/if}
+		</div>
+		{#if trailing}
+			<div class="flex items-center gap-2 pt-0.5">
+				{@render trailing()}
+			</div>
+		{/if}
+		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+			<span>轻触回顶或点击任意处收起</span>
+			<button
+				type="button"
+				class="text-accent-default hover:underline"
+				onclick={() => onTitleClick?.()}
+			>
+				平滑回顶 ↑
+			</button>
+		</div>
+	</div>
+{/snippet}
+
 <IslandCapsule
 	ariaLabel="页面锚点与快捷操作"
 	title={displayTitle}
@@ -68,6 +130,7 @@
 	onTitleClick={() => onTitleClick?.()}
 	{progress}
 	{trailing}
+	expanded={expanded ?? (author ? defaultAuthorPanel : defaultPagePanel)}
 >
 	{#snippet leading()}
 		{#if onBack}

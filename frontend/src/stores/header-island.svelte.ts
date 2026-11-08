@@ -42,6 +42,8 @@ export interface PageIslandConfig {
 	icon?: Snippet;
 	/** 右侧行动区（写操作/入口）：每页最多 2 个控件 */
 	trailing?: Snippet;
+	/** 展开态自定义中枢内容（分类切换/筛选器/分段导览等） */
+	expanded?: Snippet;
 }
 
 /** 注册令牌：页面/页头各自持有，只允许当前 token 更新与关闭。 */
@@ -52,7 +54,7 @@ let currentToken: IslandToken | null = null;
 class PageIslandStore {
 	/** 是否已有页面注册（路由切换时用于避免残留） */
 	active = $state(false);
-	/** 交接是否已开始（p>0）：控制岛是否挂载。 */
+	/** 交接是否已开始（默认常驻下注册即生效，供旧交接机制与容器使用） */
 	visible = $state(false);
 	/** 交接是否已基本落位（p>0.55，滞回）：用于页头 inert / 无障碍不可达。 */
 	settled = $state(false);
@@ -73,6 +75,7 @@ class PageIslandStore {
 	onTitleClick = $state<(() => void) | undefined>(undefined);
 	icon = $state<Snippet | undefined>(undefined);
 	trailing = $state<Snippet | undefined>(undefined);
+	expanded = $state<Snippet | undefined>(undefined);
 
 	register(token: IslandToken, config: PageIslandConfig) {
 		currentToken = token;
@@ -96,6 +99,7 @@ class PageIslandStore {
 		if (config.onTitleClick !== undefined) this.onTitleClick = config.onTitleClick;
 		if (config.icon !== undefined) this.icon = config.icon;
 		if (config.trailing !== undefined) this.trailing = config.trailing;
+		if (config.expanded !== undefined) this.expanded = config.expanded;
 	}
 
 	/**
@@ -135,6 +139,7 @@ class PageIslandStore {
 		this.onTitleClick = config.onTitleClick;
 		this.icon = config.icon;
 		this.trailing = config.trailing;
+		this.expanded = config.expanded;
 	}
 
 	private reset() {
@@ -151,6 +156,7 @@ class PageIslandStore {
 		this.onTitleClick = undefined;
 		this.icon = undefined;
 		this.trailing = undefined;
+		this.expanded = undefined;
 	}
 }
 
