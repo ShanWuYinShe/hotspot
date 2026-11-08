@@ -54,10 +54,10 @@ func (e *TokenEscrow) Seal(plaintext string) ([]byte, error) {
 	return e.aead.Seal(nonce, nonce, []byte(plaintext), nil), nil
 }
 
-// Open 解密托管密文；空输入返回空串（该行无托管，如迁移过渡期轮换行）。
+// Open 解密托管密文；空输入视为损坏（轮换必写托管），返回错误而非静默空串。
 func (e *TokenEscrow) Open(sealed []byte) (string, error) {
 	if len(sealed) == 0 {
-		return "", nil
+		return "", errors.New("token escrow: empty sealed token")
 	}
 	nonceSize := e.aead.NonceSize()
 	if len(sealed) < nonceSize {

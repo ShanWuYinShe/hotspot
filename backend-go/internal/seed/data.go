@@ -256,7 +256,7 @@ func buildAuthAccountsTable(accounts []accountSpec, opts buildDatasetOptions) ta
 		Columns: []column{col("login_id"), col("user_id"), col("password_hash"), col("created_at"), col("updated_at")},
 	}
 	for _, account := range accounts {
-		plain := legacyAccountPassword
+		plain := defaultDevAccountPassword
 		switch account.UserID {
 		case "user_seed_lumos":
 			plain = opts.qaPassword

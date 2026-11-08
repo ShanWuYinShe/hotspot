@@ -212,7 +212,7 @@ export default class EntryAbility extends UIAbility {
 
   private async restoreDarkModePreference(): Promise<void> {
     try {
-      // AppThemeManager.initialize 已完成 settings_dark_forced→dark 迁移；此处只按新偏好三选一应用
+      // 按已保存的明暗偏好应用（三选一）
       this.applyColorModePreference(AppThemeManager.getDarkModePreference());
     } catch (error) {
       // 偏好读取失败时保持跟随系统，不阻塞启动
@@ -663,8 +663,6 @@ export default class EntryAbility extends UIAbility {
       //    深色开关、登录态等持久化全部静默失效
       await this.serviceRegistry.initializeContextServices(this.context);
 
-      // 2.5 一次性清理升级前 Preferences 明文 token 残留（幂等，见 TokenAssetStore）
-      await TokenAssetStore.removeLegacyPlaintextTokens();
 
       // 3. 预加载核心服务
       await this.serviceRegistry.preloadCoreServices();

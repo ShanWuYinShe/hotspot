@@ -29,7 +29,7 @@ export async function listMyMoments(params?: { pagination?: PaginationParams }) 
 export async function getFavoriteMoments(params?: { pagination?: PaginationParams })   { return request<PaginatedData<FavoritedMomentItem>>(Endpoints.Moments.ListFavorites, params ?? {}); }
 // spec: api_spec_moment.md → moments/fetch_following（关注动态；依赖查看者关注关系，无匿名版）
 export async function fetchFollowingMoments(params?: FetchFollowingMomentsRequest)  { return request<PaginatedData<MomentItem>>(Endpoints.Moments.FetchFollowing, params ?? {}); }
-// spec: api_spec_moment.md → moments/fetch_nearby（附近瞬间，原 feed/nearby_moments 迁移；双版本）
+// spec: api_spec_moment.md → moments/fetch_nearby（附近瞬间）
 export async function fetchNearbyMoments(params?: FetchNearbyMomentsRequest, opts?: RequestOptions) {
 	return request<PaginatedData<MomentItem>>(pick(Endpoints.Moments.FetchNearby, Endpoints.Public.Moments.FetchNearby), params ?? {}, {}, 0, undefined, opts);
 }

@@ -198,11 +198,6 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 // momentItemFromRow 把已扫描的基础列填充为 MomentItem（scanMomentRowParts 与
 // scanMomentRowWithAssociations 共用，避免两处展示字段口径漂移）。
 func momentItemFromRow(item MomentItem, userID, nickname, avatarURL string, createdAt time.Time, latitude, longitude float64, locationName, privacyLevel string) MomentItem {
-	// nickname 已通过 SQL 的 COALESCE(u.nickname, '') 兜底
-	// 若 SQL 未提供 nickname（兼容性回退），降级为 userID
-	if nickname == "" {
-		nickname = userID
-	}
 	item.User = UserInfo{UserID: userID, Nickname: nickname, AvatarURL: types.StrPtr(avatarURL)}
 	item.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	item.Location = &Location{Point: struct {

@@ -110,7 +110,7 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 
 **回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill）。schema 变更已不再强制「旧镜像兼容」——项目明确不考虑二进制向后兼容，迁移允许破坏性 DDL（文件内 `-- allow-destructive: <理由>` 声明）。因此：**普通增量迁移**回滚后是「旧镜像 + 新 schema」，通常可用；**破坏性迁移**（删表/列/类型变更）发布后旧镜像无法跑在新 schema 上，回滚必须按 `docs/backup-restore.md` 恢复数据库到发布前备份。打 tag 前必须在本地 compose 完整验证迁移 + 新镜像。
 
-**迁移执行方式**：生产部署先运行独立迁移 job（见 §2），server 启动期仅幂等校验并在缺失时补跑。两者共用同一 runner：按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不再有自动基线**：若目标库「已有业务表但版本表为空」，启动会失败并提示执行 `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 显式接管（随后立即 manifest 校验）。存量生产库通常已有旧版 runner 写入的版本行，首次启动会自动补写 checksum（日志 `schema_migrations: backfilled checksums for legacy rows`），属预期的一次性过渡。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
+**迁移执行方式**：生产部署先运行独立迁移 job（见 §2），server 启动期仅幂等校验并在缺失时补跑。两者共用同一 runner：按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不做基线、不做存量库接管**：若目标库「已有业务表但版本表为空」，或已登记迁移缺少 checksum，启动直接失败；迁移只从空库按文件顺序全量执行，旧库需将数据迁移到新库。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
 
 ### 3.4 手工回滚（脚本不可用时）
 

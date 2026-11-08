@@ -27,10 +27,9 @@ function mockFix(): GeolocationPosition {
 
 describe('readLastLocation', () => {
 	beforeEach(() => localStorage.clear());
-
-	it('历史数组格式 [lat, lng] 仍可解析（向后兼容）', () => {
+	it('历史数组格式不再支持，按无锚点处理', () => {
 		localStorage.setItem(KEY, '[39.9,116.4]');
-		expect(readLastLocation()).toEqual({ lat: 39.9, lng: 116.4 });
+		expect(readLastLocation()).toBeNull();
 	});
 
 	it('对象格式带名称时保留名称', () => {

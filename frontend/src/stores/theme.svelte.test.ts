@@ -67,33 +67,9 @@ it('auto 档响应系统 change 事件；清理函数移除监听', async () => 
   expect(theme.isDark).toBe(true);
 });
 
-it('老 isDark=true 迁移为手动 dark 并删老键', async () => {
-  localStorage.setItem('isDark', 'true');
-  localStorage.setItem('appTheme', 'forest');
-  const { initTheme, theme } = await import('./theme.svelte');
-  initTheme();
-  expect(theme.colorScheme).toBe('dark');
-  expect(theme.isDark).toBe(true);
-  expect(theme.theme).toBe('forest');
-  expect(localStorage.getItem('colorScheme')).toBe('dark');
-  expect(localStorage.getItem('isDark')).toBeNull();
-  const cls = document.documentElement.classList;
-  expect(cls.contains('dark')).toBe(true);
-  expect(cls.contains('forest')).toBe(true);
-  expect(cls.contains('vibrant')).toBe(false);
-});
 
-it('老 isDark=false 迁移为手动 light', async () => {
-  localStorage.setItem('isDark', 'false');
-  const { initTheme, theme } = await import('./theme.svelte');
-  initTheme();
-  expect(theme.colorScheme).toBe('light');
-  expect(theme.isDark).toBe(false);
-  expect(localStorage.getItem('colorScheme')).toBe('light');
-  expect(localStorage.getItem('isDark')).toBeNull();
-});
 
-it('老键缺失时视为 auto（不写新键）', async () => {
+it('未保存偏好时视为 auto（不写新键）', async () => {
   const { initTheme, theme } = await import('./theme.svelte');
   initTheme();
   expect(theme.colorScheme).toBe('auto');

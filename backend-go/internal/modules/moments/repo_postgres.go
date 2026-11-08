@@ -444,9 +444,9 @@ func (r *PostgresRepository) ListFavorites(ctx context.Context, userID string, l
 		item.FavoritedAt = favoritedAt.UTC().Format(time.RFC3339) // spec moment.md → FavoritedMomentItem.favorited_at（展示截断到秒）
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
-		// 游标携带纳秒全精度（秒截断会丢同秒收藏，见 scanFavoriteMomentRow 注释）；
-		// 解码侧 time.Parse(RFC3339Nano) 兼容秒/纳秒两种历史格式，老游标仍有效。
-		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt.UTC().Format(time.RFC3339Nano), item.MomentID))
+		// 游标固定 9 位小数秒（秒截断会丢同秒收藏，见 scanFavoriteMomentRow 注释）；
+		// 解码侧只接受该格式，不做秒级兼容。
+		cursors = append(cursors, encodeMomentFavoriteCursor(favoritedAt, item.MomentID))
 		if len(items) == limit+1 {
 			// 显式关闭 rows 再发嵌套查询（同 ListMine：tx/单连接下未关闭 rows 会 conn busy）。
 			rows.Close()
@@ -528,11 +528,15 @@ func normalizeMomentInteractionLimit(limit int) int {
 	}
 }
 
-// momentFavoriteCursorNamespace 是收藏列表分页游标的加密命名空间。
-const momentFavoriteCursorNamespace = "moments.favorites"
+// momentFavoriteCursorNamespace 是收藏列表分页游标的加密命名空间；
+// 时间固定 9 位小数秒，保证同一时刻的游标表示唯一且不丢亚秒精度。
+const (
+	momentFavoriteCursorNamespace  = "moments.favorites"
+	momentFavoriteCursorTimeLayout = "2006-01-02T15:04:05.000000000Z07:00"
+)
 
-func encodeMomentFavoriteCursor(favoritedAt, momentID string) string {
-	value, err := cursor.Encode(momentFavoriteCursorNamespace, momentInteractionCursor{At: favoritedAt, ID: momentID})
+func encodeMomentFavoriteCursor(favoritedAt time.Time, momentID string) string {
+	value, err := cursor.Encode(momentFavoriteCursorNamespace, momentInteractionCursor{At: favoritedAt.UTC().Format(momentFavoriteCursorTimeLayout), ID: momentID})
 	if err != nil {
 		return ""
 	}
@@ -547,7 +551,7 @@ func decodeMomentFavoriteCursor(cursorValue string) (any, string, error) {
 	if err := cursor.Decode(momentFavoriteCursorNamespace, cursorValue, &decoded); err != nil || decoded.At == "" || decoded.ID == "" {
 		return nil, "", ErrInvalidCursor
 	}
-	favoritedAt, err := time.Parse(time.RFC3339Nano, decoded.At)
+	favoritedAt, err := time.Parse(momentFavoriteCursorTimeLayout, decoded.At)
 	if err != nil {
 		return nil, "", ErrInvalidCursor
 	}

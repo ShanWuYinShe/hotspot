@@ -44,14 +44,14 @@ type Limits struct {
 
 // AuthConfig 认证安全运行参数（审查遗留项：验证码 TTL 与登录锁定阈值此前是
 // auth 模块代码常量，调参需重新发布）。零值字段由 Effective 回退默认值，
-// 存量配置无 auth section 时行为与迁移前完全一致。
+// 存量配置无 auth section 时使用以下默认值。
 type AuthConfig struct {
 	// VerificationCodeTTLMinutes 注册/重置密码验证码有效期（分钟）。
 	VerificationCodeTTLMinutes int `json:"verification_code_ttl_minutes"`
 	// LoginLockoutThreshold 连续登录失败达到该次数即锁定账号。
 	LoginLockoutThreshold int `json:"login_lockout_threshold"`
 	// LoginLockoutMinutes 锁定时长（分钟）；同时作为失败计数衰减窗口
-	//（与迁移前「衰减窗口 = 锁期」的语义一致）。
+	//（衰减窗口 = 锁期）。
 	LoginLockoutMinutes int `json:"login_lockout_minutes"`
 }
 

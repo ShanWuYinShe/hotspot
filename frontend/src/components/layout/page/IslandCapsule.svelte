@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { ChevronDown } from '@lucide/svelte';
-	import { islandHandoff } from '@/lib/island-handoff';
 
 	// IslandCapsule — 桌面端顶栏中央「灵动岛」的唯一形态实现（docs/design-system.md §22）。
 	// 现升级为「默认常驻 + 交互中枢」模型：
@@ -20,7 +19,6 @@
 		trailing,
 		expanded,
 		progress = 0,
-		handoff = false,
 		class: className = ''
 	}: {
 		/** 岛的整体语义（role=group 的 aria-label）。 */
@@ -41,8 +39,6 @@
 		expanded?: Snippet;
 		/** 阅读进度 0–100（唯一滚动 owner 上报），渲染为最右侧圆环。 */
 		progress?: number;
-		/** 是否启用旧版滚动飞行 handoff 监听（默认关闭，保持常驻稳态） */
-		handoff?: boolean;
 		class?: string;
 	} = $props();
 
@@ -99,7 +95,6 @@
 	data-desktop-dynamic-island
 	role="group"
 	aria-label={ariaLabel}
-	use:islandHandoff={{ enabled: handoff }}
 	class="group/island pointer-events-auto relative z-50 flex transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
 		? 'w-[400px] min-w-[360px] max-w-[460px] flex-col items-stretch rounded-lg border border-accent-border/50 bg-surface-primary/95 px-3.5 pb-3 pt-1 shadow-modal backdrop-blur-2xl'
 		: 'h-8 min-w-0 max-w-md items-center rounded-full border border-border-default/35 bg-surface-primary/80 pl-1 pr-1 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"

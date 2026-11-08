@@ -257,7 +257,7 @@ func TestPrintPlan(t *testing.T) {
 			t.Errorf("dry-run 输出缺少 %q", want)
 		}
 	}
-	for _, secret := range []string{defaultQAPassword, defaultAdminPassword, legacyAccountPassword, groupSeedPassword} {
+	for _, secret := range []string{defaultQAPassword, defaultAdminPassword, defaultDevAccountPassword, groupSeedPassword} {
 		if strings.Contains(output, secret) {
 			t.Errorf("dry-run 输出不应包含口令明文 %q", secret)
 		}

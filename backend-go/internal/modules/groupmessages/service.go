@@ -416,8 +416,8 @@ func (s *Service) RecallMessageByIDAsAdmin(ctx context.Context, operatorID, mess
 // require before touching a message:
 //  1. the caller must still be a member of the group the message lives in
 //     (kicked/left users cannot edit history);
-//  2. the caller must be the message's sender — NULL/anonymous senders are
-//     refused for everyone, so legacy rows can never be mutated.
+//  2. the caller must be the message's sender — NULL-sender rows are
+//     refused for everyone, so they can never be mutated.
 func (s *Service) authorizeMessageMutation(ctx context.Context, messageID, userID string) error {
 	meta, found, err := s.repo.LookupMessageMeta(ctx, messageID)
 	if err != nil {

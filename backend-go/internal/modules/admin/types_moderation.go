@@ -142,7 +142,7 @@ type PaginatedAdminReports struct {
 	Items      []AdminReportItem `json:"items"`
 	NextCursor *string           `json:"next_cursor"`
 	// Total 带 status 过滤时返回该状态总数（不受分页窗口影响）；status 为 null 时
-	// 恒为 null（spec api_spec_admin.md AdminReportsPage.total，向后兼容新增字段）。
+	// 恒为 null（spec api_spec_admin.md AdminReportsPage.total）。
 	Total *int64 `json:"total"`
 }
 

@@ -209,9 +209,7 @@ Handler -> Service -> Repository
 - `migrations/NNN_描述.sql` 字典序执行；`schema_migrations` 版本表记录 `name + checksum + execution_ms`。
   每个文件与其版本登记在**同一事务**内提交（原子）：文件执行失败/进程崩溃不会留下
   「已执行未登记」的重放窗口，失败文件也不会被标记为已应用。
-- **不做启发式基线**：库内已有业务表但版本表为空时启动直接失败，必须显式执行
-  `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 接管（记录 checksum + 校验 manifest）。
-  历史事故（线上 idx_moments_keyset 被基线吞掉）即启发式基线所致，不得恢复。
+- **不做基线、不做存量库接管**：库内已有业务表但版本表为空时启动直接失败；必须从空库按文件顺序执行全量迁移。
 - **checksum 冻结历史**：已应用迁移文件的任何改动/删除都会在启动期 fail-fast；
   要改 schema 一律新增迁移文件（不允许改写历史，即使已不考虑二进制向后兼容）。
 - **schema manifest**：`migrations/schema_manifest.json` 是「全部迁移执行后的期望 schema」
@@ -450,9 +448,7 @@ Handler -> Service -> Repository
 - `migrations/NNN_描述.sql` 字典序执行；`schema_migrations` 版本表记录 `name + checksum + execution_ms`。
   每个文件与其版本登记在**同一事务**内提交（原子）：文件执行失败/进程崩溃不会留下
   「已执行未登记」的重放窗口，失败文件也不会被标记为已应用。
-- **不做启发式基线**：库内已有业务表但版本表为空时启动直接失败，必须显式执行
-  `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 接管（记录 checksum + 校验 manifest）。
-  历史事故（线上 idx_moments_keyset 被基线吞掉）即启发式基线所致，不得恢复。
+- **不做基线、不做存量库接管**：库内已有业务表但版本表为空时启动直接失败；必须从空库按文件顺序执行全量迁移。
 - **checksum 冻结历史**：已应用迁移文件的任何改动/删除都会在启动期 fail-fast；
   要改 schema 一律新增迁移文件（不允许改写历史，即使已不考虑二进制向后兼容）。
 - **schema manifest**：`migrations/schema_manifest.json` 是「全部迁移执行后的期望 schema」

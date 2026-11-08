@@ -54,7 +54,7 @@ func TestPasswordsAreBcryptHashedAndVerifiable(t *testing.T) {
 	want := map[string]string{
 		"qa@hotspot.local":     defaultQAPassword,
 		"admin@hotspot.local":  defaultAdminPassword,
-		"sophia@hotspot.local": legacyAccountPassword,
+		"sophia@hotspot.local": defaultDevAccountPassword,
 	}
 	for loginID, plain := range want {
 		hash, ok := hashes[loginID]

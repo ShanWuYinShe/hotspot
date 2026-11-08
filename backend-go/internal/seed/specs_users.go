@@ -161,8 +161,8 @@ func seedAccounts() []accountSpec {
 	return accounts
 }
 
-// legacyAccountPassword 是除两个 QA 账号以外的开发账号统一口令（seed-spec §3.1）。
-const legacyAccountPassword = "Seed123456"
+// defaultDevAccountPassword 是除两个 QA 账号以外的开发账号统一口令（seed-spec §3.1）。
+const defaultDevAccountPassword = "Seed123456"
 
 // defaultQAPassword / defaultAdminPassword 是 dev 缺省口令（仅本地开发；
 // 生产部署不得沿用，见 backend-go/AGENTS.md）。

@@ -57,10 +57,6 @@ export function readLastLocation(): MapPoint | null {
 	if (!store) return null;
 	try {
 		const parsed: unknown = JSON.parse(store.getItem(LAST_KEY) ?? '');
-		if (Array.isArray(parsed)) {
-			const [lat, lng] = parsed;
-			return validPoint(lat, lng) ? { lat: lat as number, lng: lng as number } : null;
-		}
 		if (parsed && typeof parsed === 'object') {
 			const { lat, lng, name } = parsed as { lat?: unknown; lng?: unknown; name?: unknown };
 			if (!validPoint(lat, lng)) return null;

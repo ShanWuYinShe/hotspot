@@ -72,8 +72,8 @@ const (
 	RETURNING message_id`
 
 	// queryLookupMessageOwner fetches only what the authorization layer needs:
-	// the group a message belongs to and who sent it. NULL sender becomes ""
-	// so the service can refuse to mutate legacy/anonymous messages.
+	// the group a message belongs to and who sent it. NULL sender (defensive;
+	// contract requires sender) becomes "" so mutations can be refused.
 	queryLookupMessageOwner = `
 	SELECT group_id, sender_user_id FROM group_messages WHERE message_id = $1`
 

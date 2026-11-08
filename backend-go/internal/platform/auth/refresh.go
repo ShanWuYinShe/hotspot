@@ -142,13 +142,12 @@ func (s *Service) resultFromRotated(ctx context.Context, session RefreshSession,
 	if err != nil {
 		return AuthResult{}, err
 	}
-	if s.escrow == nil || len(session.GraceTokenEnc) == 0 {
-		// 无托管可解（理论不可达：轮换必写托管；迁移过渡期的存量宽限行
-		// 除外）。安全侧失败：拒绝刷新，真实客户端重新登录。
-		observability.L().Warn("refresh grace escrow missing",
+	if s.escrow == nil {
+		observability.L().Error("refresh grace escrow not configured",
 			"user_id", session.UserID, "session_id", session.SessionID)
 		return AuthResult{}, errors.New("invalid refresh token")
 	}
+	// 轮换必写托管：空/损坏密文按不可用处理（fail-closed，不自愈）。
 	gracePlaintext, decErr := s.escrow.Open(session.GraceTokenEnc)
 	if decErr != nil || gracePlaintext == "" {
 		observability.L().Warn("refresh grace escrow decrypt failed",

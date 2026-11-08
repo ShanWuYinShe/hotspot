@@ -14,7 +14,7 @@ type MessageEventMeta struct {
 
 // MessageOwnerMeta carries the ownership metadata needed to authorize
 // Update/Recall: which group the message lives in and who sent it.
-// SenderUserID is "" for messages with a NULL sender (legacy/anonymous);
+// SenderUserID is "" only when the row stores a NULL sender (defensive; contract requires sender);
 // such messages are not editable/recallable by anyone.
 type MessageOwnerMeta struct {
 	GroupID      string
@@ -61,7 +61,7 @@ type Repository interface {
 	// GroupMessageMentioned notification payloads).
 	GetGroupName(ctx context.Context, groupID string) (string, bool, error)
 	// LookupMessageMeta returns the group ID and sender user ID for a message.
-	// senderID is "" when the message has a NULL sender (legacy/anonymous).
+	// senderID is "" only for a NULL column value (defensive; contract requires sender).
 	// found is false when no message matches messageID.
 	LookupMessageMeta(ctx context.Context, messageID string) (meta MessageOwnerMeta, found bool, err error)
 	// GetMessageReportSnapshot 按 message_id 读取消息真值生成举报快照投影视图

@@ -64,7 +64,7 @@ func TestPlanMigrationsVerifiesAppliedHistory(t *testing.T) {
 			t.Fatalf("unexpected pending: %#v", pending)
 		}
 	})
-	t.Run("legacy empty checksum is treated as pending verification", func(t *testing.T) {
+	t.Run("empty recorded checksum row stays applied (strict verification is a separate check)", func(t *testing.T) {
 		pending, err := planMigrations(files, map[string]string{"001_a.sql": ""}, checksums)
 		if err != nil {
 			t.Fatalf("plan: %v", err)

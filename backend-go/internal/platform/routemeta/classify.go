@@ -12,7 +12,7 @@ type RouteClass struct {
 }
 
 // ClassifyPath 按路径前缀/后缀分类限流桶（原 ratelimit.classifyRoute）。
-// 行为与迁移前完全一致：同一路径必须得到相同的 (ReadOnly, AdminOnly)。
+// 约束：同一路径必须得到相同的 (ReadOnly, AdminOnly)。
 func ClassifyPath(path string) (RouteClass, bool) {
 	switch {
 	case strings.HasPrefix(path, "/public/v1/"):

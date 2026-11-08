@@ -1,6 +1,6 @@
 ---
 name: hotspot-backend-migrations
-description: hotspot 后端数据库迁移纪律：文件命名、版本表 checksum/原子执行、schema manifest 校验与重建、存量库显式 adopt、破坏性 DDL 声明、data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 及原因。触发：新增或修改 backend-go/migrations 下的 SQL；重建 schema manifest；接管存量库；改表结构或索引；回填数据；排查启动或迁移校验失败。
+description: hotspot 后端数据库迁移纪律：文件命名、版本表 checksum/原子执行、schema manifest 校验与重建、破坏性 DDL 声明、data_migrations 旗标、禁止 CREATE INDEX CONCURRENTLY 及原因。触发：新增或修改 backend-go/migrations 下的 SQL；重建 schema manifest；从空库初始化；改表结构或索引；回填数据；排查启动或迁移校验失败。
 ---
 
 # hotspot-backend-migrations
@@ -15,16 +15,13 @@ description: hotspot 后端数据库迁移纪律：文件命名、版本表 chec
   4. 逐个执行 pending：**同一事务内**先执行整文件 SQL、再插入版本记录、提交（失败整体回滚，不会留下「已执行未登记」或半应用状态）；
   5. 用 `migrations/schema_manifest.json` 校验期望表/列/索引是否存在（缺失致命、库内多余对象仅告警）。
 - **已应用迁移文件禁止修改/删除**：checksum 会阻止演进；要改 schema 一律新增迁移。
-- **不再有启发式基线**：库内已有业务表但版本表为空时启动直接失败，必须由运维显式
-  `go run ./cmd/migrate -adopt-through=<最后已应用文件>` 接管（记录 checksum 后立即 manifest 校验）。
-  禁止恢复「只登记不执行」的自动基线（历史事故：线上索引被基线吞掉）。
+- **不做基线、不做存量库接管**：库内已有业务表但版本表为空时启动直接失败；必须从空库按文件顺序执行全量迁移。禁止恢复「只登记不执行」的基线（历史事故：线上索引被基线吞掉）。
 
 ## 常用命令
 
 ```bash
 go run ./cmd/migrate                      # 应用 pending（幂等）
 go run ./cmd/migrate -verify-only         # 只读校验：checksum / pending / schema manifest
-go run ./cmd/migrate -adopt-through=059_pg_stat_statements_extension.sql  # 存量库一次性接管
 go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json      # 在全新库重建 manifest
 ```
 
@@ -40,7 +37,7 @@ go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json      # 在�
 
 - 本项目已不考虑「旧二进制 + 新 schema」兼容；`DROP/RENAME/TYPE 变更` 允许，但迁移文件顶部必须写
   `-- allow-destructive: <理由>`，`scripts/check-migrations.sh` 强制该声明。
-- 仍建议幂等写法（`IF NOT EXISTS` / `DO $$` 自检），用于 adopt/手工重跑与本地反复初始化；
+- 仍建议幂等写法（`IF NOT EXISTS` / `DO $$` 自检），用于手工重跑与本地反复初始化；
   无法按格式判幂等的一次性数据迁移用 `data_migrations` 旗标表包裹（参照 053）。
 - 无 down 迁移：回滚以数据库备份/快照为准；破坏性迁移一旦发行，旧镜像不能直接跑在新 schema 上。
 

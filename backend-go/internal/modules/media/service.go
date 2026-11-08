@@ -370,7 +370,7 @@ func isActiveContentMime(mime string) bool {
 	}
 }
 
-// 各类别的兜底上限（AppConfig 未接线或字段为 0 时使用）；数值与迁移前的
+// 各类别的兜底上限（AppConfig 未接线或字段为 0 时使用）；数值与既有
 // 硬编码常量完全一致，保证存量配置（无 avatar/chat_file 新字段）行为不变。
 const (
 	defaultAvatarMaxSize   = 5 * 1024 * 1024

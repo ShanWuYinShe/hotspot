@@ -327,16 +327,7 @@ export class AppThemeManager {
     const storedThemeMode = await PreferencesUtil.get<string>(StorageKeys.THEME_MODE, DEFAULT_THEME_MODE);
     const themeMode = AppThemeManager.normalizeThemeMode(storedThemeMode);
     AppStorage.setOrCreate<string>(KEY_THEME_MODE, themeMode);
-    // 明暗偏好迁移：旧 settings_dark_forced=true 的用户落到 dark，并清理旧键（单通道唯一来源）
-    let storedDarkPref = await PreferencesUtil.get<string>(StorageKeys.DARK_MODE_PREFERENCE, '');
-    if (!storedDarkPref) {
-      const forcedDark = await PreferencesUtil.get<boolean>('settings_dark_forced', false);
-      if (forcedDark) {
-        storedDarkPref = 'dark';
-        await PreferencesUtil.set(StorageKeys.DARK_MODE_PREFERENCE, 'dark');
-      }
-      await PreferencesUtil.remove('settings_dark_forced');
-    }
+    const storedDarkPref = await PreferencesUtil.get<string>(StorageKeys.DARK_MODE_PREFERENCE, '');
     AppStorage.setOrCreate<string>(KEY_DARK_MODE_PREFERENCE,
       AppThemeManager.normalizeDarkModePreference(storedDarkPref));
     AppThemeManager.refreshResolvedTheme();

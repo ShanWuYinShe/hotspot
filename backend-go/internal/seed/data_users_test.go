@@ -76,7 +76,7 @@ func TestSeedUsersAndAccounts(t *testing.T) {
 	// 口令长度/字符契约（Auth 校验：8-128 且含字母+数字）。
 	hasLetter := regexp.MustCompile("[A-Za-z]")
 	hasDigit := regexp.MustCompile("[0-9]")
-	for _, plain := range []string{defaultQAPassword, defaultAdminPassword, legacyAccountPassword, groupSeedPassword} {
+	for _, plain := range []string{defaultQAPassword, defaultAdminPassword, defaultDevAccountPassword, groupSeedPassword} {
 		if len(plain) < 8 || len(plain) > 128 {
 			t.Errorf("口令长度不符合 8-128: %q", plain)
 		}

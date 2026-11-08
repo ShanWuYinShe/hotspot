@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"hotspot/backend-go/internal/platform/cursor"
 )
 
 // TestListFavoritesKeepsSameSecondRowsAcrossPages 回归：同秒多条收藏翻页不丢失。
@@ -50,11 +52,11 @@ func TestListFavoritesKeepsSameSecondRowsAcrossPages(t *testing.T) {
 	}
 }
 
-// TestFavoriteCursorRoundTripsNanoseconds 游标必须携带纳秒全精度并可解码回原时刻
-// （解码侧兼容秒/纳秒两种历史格式，老游标仍有效）。
+// TestFavoriteCursorRoundTripsNanoseconds 游标必须携带纳秒全精度并可解码回原时刻；
+// 秒级游标（旧格式）一律拒绝。
 func TestFavoriteCursorRoundTripsNanoseconds(t *testing.T) {
 	at := time.Date(2026, 3, 29, 12, 0, 0, 123456789, time.UTC)
-	token := encodeMomentFavoriteCursor(at.Format(time.RFC3339Nano), "moment_9")
+	token := encodeMomentFavoriteCursor(at, "moment_9")
 	if token == "" {
 		t.Fatal("expected cursor token")
 	}
@@ -68,5 +70,12 @@ func TestFavoriteCursorRoundTripsNanoseconds(t *testing.T) {
 	parsedTime, ok := parsed.(time.Time)
 	if !ok || !parsedTime.Equal(at) {
 		t.Fatalf("expected %v, got %#v", at, parsed)
+	}
+	secondsToken, err := cursor.Encode(momentFavoriteCursorNamespace, momentInteractionCursor{At: at.Format(time.RFC3339), ID: "moment_9"})
+	if err != nil {
+		t.Fatalf("encode seconds cursor: %v", err)
+	}
+	if _, _, err := decodeMomentFavoriteCursor(secondsToken); err == nil {
+		t.Fatal("expected seconds-precision cursor to be rejected")
 	}
 }

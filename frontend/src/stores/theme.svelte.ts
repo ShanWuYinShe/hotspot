@@ -40,8 +40,6 @@ export const THEME_OPTIONS = [
 ] as const;
 
 const COLOR_SCHEME_KEY = 'colorScheme';
-/** 老键（isDark 布尔）：仅做一次性迁移——存在则转为对应手动档并删除，不存在视为 auto。 */
-const LEGACY_IS_DARK_KEY = 'isDark';
 const THEME_KEY = 'appTheme';
 
 let colorScheme = $state<ColorSchemeMode>('auto');
@@ -121,22 +119,11 @@ function syncThemeColor(root: HTMLElement): void {
 }
 
 function readColorScheme(): ColorSchemeMode {
-  try {
-    const saved = localStorage.getItem(COLOR_SCHEME_KEY);
-    if (saved === 'auto' || saved === 'light' || saved === 'dark') return saved;
-    // 老键迁移：只有显式存过的 isDark 才转为对应手动档并删老键；
-    // 老键不存在（老用户没选过）视为 auto。
-    const legacy = localStorage.getItem(LEGACY_IS_DARK_KEY);
-    if (legacy === 'true' || legacy === 'false') {
-      const migrated: ColorSchemeMode = legacy === 'true' ? 'dark' : 'light';
-      try {
-        localStorage.setItem(COLOR_SCHEME_KEY, migrated);
-        localStorage.removeItem(LEGACY_IS_DARK_KEY);
-      } catch {}
-      return migrated;
-    }
-  } catch {}
-  return 'auto';
+	try {
+		const saved = localStorage.getItem(COLOR_SCHEME_KEY);
+		if (saved === 'auto' || saved === 'light' || saved === 'dark') return saved;
+	} catch {}
+	return 'auto';
 }
 
 function readInitial(): { scheme: ColorSchemeMode; theme: AppTheme } {

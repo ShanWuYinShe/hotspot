@@ -2110,14 +2110,13 @@ rps 与 p50/p95/p99，用于**同一会话内的前后对比**；非测试环境
 索引被永久吞掉（058 迁移自述）。新实现（提交见 git log）：
 
 - `schema_migrations` 增加 `checksum`（sha256）/ `execution_ms`：已应用迁移文件改动或删除
-  会在启动期 fail-fast；旧版本行首次启动自动补写 checksum（一次性过渡）。
-- **删除启发式基线**：库内有业务表但版本表为空时启动失败，必须
-  `go run ./cmd/migrate -adopt-through=<file>` 显式接管；adopt 后立即 manifest 校验。
+  会在启动期 fail-fast（checksum 回填与 adopt 接管已在 Batch 3 删除）。
+- **删除启发式基线**：库内有业务表但版本表为空时启动失败（Batch 3 起不再支持 adopt 接管）。
 - **每文件与版本登记同事务提交**（原子）：失败/崩溃不会留下「已执行未登记」窗口或半应用状态。
 - **schema manifest**：`migrations/schema_manifest.json`（43 表 / 391 列 / 128 索引）作为
   「迁移集合应产生的 schema」快照，启动与 `cmd/migrate -verify-only` 校验期望对象齐全；
   `verify-backend-ci.sh --with-db` 新增「临时库重放 + manifest diff」门禁，迁移改了忘重建 manifest 即失败。
-- `cmd/migrate` 扩展：默认应用、`-verify-only`、`-adopt-through`、`-write-manifest`。
+- `cmd/migrate` 扩展：默认应用、`-verify-only`、`-write-manifest`（`-adopt-through` 于 Batch 3 删除）。
 - 迁移纪律调整：破坏性 DDL 允许（用户明确不考虑向后兼容），但迁移文件必须声明
   `-- allow-destructive: <理由>`（scripts/check-migrations.sh 校验）；CONCURRENTLY 仍禁止（事务内执行）。
 - 验证：`verify-backend-ci.sh --with-db` ALL CHECKS PASSED（含 legacy 拒绝/adopt/checksum 篡改检测的手工实测）。
@@ -3847,9 +3846,8 @@ outbox 从系统公告扩展到举报裁决的实时通知：
 
 ### 明确保留（不属于可删垃圾）
 
-platform/migrate 的 AdoptLegacy/checksum 回填（生产存量库依赖）、刷新令牌 escrow 过渡分支
-（存量令牌）、admin reports total 兼容字段（spec 明确）、前端 isDark 旧存储迁移 / 鸿蒙明文 token
-清理（已安装用户），均需按下线版本择期处理；详见审计记录 .workwork/design/backend-legacy-code-audit.md。
+admin reports total（spec 明确字段）、AppConfig 缺省字段（配置演进）、group_messages sender
+可空（迁移 expand-contract 约束，代码仅防御，生产 0 NULL 行）；其余旧兼容代码已在 Batch 3 移除。
 
 ### 验证
 
@@ -3871,3 +3869,27 @@ staticcheck U1000（-tests=false）清零。
   export_test.go（会破坏跨包测试）；生产装配不调用它们，保留为测试缝并在需要时再统一收敛。
 - 验证：gofmt/vet/build、go test -short 全绿；verify-backend-ci.sh --all **ALL CHECKS PASSED**
   （DB 口径模块覆盖率仍全部 ≥90%）；staticcheck U1000（-tests=false）保持为零。
+
+## 向后兼容清理 Batch 3（2026-11-08）
+
+用户要求「不保留任何向后兼容，只保留最佳方案」，按此执行（生产数据已逐项核验无过渡依赖）：
+
+- **迁移**：删除 AdoptLegacy / ErrLegacyDatabase / backfillLegacyChecksums 与 cmd/migrate
+  -adopt-through；runner 只从空库全量执行，已有业务表但版本表为空、或已登记迁移无 checksum
+  时直接失败。生产库 schema_migrations 61 行 checksum 无空值（核验：count(*) filter where
+  checksum is null or checksum='' = 0），无需回填。
+- **refresh token escrow**：删除「迁移过渡期宽限行无托管」分支，轮换必写托管，空/损坏密文
+  fail-closed（Open 空输入返回错误）。生产核验：rotated_to 非空且宽限期内 grace_token_enc
+  为空的行数 = 0。
+- **收藏列表游标**：改为固定 9 位小数秒布局（写读同一 layout），拒绝秒级旧游标；游标不透明、
+  由服务端生成，无客户端兼容负担。
+- **前端**：删除 isDark 旧键一次性迁移、地图锚点 [lat,lng] 旧数组解析、IslandCapsule 未使用的
+  handoff 兼容开关。
+- **鸿蒙**：删除 Preferences 明文 token 一次性清理（removeLegacyPlaintextTokens）与
+  settings_dark_forced 主题偏好迁移。
+- **保留说明**（非兼容代码）：admin reports total（spec 字段）、AppConfig 缺省字段（配置演进容错）、
+  group_messages sender 可空（expand-contract 回滚约束，代码只做防御；生产 0 NULL 行）、
+  schema manifest 校验（完整性）。
+- **验证**：后端 verify-backend-ci.sh --all ALL CHECKS PASSED（含真实库 IT/E2E/govulncheck）；
+  前端 bun run check + bun run test 全绿（142 文件 / 869 用例）；鸿蒙 hvigor assembleApp
+  BUILD SUCCESSFUL；docs/release-runbook.md 与 hotspot-backend-migrations skill 同步为无 adopt 现状。

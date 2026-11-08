@@ -5,7 +5,7 @@
 
 	// 详情栏通用小节包装（R13：卡头统一走 SectionHead variant="rail"）。
 	// variant:
-	// - 'card'（默认）：带 surface-flat 边框容器与内衬 padding（保持向后兼容）
+	// - 'card'（默认）：带 surface-flat 边框容器与内衬 padding
 	// - 'bare'：去框化纯净排版（无外层边框与内阴影），直接融入侧栏背景，消除 Box-in-a-Box 嵌套杂音
 	// - 'island'：现代 Bento 微岛浮动卡片（rounded-lg 微阴影透光微岛），与主内容区无缝呼应、融为一体
 	// 卡头不再手写「标题 + 动作」行：统一由 SectionHead 承载（12px semibold + 可选 icon +

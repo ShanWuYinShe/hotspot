@@ -137,8 +137,8 @@ func (h *Handler) SetMemberRole(w http.ResponseWriter, r *http.Request) {
 
 // SetMute is the unified two-state mute endpoint (api_spec_group.md). active=true
 // mutes the member (for DurationMinutes); active=false unmutes them. Idempotent.
-// Retained as a single handler replacing the legacy MuteMember/UnmuteMember
-// pair; the service-layer MuteMember/UnmuteMember methods are unchanged.
+// SetMute 统一处理禁言/解禁（动作由请求字段区分）；service 层
+// MuteMember/UnmuteMember 语义不变。
 func (h *Handler) SetMute(w http.ResponseWriter, r *http.Request) {
 	var req MuteMemberRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || req.GroupID == "" || req.UserID == "" {

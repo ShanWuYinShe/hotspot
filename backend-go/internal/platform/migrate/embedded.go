@@ -17,13 +17,8 @@ import (
 const advisoryLockKey int64 = 2026032301
 
 // schemaMigrationsTable 记录已应用迁移：文件名 + 文件内容 checksum + 执行耗时。
-//
-// 历史背景：旧 runner 只有 name/applied_at，且对「已有全部表的存量库」做启发式
-// 一次性基线（只登记不执行）。该设计已造成线上事故：基线快照之后合并进历史迁移
-// 的索引（056 的 idx_moments_keyset）被永久标记为已应用而从未创建（058 迁移自述）。
-// 新设计的关键不变量：
-//   - 不再有启发式基线：存量库必须由运维显式 AdoptLegacy（cmd/migrate
-//     -adopt-through）完成一次性接管，且接管后立即用 schema manifest 校验；
+// 不变量：
+//   - 迁移只从空库按文件顺序执行；已有业务表但版本表为空时直接失败，不做基线/接管；
 //   - 每个已应用文件的 sha256 入库，历史文件被改动/删除会在启动期 fail-fast；
 //   - 每个迁移文件与其版本登记在同一事务内提交，消除「执行成功但登记前崩溃」窗口。
 const schemaMigrationsDDL = `CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -35,20 +30,6 @@ const schemaMigrationsDDL = `CREATE TABLE IF NOT EXISTS schema_migrations (
 ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS checksum text;
 ALTER TABLE schema_migrations ADD COLUMN IF NOT EXISTS execution_ms bigint;
 `
-
-// ErrLegacyDatabase 表示目标库已有业务表、但 schema_migrations 为空（首次接入新
-// runner 的存量库）。禁止启发式基线，必须显式执行 adopt 命令；错误信息直接给出
-// 操作步骤，避免运维在启动失败时猜测。
-type ErrLegacyDatabase struct{ MigrationFiles int }
-
-func (e *ErrLegacyDatabase) Error() string {
-	return fmt.Sprintf(
-		"database has existing tables but schema_migrations is empty: refusing heuristic baseline of %d migration files. "+
-			"Run 'go run ./cmd/migrate -adopt-through=<last-applied-migration-file>' on this database after reviewing "+
-			"schema drift (it records checksums and then verifies the schema manifest).",
-		e.MigrationFiles,
-	)
-}
 
 func listMigrationsFS(fsys fs.FS) ([]string, error) {
 	entries, err := fs.ReadDir(fsys, ".")
@@ -175,11 +156,8 @@ func ensureSchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS, v
 				return err
 			}
 			if hasTables {
-				return &ErrLegacyDatabase{MigrationFiles: len(files)}
+				return fmt.Errorf("database already contains application tables but schema_migrations is empty; this runner only supports initializing an empty database — create a fresh database and run the full migration set")
 			}
-		}
-		if err := backfillLegacyChecksums(ctx, db, applied, checksums); err != nil {
-			return err
 		}
 		pending, err := planMigrations(files, applied, checksums)
 		if err != nil {
@@ -229,66 +207,10 @@ func VerifySchema(ctx context.Context, db persistence.QueryableDB, fsys fs.FS) e
 	}
 	for name, sum := range applied {
 		if sum == "" {
-			return fmt.Errorf("migration %q has no recorded checksum (legacy row); run the app or cmd/migrate once to backfill before verifying", name)
+			return fmt.Errorf("migration %q has no recorded checksum; schema_migrations must be written by this runner", name)
 		}
 	}
 	return verifySchemaManifest(ctx, db, fsys)
-}
-
-// AdoptLegacy 显式接管一个「有业务表但 schema_migrations 为空」的存量库：
-// 把 <= through 的迁移文件按当前内容 checksum 登记为已应用，随后校验 schema
-// manifest。仅允许在空版本表上执行；已有登记时返回错误（避免误把新迁移跳过）。
-func AdoptLegacy(ctx context.Context, db persistence.QueryableDB, fsys fs.FS, through string) error {
-	if _, ok := isPostgres(db); !ok {
-		return fmt.Errorf("adopt requires a postgres backend")
-	}
-	if strings.TrimSpace(through) == "" {
-		return fmt.Errorf("adopt-through migration file is required")
-	}
-	return withSchemaLock(ctx, db, func() error {
-		if err := ensureVersionTable(ctx, db); err != nil {
-			return err
-		}
-		applied, err := loadAppliedMigrations(ctx, db)
-		if err != nil {
-			return err
-		}
-		if len(applied) > 0 {
-			return fmt.Errorf("schema_migrations already has %d rows; adopt is only valid on an empty version table", len(applied))
-		}
-		hasTables, err := databaseHasApplicationTables(ctx, db)
-		if err != nil {
-			return err
-		}
-		if !hasTables {
-			return fmt.Errorf("database has no application tables; an empty database must be initialized with the normal migration path, not adopt")
-		}
-		files, err := listMigrationsFS(fsys)
-		if err != nil {
-			return err
-		}
-		checksums, err := migrationChecksums(fsys, files)
-		if err != nil {
-			return err
-		}
-		// 记录 <= through 的全部历史文件（它们的效果视为已存在于库内）；
-		// through 之后的迁移保持 pending，由紧随其后的 EnsureSchema 正常执行。
-		found := false
-		for _, name := range files {
-			if err := recordAdoptedMigration(ctx, db, name, checksums[name]); err != nil {
-				return err
-			}
-			observability.L().Info("schema_migrations: adopted", "file", name)
-			if name == through {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("adopt-through migration %q not found", through)
-		}
-		return verifySchemaManifest(ctx, db, fsys)
-	})
 }
 
 func ensureVersionTable(ctx context.Context, db persistence.QueryableDB) error {
@@ -365,34 +287,6 @@ func loadAppliedMigrations(ctx context.Context, db persistence.QueryableDB) (map
 	return applied, rows.Err()
 }
 
-// backfillLegacyChecksums 为旧版 runner 写入的 checksum 为空的行补写当前文件
-// 哈希。旧行无法回溯验证历史内容，但补写后该文件即被冻结（后续改动会 fail-fast）。
-func backfillLegacyChecksums(ctx context.Context, db persistence.QueryableDB, applied map[string]string, checksums map[string]string) error {
-	legacy := make([]string, 0)
-	for name, sum := range applied {
-		if sum == "" {
-			legacy = append(legacy, name)
-		}
-	}
-	if len(legacy) == 0 {
-		return nil
-	}
-	sort.Strings(legacy)
-	for _, name := range legacy {
-		expected, ok := checksums[name]
-		if !ok {
-			return fmt.Errorf("schema_migrations records %q but no such migration file exists", name)
-		}
-		if err := db.Exec(ctx, "UPDATE schema_migrations SET checksum = $2 WHERE name = $1 AND checksum IS NULL", name, expected); err != nil {
-			return fmt.Errorf("backfill checksum for %s: %w", name, err)
-		}
-		applied[name] = expected
-	}
-	observability.L().Warn("schema_migrations: backfilled checksums for legacy rows (old runner did not record them)",
-		"rows", len(legacy))
-	return nil
-}
-
 // databaseHasApplicationTables 判断库内是否已有业务表（忽略迁移簿记表）。
 func databaseHasApplicationTables(ctx context.Context, db persistence.QueryableDB) (bool, error) {
 	var exists bool
@@ -446,15 +340,6 @@ func applyMigration(ctx context.Context, db persistence.QueryableDB, name, sql, 
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("commit migration %s: %w", name, err)
-	}
-	return nil
-}
-
-func recordAdoptedMigration(ctx context.Context, db persistence.QueryableDB, name, checksum string) error {
-	if err := db.Exec(ctx,
-		"INSERT INTO schema_migrations (name, checksum) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING",
-		name, checksum); err != nil {
-		return fmt.Errorf("record adopted migration %s: %w", name, err)
 	}
 	return nil
 }

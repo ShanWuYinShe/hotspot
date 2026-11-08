@@ -31,7 +31,7 @@ type FailedLoginTracker interface {
 	// Clear resets the counter for loginID (called on successful login).
 	Clear(ctx context.Context, loginID string)
 	// SetLimits 更新爆破阈值与锁期。Service 在每次登录前按 AppConfig.Auth
-	// 调用（运行期可调）；实现未设置时使用迁移前的默认常量，行为不变。
+	// 调用（运行期可调）；实现未设置时使用默认常量。
 	SetLimits(maxFailures int, lockDuration time.Duration)
 }
 
@@ -432,7 +432,7 @@ func (s *Service) verificationCodeTTL(ctx context.Context) time.Duration {
 
 // syncLoginTrackerLimits 把 AppConfig.Auth 的爆破阈值/锁期同步到 tracker
 // （审查遗留项：此前是代码常量，运行期不可调）。内存与 Redis 实现都按配置
-// 生效，未配置时回退默认常量（行为与迁移前一致）。
+// 生效，未配置时回退默认常量。
 func (s *Service) syncLoginTrackerLimits(ctx context.Context) {
 	cfg := s.authConfig(ctx)
 	s.loginTracker.SetLimits(cfg.LoginLockoutThreshold, time.Duration(cfg.LoginLockoutMinutes)*time.Minute)

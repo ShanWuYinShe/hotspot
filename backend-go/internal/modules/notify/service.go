@@ -329,11 +329,10 @@ func (s *Service) AppendMomentCommented(ctx context.Context, targetUserID string
 	return id, err
 }
 
-// AppendReactionAdded records a generic reaction_added notify. Used for
-// all three target kinds (moment/comment/message) — the legacy moment_liked /
-// comment_liked types were removed from the contract (spec api_spec_types.md
-// NotifyType). Returns the generated notify_id so callers can embed it
-// in the realtime ReactionAdded payload.
+// AppendReactionAdded records a generic reaction_added notify for all three
+// target kinds (moment/comment/message；spec api_spec_types.md NotifyType).
+// Returns the generated notify_id so callers can embed it in the realtime
+// ReactionAdded payload.
 func (s *Service) AppendReactionAdded(ctx context.Context, targetUserID string, actor types.UserInfo, targetType string, targetID string, emoji string) (string, error) {
 	id := newNotifyID()
 	err := s.repo.Append(ctx, targetUserID, NotifyItem{

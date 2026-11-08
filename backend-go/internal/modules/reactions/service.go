@@ -259,9 +259,8 @@ func (s *Service) resolveTarget(ctx context.Context, kind ReactTarget, targetID 
 // notifyOwner dispatches the realtime ReactionAdded event + reaction_added
 // notification after a reaction is added. Per spec api_spec_types.md NotifyType
 // and api_spec_websocket.md ReactionAddedPayload, ALL target kinds
-// (moment/comment/message) use the unified reaction_added notification (the
-// legacy moment_liked/comment_liked types were removed from the contract), and
-// the realtime payload carries notification_id when the reactor is not the
+// (moment/comment/message) use the unified reaction_added notification; the
+// realtime payload carries notification_id when the reactor is not the
 // target author (self-reactions are not notified).
 func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actorUserID string, owner TargetContext, added bool) {
 	actor := s.buildActor(ctx, actorUserID)

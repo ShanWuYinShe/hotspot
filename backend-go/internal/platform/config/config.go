@@ -301,8 +301,7 @@ type DefaultFinding struct {
 // insecureDefaultRegistry is the table of (field -> known-bad values) the
 // guardrail walks at startup. Adding a new default to block is a one-line
 // change here. Sentinel values come from the repo's own .env / .env.example
-// files (and the legacy Python backend/.env) so an operator who copies an
-// example verbatim is caught.
+// files so an operator who copies an example verbatim is caught.
 func (c Config) insecureDefaultRegistry() []DefaultCheck {
 	return []DefaultCheck{
 		{
