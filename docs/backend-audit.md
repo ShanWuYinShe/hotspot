@@ -3856,3 +3856,18 @@ platform/migrate 的 AdoptLegacy/checksum 回填（生产存量库依赖）、�
 gofmt/go vet/go build、go test -short 全绿；./scripts/verify-backend-ci.sh --all
 **ALL CHECKS PASSED**（DB 口径 17 个模块覆盖率均 ≥90%，auth 93.0% 为清理后最低）；
 staticcheck U1000（-tests=false）清零。
+
+## 死代码 / 兼容残留清理 Batch 2（2026-11-08）
+
+- **删除重复的旧内存 refresh store**：RefreshStore 与 InMemoryRefreshStore 语义重复（前者 Rotate 不校验旧
+  token、仅测试使用），删除并让相关测试改用 InMemoryRefreshStore；RefreshSession 类型保留，移入
+  refresh_session_types.go。
+- **过时注释修正**：login tracker 注释不再引用已删除的 loginCounterDecay（改为「衰减窗口 /
+  effectiveLockDuration」）；admin statsTrends 注释不再提已删除的 fillTrendDays；
+  privatemessages/groupmessages 的 mark_read 注释改为描述统一端点，不再引用已下线的
+  /me/mark_as_read 端点。
+- **测试专用装配口处理**：NewHTTPRouter/BuildModules、各模块 NewServiceWithXxx、StopPruneSweeper 等
+  仅被单测/跨包测试使用（如 platformauth.NewService 被 realtime 测试依赖），未强行下沉到
+  export_test.go（会破坏跨包测试）；生产装配不调用它们，保留为测试缝并在需要时再统一收敛。
+- 验证：gofmt/vet/build、go test -short 全绿；verify-backend-ci.sh --all **ALL CHECKS PASSED**
+  （DB 口径模块覆盖率仍全部 ≥90%）；staticcheck U1000（-tests=false）保持为零。

@@ -161,11 +161,9 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-// MarkRead is the unified mark_read endpoint for group messages. It replaces
-// the legacy /me/mark_as_read and /me/mark_all_read endpoints. scope selects
-// the operation: "all" clears every unread group message for the caller;
-// "group" marks messages in group_id as read (up to the optional
-// up_to_message_id). scope is required (spec 参数必显式).
+// MarkRead 是群聊消息的统一 mark_read 端点：scope 选择操作语义
+// （"all" 清空调用者全部未读群聊；"group" 将 group_id 内消息标为已读，
+// 可选 up_to_message_id 上界）。scope 必传（spec 参数必显式）。
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkGroupReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {

@@ -113,7 +113,6 @@ func decodeGeoDrilldownCursor(raw string) (geoDrilldownCursor, *httpx.APIError) 
 	return decodeCursor[geoDrilldownCursor](statsTrendsCursorNamespace, raw)
 }
 
-// fillTrendDays 把查询结果补零展开为连续日序列（TrendStart 起、UTC+8 日界）。
 // statsTrends 查询每日新增分布：窗口天数与日期序列全部在 SQL 内基于数据库时钟
 // （now()，UTC+8 自然日）生成，避免 Go/DB 时钟偏移在本地午夜附近错位；返回行
 // 已按日升序且空日补零，无需 Go 侧再展开。

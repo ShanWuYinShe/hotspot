@@ -138,11 +138,9 @@ func (h *Handler) Recall(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.SuccessEmpty())
 }
 
-// MarkRead is the unified mark_read endpoint for private messages. It replaces
-// the legacy /me/mark_as_read and /me/mark_all_read endpoints. scope selects
-// the operation: "all" clears every unread private message for the caller;
-// "session" marks messages from target_user_id as read (up to the optional
-// up_to_message_id). scope is required (spec 参数必显式).
+// MarkRead 是私聊消息的统一 mark_read 端点：scope 选择操作语义
+// （"all" 清空调用者全部未读私聊；"session" 将 target_user_id 的消息标为已读，
+// 可选 up_to_message_id 上界）。scope 必传（spec 参数必显式）。
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	var req MarkPrivateReadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil {

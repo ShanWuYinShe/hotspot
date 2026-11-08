@@ -12,7 +12,7 @@ import (
 // 任意会话撤销（不校验所有权）；重复撤销返回 false。
 func TestAdminSessionListAndRevoke(t *testing.T) {
 	store := NewInMemorySessionStore()
-	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, store, NewRefreshStore())
+	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, store, NewInMemoryRefreshStore())
 	ctx := context.Background()
 	now := time.Now().UTC()
 	for _, session := range []SessionRecord{

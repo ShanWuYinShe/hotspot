@@ -57,7 +57,7 @@ type loginLockEntry struct {
 	lockedAt  time.Time
 	lockUntil time.Time
 	// lastFailedAt 最近一次计失败的时刻：未锁定条目的计数衰减依据
-	//（见 loginCounterDecay），锁定条目不使用。
+	//（衰减窗口 = 当前锁期 effectiveLockDuration），锁定条目不使用。
 	lastFailedAt time.Time
 }
 
@@ -154,7 +154,7 @@ func (t *inMemoryLoginTracker) sweep(ctx context.Context) {
 
 // sweepOnce 清扫过期条目（与 Check 的惰性清理同口径，供周期 sweeper 与测试复用）：
 //   - 已锁定且锁期已过：锁定解除，计数随之作废（下次失败从零计）；
-//   - 从未锁定且静默已达 loginCounterDecay：计数衰减作废；
+//   - 从未锁定且静默已达衰减窗口（当前锁期）：计数衰减作废；
 //   - 锁定中的条目一律保留（清扫周期短于锁期时不得提前释放）。
 //
 // 此前条件是裸的 now.After(entry.lockUntil)，未锁定条目的零值 lockUntil
@@ -169,8 +169,8 @@ func (t *inMemoryLoginTracker) sweepOnce(now time.Time) {
 			}
 			continue
 		}
-		// 衰减窗口 = 当前锁期（与迁移前 loginCounterDecay = defaultLockDuration
-		// 同语义），随 AppConfig 动态变化。
+		// 衰减窗口 = 当前锁期（与 defaultLockDuration 同语义），
+		// 随 AppConfig 动态变化。
 		if !entry.lastFailedAt.IsZero() && now.Sub(entry.lastFailedAt) >= t.limits.effectiveLockDuration {
 			delete(t.entries, id)
 		}

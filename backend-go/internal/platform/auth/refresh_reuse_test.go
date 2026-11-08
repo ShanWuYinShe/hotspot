@@ -12,14 +12,14 @@ import (
 // 必须吊销整个会话（整条 refresh 链 + access token 同源 SessionID），
 // 而非单点拒绝后放任链继续有效。宽限期内复用仍合法返回新链 token。
 func TestRefreshReuseOutsideGraceRevokesSessionChain(t *testing.T) {
-	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), NewRefreshStore())
+	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), NewInMemoryRefreshStore())
 	ctx := context.Background()
 
 	issued, err := svc.IssueSession(ctx, "user_1")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
-	refreshes := svc.refreshes.(*RefreshStore)
+	refreshes := svc.refreshes.(*InMemoryRefreshStore)
 	sessions := svc.sessions.(*InMemorySessionStore)
 
 	// 第一次刷新：旧 token 进入 30s 宽限期，返回新 token。
@@ -69,13 +69,13 @@ func TestRefreshReuseOutsideGraceRevokesSessionChain(t *testing.T) {
 // TestRefreshTokenStoredHashed 锁定存储哈希化口径（migration 053）：库中
 // 键为 SHA-256，明文不落库——DB/备份泄漏不再等于会话可劫持。
 func TestRefreshTokenStoredHashed(t *testing.T) {
-	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), NewRefreshStore())
+	svc := NewServiceWithStores(config.Config{AuthTokenSecret: "test-secret"}, NewInMemorySessionStore(), NewInMemoryRefreshStore())
 	ctx := context.Background()
 	issued, err := svc.IssueSession(ctx, "user_1")
 	if err != nil {
 		t.Fatalf("issue session: %v", err)
 	}
-	refreshes := svc.refreshes.(*RefreshStore)
+	refreshes := svc.refreshes.(*InMemoryRefreshStore)
 	refreshes.mu.RLock()
 	_, hasHash := refreshes.items[HashRefreshToken(issued.RefreshToken)]
 	_, hasPlain := refreshes.items[issued.RefreshToken]
