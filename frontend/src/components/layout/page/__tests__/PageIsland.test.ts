@@ -64,6 +64,26 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 		expect(onTitleClick).toHaveBeenCalledOnce();
 	});
 
+	it('详情页身份模式：支持自定义 role（如社群）与 onAuthorClick 点击回调', async () => {
+		const onAuthorClick = vi.fn();
+		render(PageIsland, {
+			props: {
+				title: '群组',
+				author: { name: '骑行俱乐部', location: '徐州市', time: '12 位成员', role: '社群' },
+				onAuthorClick
+			}
+		});
+
+		// 展开面板
+		await fireEvent.click(screen.getByRole('button', { name: '展开控制面板' }));
+		expect(screen.getByText('社群')).not.toBeNull();
+		const groupBtn = screen.getByRole('button', { name: '查看群组' });
+		expect(groupBtn).not.toBeNull();
+
+		await fireEvent.click(groupBtn);
+		expect(onAuthorClick).toHaveBeenCalledOnce();
+	});
+
 	it('返回钮仅在传入 onBack 时渲染；点击回调', async () => {
 		const onBack = vi.fn();
 		const { container } = render(PageIsland, {

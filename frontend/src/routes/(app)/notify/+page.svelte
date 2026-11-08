@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, CheckCheck, Heart, UserPlus, Users } from '@lucide/svelte';
+	import { ArrowUp, Bell, CheckCheck, Heart, UserPlus, Users } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
@@ -70,6 +70,66 @@
 						onClick={() => data.markAllRead()}
 					/>
 				{/if}
+			{/snippet}
+			{#snippet islandExpanded()}
+				<div class="flex flex-col gap-2.5">
+					<div class="flex items-center justify-between text-xs pb-0.5">
+						<span class="font-medium text-text-primary">通知分类</span>
+						<span class="font-mono text-xxs text-accent-default">
+							{!data.needsAuth ? (data.unread > 0 ? `${data.unread} 条未读` : '全部已读') : '请先登录'}
+						</span>
+					</div>
+					{#if !data.needsAuth}
+						<div class="w-full overflow-x-auto no-scrollbar py-0.5">
+							<TabBar
+								items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))}
+								value={data.filter}
+								onChange={(id) => (data.filter = id)}
+							/>
+						</div>
+						{#if data.unread > 0}
+							<div class="flex items-center gap-2 pt-0.5">
+								<Button
+									type="button"
+									variant="soft"
+									size="sm"
+									class="flex-1 hit-slop h-8"
+									onclick={() => data.markAllRead()}
+								>
+									<CheckCheck class="size-3.5" />
+									<span>全部标为已读</span>
+								</Button>
+							</div>
+						{/if}
+					{:else}
+						<div class="flex items-center justify-between gap-3 rounded-md bg-surface-subtle/50 px-3 py-2">
+							<div class="flex flex-col">
+								<span class="text-xs font-medium text-text-primary">登录查看通知</span>
+								<span class="text-xxs text-text-secondary">收到互动提醒与系统通知</span>
+							</div>
+							<Button variant="primary" size="sm" onclick={() => void goto(ROUTES.login)}>
+								登录
+							</Button>
+						</div>
+					{/if}
+					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+						<div class="flex items-center gap-1.5 text-text-secondary/70">
+							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
+							<span>收起</span>
+						</div>
+						<button
+							type="button"
+							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
+							onclick={() => {
+								const scroller = document.getElementById('main-content');
+								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
+							}}
+						>
+							<span>平滑回顶</span>
+							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
+						</button>
+					</div>
+				</div>
 			{/snippet}
 			{#snippet below()}
 				{#if !data.needsAuth}

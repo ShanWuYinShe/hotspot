@@ -68,10 +68,12 @@
 			category="用户"
 			entityName={user.name ? `@${user.name}` : '用户资料'}
 			author={user.name && !page.loading ? {
+				id: params.userId,
 				name: user.name,
 				avatar: user.avatar,
 				location: user.location,
-				time: page.handleLine
+				time: page.handleLine,
+				role: '用户'
 			} : undefined}
 			onBack={() => smartBack()}
 			trailing={userHeaderActions}

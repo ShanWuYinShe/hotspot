@@ -109,7 +109,8 @@
 				name: d.moment.user || '用户',
 				avatar: d.moment.avatar,
 				location: d.moment.location,
-				time: d.moment.time
+				time: d.moment.time,
+				role: '作者'
 			} : undefined}
 			onBack={() => smartBack()}
 			onAuthorClick={() => {

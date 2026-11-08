@@ -19,6 +19,7 @@
 		author,
 		onBack,
 		backLabel = '返回',
+		onAuthorClick,
 		onTitleClick,
 		progress = 0,
 		icon,
@@ -35,6 +36,8 @@
 		/** 左侧返回；未注册则不渲染返回钮 */
 		onBack?: () => void;
 		backLabel?: string;
+		/** 点击进入作者资料/群组主页（由调用方决定） */
+		onAuthorClick?: () => void;
 		/** 点击标题/身份的语义：回锚点或进作者主页（由调用方决定） */
 		onTitleClick?: () => void;
 		/** 阅读进度 0–100，渲染为胶囊最右侧圆环 */
@@ -61,12 +64,23 @@
 {#snippet defaultAuthorPanel()}
 	<div class="flex flex-col gap-2.5">
 		<div class="flex items-center justify-between gap-3">
-			<div class="flex min-w-0 items-center gap-2.5">
+			<button
+				type="button"
+				class="hover-btn flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 text-left -ml-1 active:scale-[0.98]"
+				onclick={() => {
+					if (onAuthorClick) {
+						onAuthorClick();
+					} else {
+						onTitleClick?.();
+					}
+				}}
+				aria-label={author?.role === '社群' ? `查看群组 ${author.name}` : `查看 ${author?.name ?? '用户'} 的资料`}
+			>
 				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={36} class="shrink-0 ring-2 ring-accent-border/30" />
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-1.5">
 						<span class="truncate text-xs font-semibold text-text-primary">{author?.name}</span>
-						<span class="rounded bg-accent-soft px-1.5 py-0.2 text-[10px] font-medium text-text-accent-on-soft">作者</span>
+						<span class="rounded bg-accent-soft px-1.5 py-0.2 text-[10px] font-medium text-text-accent-on-soft">{author?.role ?? '作者'}</span>
 					</div>
 					{#if author?.location || author?.time}
 						<div class="truncate text-xxs font-mono text-text-secondary">
@@ -74,15 +88,21 @@
 						</div>
 					{/if}
 				</div>
-			</div>
+			</button>
 			<div class="flex shrink-0 items-center gap-1.5">
 				<Button
 					variant="primary"
 					size="sm"
 					shape="pill"
-					onclick={() => onTitleClick?.()}
+					onclick={() => {
+						if (onAuthorClick) {
+							onAuthorClick();
+						} else {
+							onTitleClick?.();
+						}
+					}}
 				>
-					查看资料
+					{author?.role === '社群' ? '查看群组' : '查看资料'}
 				</Button>
 			</div>
 		</div>

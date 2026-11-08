@@ -293,6 +293,7 @@
 						author={headerIsland.author}
 						onBack={headerIsland.onBack}
 						backLabel={headerIsland.backLabel}
+						onAuthorClick={headerIsland.onAuthorClick}
 						onTitleClick={handleIslandTitleClick}
 						icon={headerIsland.icon}
 						center={headerIsland.center}

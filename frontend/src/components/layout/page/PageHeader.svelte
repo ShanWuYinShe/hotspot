@@ -309,8 +309,10 @@ import {
 		md: 'text-md'
 	};
 
-	// 凡传入 onBack 的页面（二级页/流程页/详情页），桌面/移动端统一保持常驻返回入口
-	const showBack = $derived(Boolean(onBack));
+	// 返回入口判定：移动/平板统一渲染；桌面端由 showBackOnDesktop 门控（或沉浸 floating 模式恒开启），避免顶层页多余返回
+	const showBack = $derived(
+		Boolean(onBack) && (platform.platform !== 'desktop' || showBackOnDesktop || floating)
+	);
 	// header 统一预留黄金呼吸感：
 	// - 移动端黄金比例：pt-2.5 pb-2（对齐首页顶栏紧凑通透语言，释放视口）；
 	// - 桌面端舒展呼吸：纯标题留 pb-4.5，有 below 时留 pb-3.5。

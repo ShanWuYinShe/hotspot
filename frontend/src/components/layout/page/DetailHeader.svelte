@@ -17,6 +17,7 @@
 		avatar?: string | null;
 		location?: string | null;
 		time?: string | null;
+		role?: string;
 	}
 
 	let {
@@ -126,6 +127,15 @@
 	// ── 桌面端：页面锚点岛（顶栏中央）────────────────────────────────
 	// 详情页身份（作者/群/用户）在滚动离开首屏后交给顶栏岛；移动/平板保留页内吸顶岛。
 
+	const effectiveAuthor = $derived(
+		author
+			? {
+					...author,
+					role: author.role ?? (category === '社群' ? '社群' : category === '用户' ? '用户' : '作者')
+				}
+			: undefined
+	);
+
 	$effect(() => {
 		if (platform.platform !== 'desktop') return;
 		headerIsland.register(
@@ -133,7 +143,7 @@
 			untrack(() => ({
 				title: author?.name || entityName || category || '详情',
 				meta: '',
-				author,
+				author: effectiveAuthor,
 				onBack,
 				backLabel,
 				onAuthorClick,
@@ -148,7 +158,7 @@
 		headerIsland.update(islandToken, {
 			title: author?.name || entityName || category || '详情',
 			meta: '',
-			author,
+			author: effectiveAuthor,
 			onBack,
 			backLabel,
 			onAuthorClick,

@@ -22,6 +22,7 @@ export interface AuthorInfo {
 	avatar?: string | null;
 	location?: string | null;
 	time?: string | null;
+	role?: string;
 }
 
 export interface PageIslandConfig {

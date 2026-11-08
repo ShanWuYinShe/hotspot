@@ -48,10 +48,12 @@
 			category="社群"
 			entityName={gd.detail.name || '群组主页'}
 			author={gd.detail.name && !gd.loading ? {
+				id: params.groupId,
 				name: gd.detail.name,
 				avatar: gd.detail.banner,
 				location: gd.detail.category || '社群',
-				time: `${formatCount(gd.detail.members ?? 0)} 位成员`
+				time: `${formatCount(gd.detail.members ?? 0)} 位成员`,
+				role: '社群'
 			} : undefined}
 			onBack={() => smartBack()}
 			trailing={groupHeaderActions}
