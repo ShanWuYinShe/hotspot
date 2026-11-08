@@ -28,9 +28,9 @@
 	);
 </script>
 
-<div class="flex h-full flex-1 gap-3 overflow-hidden bg-surface-page p-3">
+<div class="flex h-full flex-1 overflow-hidden">
 	<!-- Left: chat list column (w-80 = 320px) -->
-	<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-xs">
+	<div class="flex w-80 shrink-0 flex-col overflow-hidden border-r border-border-default/25 bg-surface-island/50">
 		<PageHeader
 			title="消息"
 			sticky
@@ -78,6 +78,22 @@
 							>
 								<Users class="size-3.5" />
 								<span>创建群聊</span>
+							</Button>
+						</div>
+					{:else}
+						<div class="flex items-center justify-between gap-3 rounded-md bg-surface-subtle/50 px-3 py-2">
+							<div class="flex flex-col">
+								<span class="text-xs font-medium text-text-primary">开启即时消息</span>
+								<span class="text-xxs text-text-secondary">登录后查看会话与在线好友</span>
+							</div>
+							<Button
+								variant="primary"
+								size="sm"
+								shape="pill"
+								class="hit-slop px-3"
+								onclick={() => void goto(ROUTES.login)}
+							>
+								<span>立即登录</span>
 							</Button>
 						</div>
 					{/if}
@@ -163,7 +179,7 @@
 	</div>
 
 	<!-- Right: chat view or empty state -->
-	<div class="min-w-0 flex-1 overflow-hidden rounded-lg bg-surface-island shadow-xs">
+	<div class="min-w-0 flex-1 overflow-hidden bg-surface-page/40">
 		{#if data.queryGroup || (data.selectedChat && data.selectedChat.kind === 'group')}
 			<div class="h-full">
 				<GroupChatView groupId={data.queryGroup || String(data.selectedChat?.id ?? '')} compact showBackButton={false} />

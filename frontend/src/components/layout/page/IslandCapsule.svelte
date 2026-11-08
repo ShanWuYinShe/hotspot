@@ -95,12 +95,12 @@
 	data-desktop-dynamic-island
 	role="group"
 	aria-label={ariaLabel}
-	class="group/island pointer-events-auto relative z-50 flex transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
-		? 'w-[400px] min-w-[360px] max-w-[460px] flex-col items-stretch rounded-lg border border-accent-border/50 bg-surface-primary/95 px-3.5 pb-3 pt-1 shadow-modal backdrop-blur-2xl'
-		: 'h-8 min-w-0 max-w-md items-center rounded-full border border-border-default/35 bg-surface-primary/80 pl-1 pr-1 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"
+	class="group/island pointer-events-auto relative z-50 flex flex-col transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
+		? 'w-[410px] min-w-[360px] max-w-[460px] rounded-lg border border-accent-border/50 bg-surface-primary/95 shadow-modal backdrop-blur-2xl'
+		: 'h-8 w-auto min-w-0 max-w-md rounded-full border border-border-default/35 bg-surface-primary/80 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"
 >
-	<!-- 顶行紧凑条（常驻可见；展开时为头部） -->
-	<div class="flex h-8 w-full min-w-0 items-center justify-between gap-1 select-none">
+	<!-- 顶行紧凑条（常驻可见；展开时为面板头部） -->
+	<div class="flex h-8 w-full min-w-0 items-center justify-between pl-1 pr-1 select-none">
 		<div class="flex h-full min-w-0 flex-1 items-center gap-1.5">
 			{#if leading}
 				<span class="flex shrink-0 items-center">{@render leading()}</span>
@@ -129,11 +129,11 @@
 				<!-- 展开/收起引导箭头 -->
 				<button
 					type="button"
-					class="flex size-5 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-transform duration-standard"
+					class="flex size-5 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors duration-snappy"
 					onclick={toggleExpand}
 					aria-label={isExpanded ? '收起控制面板' : '展开控制面板'}
 				>
-					<ChevronDown class="size-3 transition-transform duration-standard {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
+					<ChevronDown class="size-3 transition-transform duration-standard ease-standard {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
 				</button>
 			{/if}
 
@@ -144,49 +144,53 @@
 				</div>
 			{/if}
 
-			<!-- 阅读进度圆环（最右侧，紧贴右边缘） -->
-			<span
-				class="flex shrink-0 items-center"
-				data-island-progress-ring
-				data-island-progress={safeProgress}
-				aria-hidden="true"
-			>
-				<svg
-					class="block -rotate-90"
-					width="1.125rem"
-					height="1.125rem"
-					viewBox="0 0 {RING_SIZE} {RING_SIZE}"
+			{#if !isExpanded}
+				<!-- 阅读进度圆环（仅在常驻紧凑态紧贴最右侧边缘，展开时隐去以保持视觉对称与纯净） -->
+				<span
+					class="flex shrink-0 items-center"
+					data-island-progress-ring
+					data-island-progress={safeProgress}
+					aria-hidden="true"
 				>
-					<circle
-						cx={RING_SIZE / 2}
-						cy={RING_SIZE / 2}
-						r={RING_RADIUS}
-						fill="none"
-						stroke="var(--color-border-default)"
-						stroke-opacity="0.28"
-						stroke-width={RING_STROKE}
-					/>
-					<circle
-						cx={RING_SIZE / 2}
-						cy={RING_SIZE / 2}
-						r={RING_RADIUS}
-						fill="none"
-						stroke="var(--color-accent-default)"
-						stroke-width={RING_STROKE}
-						stroke-linecap="round"
-						stroke-dasharray={RING_CIRCUMFERENCE}
-						stroke-dashoffset={ringOffset}
-					/>
-				</svg>
-			</span>
+					<svg
+						class="block -rotate-90"
+						width="1.125rem"
+						height="1.125rem"
+						viewBox="0 0 {RING_SIZE} {RING_SIZE}"
+					>
+						<circle
+							cx={RING_SIZE / 2}
+							cy={RING_SIZE / 2}
+							r={RING_RADIUS}
+							fill="none"
+							stroke="var(--color-border-default)"
+							stroke-opacity="0.28"
+							stroke-width={RING_STROKE}
+						/>
+						<circle
+							cx={RING_SIZE / 2}
+							cy={RING_SIZE / 2}
+							r={RING_RADIUS}
+							fill="none"
+							stroke="var(--color-accent-default)"
+							stroke-width={RING_STROKE}
+							stroke-linecap="round"
+							stroke-dasharray={RING_CIRCUMFERENCE}
+							stroke-dashoffset={ringOffset}
+						/>
+					</svg>
+				</span>
+			{/if}
 		</div>
 	</div>
 
 	<!-- 展开态控制面板主体 -->
 	{#if isExpanded && expanded}
-		<div class="h-px w-full bg-border-default/20 my-1.5" aria-hidden="true"></div>
-		<div class="w-full animate-fade-in pt-1 pb-0.5">
-			{@render expanded()}
+		<div class="w-full animate-fade-in px-3.5 pb-3">
+			<div class="h-px w-full bg-border-default/20 mb-2 mt-0.5" aria-hidden="true"></div>
+			<div class="w-full pt-0.5 pb-0.5">
+				{@render expanded()}
+			</div>
 		</div>
 	{/if}
 </div>
