@@ -1,11 +1,11 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { TrendingUp, Users, LogIn, Sparkles, MapPin, Radio, ChevronRight } from '@lucide/svelte';
+	import { TrendingUp, Users, LogIn, Sparkles, MapPin, Radio, ChevronRight, RotateCcw } from '@lucide/svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { homeFeed } from '@/stores/home-feed.svelte';
+	import { headerIsland } from '@/stores/header-island.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { contentFade } from '@/lib/motion';
-	import { islandAnchor } from '@/lib/island-handoff';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import HomeFeedItem from '@/components/home/HomeFeedItem.svelte';
@@ -24,36 +24,106 @@
 
 	let { data }: { data: HomeFeedData } = $props();
 
-	function handleHandoffProgress(p: number) {
-		homeFeed.setIslandVisible(p >= 0.5);
+	function scrollToTop() {
+		const scroller = document.getElementById('main-content');
+		const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+		scroller?.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
 	}
+
+	const islandToken = Symbol('home-feed-island');
+	const isDiscover = $derived(data.activeTab === 'discover');
+	const islandTitle = $derived(isDiscover ? '为你推荐' : '正在关注');
+	const islandMeta = $derived(
+		isDiscover
+			? '根据你的兴趣推荐'
+			: auth.status === 'authenticated'
+				? '关注好友与活跃邻居'
+				: '登录后查看关注动态'
+	);
+
+	$effect(() => {
+		headerIsland.register(
+			islandToken,
+			untrack(() => ({
+				title: islandTitle,
+				meta: islandMeta,
+				icon: islandIcon,
+				expanded: islandExpanded,
+				onTitleClick: scrollToTop
+			}))
+		);
+		return () => headerIsland.release(islandToken);
+	});
+
+	$effect(() => {
+		headerIsland.update(islandToken, {
+			title: islandTitle,
+			meta: islandMeta,
+			icon: islandIcon,
+			expanded: islandExpanded,
+			onTitleClick: scrollToTop
+		});
+	});
 </script>
 
+{#snippet islandIcon()}
+	{#if isDiscover}
+		<Sparkles class="size-3.5 text-accent-default" strokeWidth={1.75} />
+	{:else}
+		<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
+	{/if}
+{/snippet}
+
+{#snippet islandExpanded()}
+	<div class="flex flex-col gap-3 py-1">
+		<div class="flex items-center justify-between text-xs text-text-secondary">
+			<span class="font-medium text-text-primary">信息流切换</span>
+			<span class="font-mono text-xxs text-accent-default">{islandMeta}</span>
+		</div>
+
+		<!-- 分段选择器 -->
+		<div class="flex justify-center w-full">
+			<TabBar
+				variant="segmented"
+				size="sm"
+				items={[
+					{ id: 'discover', label: '为你推荐' },
+					{ id: 'following', label: '正在关注' }
+				]}
+				value={data.activeTab}
+				onChange={(id) => {
+					data.setTab(id as any);
+				}}
+				class="w-full justify-center bg-surface-subtle/80"
+			/>
+		</div>
+
+		<!-- 快捷操作与回顶 -->
+		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+			<button
+				type="button"
+				class="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors text-xxs"
+				onclick={() => void data.reload()}
+			>
+				<RotateCcw class="size-3" />
+				<span>刷新动态</span>
+			</button>
+			<button
+				type="button"
+				class="text-accent-default hover:underline text-xxs"
+				onclick={scrollToTop}
+			>
+				平滑回顶 ↑
+			</button>
+		</div>
+	</div>
+{/snippet}
+
 <div class="flex flex-col flex-1 min-h-full">
-	<SplitPageLayout contentClassName="flex flex-col pt-0 pb-8">
+	<SplitPageLayout contentClassName="flex flex-col pt-2 pb-8">
 		{#snippet header()}
 			<h1 class="sr-only">首页</h1>
 		{/snippet}
-
-		<!-- 桌面端信息流分段器：随内容滚动；滚出视口后由顶栏灵动岛接手 -->
-		<div
-			use:islandAnchor={{ enabled: true, onProgress: handleHandoffProgress }}
-			class="flex justify-center pb-2 pt-1 pointer-events-none transition-opacity duration-snappy ease-standard {homeFeed.islandVisible ? 'opacity-0' : 'opacity-100'}"
-		>
-			<div class="pointer-events-auto rounded-full bg-surface-primary/90 p-0.5 shadow-raised-sm backdrop-blur-md">
-				<TabBar
-					variant="segmented"
-					size="md"
-					items={[
-						{ id: 'discover', label: '为你推荐' },
-						{ id: 'following', label: '正在关注' }
-					]}
-					value={data.activeTab}
-					onChange={(id) => data.setTab(id as any)}
-					class="min-w-[15rem] bg-transparent ring-0"
-				/>
-			</div>
-		</div>
 
 		<div use:contentFade={data.currentLoading} class="min-h-[50vh] flex flex-col justify-between">
 			{#if data.activeTab === 'following' && auth.status !== 'authenticated'}

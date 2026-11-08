@@ -1,6 +1,6 @@
-// 首页信息流分段状态（桌面端灵动岛与内容区共用同一份状态）。
-// 桌面：分段器渲染在顶栏中央灵动岛（DesktopLayout → HomeFeedIsland）；
-// 移动/平板：分段器仍在页内品牌头下方。两条路径共用本 store，避免双份状态。
+// 首页信息流分段状态（桌面端灵动岛与移动端内容区共用同一份状态）。
+// 桌面：通过 HomeDesktop 注册默认常驻灵动岛（headerIsland），支持在展开面板中切换流；
+// 移动/平板：分段器在页内品牌头下方。两条路径共用本 store，避免双份状态。
 
 export type HomeFeedTab = 'discover' | 'following';
 

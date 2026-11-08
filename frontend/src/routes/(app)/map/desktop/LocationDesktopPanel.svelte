@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { MapPin, X, ChevronRight, Check, Heart } from '@lucide/svelte';
+	import { MapPin, X, ChevronRight, Check, Heart, RotateCcw } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import ListItem from '@/components/list/ListItem.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -78,7 +79,57 @@
 
 <!-- Header -->
 <div class="shrink-0">
-	<PageHeader title="位置选择" onBack={() => smartBack()} subtitle={locationName || '位置选择'} sticky contentClassName="px-4" titleSize="xl" island={false} />
+	<PageHeader
+		title="位置选择"
+		onBack={() => smartBack()}
+		subtitle={locationName || '位置选择'}
+		sticky
+		contentClassName="px-4"
+		titleSize="xl"
+		islandMeta={locationName ? `${locationName} · 5km 内` : '全城探索'}
+	>
+		{#snippet islandIcon()}
+			<MapPin class="size-3.5 text-accent-default" strokeWidth={1.75} />
+		{/snippet}
+
+		{#snippet islandExpanded()}
+			<div class="flex flex-col gap-2.5 py-1">
+				<div class="flex items-center justify-between text-xs text-text-secondary">
+					<span class="font-medium text-text-primary">位置与漫游锚点</span>
+					<span class="font-mono text-xxs text-accent-default">{locationName || defaultName || '全城'}</span>
+				</div>
+				<div class="flex items-center gap-2 pt-0.5">
+					<Button
+						variant="soft"
+						size="sm"
+						class="flex-1 hit-slop h-8"
+						onclick={onResetAnchor}
+					>
+						<RotateCcw class="size-3.5" />
+						<span>重置为默认位置</span>
+					</Button>
+					<Button
+						variant="primary"
+						size="sm"
+						class="flex-1 hit-slop h-8"
+						onclick={() => smartBack()}
+					>
+						<span>完成返回</span>
+					</Button>
+				</div>
+				<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+					<span>已锚定当前地图探索坐标</span>
+					<button
+						type="button"
+						class="text-accent-default hover:underline"
+						onclick={() => smartBack()}
+					>
+						返回上一页 ←
+					</button>
+				</div>
+			</div>
+		{/snippet}
+	</PageHeader>
 </div>
 
 <!-- Search -->

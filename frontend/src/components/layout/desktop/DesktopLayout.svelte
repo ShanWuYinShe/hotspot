@@ -14,9 +14,7 @@
 	import { composer, openComposer, closeComposer } from '@/stores/composer.svelte';
 	import { unread } from '@/stores/unread.svelte';
 	import { headerIsland } from '@/stores/header-island.svelte';
-	import HomeFeedIsland from '@/components/home/HomeFeedIsland.svelte';
 	import PageIsland from '@/components/layout/page/PageIsland.svelte';
-	import { homeFeed } from '@/stores/home-feed.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import * as Dialog from '@/components/ui/dialog';
 	import AppearanceMenu from '@/components/overlays/AppearanceMenu.svelte';
@@ -282,15 +280,7 @@
 
 		<!-- Center Horizon & Page Island — 空间地平线与灵动岛栖息地 -->
 		<div class="relative flex-1 min-w-0 h-full pointer-events-none flex items-center justify-center">
-			{#if pathname === ROUTES.home && homeFeed.islandVisible}
-				<!-- 首页灵动岛：内容区分段器滚出视口后浮现，顶部不显示 -->
-				<div
-					out:fade={{ duration: motionDuration(220) }}
-					class="pointer-events-none absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center"
-				>
-					<HomeFeedIsland progress={headerIsland.progress} />
-				</div>
-			{:else if headerIsland.active}
+			{#if headerIsland.active}
 				<!-- 默认常驻灵动岛：整条顶栏中央锚定，单向向下舒展展开 -->
 				<div
 					out:fade={{ duration: motionDuration(220) }}

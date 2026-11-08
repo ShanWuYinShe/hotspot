@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Plus, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
+	import { Plus, MessageSquare, Users, MessageSquareDashed, Pin, BellOff, Trash2, X } from '@lucide/svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import ChatView from '@/components/messages/ChatView.svelte';
@@ -18,12 +18,76 @@
 	import type { ChatListData } from '../shared/useChatListData.svelte';
 
 	let { data }: { data: ChatListData } = $props();
+
+	const islandMetaText = $derived(
+		data.selectedChat
+			? `${data.selectedChat.name} · ${data.selectedChat.kind === 'group' ? '群聊' : data.selectedChat.online ? '在线' : '离线'}`
+			: data.totalUnread > 0
+				? `${data.totalUnread} 条未读`
+				: '全部已读'
+	);
 </script>
 
 <div class="flex h-full flex-1 gap-3 overflow-hidden bg-surface-page p-3">
 	<!-- Left: chat list column (w-80 = 320px) -->
 	<div class="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg bg-surface-island shadow-xs">
-		<PageHeader title="消息" sticky titleSize="xl" contentClassName="px-4" island={false}>
+		<PageHeader
+			title="消息"
+			sticky
+			titleSize="xl"
+			contentClassName="px-4"
+			islandMeta={islandMetaText}
+		>
+			{#snippet islandIcon()}
+				{#if data.selectedChat?.kind === 'group'}
+					<Users class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				{:else}
+					<MessageSquare class="size-3.5 text-accent-default" strokeWidth={1.75} />
+				{/if}
+			{/snippet}
+
+			{#snippet islandExpanded()}
+				<div class="flex flex-col gap-2.5 py-1">
+					<div class="flex items-center justify-between text-xs text-text-secondary">
+						<span class="font-medium text-text-primary">消息与会话</span>
+						<span class="font-mono text-xxs text-accent-default">
+							{data.totalUnread > 0 ? `${data.totalUnread} 条未读` : '全部已读'}
+						</span>
+					</div>
+					{#if !data.needsAuth}
+						<div class="flex items-center gap-2 pt-0.5">
+							<Button
+								variant="soft"
+								size="sm"
+								class="flex-1 hit-slop h-8"
+								onclick={() => {
+									data.newChatTab = 'chat';
+									data.showNewChat = true;
+								}}
+							>
+								<Plus class="size-3.5" />
+								<span>发起新会话</span>
+							</Button>
+							<Button
+								variant="outline"
+								size="sm"
+								class="flex-1 hit-slop h-8"
+								onclick={() => {
+									data.showCreateGroup = true;
+								}}
+							>
+								<Users class="size-3.5" />
+								<span>创建群聊</span>
+							</Button>
+						</div>
+					{/if}
+					<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+						<span>即时消息与群聊互动</span>
+						<span class="text-text-secondary/70">实时回响</span>
+					</div>
+				</div>
+			{/snippet}
+
 			{#snippet trailing()}
 				{#if !data.needsAuth}
 					<div class="flex items-center gap-2">
