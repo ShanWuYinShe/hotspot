@@ -40,6 +40,8 @@ export interface PageIslandConfig {
 	onTitleClick?: () => void;
 	/** 左侧语义图标（可选；P1-4 岛 leading 视觉锚点） */
 	icon?: Snippet;
+	/** 中间自定义交互区（可选；如搜索页顶栏实时输入框，替代默认标题文本按钮） */
+	center?: Snippet;
 	/** 右侧行动区（写操作/入口）：每页最多 2 个控件 */
 	trailing?: Snippet;
 	/** 展开态自定义中枢内容（分类切换/筛选器/分段导览等） */
@@ -74,6 +76,7 @@ class PageIslandStore {
 	onAuthorClick = $state<(() => void) | undefined>(undefined);
 	onTitleClick = $state<(() => void) | undefined>(undefined);
 	icon = $state<Snippet | undefined>(undefined);
+	center = $state<Snippet | undefined>(undefined);
 	trailing = $state<Snippet | undefined>(undefined);
 	expanded = $state<Snippet | undefined>(undefined);
 
@@ -98,6 +101,7 @@ class PageIslandStore {
 		if (config.onAuthorClick !== undefined) this.onAuthorClick = config.onAuthorClick;
 		if (config.onTitleClick !== undefined) this.onTitleClick = config.onTitleClick;
 		if (config.icon !== undefined) this.icon = config.icon;
+		if (config.center !== undefined) this.center = config.center;
 		if (config.trailing !== undefined) this.trailing = config.trailing;
 		if (config.expanded !== undefined) this.expanded = config.expanded;
 	}
@@ -138,6 +142,7 @@ class PageIslandStore {
 		this.onAuthorClick = config.onAuthorClick;
 		this.onTitleClick = config.onTitleClick;
 		this.icon = config.icon;
+		this.center = config.center;
 		this.trailing = config.trailing;
 		this.expanded = config.expanded;
 	}
@@ -155,6 +160,7 @@ class PageIslandStore {
 		this.onAuthorClick = undefined;
 		this.onTitleClick = undefined;
 		this.icon = undefined;
+		this.center = undefined;
 		this.trailing = undefined;
 		this.expanded = undefined;
 	}

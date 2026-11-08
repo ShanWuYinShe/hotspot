@@ -138,7 +138,7 @@ for (const abs of files) {
 	const markup = file.endsWith('.svelte') ? maskForMarkup(text) : text;
 
 	// ── 搜索语义的裸控件（R1） ──
-	if (!PRIMITIVES.search.has(file) && file.endsWith('.svelte')) {
+	if (!PRIMITIVES.search.has(file) && file.endsWith('.svelte') && !isAllowed('raw-search', file)) {
 		const re = /<(input|textarea)\b/g;
 		let m;
 		while ((m = re.exec(markup))) {

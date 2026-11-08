@@ -16,6 +16,7 @@
 		titleAria,
 		onTitleClick,
 		leading,
+		center,
 		trailing,
 		expanded,
 		progress = 0,
@@ -33,6 +34,8 @@
 		onTitleClick?: () => void;
 		/** 左侧区（返回按钮 / 作者头像 / 信息流图标），可选。 */
 		leading?: Snippet;
+		/** 中间自定义交互区（如搜索输入框等，优先于默认标题文本）。 */
+		center?: Snippet;
 		/** 右侧行动区（≤2 个控件），可选。 */
 		trailing?: Snippet;
 		/** 展开态控制中枢内容（分类切换/筛选器/作者互动等） */
@@ -44,6 +47,8 @@
 
 	let islandEl = $state<HTMLElement | undefined>(undefined);
 	let isExpanded = $state(false);
+
+	const hasCenter = $derived(Boolean(center));
 
 	const safeProgress = $derived(
 		Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0))
@@ -96,8 +101,8 @@
 	role="group"
 	aria-label={ariaLabel}
 	class="group/island pointer-events-auto relative z-50 flex flex-col transition-[all] duration-standard ease-[cubic-bezier(0.16,1,0.3,1)] {isExpanded
-		? 'w-[410px] min-w-[360px] max-w-[460px] rounded-lg border border-accent-border/50 bg-surface-primary/95 shadow-modal backdrop-blur-2xl'
-		: 'h-8 w-auto min-w-0 max-w-md rounded-full border border-border-default/35 bg-surface-primary/80 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md'} {className}"
+		? 'w-[440px] min-w-[360px] max-w-[520px] rounded-xl border border-accent-border/50 bg-surface-primary/95 shadow-modal backdrop-blur-2xl'
+		: `h-8 ${hasCenter ? 'w-[360px] sm:w-[420px] max-w-[500px]' : 'w-auto min-w-0 max-w-md'} rounded-full border border-border-default/35 bg-surface-primary/80 text-text-primary shadow-raised-sm backdrop-blur-2xl hover:-translate-y-px hover:border-accent-border/60 hover:bg-surface-primary/95 hover:shadow-raised-md focus-within:border-accent-border/60 focus-within:bg-surface-primary/95 focus-within:shadow-raised-md`} {className}"
 >
 	<!-- 顶行紧凑条（常驻可见；展开时为面板头部） -->
 	<div class="flex h-8 w-full min-w-0 items-center justify-between pl-1 pr-1 select-none">
@@ -106,22 +111,28 @@
 				<span class="flex shrink-0 items-center">{@render leading()}</span>
 			{/if}
 
-			<!-- 中间：标题 + 一行 meta -->
-			<button
-				type="button"
-				class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1 py-0.5 text-left active:scale-[0.98]"
-				onclick={handleTitleClick}
-				aria-label={titleAria ?? `回到「${title}」`}
-			>
-				<span class="flex min-w-0 flex-col justify-center pb-0.5">
-					<span class="truncate text-xs font-semibold leading-tight text-text-primary">{title}</span>
-					{#if meta}
-						{#key meta}
-							<span class="animate-fade-in truncate text-xxs leading-tight text-text-secondary">{meta}</span>
-						{/key}
-					{/if}
-				</span>
-			</button>
+			{#if center}
+				<div class="flex h-full min-w-0 flex-1 items-center">
+					{@render center()}
+				</div>
+			{:else}
+				<!-- 中间：标题 + 一行 meta -->
+				<button
+					type="button"
+					class="hover-btn focus-ring flex min-w-0 flex-1 items-center rounded-full px-1 py-0.5 text-left active:scale-[0.98]"
+					onclick={handleTitleClick}
+					aria-label={titleAria ?? `回到「${title}」`}
+				>
+					<span class="flex min-w-0 flex-col justify-center pb-0.5">
+						<span class="truncate text-xs font-semibold leading-tight text-text-primary">{title}</span>
+						{#if meta}
+							{#key meta}
+								<span class="animate-fade-in truncate text-xxs leading-tight text-text-secondary">{meta}</span>
+							{/key}
+						{/if}
+					</span>
+				</button>
+			{/if}
 		</div>
 
 		<div class="flex shrink-0 items-center gap-0.5">

@@ -166,6 +166,7 @@ import {
 	 * 保留高度只改透明度 → 不产生 CLS；筛选状态由页面写进 islandMeta 带进岛。
 	 */
 	const islandBandHidden = $derived(islandEnabled && islandHandoffTrigger && islandSettled);
+	const effectiveExpanded = $derived(islandExpanded ?? (below ? defaultHeaderExpanded : undefined));
 
 	$effect(() => {
 		if (!islandEnabled) return;
@@ -176,7 +177,7 @@ import {
 				meta: islandMeta ?? subtitle ?? '',
 				icon: islandIcon,
 				trailing: islandTrailing,
-				expanded: islandExpanded,
+				expanded: effectiveExpanded,
 				onBack: showBack ? onBack : undefined,
 				backLabel
 			}))
@@ -191,7 +192,7 @@ import {
 			meta: islandMeta ?? subtitle ?? '',
 			icon: islandIcon,
 			trailing: islandTrailing,
-			expanded: islandExpanded,
+			expanded: effectiveExpanded,
 			onBack: showBack ? onBack : undefined,
 			backLabel
 		});
@@ -323,6 +324,44 @@ import {
 					: 'pt-2.5 sm:pt-4.5 pb-2 sm:pb-4.5'
 	);
 </script>
+
+{#snippet defaultHeaderExpanded()}
+	<div class="flex flex-col gap-2.5 py-1">
+		<div class="flex items-center justify-between text-xs text-text-secondary">
+			<span class="font-medium text-text-primary">分类与快捷筛选</span>
+			{#if islandMeta || subtitle}
+				<span class="font-mono text-xxs text-accent-default">{islandMeta ?? subtitle}</span>
+			{/if}
+		</div>
+		{#if below}
+			<div class="w-full pt-0.5">
+				{@render below()}
+			</div>
+		{/if}
+		{#if islandTrailing || trailing}
+			<div class="flex items-center gap-2 pt-0.5">
+				{#if islandTrailing}
+					{@render islandTrailing()}
+				{:else if trailing}
+					{@render trailing()}
+				{/if}
+			</div>
+		{/if}
+		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+			<span>轻触回顶或点击外部收起</span>
+			<button
+				type="button"
+				class="text-accent-default hover:underline text-xxs"
+				onclick={() => {
+					const scroller = document.getElementById('main-content');
+					scroller?.scrollTo({ top: 0, behavior: 'smooth' });
+				}}
+			>
+				平滑回顶 ↑
+			</button>
+		</div>
+	</div>
+{/snippet}
 
 <header
 	use:headerScroll

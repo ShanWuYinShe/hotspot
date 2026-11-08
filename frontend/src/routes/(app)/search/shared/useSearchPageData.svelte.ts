@@ -74,7 +74,9 @@ export function useSearchPageData() {
 		query = '';
 		searchTag = null;
 		commitSearchUrl();
-		const input = document.querySelector<HTMLInputElement>('[data-search-root] header input');
+		const input =
+			document.querySelector<HTMLInputElement>('input[data-search-input]') ??
+			document.querySelector<HTMLInputElement>('[data-search-root] header input');
 		if (!input) return;
 		input.value = '';
 		input.dispatchEvent(new Event('input', { bubbles: true }));

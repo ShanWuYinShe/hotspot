@@ -295,6 +295,7 @@
 						backLabel={headerIsland.backLabel}
 						onTitleClick={handleIslandTitleClick}
 						icon={headerIsland.icon}
+						center={headerIsland.center}
 						trailing={headerIsland.trailing}
 						expanded={headerIsland.expanded}
 						progress={headerIsland.progress}
@@ -311,7 +312,13 @@
 				class="group flex h-8 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-primary/60 px-2.5 text-xs text-text-secondary backdrop-blur-2xl shadow-xs transition-all hover:border-border-default/50 hover:bg-surface-primary/85 hover:text-text-primary focus-ring {pathname === ROUTES.search ? 'border-accent-border/50 bg-surface-primary/90 text-accent-default font-medium' : ''}"
 				aria-label="搜索"
 				title="搜索 (⌘K)"
-				onclick={() => void goto(ROUTES.search)}
+				onclick={() => {
+					if (pathname === ROUTES.search) {
+						document.querySelector<HTMLInputElement>('[data-desktop-dynamic-island] input')?.focus();
+					} else {
+						void goto(ROUTES.search);
+					}
+				}}
 			>
 				<Search size={13} strokeWidth={2} class="shrink-0 transition-transform duration-rapid group-hover:scale-110 {pathname === ROUTES.search ? 'text-accent-default' : 'text-text-secondary'}" />
 				<span class="tracking-wide text-xs">探索</span>

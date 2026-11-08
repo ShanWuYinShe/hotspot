@@ -22,6 +22,7 @@
 		onTitleClick,
 		progress = 0,
 		icon,
+		center,
 		trailing,
 		expanded
 	}: {
@@ -40,6 +41,8 @@
 		progress?: number;
 		/** 左侧语义图标（可选；P1-4 岛 leading 视觉锚点） */
 		icon?: Snippet;
+		/** 中间自定义交互区（可选；如搜索框等，替代默认标题文本） */
+		center?: Snippet;
 		/** 右侧行动区（页面主行动，≤2 控件） */
 		trailing?: Snippet;
 		/** 展开态控制面板内容（可选） */
@@ -129,6 +132,7 @@
 	titleAria={titleAria}
 	onTitleClick={() => onTitleClick?.()}
 	{progress}
+	{center}
 	{trailing}
 	expanded={expanded ?? (author ? defaultAuthorPanel : defaultPagePanel)}
 >

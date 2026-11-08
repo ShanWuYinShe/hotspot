@@ -1,3 +1,4 @@
+import { createRawSnippet } from 'svelte';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import PageIsland from '../PageIsland.svelte';
@@ -118,5 +119,20 @@ describe('PageIsland（桌面端页面锚点岛）', () => {
 
 		await fireEvent.keyDown(window, { key: 'Escape' });
 		expect(screen.queryByText('页面控制与导航')).toBeNull();
+	});
+
+	it('支持传入 center 自定义交互区（如搜索输入框）替代默认标题文本按钮', () => {
+		const { container } = render(PageIsland, {
+			props: {
+				title: '搜索',
+				center: createRawSnippet(() => ({
+					render: () => '<input data-test-island-input placeholder="搜索测试..." />'
+				}))
+			}
+		});
+		const input = container.querySelector('input[data-test-island-input]');
+		expect(input).not.toBeNull();
+		// 存在 center 时，默认的主标题按钮不应被重复渲染
+		expect(container.querySelector('button[aria-label="回到「搜索」"]')).toBeNull();
 	});
 });

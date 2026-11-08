@@ -45,6 +45,16 @@
 		"reason": "仅 JS 选择器字符串 .input-surface（键盘导航排除输入区），非样式声明"
 	},
 	{
+		"rule": "raw-search",
+		"file": "src/routes/(app)/search/+page.svelte",
+		"reason": "搜索页顶栏灵动岛中枢内联输入：嵌于 32px 紧凑胶囊内，不套 39px 独立字段壳"
+	},
+	{
+		"rule": "raw-input",
+		"file": "src/routes/(app)/search/+page.svelte",
+		"reason": "搜索页顶栏灵动岛中枢内联输入：嵌于 32px 紧凑胶囊内，不套 forms/Input 字段壳"
+	},
+	{
 		"rule": "raw-badge",
 		"file": "src/components/overlays/ImageViewer.svelte",
 		"reason": "全屏看图浮层的顶部 chrome 徽章（页码/缩放），属于浮层 chrome 而非内容标签，不参与徽章档位统一"

@@ -1,13 +1,16 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { X } from '@lucide/svelte';
+	import { Search as SearchIcon, X } from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
+	import { headerIsland } from '@/stores/header-island.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
 	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
+	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
 
@@ -21,6 +24,49 @@
 	const searchShortcut = $derived(
 		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K'
 	);
+
+	function scrollToTop() {
+		const scroller = document.getElementById('main-content');
+		const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+		scroller?.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+	}
+
+	const islandToken = Symbol('search-island');
+
+	// 桌面端顶栏灵动岛：直接作为全局搜索交互中枢
+	$effect(() => {
+		if (device !== 'desktop') return;
+		headerIsland.register(
+			islandToken,
+			untrack(() => ({
+				title: '搜索',
+				meta: data.islandMeta,
+				icon: islandIcon,
+				center: islandSearchCenter,
+				trailing: islandSearchTrailing,
+				expanded: islandSearchExpanded,
+				onBack: () => smartBack(),
+				backLabel: '返回',
+				onTitleClick: scrollToTop
+			}))
+		);
+		return () => headerIsland.release(islandToken);
+	});
+
+	$effect(() => {
+		if (device !== 'desktop') return;
+		headerIsland.update(islandToken, {
+			title: '搜索',
+			meta: data.islandMeta,
+			icon: islandIcon,
+			center: islandSearchCenter,
+			trailing: islandSearchTrailing,
+			expanded: islandSearchExpanded,
+			onBack: () => smartBack(),
+			backLabel: '返回',
+			onTitleClick: scrollToTop
+		});
+	});
 </script>
 
 <svelte:head>
@@ -29,52 +75,181 @@
 
 <svelte:window onkeydown={(e) => data.handleSearchNavKeydown(e)} />
 
+{#snippet islandIcon()}
+	<SearchIcon class="size-3.5 text-accent-default" strokeWidth={2} />
+{/snippet}
+
+{#snippet islandSearchCenter()}
+	<div class="flex h-full w-full min-w-0 items-center">
+		<input
+			type="text"
+			inputmode="search"
+			enterkeyhint="search"
+			autocomplete="off"
+			autocapitalize="off"
+			spellcheck="false"
+			data-search-input=""
+			placeholder="搜索用户、瞬间、群组或话题..."
+			aria-label="搜索用户、瞬间、群组、地点或话题"
+			value={data.query}
+			oninput={(e) => {
+				const v = (e.currentTarget as HTMLInputElement).value;
+				data.searchTag = null;
+				data.query = v;
+				if (!v.trim()) data.commitSearchUrl();
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Enter') {
+					e.preventDefault();
+					if (!data.query.trim()) return;
+					data.remember(data.query.trim());
+					data.commitSearchUrl();
+				}
+			}}
+			class="h-6 w-full min-w-0 bg-transparent text-xs text-text-primary placeholder:text-text-secondary/60 focus:outline-none"
+		/>
+	</div>
+{/snippet}
+
+{#snippet islandSearchTrailing()}
+	{#if data.query.trim()}
+		<button
+			type="button"
+			class="flex size-4.5 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors"
+			onclick={() => data.clearSearch()}
+			aria-label="清空搜索"
+			title="清空搜索"
+		>
+			<X class="size-3" />
+		</button>
+	{:else}
+		<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary/70 select-none">
+			{searchShortcut}
+		</kbd>
+	{/if}
+{/snippet}
+
+{#snippet islandSearchExpanded()}
+	<div class="flex flex-col gap-2.5 py-1">
+		<div class="flex items-center justify-between text-xs text-text-secondary">
+			<span class="font-medium text-text-primary">搜索控制中枢</span>
+			<span class="font-mono text-xxs text-accent-default">
+				{data.keyword ? `共 ${data.resultsTotal} 条结果` : '即时探索与分类'}
+			</span>
+		</div>
+
+		<!-- 搜索分类切换 -->
+		<div class="flex justify-center w-full">
+			<TabBar
+				variant="segmented"
+				size="sm"
+				items={data.tabs}
+				value={data.tab}
+				onChange={(id) => {
+					data.tab = id as any;
+					data.commitSearchUrl();
+				}}
+				class="w-full justify-center bg-surface-subtle/80"
+			/>
+		</div>
+
+		<!-- 热门推荐词快速选择 -->
+		{#if data.hotTopics.length > 0}
+			<div class="flex flex-col gap-1.5 pt-0.5">
+				<span class="text-xxs font-medium text-text-secondary">热门话题</span>
+				<div class="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto no-scrollbar">
+					{#each data.hotTopics.slice(0, 6) as topic (topic)}
+						<button
+							type="button"
+							class="rounded-full border border-border-default/30 bg-surface-subtle/60 px-2 py-0.5 text-xxs text-text-secondary hover:border-accent-border/40 hover:text-text-primary transition-colors active:scale-95"
+							onclick={() => data.chooseTopic(topic)}
+						>
+							#{topic}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- 搜索历史 -->
+		{#if data.recent.length > 0}
+			<div class="flex flex-col gap-1.5 pt-0.5">
+				<div class="flex items-center justify-between">
+					<span class="text-xxs font-medium text-text-secondary">历史搜索</span>
+					<button
+						type="button"
+						class="text-xxs text-text-secondary/70 hover:text-text-secondary transition-colors"
+						onclick={() => (data.recent = [])}
+					>
+						清空
+					</button>
+				</div>
+				<div class="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto no-scrollbar">
+					{#each data.recent.slice(0, 5) as r (r)}
+						<button
+							type="button"
+							class="rounded-full border border-border-default/20 bg-surface-subtle/40 px-2 py-0.5 text-xxs text-text-secondary hover:text-text-primary transition-colors active:scale-95"
+							onclick={() => data.choose(r)}
+						>
+							{r}
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
+		<!-- 快捷操作与回顶 -->
+		<div class="flex items-center justify-between border-t border-border-default/20 pt-2 text-xxs text-text-secondary">
+			<span>按 Enter 检索 · Esc 收起</span>
+			<button
+				type="button"
+				class="text-accent-default hover:underline text-xxs"
+				onclick={scrollToTop}
+			>
+				平滑回顶 ↑
+			</button>
+		</div>
+	</div>
+{/snippet}
+
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
 	<StandardPageLayout contentClassName="pt-4 pb-6">
 		{#snippet header()}
-			<PageHeader
-				variant="integrated"
-				title="搜索"
-				onBack={() => smartBack()}
-				islandMeta={data.islandMeta}
-			>
-				{#snippet islandTrailing()}
-					{#if data.query.trim()}
-						<ActionIconButton icon={X} label="清空搜索" variant="ghost" tone="muted" size={32} onClick={data.clearSearch} />
-					{/if}
-				{/snippet}
+			{#if device !== 'desktop'}
+				<PageHeader
+					variant="integrated"
+					title="搜索"
+					onBack={() => smartBack()}
+					islandMeta={data.islandMeta}
+				>
+					{#snippet islandTrailing()}
+						{#if data.query.trim()}
+							<ActionIconButton icon={X} label="清空搜索" variant="ghost" tone="muted" size={32} onClick={data.clearSearch} />
+						{/if}
+					{/snippet}
 
-				{#snippet below()}
-					<div class="mt-3 mb-2.5 w-full">
-						<SearchInput
-							value={data.query}
-							onChange={(v) => {
-								data.searchTag = null;
-								data.query = v;
-								if (!v.trim()) data.commitSearchUrl();
-							}}
-							placeholder="搜索用户、瞬间、群组、地点或话题"
-							ariaLabel="搜索用户、瞬间、群组、地点或话题"
-							autofocus
-							class={device === 'desktop' ? 'max-w-3xl 2xl:max-w-5xl' : ''}
-							onEnter={(v) => {
-								if (!v.trim()) return;
-								data.remember(v.trim());
-								data.commitSearchUrl();
-							}}
-						>
-							{#snippet trailing()}
-								{#if device === 'desktop'}
-									<kbd
-										class="flex shrink-0 items-center rounded-sm border border-border-default bg-surface-subtle px-1.5 py-0.5 text-xs font-medium text-text-secondary"
-										aria-hidden="true"
-									>{searchShortcut}</kbd>
-								{/if}
-							{/snippet}
-						</SearchInput>
-					</div>
-				{/snippet}
-			</PageHeader>
+					{#snippet below()}
+						<div class="mt-3 mb-2.5 w-full">
+							<SearchInput
+								value={data.query}
+								onChange={(v) => {
+									data.searchTag = null;
+									data.query = v;
+									if (!v.trim()) data.commitSearchUrl();
+								}}
+								placeholder="搜索用户、瞬间、群组、地点或话题"
+								ariaLabel="搜索用户、瞬间、群组、地点或话题"
+								autofocus
+								onEnter={(v) => {
+									if (!v.trim()) return;
+									data.remember(v.trim());
+									data.commitSearchUrl();
+								}}
+							/>
+						</div>
+					{/snippet}
+				</PageHeader>
+			{/if}
 		{/snippet}
 
 		{#if data.searchError}
