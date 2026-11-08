@@ -236,8 +236,9 @@ func (s *Service) GetForDetail(ctx context.Context, commentID string) (CommentIt
 	if err := s.ensureMomentVisible(ctx, item.MomentID); err != nil {
 		return CommentItem{}, false, nil
 	}
-	s.fillReactionsBatch(ctx, []CommentItem{item}, viewerUserID(ctx))
-	return item, true, nil
+	items := []CommentItem{item}
+	s.fillReactionsBatch(ctx, items, viewerUserID(ctx))
+	return items[0], true, nil
 }
 
 // ensureMomentVisible 校验瞬间对当前 viewer 可见；不可见/不存在统一返回

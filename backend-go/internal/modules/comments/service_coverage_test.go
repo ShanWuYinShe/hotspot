@@ -369,14 +369,16 @@ func TestServiceGetForDetailVisibilityAndReactions(t *testing.T) {
 	if item.CommentID != "c1" {
 		t.Fatalf("unexpected detail item: %#v", item)
 	}
-	// 详情读路径必须把 viewer 传给聚合器（viewer 决定 reacted_by_me 口径）。
-	// 注意：当前实现 fillReactionsBatch 作用在临时切片上，返回的 item 副本
-	// 不带 reactions[]（已作为生产缺陷记录在最终报告，此处不断言该行为）。
+	// 详情读路径必须把 viewer 传给聚合器（viewer 决定 reacted_by_me 口径），
+	// 并把聚合结果回写到返回 item（回归：曾因作用在临时切片上导致 reactions 恒空）。
 	if aggregator.calls != 1 || aggregator.viewerID != "viewer_2" {
 		t.Fatalf("aggregator calls=%d viewer=%q", aggregator.calls, aggregator.viewerID)
 	}
 	if len(aggregator.ids) != 1 || aggregator.ids[0] != "c1" {
 		t.Fatalf("aggregator ids = %v, want [c1]", aggregator.ids)
+	}
+	if len(item.Reactions) != 1 || item.Reactions[0].Emoji != "😂" || item.Reactions[0].Count != 3 {
+		t.Fatalf("detail reactions not filled: %#v", item.Reactions)
 	}
 }
 
