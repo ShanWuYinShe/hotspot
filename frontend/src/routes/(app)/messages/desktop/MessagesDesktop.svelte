@@ -135,12 +135,26 @@
 
 			{#snippet below()}
 				{#if !data.needsAuth}
-					<div class="mt-3">
-						<SearchInput
-							value={data.searchQuery}
-							onChange={(v) => (data.searchQuery = v)}
-							placeholder="搜索会话…"
-							ariaLabel="搜索会话"
+					<div class="flex items-center gap-2 pt-1 pb-0.5">
+						<div class="min-w-0 flex-1">
+							<SearchInput
+								value={data.searchQuery}
+								onChange={(v) => (data.searchQuery = v)}
+								placeholder="搜索会话…"
+								ariaLabel="搜索会话"
+							/>
+						</div>
+						<ActionIconButton
+							icon={Plus}
+							label="发起新会话"
+							variant="surface"
+							tone="current"
+							size={32}
+							class="shrink-0"
+							onClick={() => {
+								data.newChatTab = 'chat';
+								data.showNewChat = true;
+							}}
 						/>
 					</div>
 				{/if}

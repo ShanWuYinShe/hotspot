@@ -34,7 +34,7 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth="var(--cst-content-form)" contentClassName="pt-4 pb-10">
+<StandardPageLayout contentMaxWidth={device === 'desktop' ? '1040px' : 'var(--cst-content-form)'} contentClassName="pt-4 sm:pt-6 pb-12">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -43,7 +43,7 @@
 			islandMeta="账号 · 外观 · 地图 · 通知"
 			onBack={() => smartBack()}
 			showBackOnDesktop={false}
-			maxWidth="var(--cst-content-form)"
+			maxWidth={device === 'desktop' ? '1040px' : 'var(--cst-content-form)'}
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 		>
 			{#snippet islandIcon()}
@@ -138,78 +138,85 @@
 	{:else if page.loadError}
 		<LoadError message={page.loadError} onRetry={() => page.refresh()} />
 	{:else}
-		<div class="flex w-full flex-col">
-			<!-- 账号信息 -->
-			{#if auth.isAuthenticated}
-				<div data-settings-account>
-					<SettingsSection title="账号信息" description="当前登录的账号信息与个人主页入口">
-						<ListContainer bordered inset class="overflow-hidden">
-							<ListItem
-								onClick={() => void goto(ROUTES.meEdit)}
-								ariaLabel="编辑个人资料"
-								class="group flex items-center gap-3.5 px-4 py-3.5"
-							>
-								<Avatar
-									class="border-2 border-surface-primary shrink-0 transition-transform duration-rapid group-hover:scale-105"
-									src={page.accountAvatar}
-									name={page.accountName}
-									size="lg"
-								/>
-								<div class="min-w-0 flex-1">
-									<div class="flex items-center gap-2">
-										<p class="text-sm font-semibold text-text-primary truncate">{page.accountName || '用户'}</p>
-										<Badge tone="solid">已登录</Badge>
+		<!-- 桌面端双列 Bento Grid 架构，移动端单列流式呈现 -->
+		<div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6 items-start">
+			<!-- 左栏：身份档案、外观主题视觉中枢与系统关于 -->
+			<div class="flex flex-col w-full">
+				<!-- 账号信息 -->
+				{#if auth.isAuthenticated}
+					<div data-settings-account>
+						<SettingsSection title="账号信息" description="当前登录的账号信息与个人主页入口">
+							<ListContainer bordered inset class="overflow-hidden">
+								<ListItem
+									onClick={() => void goto(ROUTES.meEdit)}
+									ariaLabel="编辑个人资料"
+									class="group flex items-center gap-3.5 px-4 py-3.5"
+								>
+									<Avatar
+										class="border-2 border-surface-primary shrink-0 transition-transform duration-rapid group-hover:scale-105"
+										src={page.accountAvatar}
+										name={page.accountName}
+										size="lg"
+									/>
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-2">
+											<p class="text-sm font-semibold text-text-primary truncate">{page.accountName || '用户'}</p>
+											<Badge tone="solid">已登录</Badge>
+										</div>
+										<p class="text-xs text-text-secondary mt-0.5 truncate">{page.accountEmail || '未绑定邮箱'}</p>
 									</div>
-									<p class="text-xs text-text-secondary mt-0.5 truncate">{page.accountEmail || '未绑定邮箱'}</p>
-								</div>
-								<div class="flex items-center gap-1 text-xs text-text-secondary group-hover:text-text-primary transition-colors">
-									<span>编辑资料</span>
-									<ChevronRight class="size-4 text-text-secondary group-hover:translate-x-0.5 group-hover:text-text-primary transition-transform" strokeWidth={1.75} />
-								</div>
-							</ListItem>
-						</ListContainer>
-					</SettingsSection>
-				</div>
-			{/if}
+									<div class="flex items-center gap-1 text-xs text-text-secondary group-hover:text-text-primary transition-colors">
+										<span>编辑资料</span>
+										<ChevronRight class="size-4 text-text-secondary group-hover:translate-x-0.5 group-hover:text-text-primary transition-transform" strokeWidth={1.75} />
+									</div>
+								</ListItem>
+							</ListContainer>
+						</SettingsSection>
+					</div>
+				{/if}
 
-			<!-- 外观与地图 -->
-			<div data-settings-appearance>
-				<AppearanceSection />
+				<!-- 外观与地图 -->
+				<div data-settings-appearance>
+					<AppearanceSection />
+				</div>
+
+				<!-- 系统与关于 -->
+				<div data-settings-about>
+					<AboutSection
+						isAuthenticated={auth.isAuthenticated}
+						{shortCommit}
+						onOpenLogout={() => (page.confirmLogoutOpen = true)}
+					/>
+				</div>
 			</div>
 
-			<!-- 通知与隐私 -->
-			<div data-settings-privacy>
-				<PrivacySection
-					notif={page.notif}
-					onToggleNotif={page.toggleNotif}
-					isAuthenticated={auth.isAuthenticated}
-					nearbyMomentNotify={page.nearbyMomentNotify}
-					onToggleNearbyMomentNotify={page.toggleNearbyMomentNotify}
-					privateProfile={page.privateProfile}
-					onTogglePrivateProfile={page.togglePrivateProfile}
-					locationSharing={page.locationSharing}
-					onToggleLocationSharing={page.toggleLocationSharing}
-				/>
-			</div>
-
-			<!-- 账号安全（改密/设备） -->
-			{#if auth.isAuthenticated}
-				<div data-settings-security>
-					<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
-						<ListContainer bordered inset class="overflow-hidden">
-							<AccountSecuritySection />
-						</ListContainer>
-					</SettingsSection>
+			<!-- 右栏：通知、隐私防线与账号安全中心 -->
+			<div class="flex flex-col w-full">
+				<!-- 通知与隐私 -->
+				<div data-settings-privacy>
+					<PrivacySection
+						notif={page.notif}
+						onToggleNotif={page.toggleNotif}
+						isAuthenticated={auth.isAuthenticated}
+						nearbyMomentNotify={page.nearbyMomentNotify}
+						onToggleNearbyMomentNotify={page.toggleNearbyMomentNotify}
+						privateProfile={page.privateProfile}
+						onTogglePrivateProfile={page.togglePrivateProfile}
+						locationSharing={page.locationSharing}
+						onToggleLocationSharing={page.toggleLocationSharing}
+					/>
 				</div>
-			{/if}
 
-			<!-- 系统与关于 -->
-			<div data-settings-about>
-				<AboutSection
-					isAuthenticated={auth.isAuthenticated}
-					{shortCommit}
-					onOpenLogout={() => (page.confirmLogoutOpen = true)}
-				/>
+				<!-- 账号安全（改密/设备） -->
+				{#if auth.isAuthenticated}
+					<div data-settings-security>
+						<SettingsSection title="账号与安全" description="修改登录密码、管理活跃设备登录态。">
+							<ListContainer bordered inset class="overflow-hidden">
+								<AccountSecuritySection />
+							</ListContainer>
+						</SettingsSection>
+					</div>
+				{/if}
 			</div>
 		</div>
 

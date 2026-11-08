@@ -99,12 +99,21 @@
 				</div>
 			{/snippet}
 			{#snippet below()}
-				<div>
-					<TabBar
-						items={NEARBY_CATEGORIES.map((c) => ({ id: c, label: c }))}
-						value={data.activeCategory}
-						onChange={(id) => data.setCategory(id)}
-					/>
+				<div class="flex items-center justify-between gap-3">
+					<div class="min-w-0 flex-1">
+						<TabBar
+							items={NEARBY_CATEGORIES.map((c) => ({ id: c, label: c }))}
+							value={data.activeCategory}
+							onChange={(id) => data.setCategory(id)}
+							class={device === 'desktop' ? 'flex-wrap' : 'pr-1'}
+						/>
+					</div>
+					{#if !data.loading && !data.loadError && data.filtered.length}
+						<span class="hidden sm:inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border-default/30 bg-surface-island/60 px-2.5 py-1 text-xs tabular-nums text-text-secondary backdrop-blur-md shadow-xs">
+							<span class="size-1.5 rounded-full bg-status-online"></span>
+							<span class="font-medium text-text-status-online-on-soft">{formatCount(data.totalOnline)} 人在线</span>
+						</span>
+					{/if}
 				</div>
 			{/snippet}
 		</PageHeader>

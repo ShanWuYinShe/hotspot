@@ -133,12 +133,26 @@
 			{/snippet}
 			{#snippet below()}
 				{#if !data.needsAuth}
-					<div>
-						<TabBar
-							items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))}
-							value={data.filter}
-							onChange={(id) => (data.filter = id)}
-						/>
+					<div class="flex items-center justify-between gap-3">
+						<div class="min-w-0 flex-1">
+							<TabBar
+								items={FILTER_TABS.map((t) => ({ id: t.id, label: t.label }))}
+								value={data.filter}
+								onChange={(id) => (data.filter = id)}
+							/>
+						</div>
+						{#if data.unread > 0}
+							<Button
+								type="button"
+								variant="soft"
+								size="sm"
+								class="hidden sm:inline-flex shrink-0 hit-slop h-7 text-xs"
+								onclick={() => data.markAllRead()}
+							>
+								<CheckCheck size={13} class="text-text-secondary" />
+								<span>全部已读</span>
+							</Button>
+						{/if}
 					</div>
 				{/if}
 			{/snippet}

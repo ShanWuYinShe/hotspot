@@ -179,23 +179,25 @@
 <header
 	use:headerScroll
 	class={cn(
-		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none pointer-events-none bg-transparent py-2 sm:py-2.5',
+		'sticky top-0 z-[var(--cst-z-sticky)] w-full select-none pointer-events-none bg-transparent py-2 sm:py-2.5 lg:py-0 lg:h-0 lg:overflow-hidden',
 		hidden ? '-translate-y-full opacity-0' : 'translate-y-0 opacity-100',
 		className
 	)}
 >
-	<ContentColumn {maxWidth} class={contentClassName}>
-			<!-- 初始工具行与收敛态胶囊：滚动过阈值时工具行平滑淡出，桌面端由顶栏灵动岛直接动画完成展现 -->
-			<div class="relative h-10">
-				<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
-				<div
-					data-detail-header-anchor
-					aria-hidden={islandSettled ? 'true' : undefined}
-					inert={islandSettled}
-					class="absolute inset-0 flex items-center justify-between gap-2 transition-[opacity,transform] duration-snappy ease-standard {islandSettled
-						? 'pointer-events-none -translate-y-1 opacity-0'
-						: 'pointer-events-auto translate-y-0 opacity-100'}"
-				>
+	<ContentColumn {maxWidth} class={cn(contentClassName, 'lg:h-0')}>
+		<h1 class="sr-only">{entityName || category || '详情'}</h1>
+		<!-- 初始工具行与收敛态胶囊：滚动过阈值时工具行平滑淡出，桌面端由顶栏灵动岛直接动画完成展现 -->
+		<div class="relative h-10 lg:hidden">
+			<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
+			<!-- 桌面端由顶栏灵动岛常驻呈现完整身份与操作，内页隐藏重复浮层 -->
+			<div
+				data-detail-header-anchor
+				aria-hidden={islandSettled ? 'true' : undefined}
+				inert={islandSettled}
+				class="absolute inset-0 flex items-center justify-between gap-2 transition-[opacity,transform] duration-snappy ease-standard {islandSettled
+					? 'pointer-events-none -translate-y-1 opacity-0'
+					: 'pointer-events-auto translate-y-0 opacity-100'}"
+			>
 					<!-- 左侧：返回按键 + 桌面实体面包屑 -->
 					<div
 						data-detail-header-left
