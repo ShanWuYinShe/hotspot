@@ -3797,3 +3797,23 @@ outbox 从系统公告扩展到举报裁决的实时通知：
 - 验证后 report/notification/outbox 行已清理，outbox pending=0；main backend healthy。
 - perf-budget（backend-test，c=10/warmup 2s/5s）：8 端点全部 OK；users/search
   3156 rps / p99 21.18ms、notify/fetch 8983 rps / p99 3.39ms 等。
+
+## 覆盖率提升至真实库口径每模块 ≥90% + comments 详情 reactions 修复（2026-11-08）
+
+- **覆盖率口径**：`scripts/verify-backend-ci.sh --with-db` 与 CI backend-integration job
+  新增门禁——真实库上跑全部模块测试（含 `TestPostgresIT|Contract`，`POSTGRES_DSN` 注入），
+  每个 `internal/modules/*` 包语句覆盖率 ≥90%；默认无 DB 阶段保留 ≥70% 下限
+  （无库时 repo 代码天然不可覆盖，90% 只在具备 Postgres 的阶段校验）。
+- **17 个模块 before → after**（`go test -count=1 -cover`，真实库口径）：
+  admin 70.8→94.5、auth 73.1→94.9、comments 75.3→99.5、groupmessages 82.6→99.7、
+  groups 74.7→94.8、mapmodule 85.5→95.1、media 78.0→99.1、moments 75.8→95.1、
+  notify 89.7→93.7、privatechats 77.4→99.7、privatemessages 80.2→99.6、
+  reactions 82.9→94.0、reports 83.2→94.4、search 78.1→93.3、share 78.5→99.1、
+  system 83.0→98.8、users 73.7→99.4。新增 72 个测试文件（约 2.08 万行），仅测试代码，
+  未改既有断言；真实库用例统一 `testdb` 事务回滚 + 唯一 ID 前缀，不污染共享测试库。
+- **生产缺陷修复**：`comments/service.go` 的 `GetForDetail` 把 `fillReactionsBatch`
+  作用在临时切片上，聚合结果未回写，导致 `/api/v1/comments/open_the_door` 与
+  `/public/v1/comments/open_the_door` 的 `reactions` 恒为 null（spec 要求恒为数组）。
+  改为先在本地切片聚合再返回首元素，并补回归断言；dev 环境实测已返回非空 reactions。
+- **残留**：少量不可注入的失败分支（crypto/rand、AES-GCM/游标 Encode、SMTP TLS、idgen 等）
+  仍未覆盖，未伪造测试；不影响 ≥90% 门禁。
