@@ -232,7 +232,7 @@ Handler -> Service -> Repository
 
 - 仅 POST，RPC + JSON；所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
 - 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按 `$share_crawler` UA 分流（见 docker/nginx*.conf），不属于 `/api` RPC 面；真实用户仍走 SPA `/share/[code]`
-- 认证分公开/可选/必须/管理员四档，每模块按端点的认证要求分组挂载对应中间件
+- 认证分公开/必须/管理员三档（对应 spec 的 public/api/admin 三节点），每模块按端点的认证要求分组挂载对应中间件
 - 统一中间件链（顺序）：鉴权 → 限流 → 资源守卫 → 幂等
 
 ## 统一响应与错误处理
@@ -255,7 +255,7 @@ Handler -> Service -> Repository
 
 - JWT 仅含 user_id 与不可变的 session_id，禁止写入可变字段
 - Web 端通过 HttpOnly Cookie，App 端通过 Bearer Token（详见 spec）
-- 鉴权分公开/可选（匿名降级）/必须（未登录拒绝）/管理员（额外 RBAC）四档
+- 鉴权分公开/必须（未登录拒绝）/管理员（额外 RBAC）三档；不存在 optional 档，需要「匿名可读、登录增强」的端点按 spec 拆分到 public 与 api 两个节点
 - CSRF 防护完全依赖 auth Cookie 的 `SameSite=Strict`，不使用 CSRF Token
 - 失效机制为 session 撤销：登出/撤销时标记 session 失效，后续请求校验 session 状态即拒绝；不需要独立的 token 黑名单
 - 刷新 Token 必须轮转，旧 token 进入 30 秒宽限期后拒绝（详见 spec 并发刷新策略）
@@ -473,7 +473,7 @@ Handler -> Service -> Repository
 
 - 仅 POST，RPC + JSON；所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
 - 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按 `$share_crawler` UA 分流（见 docker/nginx*.conf），不属于 `/api` RPC 面；真实用户仍走 SPA `/share/[code]`
-- 认证分公开/可选/必须/管理员四档，每模块按端点的认证要求分组挂载对应中间件
+- 认证分公开/必须/管理员三档（对应 spec 的 public/api/admin 三节点），每模块按端点的认证要求分组挂载对应中间件
 - 统一中间件链（顺序）：鉴权 → 限流 → 资源守卫 → 幂等
 
 ## 统一响应与错误处理
@@ -496,7 +496,7 @@ Handler -> Service -> Repository
 
 - JWT 仅含 user_id 与不可变的 session_id，禁止写入可变字段
 - Web 端通过 HttpOnly Cookie，App 端通过 Bearer Token（详见 spec）
-- 鉴权分公开/可选（匿名降级）/必须（未登录拒绝）/管理员（额外 RBAC）四档
+- 鉴权分公开/必须（未登录拒绝）/管理员（额外 RBAC）三档；不存在 optional 档，需要「匿名可读、登录增强」的端点按 spec 拆分到 public 与 api 两个节点
 - CSRF 防护完全依赖 auth Cookie 的 `SameSite=Strict`，不使用 CSRF Token
 - 失效机制为 session 撤销：登出/撤销时标记 session 失效，后续请求校验 session 状态即拒绝；不需要独立的 token 黑名单
 - 刷新 Token 必须轮转，旧 token 进入 30 秒宽限期后拒绝（详见 spec 并发刷新策略）

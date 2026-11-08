@@ -35,31 +35,6 @@ func depsFromContext(ctx context.Context) requestDeps {
 
 func serviceFromContext(ctx context.Context) *Service { return depsFromContext(ctx).service }
 
-func OptionalAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))
-		svc := serviceFromContext(r.Context())
-		if svc == nil {
-			// 未装配认证依赖时匿名降级（生产由根中间件 WithDependencies 注入）。
-			observability.L().Error("optional auth: auth service not wired")
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-		if principal, expiresAt, ok := svc.AuthenticateRequest(ctx, r.Header.Get("Authorization"), ReadCookie(r, AccessTokenCookieName)); ok {
-			ctx = WithPrincipal(ctx, principal)
-			ctx = WithAccessExpiry(ctx, expiresAt)
-			r = r.WithContext(ctx)
-		} else {
-			observability.L().Debug("optional auth: no valid token, downgrade to anonymous",
-				"method", r.Method,
-				"uri", r.URL.RequestURI(),
-			)
-			r = r.WithContext(ctx)
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 func RequiredAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := WithPlatform(r.Context(), DetectPlatform(r, ""))

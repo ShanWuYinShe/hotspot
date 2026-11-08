@@ -382,49 +382,6 @@ func TestPostgresRepositoryLoadMyState(t *testing.T) {
 }
 
 // TestLoadMomentFavorites 覆盖批量收藏补全（含匿名/空集合短路与错误包装）。
-func TestLoadMomentFavorites(t *testing.T) {
-	ctx := context.Background()
-	backend := newPathsBackend()
-	backend.queryRows[queryMomentFavoritesByIDs] = [][]any{{"m1"}, {"m3"}}
-
-	favorited, err := loadMomentFavorites(ctx, backend, "u1", []string{"m1", "m2", "m3"})
-	if err != nil {
-		t.Fatalf("loadMomentFavorites: %v", err)
-	}
-	if !favorited["m1"] || favorited["m2"] || !favorited["m3"] {
-		t.Fatalf("unexpected favorites: %#v", favorited)
-	}
-
-	// 匿名视角与空集合直接返回空集且不查库
-	queriesBefore := len(backend.queries)
-	favorited, err = loadMomentFavorites(ctx, backend, "", []string{"m1"})
-	if err != nil || len(favorited) != 0 {
-		t.Fatalf("anonymous: %#v err=%v", favorited, err)
-	}
-	favorited, err = loadMomentFavorites(ctx, backend, "u1", nil)
-	if err != nil || len(favorited) != 0 {
-		t.Fatalf("empty ids: %#v err=%v", favorited, err)
-	}
-	if len(backend.queries) != queriesBefore {
-		t.Fatalf("short-circuit paths must not query, got %v", backend.queries[queriesBefore:])
-	}
-
-	backend.queryErr[queryMomentFavoritesByIDs] = errMomentFake
-	if _, err := loadMomentFavorites(ctx, backend, "u1", []string{"m1"}); err == nil || !strings.Contains(err.Error(), "loadMomentFavorites query") {
-		t.Fatalf("query error must be wrapped, got %v", err)
-	}
-	delete(backend.queryErr, queryMomentFavoritesByIDs)
-	backend.scanErr[queryMomentFavoritesByIDs] = errMomentFake
-	if _, err := loadMomentFavorites(ctx, backend, "u1", []string{"m1"}); err == nil || !strings.Contains(err.Error(), "loadMomentFavorites scan") {
-		t.Fatalf("scan error must be wrapped, got %v", err)
-	}
-	delete(backend.scanErr, queryMomentFavoritesByIDs)
-	backend.queryRows[queryMomentFavoritesByIDs] = [][]any{{"m1"}}
-	backend.rowsErr[queryMomentFavoritesByIDs] = errMomentFake
-	if _, err := loadMomentFavorites(ctx, backend, "u1", []string{"m1"}); err == nil || !strings.Contains(err.Error(), "loadMomentFavorites rows") {
-		t.Fatalf("rows error must be wrapped, got %v", err)
-	}
-}
 
 // TestPostgresRepositoryMomentImageRows 覆盖图片行批量读取与仓储出口。
 func TestPostgresRepositoryMomentImageRows(t *testing.T) {
@@ -683,15 +640,6 @@ func TestPostgresRepositorySearchBranches(t *testing.T) {
 	}
 	if got := searchScoreSQL("relevance", 2, 4, 0); !strings.Contains(got, " + 1") {
 		t.Fatalf("keyword+tag expr: %s", got)
-	}
-}
-
-func TestPostgresEscapeLikePattern(t *testing.T) {
-	if got := escapeLikePattern("50%_off\\path"); got != "50\\%\\_off\\\\path" {
-		t.Fatalf("escapeLikePattern: %q", got)
-	}
-	if got := escapeLikePattern(""); got != "" {
-		t.Fatalf("empty input: %q", got)
 	}
 }
 

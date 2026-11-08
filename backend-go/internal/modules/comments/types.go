@@ -46,14 +46,6 @@ func strPtr(s string) *string {
 	return &s
 }
 
-// parentIDStr 将 *string 归一为 any（nil→nil），供测试行构造直接传给 pgx mock。
-func parentIDStr(p *string) any {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
 type CreateCommentRequest struct {
 	MomentID string   `json:"moment_id"`
 	Content  string   `json:"content"`

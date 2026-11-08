@@ -45,7 +45,7 @@ type Options struct {
 	// 空值回退规格缺省值（仅本地开发使用）。
 	QAPassword    string
 	AdminPassword string
-	// BcryptCost 是账号口令哈希成本；0 取 auth.DefaultBcryptCost()。
+	// BcryptCost 是账号口令哈希成本；0 取 config.DefaultBcryptCost()。
 	BcryptCost int
 }
 
@@ -70,8 +70,8 @@ func (o Options) normalize() (Options, error) {
 		normalized.AdminPassword = defaultAdminPassword
 	}
 	if normalized.BcryptCost == 0 {
-		// 与 auth 模块的口令哈希成本同源：modules/auth 启动时把该常量写入
-		// 全局 hashCost（auth.DefaultBcryptCost = config.DefaultBcryptCost）。
+		// 与 auth 模块的口令哈希成本同源：modules/auth 启动时把
+		// config.DefaultBcryptCost 写入全局 hashCost。
 		normalized.BcryptCost = config.DefaultBcryptCost()
 	}
 	return normalized, nil

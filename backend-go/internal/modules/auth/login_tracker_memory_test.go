@@ -8,11 +8,11 @@ import (
 )
 
 // 审查 P1-5 防回归：sweeper 只清「已锁定且锁期已过」与「未锁定且静默期
-// （loginCounterDecay）已过」的条目。此前裸 now.After(lockUntil) 会把零值
+// （defaultLockDuration）已过」的条目。此前裸 now.After(lockUntil) 会把零值
 // lockUntil 的未锁定条目全部清光——攻击者以「每清扫周期失败 max-1 次」
 // 的节奏永不触发锁定。
 func TestInMemoryLoginTrackerSweepKeepsPartialCounters(t *testing.T) {
-	tracker := newInMemoryLoginTracker(context.Background())
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	// 连续失败 4 次（未达阈值），静默仅一个清扫周期（10min < 衰减窗口 15min）：
@@ -28,12 +28,12 @@ func TestInMemoryLoginTrackerSweepKeepsPartialCounters(t *testing.T) {
 }
 
 func TestInMemoryLoginTrackerSweepDecaysSilentCounters(t *testing.T) {
-	tracker := newInMemoryLoginTracker(context.Background())
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	tracker.RecordFailed(ctx, "bob")
 	// 静默超过衰减窗口：计数作废，条目被清（防无界增长）。
-	tracker.sweepOnce(time.Now().Add(loginCounterDecay + time.Second))
+	tracker.sweepOnce(time.Now().Add(defaultLockDuration + time.Second))
 	if err := tracker.Check(ctx, "bob"); err != nil {
 		t.Fatalf("expected no lock after decay, got %v", err)
 	}
@@ -44,7 +44,7 @@ func TestInMemoryLoginTrackerSweepDecaysSilentCounters(t *testing.T) {
 }
 
 func TestInMemoryLoginTrackerSweepKeepsActiveLocks(t *testing.T) {
-	tracker := newInMemoryLoginTracker(context.Background())
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	for i := 0; i < defaultMaxFailures; i++ {
@@ -60,4 +60,11 @@ func TestInMemoryLoginTrackerSweepKeepsActiveLocks(t *testing.T) {
 	if err := tracker.Check(ctx, "carol"); err != nil {
 		t.Fatalf("expected lock released after expiry, got %v", err)
 	}
+}
+
+func newTestLoginTracker(t *testing.T) *inMemoryLoginTracker {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	return newInMemoryLoginTracker(ctx)
 }

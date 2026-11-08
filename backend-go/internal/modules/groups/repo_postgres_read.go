@@ -216,16 +216,6 @@ func formatMutedUntil(value *time.Time) *string {
 	return &formatted
 }
 
-// groupMutedUntil converts an in-memory muted_until string storage to a
-// truthy nullable pointer ("" → nil, meaning not muted).
-func groupMutedUntil(value string) *string {
-	if value == "" {
-		return nil
-	}
-	v := value
-	return &v
-}
-
 func countGroupMembers(ctx context.Context, queryable persistence.Queryable, groupID string) (int, error) {
 	var count int
 	if err := queryable.QueryRow(ctx, queryCountGroupMembers, groupID).Scan(&count); err != nil {

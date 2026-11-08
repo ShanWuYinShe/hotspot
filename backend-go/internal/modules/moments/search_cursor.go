@@ -2,7 +2,6 @@ package moments
 
 import (
 	"math"
-	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/platform/cursor"
@@ -77,26 +76,6 @@ func momentSearchScore(item MomentItem, sortBy, keyword, tag string, now time.Ti
 		}
 		return score
 	}
-}
-
-// compareSearchTuple 比较 keyset 元组 (score, created_at, moment_id) 与解码游标
-// （全 DESC 排序语义）：返回 <0 表示该元素严格排在游标之后，即满足 SQL 谓词
-// `(score, created_at, moment_id) < (cursor.Score, cursor.At, cursor.ID)`。
-// 内存实现据此定位下一页起点，不依赖边界项仍存在（与 Postgres keyset 同语义）。
-func compareSearchTuple(score float64, at, id string, cur momentSearchCursor) int {
-	if score != cur.Score {
-		if score < cur.Score {
-			return -1
-		}
-		return 1
-	}
-	if at != cur.At {
-		if at < cur.At {
-			return -1
-		}
-		return 1
-	}
-	return strings.Compare(id, cur.ID)
 }
 
 // encodeMomentSearchCursor 编码 keyset 游标。now 为本次查询的统一时钟，保证

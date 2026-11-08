@@ -145,13 +145,6 @@ func (b *backendStub) Exec(_ context.Context, query string, args ...any) error {
 		item.Location.Point.Latitude = args[5].(float64)
 		item.Location.Point.Longitude = args[6].(float64)
 		b.moments[item.MomentID] = item
-	case queryInsertMomentTagAssignment:
-		momentID := args[0].(string)
-		item := b.moments[momentID]
-		tag := args[1].(string)
-		item.Tags = append(item.Tags, tag)
-		sort.Strings(item.Tags)
-		b.moments[momentID] = item
 	case queryInsertMomentMention:
 		momentID := args[0].(string)
 		item := b.moments[momentID]
@@ -337,7 +330,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			rows = append(rows, []any{tag})
 		}
 		return &rowsValues{rows: rows}, nil
-	case queryListMomentTagsByMomentID, queryListMomentTagsByMomentIDs:
+	case queryListMomentTagsByMomentIDs:
 		batchTagRows := func(ids []string) [][]any {
 			out := make([][]any, 0)
 			for _, mid := range ids {
@@ -358,7 +351,7 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 			return &rowsValues{rows: batchTagRows(v)}, nil
 		}
 		return &rowsValues{rows: nil}, nil
-	case queryListMomentMentionsByMomentID, queryListMomentMentionsByMomentIDs:
+	case queryListMomentMentionsByMomentIDs:
 		batchMentionRows := func(ids []string) [][]any {
 			out := make([][]any, 0)
 			for _, mid := range ids {

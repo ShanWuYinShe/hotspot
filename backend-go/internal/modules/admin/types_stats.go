@@ -136,16 +136,6 @@ type geoStatsQuery struct {
 	TrendStart time.Time // 趋势窗口起点（UTC+8 日界），TrendDays > 0 时有效
 }
 
-// geoBucketCount 一条聚合行（区域或地点维度共用）。
-type geoBucketCount struct {
-	Key    string // 区域维度为 S2 token；地点维度为 location_name
-	Center GeoPoint
-	Total  int
-	User   int
-	Group  int
-	Moment int
-}
-
 // stats 模块级参数（聚合排名 Top-N，与通用分页 Default/MaxPageSize 语义不同）
 const (
 	statsDefaultLimit = 20

@@ -3817,3 +3817,42 @@ outbox 从系统公告扩展到举报裁决的实时通知：
   改为先在本地切片聚合再返回首元素，并补回归断言；dev 环境实测已返回非空 reactions。
 - **残留**：少量不可注入的失败分支（crypto/rand、AES-GCM/游标 Encode、SMTP TLS、idgen 等）
   仍未覆盖，未伪造测试；不影响 ≥90% 门禁。
+
+## 死代码 / 兼容残留清理 Batch 1（2026-11-08）
+
+方法：staticcheck U1000 且 -tests=false（测试不作为“使用”）+ deadcode 从 main 出发复核可达性；
+再逐项全仓引用核对。**未发现为旧接口/旧客户端保留的后端业务代码**——HTTP 路由清单与 spec 逐条
+一致、无 deprecated 请求字段；可清理的是重构后遗留的死实现。
+
+### 删除内容
+
+- **29 个生产零引用符号**（U1000）：admin（queryRoleInsertPermission、fillTrendDays、limitPageItems、
+  geoBucketCount）、auth（nullIfEmpty、registerCodeRecord、retentionSweeperRunning、loginCounterDecay、
+  stopOnce/stop）、comments（parentIDStr）、groups（querySearchGroups、groupMutedUntil、ownerIDValue、
+  groupUserInfo）、mapmodule（fallbackHeatBucketCenter、aggregateHeatBuckets）、media/auth
+  retentionSweeperRunning、moments（compareNearbyCandidates/paginateNearbyMoments/findNearbyCursorStart/
+  escapeLikePattern/loadMomentFavorites/compareSearchTuple + 4 条废弃 SQL）、platform/auth
+  queryRevokeOtherSessions。
+- **导出死符号**：bootstrap.NewHTTPRouterWithLogger、platformauth.Forbidden、
+  platformauth.UnauthorizedError、auth.DefaultBcryptCost；**auth.OptionalAuth**（契约只有
+  public/api/admin 三节点，无 optional 档）——同步修正 AGENTS「四档认证」与 http.go 过时注释。
+- **测试专用辅助下沉**：仅被测试替身实现使用的 helper 移到各包 legacy_helpers_test.go
+  （admin geoBucketCount/fillTrendDays/limitPageItems、auth registerCodeRecord、comments parentIDStr、
+  groups groupMutedUntil、moments nearby 分页比较与 compareSearchTuple、mapmodule 热度聚合）。
+- **login tracker 生命周期**：去掉生产代码里的测试专用 stop 钩子（stopOnce/stopCh/stop），
+  测试改用可取消 ctx；生产只在 ctx.Done 退出。
+- **删除仅用于覆盖死代码的测试**：OptionalAuth、auth/media retention sweeper guard、mapmodule 热度聚合、
+  moments G4 比较/分页、escapeLikePattern、loadMomentFavorites、groups 旧搜索错误分支、auth nullIfEmpty 等。
+- **整文件删除**：moments/repo_postgres_favorites.go、platform/auth/api_errors.go；清理死 SQL 常量 8 条。
+
+### 明确保留（不属于可删垃圾）
+
+platform/migrate 的 AdoptLegacy/checksum 回填（生产存量库依赖）、刷新令牌 escrow 过渡分支
+（存量令牌）、admin reports total 兼容字段（spec 明确）、前端 isDark 旧存储迁移 / 鸿蒙明文 token
+清理（已安装用户），均需按下线版本择期处理；详见审计记录 .workwork/design/backend-legacy-code-audit.md。
+
+### 验证
+
+gofmt/go vet/go build、go test -short 全绿；./scripts/verify-backend-ci.sh --all
+**ALL CHECKS PASSED**（DB 口径 17 个模块覆盖率均 ≥90%，auth 93.0% 为清理后最低）；
+staticcheck U1000（-tests=false）清零。

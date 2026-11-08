@@ -439,15 +439,6 @@ func (r *PostgresRepository) queryable(ctx context.Context) (persistence.Queryab
 	return persistence.RepoQueryable(ctx, r.factory)
 }
 
-// nullIfEmpty 把空串映射为 SQL NULL（users.email/phone 等可空列：login_id
-// 类型不对应时按 spec 保持 NULL 而非空串）。
-func nullIfEmpty(v string) any {
-	if v == "" {
-		return nil
-	}
-	return v
-}
-
 func (r accountRecord) withDerivedFields() accountRecord {
 	r.Account = Account{UserID: r.UserID, LoginID: r.LoginID, Nickname: r.LoginID, UserType: "normal"}
 	return r

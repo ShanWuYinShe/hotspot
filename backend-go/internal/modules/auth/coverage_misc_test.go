@@ -78,15 +78,6 @@ func TestIsAllDigitsEmptyCov(t *testing.T) {
 	}
 }
 
-func TestNullIfEmptyCov(t *testing.T) {
-	if got := nullIfEmpty(""); got != nil {
-		t.Fatalf("empty string must map to nil, got %#v", got)
-	}
-	if got := nullIfEmpty("x"); got != "x" {
-		t.Fatalf("non-empty value must pass through, got %#v", got)
-	}
-}
-
 func TestWrapBase64LinesLongInputCov(t *testing.T) {
 	wrapped := wrapBase64Lines(strings.Repeat("A", 160))
 	lines := strings.Split(wrapped, "\r\n")

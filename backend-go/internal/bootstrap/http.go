@@ -28,10 +28,6 @@ func NewHTTPRouter(modules []modulekit.Module) http.Handler {
 	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil, nil)
 }
 
-func NewHTTPRouterWithLogger(modules []modulekit.Module, logger *observability.Logger) http.Handler {
-	return newHTTPRouter(modules, nil, nil, nil, idempotency.NewInMemoryStore(), nil, nil, nil)
-}
-
 // NewHTTPRouterWithReadiness 在生产装配下注入就绪探针（DB 必查、Redis 降级
 // 仅告警不摘流量），供容器 healthcheck/LB 使用。
 func NewHTTPRouterWithReadiness(modules []modulekit.Module, logger *observability.Logger, readiness http.Handler, guardChecker resourceguard.Checker, idemStore idempotency.Store, platformAuth *platformauth.Service, adminChecker platformauth.AdminChecker, hub *realtime.Hub) http.Handler {
@@ -85,7 +81,7 @@ func newHTTPRouter(modules []modulekit.Module, logger *observability.Logger, rea
 	}
 	r.Use(idempotency.WithStore(idemStore))
 	// 平台认证依赖显式注入（替代进程级 DefaultService/AdminChecker 全局）：
-	// RequiredAuth/OptionalAuth/AdminAccess 统一从 ctx 读取。
+	// RequiredAuth/AdminAccess 统一从 ctx 读取。
 	r.Use(platformauth.WithDependencies(platformAuth, adminChecker))
 	r.NotFound(httpx.NotFoundHandler)
 	r.MethodNotAllowed(httpx.MethodNotAllowedHandler)

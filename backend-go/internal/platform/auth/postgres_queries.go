@@ -25,11 +25,6 @@ UPDATE auth_sessions
 SET revoked_at = NOW()
 WHERE session_id = $1 AND revoked_at IS NULL`
 
-	queryRevokeOtherSessions = `
-UPDATE auth_sessions
-SET revoked_at = NOW()
-WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL`
-
 	queryGetSession = `
 SELECT session_id, user_id, created_at, last_active_at, revoked_at, COALESCE(device_type, ''), COALESCE(device_name, ''), COALESCE(ip_address, ''), COALESCE(ip_location, ''), COALESCE(device_id, '')
 FROM auth_sessions

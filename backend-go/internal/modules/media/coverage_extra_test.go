@@ -108,27 +108,6 @@ func TestMediaRetentionSweeperDeletesStaleUploads(t *testing.T) {
 	}
 }
 
-func TestMediaServiceStartRetentionSweeperIdempotentGuard(t *testing.T) {
-	repo := NewInMemoryRepository()
-	svc := NewServiceWithRepoAndProvider(repo, &mediaStubProvider{})
-
-	sweepCtx, sweepCancel := context.WithCancel(context.Background())
-	defer sweepCancel()
-	svc.StartRetentionSweeper(sweepCtx)
-	svc.StartRetentionSweeper(sweepCtx)
-	if !retentionSweeperRunning() {
-		t.Fatal("expected retention sweeper started flag to be set")
-	}
-	sweepCancel()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && retentionSweeperRunning() {
-		time.Sleep(5 * time.Millisecond)
-	}
-	if retentionSweeperRunning() {
-		t.Fatal("expected retention sweeper started flag to reset after ctx cancel")
-	}
-}
-
 // ── 内存 repo 与 service 解析路径 ─────────────────────────────────────
 
 func TestInMemoryRepositoryResolveAndMetaMethods(t *testing.T) {

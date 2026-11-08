@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -31,7 +30,7 @@ func TestAuthModuleMountsAllRoutes(t *testing.T) {
 	if m.Service() == nil {
 		t.Fatal("expected Service() to expose the module service")
 	}
-	m.SetLoginTracker(newInMemoryLoginTracker(context.Background()))
+	m.SetLoginTracker(newTestLoginTracker(t))
 
 	r := chi.NewRouter()
 	m.Mount(r)
@@ -69,28 +68,3 @@ func TestAuthModuleMountsAllRoutes(t *testing.T) {
 
 // 保留期清理：sweepRetention 同步跑一轮（repo 未接 PG 时静默等待下一轮）；
 // StartRetentionSweeper 幂等守卫生效，ctx 取消后幂等标志复位。
-func TestAuthModuleStartRetentionSweeperRunsOnceAndStops(t *testing.T) {
-	m, cancel := newTestModule(t)
-	defer cancel()
-
-	// 同步执行一轮清理（不依赖 goroutine 调度，确定性覆盖）。
-	m.sweepRetention(context.Background())
-
-	sweepCtx, sweepCancel := context.WithCancel(context.Background())
-	defer sweepCancel()
-	m.StartRetentionSweeper(sweepCtx)
-	// 重复调用 no-op（幂等守卫分支）。
-	m.StartRetentionSweeper(sweepCtx)
-	if !retentionSweeperRunning() {
-		t.Fatal("expected retention sweeper started flag to be set")
-	}
-
-	sweepCancel()
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) && retentionSweeperRunning() {
-		time.Sleep(5 * time.Millisecond)
-	}
-	if retentionSweeperRunning() {
-		t.Fatal("expected retention sweeper started flag to reset after ctx cancel")
-	}
-}

@@ -118,13 +118,6 @@ func validPermissionSet(values []string) bool {
 	return true
 }
 
-func limitPageItems[T any](items []T, limit int) ([]T, bool) {
-	if len(items) <= limit {
-		return items, false
-	}
-	return items[:limit], true
-}
-
 // admin 各列表游标的 AES-GCM 加密命名空间（cursor 包：同 secret 下命名空间
 // 隔离，跨列表游标无法互用）。
 const (

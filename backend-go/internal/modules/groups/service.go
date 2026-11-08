@@ -24,13 +24,6 @@ import (
 	"hotspot/backend-go/internal/platform/resourceguard"
 )
 
-func ownerIDValue(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
 // isGroupOwner reports whether userID is the group owner (nil owner → false).
 func isGroupOwner(owner *string, userID string) bool {
 	return owner != nil && *owner == userID

@@ -123,31 +123,6 @@ func compareFollowingCandidates(left, right momentCandidate) int {
 	return 0
 }
 
-// compareNearbyCandidates 排序规则（spec moment.md → fetch_nearby 排序主序）：
-// 距离升序为主序（服务端计算 distance）；热度评分仅作为次级信号——实现为
-// 距离升序 → 热度降序 → 发布时间降序 → momentID 降序。
-func compareNearbyCandidates(left, right momentCandidate) int {
-	if left.Distance != right.Distance {
-		return left.Distance - right.Distance
-	}
-	if left.Score != right.Score {
-		return right.Score - left.Score
-	}
-	if !left.CreatedAt.Equal(right.CreatedAt) {
-		if left.CreatedAt.After(right.CreatedAt) {
-			return -1
-		}
-		return 1
-	}
-	if left.Item.MomentID > right.Item.MomentID {
-		return -1
-	}
-	if left.Item.MomentID < right.Item.MomentID {
-		return 1
-	}
-	return 0
-}
-
 var fetchCursorCodec = platformcursor.NewCodec("moments.fetch")
 
 func encodeFetchCursor(cursor itemCursor) string {
@@ -196,41 +171,4 @@ func paginateFollowingMoments(items []momentCandidate, limit int, cursor string)
 		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339Nano), ID: last.Item.MomentID}))
 	}
 	return resp, nil
-}
-
-// paginateNearbyMoments：候选集已在 SQL/内存层按最终序排好，此处按游标定位后裁剪。
-func paginateNearbyMoments(items []momentCandidate, limit int, cursor string) (PaginatedMoments, error) {
-	decoded, err := decodeFetchCursor(cursor)
-	if err != nil {
-		return PaginatedMoments{}, err
-	}
-	limit = types.NormalizeLimit(limit)
-	start := findNearbyCursorStart(items, decoded)
-	end := min(len(items), start+limit)
-	resp := PaginatedMoments{Items: make([]MomentItem, 0, max(0, end-start))}
-	for _, item := range items[start:end] {
-		resp.Items = append(resp.Items, item.Item)
-	}
-	if end < len(items) && end > start {
-		last := items[end-1]
-		resp.NextCursor = types.StrPtr(encodeFetchCursor(itemCursor{Score: last.Score, Distance: last.Distance, CreatedAt: last.CreatedAt.UTC().Format(time.RFC3339Nano), ID: last.Item.MomentID}))
-	}
-	return resp, nil
-}
-
-func findNearbyCursorStart(items []momentCandidate, cursor *itemCursor) int {
-	if cursor == nil {
-		return 0
-	}
-	parsedAt, _ := time.Parse(time.RFC3339Nano, cursor.CreatedAt)
-	for idx, item := range items {
-		cmp := compareNearbyCandidates(item, momentCandidate{Item: MomentItem{MomentID: cursor.ID}, Score: cursor.Score, Distance: cursor.Distance, CreatedAt: parsedAt.UTC()})
-		if cmp > 0 {
-			return idx
-		}
-		if cmp == 0 {
-			return idx + 1
-		}
-	}
-	return len(items)
 }

@@ -240,8 +240,7 @@ func TestServiceLoginPropagatesMetaError(t *testing.T) {
 // --- Lockout (brute-force protection) ---
 
 func TestLoginTrackerLocksAfterFiveFailures(t *testing.T) {
-	tracker := newInMemoryLoginTracker(context.Background())
-	defer tracker.stop()
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	for i := 0; i < 5; i++ {
@@ -255,8 +254,7 @@ func TestLoginTrackerLocksAfterFiveFailures(t *testing.T) {
 }
 
 func TestLoginTrackerClearResetsCounter(t *testing.T) {
-	tracker := newInMemoryLoginTracker(context.Background())
-	defer tracker.stop()
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	for i := 0; i < 3; i++ {
@@ -302,8 +300,7 @@ func TestServiceLoginClearOnSuccessResetsLockout(t *testing.T) {
 	// Use the tracker directly — the Login method calls Clear() on success,
 	// and RecordFailed() + Check() flow is already verified via
 	// TestServiceLoginLocksAfterConsecutiveFailures.
-	tracker := newInMemoryLoginTracker(context.Background())
-	defer tracker.stop()
+	tracker := newTestLoginTracker(t)
 	ctx := context.Background()
 
 	for i := 0; i < 3; i++ {

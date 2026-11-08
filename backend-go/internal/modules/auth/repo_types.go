@@ -23,16 +23,6 @@ type passwordResetRecord struct {
 	FailedAttempts   int
 }
 
-type registerCodeRecord struct {
-	RequestID        string
-	LoginID          string
-	VerificationCode string
-	ExpiresAt        time.Time
-	CreatedAt        time.Time
-	ConsumedAt       *time.Time
-	FailedAttempts   int
-}
-
 const passwordResetThrottleWindow = 10 * time.Minute
 
 const registerCodeThrottleWindow = 60 * time.Second

@@ -62,47 +62,6 @@ func TestG4CompareFollowingCandidatesBranches(t *testing.T) {
 	}
 }
 
-func TestG4CompareNearbyCandidatesBranches(t *testing.T) {
-	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	base := momentCandidate{Item: MomentItem{MomentID: "m_b"}, Distance: 100, Score: 5, CreatedAt: now}
-
-	closer := momentCandidate{Item: MomentItem{MomentID: "m_a"}, Distance: 50, Score: 1, CreatedAt: now}
-	if got := compareNearbyCandidates(closer, base); got != -50 {
-		t.Fatalf("closer vs base = %d, want -50", got)
-	}
-	if got := compareNearbyCandidates(base, closer); got != 50 {
-		t.Fatalf("base vs closer = %d, want 50", got)
-	}
-
-	hotter := momentCandidate{Item: MomentItem{MomentID: "m_c"}, Distance: 100, Score: 9, CreatedAt: now}
-	if got := compareNearbyCandidates(hotter, base); got != -4 {
-		t.Fatalf("hotter vs base = %d, want -4", got)
-	}
-	if got := compareNearbyCandidates(base, hotter); got != 4 {
-		t.Fatalf("base vs hotter = %d, want 4", got)
-	}
-
-	older := momentCandidate{Item: MomentItem{MomentID: "m_d"}, Distance: 100, Score: 5, CreatedAt: now.Add(-time.Minute)}
-	if got := compareNearbyCandidates(base, older); got != -1 {
-		t.Fatalf("newer vs older = %d, want -1", got)
-	}
-	if got := compareNearbyCandidates(older, base); got != 1 {
-		t.Fatalf("older vs newer = %d, want 1", got)
-	}
-
-	highID := momentCandidate{Item: MomentItem{MomentID: "m_b"}, Distance: 100, Score: 5, CreatedAt: now}
-	lowID := momentCandidate{Item: MomentItem{MomentID: "m_a"}, Distance: 100, Score: 5, CreatedAt: now}
-	if got := compareNearbyCandidates(highID, lowID); got != -1 {
-		t.Fatalf("same tuple high id = %d, want -1", got)
-	}
-	if got := compareNearbyCandidates(lowID, highID); got != 1 {
-		t.Fatalf("same tuple low id = %d, want 1", got)
-	}
-	if got := compareNearbyCandidates(lowID, lowID); got != 0 {
-		t.Fatalf("identical candidate = %d, want 0", got)
-	}
-}
-
 func TestG4DecodeFetchCursorInvalidBranches(t *testing.T) {
 	// 可解码但字段缺失（ID 为空）→ ErrInvalidCursor
 	forged, err := fetchCursorCodec.Encode(itemCursor{})
@@ -127,42 +86,6 @@ func TestG4DecodeFetchCursorInvalidBranches(t *testing.T) {
 	}
 	if decoded, err := decodeFetchCursor(""); decoded != nil || err != nil {
 		t.Fatalf("empty cursor must yield nil,nil, got %#v err=%v", decoded, err)
-	}
-}
-
-func TestG4PaginateInvalidCursor(t *testing.T) {
-	if _, err := paginateFollowingMoments(nil, 20, "bad-cursor"); !errors.Is(err, ErrInvalidCursor) {
-		t.Fatalf("following invalid cursor err = %v, want ErrInvalidCursor", err)
-	}
-	if _, err := paginateNearbyMoments(nil, 20, "bad-cursor"); !errors.Is(err, ErrInvalidCursor) {
-		t.Fatalf("nearby invalid cursor err = %v, want ErrInvalidCursor", err)
-	}
-}
-
-func TestG4FindNearbyCursorStartBranches(t *testing.T) {
-	now := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
-	items := []momentCandidate{
-		{Item: MomentItem{MomentID: "m1"}, Distance: 10, CreatedAt: now},
-		{Item: MomentItem{MomentID: "m2"}, Distance: 20, CreatedAt: now},
-		{Item: MomentItem{MomentID: "m3"}, Distance: 30, CreatedAt: now},
-	}
-	if got := findNearbyCursorStart(items, nil); got != 0 {
-		t.Fatalf("nil cursor start = %d, want 0", got)
-	}
-	// 游标比首项更近：首项严格排在游标之后 → 从下标 0 开始
-	closerCursor := &itemCursor{Distance: 5, CreatedAt: now.Format(time.RFC3339Nano), ID: "m0"}
-	if got := findNearbyCursorStart(items, closerCursor); got != 0 {
-		t.Fatalf("closer cursor start = %d, want 0", got)
-	}
-	// 游标比所有项都远 → 落在末尾（返回 len）
-	behindCursor := &itemCursor{Distance: 500, CreatedAt: now.Format(time.RFC3339Nano), ID: "m9"}
-	if got := findNearbyCursorStart(items, behindCursor); got != len(items) {
-		t.Fatalf("behind cursor start = %d, want %d", got, len(items))
-	}
-	// 游标与首项完全相等 → 从下一项开始（cmp==0 分支）
-	equalCursor := &itemCursor{Distance: 10, CreatedAt: now.Format(time.RFC3339Nano), ID: "m1"}
-	if got := findNearbyCursorStart(items, equalCursor); got != 1 {
-		t.Fatalf("equal cursor start = %d, want 1", got)
 	}
 }
 
@@ -228,31 +151,6 @@ func TestG4MomentSearchScoreTagBranch(t *testing.T) {
 	// newest 恒 0 分
 	if score := momentSearchScore(item, "newest", "hello", "golang", now); score != 0 {
 		t.Fatalf("newest score = %v, want 0", score)
-	}
-}
-
-func TestG4CompareSearchTupleBranches(t *testing.T) {
-	cur := momentSearchCursor{Score: 2, At: "2026-01-01T00:00:00Z", ID: "m2"}
-	if got := compareSearchTuple(1, cur.At, "m1", cur); got != -1 {
-		t.Fatalf("lower score = %d, want -1", got)
-	}
-	if got := compareSearchTuple(3, cur.At, "m1", cur); got != 1 {
-		t.Fatalf("higher score = %d, want 1", got)
-	}
-	if got := compareSearchTuple(2, "2025-12-31T00:00:00Z", "m1", cur); got != -1 {
-		t.Fatalf("older at = %d, want -1", got)
-	}
-	if got := compareSearchTuple(2, "2026-01-02T00:00:00Z", "m1", cur); got != 1 {
-		t.Fatalf("newer at = %d, want 1", got)
-	}
-	if got := compareSearchTuple(2, cur.At, "m1", cur); got != -1 {
-		t.Fatalf("lower id = %d, want -1", got)
-	}
-	if got := compareSearchTuple(2, cur.At, "m3", cur); got != 1 {
-		t.Fatalf("higher id = %d, want 1", got)
-	}
-	if got := compareSearchTuple(2, cur.At, "m2", cur); got != 0 {
-		t.Fatalf("identical tuple = %d, want 0", got)
 	}
 }
 

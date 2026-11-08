@@ -11,7 +11,6 @@ import (
 	"hotspot/backend-go/internal/platform/geo"
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/persistence"
-	"hotspot/backend-go/internal/platform/textutil"
 	"hotspot/backend-go/internal/platform/types"
 
 	"github.com/jackc/pgx/v5"
@@ -560,10 +559,4 @@ func decodeMomentFavoriteCursor(cursorValue string) (any, string, error) {
 // ok=false when persistence is not configured (in-memory mode).
 func queryable(ctx context.Context, factory *persistence.Factory) (persistence.Queryable, bool) {
 	return persistence.RepoQueryable(ctx, factory)
-}
-
-// escapeLikePattern 转义 LIKE/ILIKE 的 \、%、_ 通配符（配 ESCAPE '\'）。
-// 实现已上收 platform/textutil.EscapeLikePattern（users/groups 搜索同用）。
-func escapeLikePattern(input string) string {
-	return textutil.EscapeLikePattern(input)
 }

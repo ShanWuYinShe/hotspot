@@ -28,7 +28,7 @@ func TestHashPasswordUsesConfiguredCost(t *testing.T) {
 
 // TestConfigureHashingCostClamps verifies that out-of-range costs get
 // clamped into bcrypt's supported window. We check the *configured* value
-// via DefaultBcryptCost() rather than invoking hashPassword, because
+// via int(hashCost.Load()) rather than invoking hashPassword, because
 // running bcrypt at MaxCost (31) takes minutes and would time out the
 // test — the clamp is what we care about, not the hashing itself.
 func TestConfigureHashingCostClamps(t *testing.T) {
@@ -47,7 +47,7 @@ func TestConfigureHashingCostClamps(t *testing.T) {
 	}
 	for _, c := range cases {
 		ConfigureHashingCost(c.in)
-		if got := DefaultBcryptCost(); got != c.want {
+		if got := int(hashCost.Load()); got != c.want {
 			t.Fatalf("ConfigureHashingCost(%d): expected clamp to %d, got %d", c.in, c.want, got)
 		}
 	}
@@ -56,7 +56,7 @@ func TestConfigureHashingCostClamps(t *testing.T) {
 // TestDefaultBcryptCostMatchesOWASPMinimum documents the invariant that the
 // package default is the OWASP-recommended floor.
 func TestDefaultBcryptCostMatchesOWASPMinimum(t *testing.T) {
-	if got := DefaultBcryptCost(); got < 12 {
+	if got := int(hashCost.Load()); got < 12 {
 		t.Fatalf("DefaultBcryptCost must be >= OWASP minimum 12, got %d", got)
 	}
 }

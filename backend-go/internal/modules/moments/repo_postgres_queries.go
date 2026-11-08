@@ -43,11 +43,6 @@ LIMIT $4`
 INSERT INTO moments (moment_id, user_id, description, created_at, location_name, latitude, longitude, privacy_level, s2_cell_id, interaction_count)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,0)`
 
-	queryInsertMomentTagAssignment = `
-INSERT INTO moment_tags (moment_id, tag_name, created_at)
-VALUES ($1, $2, $3)
-ON CONFLICT (moment_id, tag_name) DO NOTHING`
-
 	queryFilterAllowedMomentTags = `
 SELECT candidate.tag_name
 FROM unnest($1::text[]) AS candidate(tag_name)
@@ -55,28 +50,11 @@ LEFT JOIN admin_blocked_tags bt ON bt.name = candidate.tag_name
 WHERE bt.name IS NULL
 ORDER BY candidate.tag_name ASC`
 
-	queryListMomentTagsByMomentID = `
-SELECT tag_name
-FROM moment_tags
-WHERE moment_id = $1
-ORDER BY tag_name ASC`
-
-	queryMomentFavoritesByIDs = `
-SELECT moment_id
-FROM moment_favorites
-WHERE user_id = $1 AND moment_id = ANY($2)`
-
 	queryListMomentTagsByMomentIDs = `
 SELECT moment_id, tag_name
 FROM moment_tags
 WHERE moment_id = ANY($1)
 ORDER BY moment_id, tag_name ASC`
-
-	queryListMomentMentionsByMomentID = `
-SELECT mentioned_user_id
-FROM moment_mentions
-WHERE moment_id = $1
-ORDER BY mentioned_user_id ASC`
 
 	queryListMomentMentionsByMomentIDs = `
 SELECT moment_id, mentioned_user_id

@@ -679,34 +679,6 @@ func TestNormalizeFetchLimitBranches(t *testing.T) {
 }
 
 // TestCompareNearbyCandidatesBranches 覆盖附近候选全序比较的各分支。
-func TestCompareNearbyCandidatesBranches(t *testing.T) {
-	base := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
-	left := momentCandidate{Item: MomentItem{MomentID: "m2"}, Score: 5, Distance: 100, CreatedAt: base}
-	if got := compareNearbyCandidates(left, left); got != 0 {
-		t.Fatalf("equal: %d", got)
-	}
-	cases := []struct {
-		name  string
-		left  momentCandidate
-		right momentCandidate
-		want  int
-	}{
-		// 距离/分值分支返回差值（负=更靠前），时间/ID 分支返回 ±1。
-		{"closer", momentCandidate{Distance: 50}, left, -50},
-		{"farther", momentCandidate{Distance: 150}, left, 50},
-		{"higher score", momentCandidate{Distance: 100, Score: 9}, left, -4},
-		{"lower score", momentCandidate{Distance: 100, Score: 1}, left, 4},
-		{"newer", momentCandidate{Distance: 100, Score: 5, CreatedAt: base.Add(time.Minute)}, left, -1},
-		{"older", momentCandidate{Distance: 100, Score: 5, CreatedAt: base.Add(-time.Minute)}, left, 1},
-		{"larger id", momentCandidate{Item: MomentItem{MomentID: "m3"}, Distance: 100, Score: 5, CreatedAt: base}, left, -1},
-		{"smaller id", momentCandidate{Item: MomentItem{MomentID: "m1"}, Distance: 100, Score: 5, CreatedAt: base}, left, 1},
-	}
-	for _, tc := range cases {
-		if got := compareNearbyCandidates(tc.left, tc.right); got != tc.want {
-			t.Fatalf("%s: got %d want %d", tc.name, got, tc.want)
-		}
-	}
-}
 
 // TestDecodeFetchCursorBranches 覆盖发现流游标解码的合法/非法分支。
 func TestDecodeFetchCursorBranches(t *testing.T) {
@@ -730,64 +702,8 @@ func TestDecodeFetchCursorBranches(t *testing.T) {
 }
 
 // TestFindNearbyCursorStartDiscoveryBranches 覆盖发现流分页定位游标起点。
-func TestFindNearbyCursorStartDiscoveryBranches(t *testing.T) {
-	base := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
-	items := []momentCandidate{
-		{Item: MomentItem{MomentID: "m1"}, Distance: 10, CreatedAt: base},
-		{Item: MomentItem{MomentID: "m2"}, Distance: 20, CreatedAt: base},
-	}
-	if got := findNearbyCursorStart(items, nil); got != 0 {
-		t.Fatalf("nil cursor: %d", got)
-	}
-	// 非法 CreatedAt 解析为零值时间：首项（同距同分）被判为早于游标，
-	// 第二项因距离更大而返回其下标。
-	if got := findNearbyCursorStart(items, &itemCursor{ID: "m1", Distance: 10, CreatedAt: "bad"}); got != 1 {
-		t.Fatalf("bad created_at cursor: %d", got)
-	}
-	hit := &itemCursor{ID: "m1", Distance: 10, CreatedAt: base.Format(time.RFC3339Nano)}
-	if got := findNearbyCursorStart(items, hit); got != 1 {
-		t.Fatalf("hit cursor: %d", got)
-	}
-	before := &itemCursor{ID: "mx", Distance: 5, CreatedAt: base.Format(time.RFC3339Nano)}
-	if got := findNearbyCursorStart(items, before); got != 0 {
-		t.Fatalf("cursor before list: %d", got)
-	}
-	after := &itemCursor{ID: "mx", Distance: 99, CreatedAt: base.Format(time.RFC3339Nano)}
-	if got := findNearbyCursorStart(items, after); got != len(items) {
-		t.Fatalf("cursor after list: %d", got)
-	}
-}
 
 // TestPaginateNearbyAndFollowingBranches 覆盖两种发现流分页的游标生成与非法游标。
-func TestPaginateNearbyAndFollowingBranches(t *testing.T) {
-	base := time.Date(2026, 6, 1, 10, 0, 0, 0, time.UTC)
-	items := []momentCandidate{
-		{Item: MomentItem{MomentID: "m1"}, Distance: 10, CreatedAt: base},
-		{Item: MomentItem{MomentID: "m2"}, Distance: 20, CreatedAt: base},
-		{Item: MomentItem{MomentID: "m3"}, Distance: 30, CreatedAt: base},
-	}
-	page, err := paginateNearbyMoments(items, 2, "")
-	if err != nil || len(page.Items) != 2 || page.NextCursor == nil {
-		t.Fatalf("nearby page: %#v err=%v", page, err)
-	}
-	if _, err := paginateNearbyMoments(items, 2, "garbage"); !errors.Is(err, ErrInvalidCursor) {
-		t.Fatalf("nearby bad cursor: %v", err)
-	}
-	// limit 大于候选数 → 全量且无游标
-	all, err := paginateNearbyMoments(items, 10, "")
-	if err != nil || len(all.Items) != 3 || all.NextCursor != nil {
-		t.Fatalf("nearby all: %#v err=%v", all, err)
-	}
-
-	if _, err := paginateFollowingMoments(items, 2, "garbage"); !errors.Is(err, ErrInvalidCursor) {
-		t.Fatalf("following bad cursor: %v", err)
-	}
-	// 注意：仓库层已按 LIMIT+1 拉取，分页函数按 limit 裁剪并以页尾生成游标。
-	followPage, err := paginateFollowingMoments(items, 2, "")
-	if err != nil || len(followPage.Items) != 2 || followPage.NextCursor == nil {
-		t.Fatalf("following page: %#v err=%v", followPage, err)
-	}
-}
 
 // TestCompareFollowingCandidatesBranches 覆盖关注流排序的 ID 兜底分支。
 func TestCompareFollowingCandidatesBranches(t *testing.T) {

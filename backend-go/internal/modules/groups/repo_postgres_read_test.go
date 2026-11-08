@@ -70,12 +70,6 @@ func (b *groupBackendStub) Query(_ context.Context, query string, _ ...any) (per
 		return nil, err
 	}
 	if strings.Contains(query, "FROM groups g") {
-		if err := b.queryErrs[querySearchGroups]; err != nil {
-			return nil, err
-		}
-		return &testdb.RowsValues{Rows: b.rows}, nil
-	}
-	if query == querySearchGroups {
 		return &testdb.RowsValues{Rows: b.rows}, nil
 	}
 	return &persistence.InMemoryRows{}, nil
@@ -137,18 +131,6 @@ func TestPostgresRepositoryCreateReturnsErrorOnExecFailure(t *testing.T) {
 	_, err := repo.Create(context.Background(), "user_alice", CreateGroupRequest{Name: "Hot Group", Location: Location{LocationName: "南天门"}})
 	if err == nil {
 		t.Fatal("expected create error")
-	}
-}
-
-func TestPostgresRepositorySearchReturnsErrorOnQueryFailure(t *testing.T) {
-	backend := &groupBackendStub{rows: nil, queryErrs: map[string]error{querySearchGroups: errors.New("boom")}, queryRow: testdb.RowValues{Err: persistence.ErrNotImplemented}, execErrs: map[string]error{}}
-	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
-	factory.DB.(*persistence.PostgresDB).Backend = backend
-	repo := NewPostgresRepository(factory)
-
-	_, err := repo.Search(context.Background(), SearchGroupsRequest{Keyword: "Hot Group", ReferencePoint: GeoPoint{Latitude: 35.0, Longitude: 112.0}})
-	if err == nil {
-		t.Fatal("expected search error")
 	}
 }
 

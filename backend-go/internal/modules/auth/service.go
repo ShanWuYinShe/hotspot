@@ -65,21 +65,14 @@ const (
 	defaultMaxFailures    = 5
 	defaultLockDuration   = 15 * time.Minute
 	defaultTrackerCleanup = 10 * time.Minute
-	// loginCounterDecay 未锁定条目的失败计数衰减窗口：静默（无新失败）
-	// 达该窗口后计数作废。窗口内连续失败会持续累计直至锁定——若按
-	// sweeper 周期无差别清扫，攻击者以「每周期失败 max-1 次」的节奏可
-	// 永不触发锁定（审查 P1-5），故只清「静默期已过」的条目。
-	loginCounterDecay = defaultLockDuration
 )
 
 // inMemoryLoginTracker is a simple in-memory failed-login tracker.
 // It should be replaced with a Redis-backed implementation in multi-instance deployments.
 type inMemoryLoginTracker struct {
-	mu       sync.Mutex
-	entries  map[string]*loginLockEntry
-	limits   loginTrackerLimits
-	stopOnce sync.Once
-	stopCh   chan struct{}
+	mu      sync.Mutex
+	entries map[string]*loginLockEntry
+	limits  loginTrackerLimits
 }
 
 func (t *inMemoryLoginTracker) SetLimits(maxFailures int, lockDuration time.Duration) {
@@ -93,7 +86,6 @@ func newInMemoryLoginTracker(ctx context.Context) *inMemoryLoginTracker {
 	t := &inMemoryLoginTracker{
 		entries: make(map[string]*loginLockEntry),
 		limits:  normalizeLoginTrackerLimits(defaultMaxFailures, defaultLockDuration),
-		stopCh:  make(chan struct{}),
 	}
 	// Bind the sweeper to ctx so it exits when the app root context is
 	// cancelled (graceful shutdown), and wrap it with worker.Go so a panic
@@ -154,8 +146,6 @@ func (t *inMemoryLoginTracker) sweep(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-t.stopCh:
-			return
 		case <-ticker.C:
 			t.sweepOnce(time.Now())
 		}
@@ -185,10 +175,6 @@ func (t *inMemoryLoginTracker) sweepOnce(now time.Time) {
 			delete(t.entries, id)
 		}
 	}
-}
-
-func (t *inMemoryLoginTracker) stop() {
-	t.stopOnce.Do(func() { close(t.stopCh) })
 }
 
 type Service struct {

@@ -123,17 +123,6 @@ func (b *authBackendStub) Exec(_ context.Context, query string, args ...any) err
 			record.RevokedAt = &now
 			b.sessions[id] = record
 		}
-	case queryRevokeOtherSessions:
-		userID := args[0].(string)
-		currentSessionID := args[1].(string)
-		now := time.Now().UTC()
-		for id, record := range b.sessions {
-			if record.UserID != userID || id == currentSessionID || record.RevokedAt != nil {
-				continue
-			}
-			record.RevokedAt = &now
-			b.sessions[id] = record
-		}
 	case queryUpsertRefreshToken:
 		session := RefreshSession{
 			RefreshToken: args[0].(string),

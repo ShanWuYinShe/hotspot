@@ -77,15 +77,6 @@ func TestServiceCoverageHelpers(t *testing.T) {
 	svc.SetGroupDismissAuditWriter(nil)
 	svc.SetLocationProvider(nil)
 
-	// ownerIDValue 空指针 → ""
-	if v := ownerIDValue(nil); v != "" {
-		t.Fatalf("nil owner: %q", v)
-	}
-	owner := "u1"
-	if v := ownerIDValue(&owner); v != "u1" {
-		t.Fatalf("owner: %q", v)
-	}
-
 	// derefString
 	if v := derefString(nil); v != "" {
 		t.Fatalf("nil deref: %q", v)
@@ -95,21 +86,6 @@ func TestServiceCoverageHelpers(t *testing.T) {
 		t.Fatalf("deref: %q", v)
 	}
 
-	// groupUserInfo：avatar 为空/非空
-	info := groupUserInfo(UserInfo{UserID: "u1", Nickname: "n1"})
-	if info["user_id"] != "u1" {
-		t.Fatalf("user info: %#v", info)
-	}
-	avatar := "http://a"
-	info = groupUserInfo(UserInfo{UserID: "u2", Nickname: "n2", AvatarURL: &avatar})
-	if info["avatar_url"] != "http://a" {
-		t.Fatalf("user info avatar: %#v", info)
-	}
-	emptyAvatar := ""
-	info = groupUserInfo(UserInfo{UserID: "u3", Nickname: "n3", AvatarURL: &emptyAvatar})
-	if _, has := info["avatar_url"]; has {
-		t.Fatalf("empty avatar must be omitted: %#v", info)
-	}
 }
 
 func TestMatchesSearchCursor(t *testing.T) {

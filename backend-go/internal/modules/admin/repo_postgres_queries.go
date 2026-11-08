@@ -23,10 +23,6 @@ WHERE role_id = $1`
 DELETE FROM admin_role_permissions
 WHERE role_id = $1`
 
-	queryRoleInsertPermission = `
-INSERT INTO admin_role_permissions (role_id, permission_key, created_at)
-VALUES ($1,$2,$3)`
-
 	// queryRoleInsertPermissionsBatch inserts all permissions for a role in one
 	// round trip via unnest, replacing the previous per-permission loop.
 	queryRoleInsertPermissionsBatch = `

@@ -229,18 +229,3 @@ func nullableTimeRange(start, end time.Time) (*time.Time, *time.Time) {
 	}
 	return s, e
 }
-
-// fillTrendDays 把「日期 → 计数」映射按 start 起逐日展开为固定长度序列（空日补零）。
-// PG 实现现已由 SQL 直接产出完整日期序列；内存实现（repo_memory_stats.go）仍复用它，
-// 两者在正常时钟下口径一致（日期按 UTC+8 自然日）。
-func fillTrendDays(rows map[string]geoBucketCount, start time.Time, days int) []AdminGeoStatsTrendPoint {
-	sh := time.FixedZone("UTC+8", 8*60*60)
-	out := make([]AdminGeoStatsTrendPoint, 0, days)
-	dayStart := time.Date(start.In(sh).Year(), start.In(sh).Month(), start.In(sh).Day(), 0, 0, 0, 0, sh)
-	for i := 0; i < days; i++ {
-		key := dayStart.AddDate(0, 0, i).Format("2006-01-02")
-		b := rows[key]
-		out = append(out, AdminGeoStatsTrendPoint{Date: key, User: b.User, Group: b.Group, Moment: b.Moment})
-	}
-	return out
-}

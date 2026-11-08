@@ -71,47 +71,6 @@ func TestCanvasRejectsInvalidEndTimeFormat(t *testing.T) {
 
 // TestAggregateHeatBucketsCombinesTypesAndTruncates 单元覆盖按 S2 网格聚合的
 // 分类计数、并列排序与 >200 桶截断分支（该函数仅保留给内存/回退实现使用）。
-func TestAggregateHeatBucketsCombinesTypesAndTruncates(t *testing.T) {
-	items := []mapCandidate{
-		{ObjectType: "user", ObjectID: "u1", Location: GeoPoint{Latitude: 35.0, Longitude: 112.0}},
-		{ObjectType: "group", ObjectID: "g1", Location: GeoPoint{Latitude: 35.00001, Longitude: 112.00001}},
-		{ObjectType: "moment", ObjectID: "m1", Location: GeoPoint{Latitude: 35.00002, Longitude: 112.00002}},
-		// 另一个格：仅 moment，用于并列计数时按 cell_token 排序（level-20 单格约 0.15m）。
-		{ObjectType: "moment", ObjectID: "m2", Location: GeoPoint{Latitude: 35.001, Longitude: 112.001}},
-	}
-	buckets := aggregateHeatBuckets(items, 20)
-	if len(buckets) != 2 {
-		t.Fatalf("buckets = %d, want 2", len(buckets))
-	}
-	var combined *MapHeatBucket
-	for i := range buckets {
-		if buckets[i].TotalCount == 3 {
-			combined = &buckets[i]
-		}
-	}
-	if combined == nil {
-		t.Fatalf("missing combined bucket: %#v", buckets)
-	}
-	if combined.Breakdown == nil || combined.Breakdown.User == nil || *combined.Breakdown.User != 1 ||
-		combined.Breakdown.Group == nil || *combined.Breakdown.Group != 1 ||
-		combined.Breakdown.Moment == nil || *combined.Breakdown.Moment != 1 {
-		t.Fatalf("unexpected breakdown: %#v", combined.Breakdown)
-	}
-
-	// 201 个不同 level-20 网格（单格约 0.15m）触发 >200 截断。
-	many := make([]mapCandidate, 0, 201)
-	for i := 0; i < 201; i++ {
-		many = append(many, mapCandidate{
-			ObjectType: "user",
-			ObjectID:   "u",
-			Location:   GeoPoint{Latitude: 30.0 + float64(i)*0.01, Longitude: 110.0 + float64(i)*0.01},
-		})
-	}
-	truncated := aggregateHeatBuckets(many, 20)
-	if len(truncated) != 200 {
-		t.Fatalf("truncated buckets = %d, want 200", len(truncated))
-	}
-}
 
 // TestCompareMapCandidatesTieBreakers 覆盖排序比较器的全部并列降级分支：
 // 距离相同 -> 类型 -> 创建时间 -> 对象 ID -> 完全相等。
@@ -178,17 +137,6 @@ func TestDecodeMapCursorRejectsMissingIdentity(t *testing.T) {
 
 // TestFallbackHeatBucketCenterUsesFallbackForInvalidToken 覆盖 token 无法解出
 // 格心（返回零值）时回退到调用方坐标的分支。
-func TestFallbackHeatBucketCenterUsesFallbackForInvalidToken(t *testing.T) {
-	fallback := GeoPoint{Latitude: 35.5, Longitude: 112.5}
-	if got := fallbackHeatBucketCenter("not-a-cell-token", fallback); got != fallback {
-		t.Fatalf("fallback center = %#v, want %#v", got, fallback)
-	}
-	validToken := geo.CellTokenAtLevel(geo.Point{Latitude: 35.0, Longitude: 112.0}, 12)
-	got := fallbackHeatBucketCenter(validToken, fallback)
-	if got == fallback || (got == GeoPoint{}) {
-		t.Fatalf("valid token center = %#v, want S2 cell center", got)
-	}
-}
 
 // TestPostgresRepositoryHeatmapAppliesTimeWindow 覆盖 Heatmap 在 moments 分支
 // 把零值/非零时间窗转成 nil / *time.Time 的两条路径。

@@ -115,16 +115,6 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 	realtime.HubFromContext(ctx).BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationRejected, Payload: payload})
 }
 
-// applicationExpired reports whether a pending application is past its TTL
-// (AppConfig.limits.group_application_ttl_hours, default 72h).
-func groupUserInfo(user UserInfo) map[string]any {
-	payload := map[string]any{"user_id": user.UserID, "nickname": user.Nickname}
-	if user.AvatarURL != nil && *user.AvatarURL != "" {
-		payload["avatar_url"] = *user.AvatarURL
-	}
-	return payload
-}
-
 func (s *Service) resolveUserInfo(ctx context.Context, userID string) types.UserInfo {
 	if s.users != nil {
 		info, err := s.users.GetActorInfo(ctx, userID)

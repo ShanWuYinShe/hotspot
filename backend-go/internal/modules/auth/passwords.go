@@ -25,10 +25,6 @@ func init() {
 	hashCost.Store(int32(config.DefaultBcryptCost()))
 }
 
-// DefaultBcryptCost exposes the configured default so tests and tooling can
-// reference the same value without re-hardcoding it.
-func DefaultBcryptCost() int { return int(hashCost.Load()) }
-
 // ConfigureHashingCost sets the bcrypt work factor used by hashPassword. It
 // is intended to be called once at module construction (see module.go) from
 // the validated Config.BcryptCost. Values outside [bcrypt.MinCost,
