@@ -244,7 +244,7 @@ jobs:
           awk '/^ok .*coverage: [0-9.]+% of statements/ {
             pkg = $2; cov = $0;
             sub(/^.*coverage: /, "", cov); sub(/% of statements.*$/, "", cov);
-            if (pkg ~ /modules\// && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
+            if (index(pkg, "/modules/") > 0 && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
           } END { if (failed) exit 1 }' /tmp/module-coverage.log
 
       # ── HTTP 全链路集成（docker_test.go ~90 用例）─────────────────

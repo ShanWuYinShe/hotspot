@@ -140,7 +140,7 @@ if [ "$WITH_DB" = "1" ]; then
   awk '/^ok .*coverage: [0-9.]+% of statements/ {
     pkg = $2; cov = $0;
     sub(/^.*coverage: /, "", cov); sub(/% of statements.*$/, "", cov);
-    if (pkg ~ /modules\\// && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
+    if (index(pkg, "/modules/") > 0 && cov + 0 < 90.0) { print "COVERAGE BELOW 90%: " pkg " " cov "%"; failed = 1 }
   } END { if (failed) exit 1 }' "$COV_LOG" || die "模块覆盖率低于 90%（真实库口径）"
   rm -f "$COV_LOG"
 fi
