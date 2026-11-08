@@ -80,7 +80,7 @@
 {/snippet}
 
 {#snippet islandSearchCenter()}
-	<div class="flex h-full w-full min-w-0 items-center">
+	<div class="flex h-full w-full min-w-0 items-center gap-1.5 pr-1">
 		<input
 			type="text"
 			inputmode="search"
@@ -108,21 +108,22 @@
 			}}
 			class="h-6 w-full min-w-0 bg-transparent text-xs text-text-primary placeholder:text-text-secondary/60 focus:outline-none"
 		/>
+		{#if data.query.trim()}
+			<button
+				type="button"
+				class="flex size-4 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors"
+				onclick={() => data.clearSearch()}
+				aria-label="清空搜索"
+				title="清空搜索"
+			>
+				<X class="size-3" />
+			</button>
+		{/if}
 	</div>
 {/snippet}
 
 {#snippet islandSearchTrailing()}
-	{#if data.query.trim()}
-		<button
-			type="button"
-			class="flex size-4.5 shrink-0 items-center justify-center rounded-full text-text-secondary/70 hover:text-text-primary hover:bg-interactive-hover transition-colors"
-			onclick={() => data.clearSearch()}
-			aria-label="清空搜索"
-			title="清空搜索"
-		>
-			<X class="size-3" />
-		</button>
-	{:else}
+	{#if !data.query.trim()}
 		<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary/70 select-none">
 			{searchShortcut}
 		</kbd>

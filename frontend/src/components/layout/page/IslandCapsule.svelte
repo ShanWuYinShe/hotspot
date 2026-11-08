@@ -136,6 +136,13 @@
 		</div>
 
 		<div class="flex shrink-0 items-center gap-0.5">
+			{#if trailing && !isExpanded}
+				<div class="h-3.5 w-px shrink-0 bg-border-default/40 mx-0.5" aria-hidden="true"></div>
+				<div class="flex shrink-0 items-center gap-0.5">
+					{@render trailing()}
+				</div>
+			{/if}
+
 			{#if expanded}
 				<!-- 展开/收起引导箭头 -->
 				<button
@@ -146,13 +153,6 @@
 				>
 					<ChevronDown class="size-3 transition-transform duration-standard ease-standard {isExpanded ? 'rotate-180 text-accent-default' : ''}" />
 				</button>
-			{/if}
-
-			{#if trailing && !isExpanded}
-				<div class="h-3.5 w-px shrink-0 bg-border-default/40 mx-0.5" aria-hidden="true"></div>
-				<div class="flex shrink-0 items-center gap-0.5">
-					{@render trailing()}
-				</div>
 			{/if}
 
 			{#if !isExpanded}
