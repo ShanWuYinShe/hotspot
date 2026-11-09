@@ -37,7 +37,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 1. **布局**：普通页面必须用 `StandardPageLayout`，分栏页面必须用 `SplitPageLayout`；header 以 snippet 传入、正文放 children；不得自行组合 PageHeader/ContentColumn/页面级滚动/页面级横向 padding（聊天页豁免见上）。gutter 一律由 `ContentColumn` 的 `px-[var(--cst-page-gutter)]` 管理。
 2. **页头**：一律用 `PageHeader`，按页面类型选变体：
    - **默认变体**：`sticky` 默认开（表单/设置/管理/搜索/聊天/资料页等），`onBack` 在非桌面自动显示返回按钮；`below` 只放搜索框与 Tab 栏等 header 附属区，**below 首元素带 `mt-3`**（默认变体 spacing 由页面控制），below 内多行元素之间用 `mt-3` 分隔。内部 ContentColumn 上下内距由组件派生（有 below：`pt-4 pb-3.5`；无 below：`pt-4.5 pb-4.5`），页面不要再传 `contentClassName` 覆盖（唯一例外是已登记的窄列面板）。
-   - **`variant="integrated"`（hub/列表页内容内页头）**：桌面/平板无背景/边框/吸顶、整段随内容滚走；**移动端（<600px）例外吸顶**（85% 画布底 + blur，与移动端其它页头的 sticky 语言一致，保证筛选入口不随内容滚走）。标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页也归入本类（输入框走 `below`，桌面不吸顶、标题与输入随内容滚走、入岛后由灵动岛保「搜索」上下文；移动端 integrated 例外吸顶保住输入入口）；设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。**/nearby 枢纽页为登记例外：用默认 sticky 变体（与首页对齐，顶部保留常驻搜索/地图工具；桌面滚动入岛后整条隐去，地图入口随 `islandTrailing` 进岛）**。
+   - **`variant="integrated"`（hub/列表页内容内页头）**：桌面/平板无背景/边框/吸顶、整段随内容滚走；**移动端（<600px）例外吸顶**（85% 画布底 + blur，与移动端其它页头的 sticky 语言一致，保证筛选入口不随内容滚走）。标题+副标题/计数+trailing 工具同一行，`below` 筛选/操作紧随（组件统一 `mt-2.5`，页面不要再加 `mt-3`）；正文 `pt-4` 直接开始。适用 /nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify；**这些页面禁止在正文重复页面标题/分区头**。搜索页：移动端 integrated 吸顶（输入框走 `below`）；桌面端不渲染页头，搜索框/筛选中枢直接由常驻灵动岛承担（见本文「页面锚点岛」）；设置/表单页、聊天分栏、品牌首页不是同类，继续用默认变体/自建页头。**/nearby 枢纽页为登记例外：用默认 sticky 变体（与首页对齐，顶部保留常驻搜索/地图工具；桌面端整条隐藏，地图入口由左侧栏 `LocationCard` 承担，不重复进岛）**。
 3. **分类/筛选/排序 Tab（强制统一）**：一律使用 `TabBar`（`components/navigation/TabBar.svelte`，胶囊样式 + 激活项 accent 实底胶囊 + `aria-pressed`，对齐鸿蒙 TabsPillGroup 分段式视觉），放 `below` snippet 内随 header 吸顶；tab 状态可存 URL query（如 `?tab=`）以支持深链，切换用 `goto` 更新 URL。**禁止再写手写 tab/chip 变体**（通知/搜索/个人主页/地图 sheet 一律用 TabBar）。表单内的标签/多选 chips 一律用 `TagPill`；网格选择器（主题 swatch、发布可见范围）属例外，不套 TabBar。
 4. **正文与滚动**：正文直接放 children；`StandardPageLayout` 页面滚动由 `RoutedContentViewport`（main）唯一承担，`SplitPageLayout` 分栏页的主区/rail 滚动由组件统一管理；页面不得自建滚动容器（消息分栏、地图等全画布页面除外）。内嵌自带 gutter 的组件时用负 margin（`-mx-[var(--cst-page-gutter)]`）抵消 ContentColumn gutter，避免双重内边距（参照 `me/relationships/RelationshipsPage.svelte`）。
 5. **三端差异**：共用组件只写一次，设备差异用 `platform.platform` 派生（列数、字号、布局分支），不得复制三份页面。
@@ -120,7 +120,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 1. **外壳不画框**：桌面顶栏/侧栏/主内容面板、移动与平板顶栏/PageHeader 一律不得有包裹整页的 `border`/`rounded-*`/白色底面/硬分隔线（`border-b` 发丝线也算）。四端外壳共享同一张 `--cst-surface-page` 连续画布；层级靠留白、排版、交互态表达。
 2. **氛围画布整窗一次**：桌面在 `DesktopLayout` 根挂单实例 `AmbientBackdrop`；不得按区域各挂一份（区域交界会出现渐变接缝）。移动/平板仍挂在各自外壳内容区。
-3. **PageHeader**：默认变体静止态无底线、滚动后允许柔和投影（不再用硬 `border-bottom`），sticky 背景 = 画布色/玻璃，不留白条；**`variant="integrated"` 桌面/平板无背景/边框/吸顶、整段随内容滚走**（hub/列表页），不得再包一层描边/圆角/软岛；**移动端例外吸顶**（画布 85% + blur），与移动端其它页头统一。**桌面端入岛即隐去**：默认吸顶页头滚动 >120px 把标题/上下文/行动交给顶栏灵动岛后，**没有 `below` 的页头整条隐去**（`opacity-0` + `inert`，保留占位不跳版），不再在内容区留一条空玻璃标题带；有 `below`（搜索框、后台模块导航等功能工具行）的页头保留整条——它们是操作入口不是标题栏。页头 `trailing` 行动必须通过 `islandTrailing` 同步进岛（≤2 控件），否则页头隐去后入口丢失。
+3. **PageHeader**：默认变体静止态无底线、滚动后允许柔和投影（不再用硬 `border-bottom`），sticky 背景 = 画布色/玻璃，不留白条；**`variant="integrated"` 桌面/平板无背景/边框/吸顶、整段随内容滚走**（hub/列表页），不得再包一层描边/圆角/软岛；**移动端例外吸顶**（画布 85% + blur），与移动端其它页头统一。**桌面端页头整条隐藏**：标准 `PageHeader` 默认 `desktopVisible={false}` → `lg:hidden`，标题/上下文/`below` 筛选行全部交给常驻灵动岛承担，内容区不留空玻璃标题带；仅 `/messages` 左栏传 `desktopVisible` 保留栏头。页面工具（搜索/编辑/全部已读等）要保留就放进 `islandTrailing` 或 `islandExpanded`（≤2 控件），否则桌面端无入口。
 4. **页头/分区硬线清零**：/me 自定义页头线、他人主页分区头线、群详情分区标题线、通知/设置/搜索/关系页内分区线、reports 过滤行线一律清零。页面分组用「eyebrow + 留白 + 内容软岛」，不要用横线切分。
 5. **保留的功能线（白名单）**：聊天输入条/粘底操作条（`border-t`）、消息分栏竖向发丝线（`border-subtle/40`）、表格/统计行、内容单元内演示分隔。新增页面不得引入新的页面级横线。
 6. **页面内允许的「边界」**：内容单元卡片（`ListContainer bordered`、设置分组卡、rail 卡、信息卡）是内容层级，不是页面框，可保留；但要收敛视觉重量（外框读起来像页面框时改投影/间距）。**例外登记**：底部 tab dock、FAB、弹层/Sheet 控件的玻璃浮层属于控件边界，可保留。
@@ -159,7 +159,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 1. **根字号**：`shared.css` 的 `html { font-size: clamp(1rem, calc(100vw / 120), 2rem) }`——1920→16px、2560→21.33px、3840→32px，上限 2×；所有 rem 尺寸（Tailwind spacing、字号/圆角/布局 token、组件 rem 化尺寸）随根字号等比放大。≤1920 与移动/平板保持 16px 完全不变。
 2. **字号 token 必须用 rem**：`--text-xxs/xs/sm/md` 为 rem 表达（10/11/12/14px @16 基准）；新增尺寸禁止硬编码 px（1px 发丝线、地图瓦片 256px 除外），否则大屏不放大。
 3. **数值型内联尺寸走 --cst-ui-scale**：lucide `size={n}` 由 `svg.lucide[width][height]:not([class*='size-'])` 的 `zoom: var(--cst-ui-scale)` 统一缩放（首帧由 `app.html` 写入、resize 由 `platform` store 同步）；Avatar/ActionIconButton/PinMedia/Toggle 等数值尺寸在组件内 rem 化。新增组件若必须收数字 px，需消费 `--cst-ui-scale` 或 `rem`，不得裸写 px。
-4. **JS 阈值/间距**：滚动阈值（含吸顶页头交接窗口 120→260 / 160→280px）等 JS 内联 px 必须乘 `platform.uiScale`（见 `PageHeader` / `DetailHeader`），否则大屏上岛、交接触发时机失真。
+4. **JS 阈值/间距**：滚动阈值（页头交接窗口 120→260px、`DetailHeader` 的 `scrollThreshold` 默认 48）等 JS 内联 px 必须乘 `platform.uiScale`（见 `PageHeader` / `DetailHeader`），否则大屏上触发时机失真。
 5. **验收**：1920 截图与既有基准一致；2560/3840 实测 `htmlFont`、侧栏宽、顶栏高、正文字号与 1920 的比值等于视口宽度比（±1px），且无横向溢出（`document.documentElement.scrollWidth === innerWidth`）。取数用 `agent-browser eval` 读 `getComputedStyle`，不要凭截图目测。
 
 ### 聊天页内容轴与降噪
@@ -173,15 +173,32 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ## 页面锚点岛（Page Island，桌面端）
 
-桌面端 52px 顶栏中央的固定信息位：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态）与页面主行动固定住，用户自由滚动不丢上下文、还能直接操作。**按信息丢失触发**：短页/无滚动页不出岛；岛绝不因滚动方向自动隐藏。唯一形态实现 `components/layout/page/IslandCapsule.svelte`（`PageIsland.svelte` 页面锚点岛与首页 `HomeFeedIsland.svelte` 均组合它，只注入内容与行为）。
+桌面端 52px 顶栏中央的常驻信息位：页面级上下文（标题/身份/meta）与 ≤2 页面行动固定于此，
+正文区不再显示页头标题栏。**现行模型是「默认常驻 + 点击向下展开控制中枢」**，与滚动无关：
+不做滚动飞入/缩放入场，也不按滚动显隐。
 
-- **形态**：h-9 紧凑胶囊 = `[leading: 返回（页面注册 onBack 才有）/ 作者头像 20px] · [title 12 semibold + meta 11 secondary] · [trailing: ≤2 行动]`，胶囊最右侧 18px 阅读进度圆环（accent 弧 + 极淡底轨，`aria-hidden` 纯展示，由滚动 owner 上报 0–100，弧长每帧直接跟手、不加 CSS 过渡；同一读数只此一处，不设下划线/hover 百分比）。
-- **何时出现（滚动驱动交接，无时长动画）**：`p`（0→1）由滚动位置直接算出——吸顶页头用滚动窗口 120→260px（`DetailHeader` 160→280px）；`integrated`/非吸顶页头按标题「文字矩形相对 52px 顶栏的位置」每帧算；首页按分段器位置算。滚动停在哪交接就停在哪、回滚沿原路径反向；过半后吸顶页头快速淡出（`handoffRecede` 逐帧写 opacity，保留高度防 CLS，`inert` 屏蔽不可见控件）。**入岛 = 整块页头交接**：标题、副标题、`below` 筛选/标签/工具行、页头 trailing 一起退场——内容区只剩内容本身；被隐藏的筛选状态写进 `islandMeta` 带进岛（如「摄影 · 云龙湖 · 5km 内 · 8 人」）。**阈值均乘 `platform.uiScale`**。内容不足一屏的页面标题不离开视口 → 自然不出岛。例外：`/messages`（左右列头部常驻）、`/map`（全画布）、`/login`、`/register`（无外壳）不出岛；面板内嵌页头不承载主滚动 owner，不会出岛。交接实现：`lib/island-handoff.ts`（`islandHandoff` 逐帧写 transform/opacity/`--cst-island-content`；锚点取页头标题的**文字**矩形 / 首页分段器 / 详情页左侧工具行，几何从锚点到顶栏泊位做 smoothstep 插值；reduced 过闸即切换）。`.page-header-scroll` 的 transition 列表**不得**含 opacity（逐帧写入会被二次平滑，交接慢半拍）。
-- **岛内交互**：点击标题/身份回锚点（吸顶页头→页首、integrated→标题位置、详情身份卡→作者主页，`onTitleClick` 语义由页面给，reduced 立即）；hover / 键盘 `focus-within` 只改表面材质（半透明玻璃→实底 + accent 细边 + `shadow-raised-md` + 1px 上移），**胶囊宽度全程不变**（旧 max-width 舒展会让居中胶囊左右抖动）、**不再揭示百分比**；行动区 ≤2 控件（32px 命中、`aria-label`，页头原 trailing 入岛时淡出避免两份；**同一目的地常驻入口不得进岛**，如桌面地图入口唯一 = 左侧栏 `LocationCard`）；Tab 顺序 返回 → 标题/身份 → 行动区；标题按钮 `active:scale-[0.98]` 即时反馈。
-- **入口 API**：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省用 subtitle）/ `islandTrailing`（提供后页头原 trailing 入岛时隐藏）；`DetailHeader` 走同一 store 契约（作者/群/用户名 + 地点·时间 + trailing）。state 在 `stores/header-island.svelte.ts`（token 注册，路由切换不串台；`setProgress` 与 token 无关，首页岛同样消费）。
-- **首页（桌面端）**：无页面标题，采用「分段器 → 灵动岛」滚动交接（`components/home/HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts` + `lib/island-handoff.ts`）：内容区分段器按相对 52px 顶栏的位置每帧算滚动进度，交接给顶栏灵动岛（当前信息流 + 语境说明 + 切换动作 + 阅读进度圆环）；回到顶部/切换后交接沿原路径反向、分段器接管。移动/平板仍在页内品牌头下渲染同一分段器；首页不注册 `headerIsland`。
-- **新增页面接岛**：默认 sticky 页头自动入岛；需要保留页面工具（搜索/地图/编辑等）时把 ≤2 个入口放进 `islandTrailing`，并把「会丢失的入口」从页头 trailing 移入岛（或同时在岛提供）；integrated hub 页同样适用。禁止另造一套顶栏浮层。
-- 验证：滚动后 `[data-desktop-dynamic-island]` 文本正确、`main header[data-island-visible]="true"`、hover 不改宽度（材质/投影变化）、回顶消失、短页无岛；headless 下滚动后先截图泵帧再断言；入场动效可采样 `getComputedStyle(island).transform`（前几帧应为锚点位移+缩放，300ms 后为 none）。
+- **唯一形态实现**：`components/layout/page/IslandCapsule.svelte`（外壳/交互/展开容器/进度圆环）；
+  `PageIsland.svelte` 组合业务内容（leading/标题/默认面板）；首页 `HomeDesktop`、搜索页
+  `search/+page.svelte` 直接向 store 注册；`DesktopLayout` 在顶栏中央绝对定位渲染。
+- **桌面页头**：标准 `PageHeader` 默认 `desktopVisible={false}` → `lg:hidden`（标题/副标题/`below`
+  筛选行都交给岛）；`/messages` 左栏传 `desktopVisible` 是登记例外。移动/平板不渲染岛、页头照常。
+- **形态**：常驻胶囊高 34px、宽 min 260/290 / max 380（center 搜索态 360/400）；展开中枢宽固定
+  440/460、头部行 44px、主体高度自适应。圆角常驻 `rounded-lg`(20px)（34px 高渲染即半高胶囊）、
+  展开 `rounded-xl`(24px)；宽度用 min/max-width 插值 + 高度 slide，220ms `--cst-ease-standard`；
+  **禁止 rounded-full 驱动展开**（9999px 会被钳制、末帧圆角骤降）；头部行两态常驻，不得整块换内容。
+- **岛内**：leading（返回/作者头像/`islandIcon`/微点）· title 12 + meta 11（或 `center` 自定义区）·
+  trailing ≤2 控件 · 最右 18px 阅读进度圆环（每帧写 `stroke-dashoffset`，无 CSS 过渡；同一读数只一处）。
+  hover/focus 只由外壳承载（实底 + accent 细边 + 抬升 + 轻缩放；标题区不再画独立灰底），除展开 morph
+  外不改宽度；`Esc`/点岛外空白收起。
+- **展开中枢**：`PageHeader` 有 `below` 时自动映射（筛选/工具行 + `islandTrailing`/`trailing` + Esc/回顶）；
+  `DetailHeader` 为作者名片面板；首页/搜索页自定义。面板底部统一「Esc 收起 / 平滑回顶」。
+- **注册 API**：`PageHeader` 的 `island`（默认 true）/`islandMeta`/`islandTrailing`/`islandExpanded`/
+  `islandIcon`；`DetailHeader` 走同一 store 契约；state 在 `stores/header-island.svelte.ts`
+  （token 注册、最后注册者生效、路由切换不串台）；阅读进度由唯一滚动 owner `RoutedContentViewport` 上报。
+- **新增页面接岛**：用 `PageHeader`/`DetailHeader` 即自动注册；桌面端页头隐藏后仍需保留的页面工具
+  放进 `islandTrailing` 或 `islandExpanded`；禁止另造顶栏浮层。
+- **验收**：1440 桌面岛内容与页面状态一致；展开/收起帧采样宽度 290→460、圆角仅 20~24px、头部 34→44px
+  （首帧不塌陷）；hover 不改布局；移动/平板不出现岛。
 
 ## 数据量自适应（0 / 1 / 2 / 3+ / 大量）
 

@@ -83,9 +83,9 @@ import {
 		onBack?: () => void;
 		backLabel?: string;
 		trailing?: Snippet;
-		/** 桌面端滚动后交给顶栏灵动岛的右侧行动区（≤2 个控件）。提供后页头 trailing 入岛时隐藏，避免重复。 */
+		/** 桌面端顶栏灵动岛的右侧行动区（≤2 个控件）；桌面端页头整体隐藏，移动/平板仍用页头 trailing。 */
 		islandTrailing?: Snippet;
-		/** 桌面端滚动后是否把标题/上下文交给顶栏灵动岛（默认开启；面板内嵌页头可传 false）。 */
+		/** 桌面端是否注册顶栏灵动岛（默认 true；floating 变体不注册，面板内嵌页头可传 false）。 */
 		island?: boolean;
 		/** 岛上的副信息（缺省用 subtitle）。 */
 		islandMeta?: string;
@@ -111,11 +111,11 @@ import {
 	const floating = $derived(variant === 'floating');
 	const integrated = $derived(variant === 'integrated');
 
-		// ── 页面锚点岛（Page Island，仅桌面端）：滚动驱动交接 ─────────────────
-	// 交接进度 p（0→1）直接由滚动位置算出（lib/island-handoff.ts），岛的位置/尺寸逐帧插值：
-	// 滚动停在哪交接就停在哪、反向滚动完全可逆——对齐 iOS 大标题收进导航栏的交互模型。
-	// 不再用「时长动画」：时长动画开始后不跟手（用户继续滚它按自己节奏走），回滚还要等它播完，
-	// 观感就是「不自然」。token 保证路由切换/多页头时不串台。
+	// ── 页面锚点岛（Page Island，仅桌面端）：注册即常驻 ─────────────────
+	// 桌面端页头默认整体隐藏（desktopVisible=false），标题/上下文/行动交给顶栏常驻岛；
+	// 岛不做滚动显隐/飞行动画；页头仍按滚动位置产出交接帧 p（lib/island-handoff.ts），
+	// 仅用于页面侧 band 退场、inert/aria 与测试钩子；token 保证路由切换/多页头时不串台。
+
 	const islandToken: IslandToken = Symbol('page-header-island');
 	const islandEnabled = $derived(island && !floating && platform.platform === 'desktop');
 	/** 吸顶页头：标题不会自己滚走，用滚动窗口驱动交接；integrated 页头则用锚点位置。 */
@@ -375,7 +375,7 @@ import {
 	aria-hidden={islandBandHidden ? 'true' : undefined}
 	inert={islandBandHidden}
 	class={cn(
-		// 阈值触发交接：吸顶页头淡出增加 180ms snappy 过渡，与顶栏灵动岛 180ms 入场动效严格对称
+		// 页头 band 退场过渡（桌面端页头隐藏时无可见效果；移动/平板不启用岛）
 		'shrink-0',
 		islandHandoffTrigger && 'transition-opacity duration-snappy ease-standard',
 		integrated
@@ -386,7 +386,7 @@ import {
 						'page-header-scroll max-sm:bg-surface-page/85 max-sm:backdrop-blur-md max-sm:border-b-0',
 						sticky && 'sticky top-0 z-[var(--cst-z-sticky)]',
 						scrolled && 'page-header-scrolled',
-						// 岛已接管：整条页头已由 handoffRecede 淡到 0（逐帧、可逆），这里只切断指针事件。
+						// 页头 band 已由 handoffRecede 逐帧淡出（可逆），这里只切断指针事件。
 						islandBandHidden && 'pointer-events-none'
 					],
 		!desktopVisible && 'lg:hidden',
@@ -396,7 +396,7 @@ import {
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 		{#if integrated}
 			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；桌面/平板无背景/边框/吸顶，移动端例外吸顶 -->
-			<!-- 桌面端标题栏由顶栏灵动岛常驻承担，内页容器在桌面端统一 hidden 隐藏，同时保留语义无障碍 -->
+			<!-- 桌面端整条页头隐藏（`lg:hidden`），标题/筛选由常驻灵动岛承担；移动/平板照常渲染 -->
 			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
 					data-island-handoff={islandActive ? 'true' : undefined}
@@ -425,7 +425,7 @@ import {
 						</p>
 					{/if}
 				</div>
-				<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
+				<!-- 桌面端页头隐藏，行动区由岛 trailing 承担；移动/平板仍渲染本 trailing（岛不出现） -->
 				{#if trailing}
 					<div class="flex shrink-0 items-center gap-2">
 						{@render trailing()}
@@ -503,7 +503,7 @@ import {
 					</div>
 				{/if}
 			</div>
-			<!-- 入岛后若岛接管了行动区，页头 trailing 淡出（保留占位、不瞬时抽走），同一动作不出现两份 -->
+			<!-- 桌面端页头隐藏，行动区由岛 trailing 承担；移动/平板仍渲染本 trailing（岛不出现） -->
 			{#if trailing}
 				<div class="shrink-0">
 					{@render trailing()}

@@ -4,17 +4,17 @@ import { publishHandoff } from '@/lib/island-handoff';
 
 // PageIsland（原 header-island）——桌面端顶栏中央「页面锚点岛」的状态单例。
 //
-// 目标：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态/行动）
-// 固定到 52px 顶栏中央，用户自由滚动也不丢失上下文。
+// 目标：桌面端把页面级上下文（标题/身份/状态/行动）固定到 52px 顶栏中央；页面注册即常驻
+// （与滚动无关，滚动只驱动最右阅读进度圆环），由注册方决定展开控制中枢的内容。
 //
 // 注册契约：
 //   - 每个页面（或详情页头）用一个 token 注册；同一时刻只有最后注册者生效（active）。
-//   - 页面用 setHandoff 上报「标题 → 岛」的滚动交接进度 p（0→1）；store 只存状态与内容，
-//     不做滚动监听（监听归 PageHeader/DetailHeader）。
+//   - 页面用 setHandoff 上报页头 band 的交接进度 p（0→1）：现只用于页面侧退场、inert/aria
+//     与测试钩子，岛本体常驻不再消费（不做滚动显隐/飞行动画）。
 //   - release 只释放自己的 token，避免路由切换时旧页面把新页面的岛关掉；
-//     注册/释放都会把交接归零 —— 路由切换时旧岛直接消失，不会再出现「飞回上一页标题」的幽灵动画。
+//     注册/释放都会把交接归零，路由切换不串台。
 //
-// 内容模型（三段式）：[leading: 返回/头像] · [title + meta] · [trailing: ≤2 行动]
+// 内容模型（三段式）：[leading: 返回/头像] · [title + meta] · [trailing: ≤2 行动]；另有 center / expanded。
 
 export interface AuthorInfo {
 	id?: string;
@@ -57,15 +57,15 @@ let currentToken: IslandToken | null = null;
 class PageIslandStore {
 	/** 是否已有页面注册（路由切换时用于避免残留） */
 	active = $state(false);
-	/** 交接是否已开始（默认常驻下注册即生效，供旧交接机制与容器使用） */
+	/** 页头交接进度 >0（页面侧状态；岛本体常驻，不据此显隐） */
 	visible = $state(false);
-	/** 交接是否已基本落位（p>0.55，滞回）：用于页头 inert / 无障碍不可达。 */
+	/** 页头交接是否已基本落位（p>0.55）：用于页头 band inert/aria 与移动端页内工具行状态。 */
 	settled = $state(false);
 
 	/**
 	 * 当前页面阅读进度（0–100）。由唯一滚动承载区 RoutedContentViewport 写入，
 	 * 顶栏岛底部进度条消费（首页信息流岛与通用页面岛共用同一进度）。
-	 * 与注册 token 无关：首页不注册岛，但同样需要进度。
+	 * 与注册 token 无关：首页/搜索页自定义注册，也消费同一进度。
 	 */
 	progress = $state(0);
 
@@ -108,8 +108,8 @@ class PageIslandStore {
 	}
 
 	/**
-	 * 滚动交接进度（滚动触发方每帧调用）；非当前持有者忽略。
-	 * p=0 标题完整可见、岛不存在；p=1 标题已进顶栏、岛完全落位。
+	 * 页头 band 交接进度（滚动触发方每帧调用）；非当前持有者忽略。
+	 * p=0 页头完整可见；p=1 页头 band 已退场（岛本体常驻，与 p 无关）。
 	 * source 为锚点当前矩形（非吸顶页头每帧跟手更新；吸顶页头为固定快照）。
 	 */
 	setHandoff(token: IslandToken, p: number, source: IslandRect | null) {

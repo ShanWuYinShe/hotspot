@@ -1211,127 +1211,119 @@ eager 图各 2 张且像素 diff 0 回归。
 
 ## 22. 页面锚点岛（Page Island，桌面端）
 
-**目标**：把「会随滚动离开视口、但用户随时可能需要」的常驻信息（标题/身份/状态）与页面主行动
-固定到 52px 顶栏中央，用户自由滚动也不丢上下文，并能**直接操作**而不是只读提示；
-短页/无滚动页不出岛（没有信息丢失，就不打扰）。
+**目标**：桌面端把页面级上下文（标题 / 身份 / 状态）与页面主行动固定在 52px 顶栏中央，
+正文区不再被页头标题栏占用；上下文随路由实时同步，并可向下展开控制中枢直接操作。
 
-**唯一形态实现**：`components/layout/page/IslandCapsule.svelte`（外壳 / hover 呼吸 / 右侧阅读进度圆环 / 滚动交接钩子）；
-页面锚点岛 `PageIsland.svelte` 与首页信息流岛（`components/home/desktop/HomeDesktop.svelte` 注册内容）只组合它并注入内容与行为。
-两者都由 `DesktopLayout` 绝对居中渲染在顶栏，`[data-desktop-dynamic-island]` 为稳定测试钩子。
+**当前模型：默认常驻 + 向下展开（滚动不参与岛本体）**
 
-**形态（紧凑胶囊，h-8.5 = 34px）**
+- 桌面端页面注册后岛**常驻显示**，与滚动位置无关；不做滚动飞行/缩放入场，也不因滚动方向隐藏。
+- 桌面端标准页头（`PageHeader`）默认 `desktopVisible={false}` → `lg:hidden`：标题、副标题、
+  `below` 筛选行在桌面端都不在正文里显示，全部由岛承担；移动/平板仍显示原页头，且不渲染岛。
+  `/messages` 左栏是登记例外（传 `desktopVisible`，栏头在桌面端保留，岛同时提供全局上下文）。
+- 点击岛右侧展开控件向下展开「控制中枢」：承载分类/筛选/页面工具/身份名片等；
+  `Esc`、点击岛外空白、标题/上下文变化都会自动收起。
+- 首页（无页面标题）由 `HomeDesktop` 注册；搜索页桌面端由 `search/+page.svelte` 注册（内联搜索输入框）。
 
-- `leading`：返回按钮（二级页/详情页注册了 `onBack` 才有）/ 作者头像（20px 身份名片，普通页面无）。
-- `title + meta`：标题 12px semibold 单行截断；meta 11px secondary（计数 / 位置 / 结果数 / 当前信息流），
-  详情页缺省回退「作者位置 · 时间」，最多两个事实。
-- `trailing`：每页 ≤2 个行动控件（允许写操作：清空搜索 / 全部已读 / 编辑 / 地图 / 收藏…），状态与页面同步。
-- `progress`：胶囊**最右侧**的 18px 阅读进度圆环（accent 弧 + 极淡底轨，0% 空环、100% 收成整圆；
-  `aria-hidden` 纯展示），由唯一滚动承载区上报 0–100，弧长每帧直接跟随滚动（**不加 CSS 过渡**，
-  否则会落后滚动约 150ms）。
-  **同一读数只允许这一处表达**：不提供下划线 / hover 百分比等第二种同值表达；圆环固定在最右，
-  有行动区时位于行动区外侧（行动区仍在圆环左侧）。
-- **圆角与展开 morph（连续形变契约）**：常驻态 `rounded-lg`(20px)——34px 高度下渲染即半高胶囊，
-  但有限值让展开/收起全程只插值 20→24px；`rounded-full` 的 9999px 会被浏览器按半高钳制、直到
-  过渡末帧才骤降到卡片圆角，观感是「大圆角突然变小小圆角」（禁止回退）。展开态 `rounded-xl`(24px)。
-  宽度用 `min-width`/`max-width` 成对表达（`width:auto` 下 `min-width` 可插值，显式 `w-*` 会瞬跳），
-  与主体高度 slide 同为 220ms `--cst-ease-standard`；**头部行两态常驻**（只增高 34→44px 并原位
-  切换展开箭头/关闭钮），不做整块内容换位——否则展开首帧会闪出 2px 细线、标题闪一下再出现。
+**唯一形态实现**
 
-**何时出现：滚动驱动交接（scroll-linked，不做「滚动方向」花活）**
+- `components/layout/page/IslandCapsule.svelte`：外壳与交互唯一实现（尺寸 / 圆角 morph / 表面 /
+  hover / focus / 进度圆环 / 展开容器 / 键盘与外部点击收起）。桌面端仅此一处形态。
+- `components/layout/page/PageIsland.svelte`：页面锚点岛业务组合——`leading` 规则、标题/身份、
+  默认展开面板（页面控制 / 作者名片），把 store 内容注入 `IslandCapsule`。
+- `DesktopLayout.svelte` 在顶栏中央绝对定位渲染（52px 顶栏内按 34px 胶囊垂直居中）；
+  `[data-desktop-dynamic-island]` 为稳定测试钩子。
 
-交接进度 `p`（0→1）直接由滚动位置算出，逐帧写样式——**不再是「切显隐再播一段时长动画」**：
-滚动停在哪交接就停在哪，反向滚动完全可逆（对齐 iOS 大标题收进导航栏 / Material container transform
-的交互模型；时长动画开始后不跟手、回滚要等它播完，是「不自然」的根因）。实现见
-`lib/island-handoff.ts`（`publishHandoff` / `islandHandoff` / `handoffRecede`）。
+**形态与几何（强制）**
 
-1. 吸顶页头（PageHeader 默认 / DetailHeader）：滚动窗口 120→260px（DetailHeader 为 160→280px，
-   均乘 `platform.uiScale`）把 `p` 从 0 推到 1；`p<0.5` 页头保持清晰可读（岛从标题位置升起并从其上掠过），
-   后段页头快速淡出（`handoffRecede`，逐帧写 opacity，滚动反向时同样逐帧恢复）。
-2. 非吸顶页头（PageHeader `integrated` / `sticky={false}`）：`p` 由标题「文字矩形」相对 52px 顶栏
-   的位置算出——标题开始没入顶栏时 `p=0`，完全被裁掉时 `p=1`；`p` 每帧跟随标题，天然可逆。
-3. **入岛 = 整块页头交接**（不只是标题）：吸顶页头的标题、副标题、下方筛选/标签/工具行、页头 trailing
-   随页头淡出（`inert` 避免键盘落到不可见控件，保留高度不产生 CLS）；`integrated` 页头的标题/筛选
-   随内容自然滚走，不需要额外淡出。内容区只剩内容本身——岛存在的意义就是完全干净、沉浸的浏览画布；
-   想改筛选/看全页头，点岛标题回锚点即可（平滑滚动会让交接沿原路径反向吐回）。
-   被隐藏的筛选状态不能丢：页面把当前筛选/分类/模块名写进 `islandMeta`（如「摄影 · 云龙湖 · 5km 内 · 8 人」）。
-4. 详情页：`DetailHeader` 滚动 >160px 后收敛到同一顶栏岛（作者/群/用户名 + 地点·时间 + 行动区）；
-   移动/平板保留页面内吸顶岛。
-5. **只有滚动会让锚点丢失时才出岛**：无滚动 / 头部常驻不丢信息的页面不出岛——`/messages`（左右列头部常驻）、
-   `/map`（全画布）、`/login`、`/register`（无外壳）；面板内嵌页头（`/messages` 左栏、`/map` 左侧面板）
-   所在面板不承载主滚动 owner，标题不会随页面滚走，因此不会出岛。
-   内容不足一屏的页面（如搜索页发现态）标题不会离开视口，岛自然不出现。
-6. 岛**绝不因滚动方向自动隐藏**、不在滚动中抖动：显隐只由锚点进出视口与滞回阈值决定。
+| 项 | 契约 |
+|---|---|
+| 常驻胶囊 | 高 34px（`h-8.5`）；宽 `min-w-[260px] sm:min-w-[290px]`、`max-w-[380px]`（内容驱动：普通页 290，详情页随标题/行动区约 290–343，搜索态 400）；带 `center` 的搜索态 `min/max-w-[360px] sm:400px` |
+| 展开中枢 | 宽固定 440/460px（`min-w` + `max-w` 成对表达）；头部行高 44px（`h-11`，`rounded-t-xl` + `bg-surface-subtle/25` + 底分割线）；主体与底栏高度自适应，底栏 `rounded-b-xl` |
+| 圆角 morph | 常驻 `rounded-lg`(20px)——34px 高时渲染即半高胶囊；展开 `rounded-xl`(24px)。**禁止常驻态 `rounded-full`**：9999px 会被浏览器按半高钳制，展开过渡末帧才骤降到 24px，观感是「大圆角突然变小小圆角」 |
+| 形变节奏 | 宽度/高度/圆角同步 220ms `duration-standard` + `--cst-ease-standard`：宽度靠 min/max-width 插值（`width:auto` 不可插值，禁止显式 `w-*` 驱动展开），高度由主体 slide 驱动，圆角只走 20→24px。`prefers-reduced-motion` 由全局规则瞬时化 |
+| 表面 | 常驻 `bg-surface-primary/75 + border-border-default/45 + shadow-xs + backdrop-blur-xl`；hover / focus-within 升 `bg-surface-primary/95 + border-accent-border/50 + shadow-raised-sm` + `scale(1.01)`；展开态 `bg-surface-primary/95 + border-accent-border/40 + shadow-modal + backdrop-blur-2xl` |
+| 层级 | 顶栏内 overlay（`z-50`），不参与页面布局 → 无 CLS |
 
-7. 首页桌面：无页面标题，采用「内容区分段器 → 顶栏灵动岛」**滚动驱动**交接
-   （`HomeFeedIsland.svelte` + `stores/home-feed.svelte.ts` + `lib/island-handoff.ts`）：`p` 由分段器
-   相对顶栏的位置算出，岛随滚动浮现/收回（当前信息流 + 语境 + 切换），切换信息流回到顶部时交接沿原路径反向；
-   移动/平板仍在页内品牌头下。首页不注册 `headerIsland`，进度圆环同样消费 `headerIsland.progress`。
+**内容（`PageIsland` 组合规则）**
 
-**交接动效（`lib/island-handoff.ts`，滚动驱动）**
+- `leading`：返回按钮（注册 `onBack` 才有：`showBack` 为真）/ 作者头像 22px（`author` 身份模式）/
+  语义图标（`islandIcon`，22px accent 软底圆）/ 缺省 6px accent 微点。
+- 标题区：默认 `title` 12px semibold 单行截断 + `meta` 11px secondary；`meta` 变化时 120ms 淡入。
+  详情页 `author` 模式下 title = 作者/实体名，meta 缺省回退「作者地点 · 时间」。
+- `center`：自定义交互区（搜索页内联搜索框），出现时替代默认标题文本。
+- `trailing`：页面行动区，≤2 个控件（32px 命中 + `aria-label`）。
+- 进度圆环：最右侧 18px（accent 弧 + 极淡底轨，`aria-hidden` 纯展示），弧长每帧直接写
+  `stroke-dashoffset`（无 CSS 过渡）；同一读数只此一处，不提供百分比/下划线等第二种表达。
 
-显隐切换那一刻不再「抓锚点矩形 + 播 340/300ms 时长动画」，而是让页头/首页在滚动回调里算出 `p`
-并 `publishHandoff({ p, source })`：
+**展开中枢（注册方决定内容）**
 
-- `source`：锚点矩形（页头标题取**文字**矩形 = Range 包围盒，不是块级 h1 的整列宽度；吸顶页头的标题不动，
-  取一次快照并把 y 收紧进 52px 顶栏带——交接沿顶栏横向滑入，不掠过页头下方的正文；
-  `integrated` 页头/首页分段器每帧按「文档绝对 top - 滚动量」更新，标题真正被「吸」进顶栏）。
-- 岛侧 `use:islandHandoff`：`transform` 从锚点到顶栏泊位做 smoothstep 插值（中心对齐 + 长宽比缩放，
-  起跳帧与锚点严格同框；只对极端长宽比做宽松保护），`opacity` 前段显影，`--cst-island-content`
-  在后段（缓动后 55%–95%）显字——整胶囊 scale 期间正文是缩放态，先隐后显才不会有「糊字掠过顶栏」。
-  `p=1` 时清空内联 `transform`，把 hover 的 1px 上移交还给 CSS。
-- 页头侧 `use:handoffRecede`：`p<0.5` 时 opacity 保持 1，`p>0.5` 后在 35% 的进度跨度内快速淡出——
-  避免「半透明页头 + 下方内容滚动」长时间叠字的双曝光；`.page-header-scroll` **不得**再给 opacity
-  挂 CSS transition（逐帧写入会被过渡再平滑一次，交接慢半拍）。
-- 只动 `transform`/`opacity`（合成器属性，胶囊 `contain: layout paint`）→ 不触发布局；每帧读的都是
-  缓存的绝对位置，不读布局。reduced-motion 下退化为「过闸即切换」（p>0.5 直接终态），不做连续位移。
-- 路由切换：`register/release` 都会 `publishHandoff(0)`，且岛没有时长退场动画 → 直接卸载，
-  不会在新页面上残留「飞回上一页标题」的动画。
+- `PageHeader`：传 `islandExpanded` 时用它；否则若页面有 `below`，自动映射为
+  `below`（筛选/标签/工具行）+ `islandTrailing`（缺省 `trailing`）+ 底部「Esc 收起 / 平滑回顶」。
+- `PageHeader` 无 `below` 且无 `islandExpanded`：`PageIsland` 的「页面控制与导航」默认面板（meta + trailing）。
+- `DetailHeader`：作者名片面板（头像 + 名称/角色徽章 + 地点·时间 + 「查看资料」主按钮）。
+- 首页：信息流频道面板（`为你推荐 / 正在关注` 分段切换 + 刷新动态）。
+- 搜索：搜索中枢面板（搜索类型/结果计数 + 热门话题）。
+- 面板底部统一「Esc 收起 / 平滑回顶」（滚动 owner `#main-content`，reduced 直接跳）。
 
 **岛内交互（统一契约）**
 
 | 元素 | 交互 | 说明 |
-|------|------|------|
-| 返回（leading） | 点击返回上一页/关闭 | 仅注册 `onBack` 的页面出现；入岛后页头返回同步淡出，同一动作不重复 |
-| 头像 + 标题（中间） | 点击回到页面锚点 | 吸顶页头→页首；非吸顶页头→标题位置；详情页身份卡→作者主页（`onTitleClick` 语义由页面决定） |
-| meta（第二行） | 纯展示 | 页面状态实时同步（搜索：「词 · N 个结果」；首页：当前信息流语境；筛选页：当前标签/分类 + 位置/计数——筛选标签行已随页头退场） |
-| 行动区（trailing） | 点击执行页面主行动 | ≤2 控件、32px 命中、带 `aria-label`；页头原 trailing 入岛时淡出（保留占位），避免两份。**同一目的地的常驻入口不得再进岛**：桌面地图入口唯一 = 左侧栏 LocationCard（折叠态仍可见），nearby 系页头的搜索/地图工具只在移动/平板渲染 |
-| 整个胶囊 | hover / 键盘 focus-within → 表面「醒」起来 | 半透明玻璃转实底 `bg-surface-primary/95` + accent 细边 + `shadow-raised-sm` + 轻微放大（scale 1.01）；**只有展开 morph 才改变宽度**，hover 全程不位移布局。反馈统一由外壳承载：**标题区不画独立 hover 灰底**（显式 `hover:bg-transparent` 退出全局按钮兜底填充，避免胶囊内出现一块覆盖范围尴尬的方形块），键盘聚焦时标题按钮有可见 focus ring |
-| 右侧展开控件 | 点击展开/收起控制中枢 | 常驻态为 chevron（hover 只提亮图标 + 自身圆形淡底）；展开态同一位置替换为关闭钮；Esc / 点击岛外空白同样收起 |
-| 右侧进度圆环 | 只读 | 胶囊最右侧 18px 圆环（accent 弧 + 极淡底轨）跟随页面阅读进度增长，每帧直接写 `stroke-dashoffset`（无 CSS 过渡）；不做点击/拖拽 |
-| 键盘 | Tab 顺序 返回 → 标题/身份 → 行动区 | 全部控件 `focus-ring`；标题按钮 `active:scale-[0.98]` 即时反馈 |
+|---|---|---|
+| 整个胶囊 | hover / 键盘 focus-within → 表面「醒」起来 | 半透明玻璃转实底 + accent 细边 + 抬升 + 轻微放大；**除展开 morph 外不改宽度**，不在 hover 时位移布局。反馈统一由外壳承载 |
+| 标题区 | 点击执行 `onTitleClick` | 语义由页面给：页面岛 = 回锚点/回顶，详情 = 进作者主页，首页 = 回顶；展开态下点击同时收起。**不画独立 hover 灰底**（显式 `hover:bg-transparent` 退出全局按钮兜底填充），键盘聚焦有可见 focus ring |
+| 返回（leading） | 点击返回上一页/关闭 | 仅注册 `onBack` 的页面出现 |
+| 行动区（trailing） | 点击执行页面主行动 | ≤2 控件、32px 命中、带 `aria-label`；展开后头部不显示行动区，行动收进面板，避免同一动作两份 |
+| 展开控件 | 点击展开/收起 | 常驻态 chevron（`aria-label="展开控制面板"`），hover 只提亮图标 + 自身圆形淡底；展开态同位置换成关闭钮（`aria-label="收起控制面板"`） |
+| 进度圆环 | 只读 | 不做点击/拖拽；展开时同样显示（位置不跳动） |
+| 键盘 | `Tab`：leading → 标题/center → trailing → 展开控件 | 全部控件 `focus-ring`；`Esc` 收起；不抢页面焦点 |
+
+**状态与注册（API）**
+
+- `stores/header-island.svelte.ts` 单例：`register(token, config)` / `update(token, config)` / `release(token)`。
+  同一时刻**最后注册者生效**（嵌套页头按挂载顺序，如消息页选中会话后由会话页头接管岛）；
+  注册/释放都会把交接帧归零，路由切换不串台。
+- `config`：`title` / `meta` / `author` / `onBack` / `backLabel` / `onAuthorClick` / `onTitleClick` /
+  `icon` / `center` / `trailing` / `expanded`。
+- 注册方：`PageHeader`（`island` 默认 true；`floating` 变体不注册）、`DetailHeader`（桌面）、
+  `HomeDesktop`、`search/+page.svelte`；面板内嵌页头（如地图左侧面板）同样注册，内容随页面结构生效。
+- 阅读进度：唯一滚动 owner `RoutedContentViewport` 的 `<main id="main-content">` 上报（passive + rAF），
+  `headerIsland.setProgress(0–100)` 与注册 token 无关（首页/搜索同样消费）。
+
+**与滚动的关系（现行）**
+
+- 岛常驻，滚动**不**影响岛本体的显隐/位置；滚动唯一驱动的是最右阅读进度圆环。
+- `PageHeader` / `DetailHeader` 仍在上报 `publishHandoff` 帧（`lib/island-handoff.ts`），供页头 band
+  退场与 `data-island-*` 测试钩子使用；桌面端标准页头已隐藏，这些帧当前不改变岛本体。
+  `lib/island-handoff.ts` 的飞行 action（`islandHandoff`）与 `.island-flight-*` / `.island-bloom` /
+  `.island-land` / `--cst-island-content` 已不在岛渲染路径上（保留实现与单测，属待清理 backlog）。
+- 移动/平板 `islandEnabled=false`，不注册、不渲染岛，页头行为不变。
+
+**无障碍 / 测试钩子 / 性能**
+
+- `role="group"` + `aria-label`；标题按钮、返回、展开/收起、清空等全部带可访问名；`Esc` 收起；
+  键盘焦点可见；岛内文字不重复播报。
+- 测试钩子：岛根 `data-desktop-dynamic-island`；进度圆环 `data-island-progress-ring` /
+  `data-island-progress`；页面侧 `data-island-visible` / `data-island-band-hidden` / `data-island-handoff`
+  （页面退场与断言用，不参与岛样式）。
+- 性能：岛为顶栏 overlay，无 CLS；展开/收起是用户点击触发的一次布局动画（宽/高/圆角一致节奏）；
+  进度圆环每帧只写 `stroke-dashoffset`；hover/focus 只过渡颜色/投影/轻缩放。
 
 **按页内容映射（现状基线）**
 
-| 页面类型 | title | meta | trailing |
-|---|---|---|---|
-| 首页（HomeDesktop 注册） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | 切换信息流 |
-| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/notify、/me/relationships、/me/reports） | 页面标题 | 当前筛选标签/分类/tab + 计数 / 位置 / 未读数 | 全部已读 / 清空搜索等 ≤2 入口（地图不进岛：桌面入口唯一=侧栏 LocationCard；移动/平板岛不出现，页头保留地图工具） |
-| /nearby 枢纽 | 附近 | 地点 · 5km 内 | 无（桌面地图入口唯一=侧栏 LocationCard） |
-| 搜索 | 搜索 | 「词 · N 个结果」/ 搜索中 / 失败 / 无匹配 | 清空搜索（有词时） |
-| 详情（瞬间/群组/他人主页） | 作者名 / 实体名 | 作者地点 · 时间 | 页面主行动 ≤2 |
-| /me 个人中心、/admin、/settings 等 | 页面标题 | 计数 / 状态 | 编辑 / 管理入口 |
+| 页面类型 | title | meta | trailing | 展开中枢 |
+|---|---|---|---|---|
+| 首页 /（`HomeDesktop` 注册） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | — | 信息流频道切换（segmented）+ 刷新动态 |
+| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify） | 页面标题 | 当前筛选/分类/tab + 计数 / 未读数（如「附近的人 · … · 20 人」） | 全部已读（/notify）/ — | 页面 `below` 筛选/标签/工具行（分类、排序、话题等）+ trailing + Esc/回顶 |
+| /nearby 枢纽 | 附近 | 地点 · 5km 内 | — | 页面控制与导航（当前定位） |
+| /search（自定义注册） | —（`center` 内联搜索框 + ⌘K 提示） | — | 清空搜索（有词时） | 搜索中枢（类型/结果计数 + 热门话题） |
+| 详情（瞬间/群组/他人主页，`DetailHeader`） | 作者名 / 实体名 | 作者地点 · 时间；群组为分类 · 成员数 | 分享动态 / 分享资料 / 更多操作（≤2） | 作者/用户/群组卡（头像 + 名称/角色 + 地点·时间 + 查看资料/查看群组） |
+| /messages（左栏 PageHeader 桌面可见的登记例外） | 消息 | 全部已读 | — | 会话操作（全部已读 / 发起新会话 / 创建群聊）+ 页面级页脚 + Esc/回顶 |
+| /map（左侧面板 PageHeader 注册） | 位置选择 | 地点 · 5km 内 | — | 位置与漫游锚点（重置默认 / 完成返回）+ 返回上一页页脚 + Esc/回顶 |
+| /me、/me/edit、/settings、/admin、/admin/reports 等 | 页面标题（/me/edit 无 meta） | 计数 / 模块 / 平台管理 | 编辑资料 / 保存 / 返回概览（按页；/settings 等无 trailing） | 页面控制与导航（页面工具；/admin 无权限时仅 Esc/回顶） |
 
-**API / 实现**
+> 已知问题（待清理，不计入契约）：`/me/relationships`、`/me/reports`、`/admin`、`/admin/reports` 的展开面板出现两组「Esc 收起 / 平滑回顶」（页面级页脚与全局页脚重复）；`/admin`、`/admin/reports` 在无权限账号下仍显示管理上下文。
 
-- 状态：`stores/header-island.svelte.ts`（token 注册 + title/meta/author/trailing + 交接派生状态
-  `visible`/`settled` + `progress`；`setHandoff(token, p, source)` 由页头/详情页在滚动回调里每帧上报，
-  `setProgress` 与 token 无关、首页岛同样消费；阅读进度由唯一滚动 owner `RoutedContentViewport` passive + rAF 上报）。
-- 交接：`lib/island-handoff.ts`（`publishHandoff` / `subscribeHandoff` + `islandHandoff` / `handoffRecede` 两个 action）；
-  `lib/island-morph.ts` 只保留锚点矩形与几何差（Range 文字矩形、中心对齐缩放）。
-- 入口：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省 subtitle）/ `islandTrailing`；
-  `DetailHeader` 走同一 store 契约；页面无 PageHeader（首页）用 `HomeFeedIsland` + `homeFeed.islandVisible`。
-- 视觉：h-8.5（34px）胶囊、`bg-surface-primary/75 + backdrop-blur-xl + border + shadow-xs`，
-  hover/focus 升 `bg-surface-primary/95 + accent 细边 + shadow-raised-sm`；岛常驻显示（无滚动入场
-  时长动画，路由切换直接卸载），展开/收起是 220ms 的宽度/圆角/高度连续 morph（reduced-motion 下
-  由全局降级规则瞬时化）；hover/focus 只过渡颜色/投影/轻缩放，不改变宽度、不触发重排。
-- 无障碍：`role="group"` + `aria-label`；岛内文字不重复播报（标题按钮有 aria-label，h1 仍在 DOM/landmark）；
-  不抢焦点；带返回的页头入岛后返回动作移到岛 leading，页头标题/返回同步淡出（同一动作不出现两份）。
-- 性能：每页一个触发源（页头/详情页各自的滚动监听算出交接进度，无共享全局 scroll 监听），每帧只写 style/transform、不读布局（锚点绝对位置缓存）；阅读进度 listener 由滚动 owner 统一承担（passive + rAF 节流）；
-  岛为顶栏 overlay，不参与布局 → 无 CLS。
-- 测试钩子：页头暴露 `data-island-visible` / `data-island-band-hidden` / `data-island-handoff`（触发与交接断言用；供单测与排障，不是样式契约）；
-  岛根节点固定 `data-desktop-dynamic-island`，进度圆环为 `data-island-progress-ring` / `data-island-progress`，
-  组件契约见 `PageIsland.test.ts`、交接数学见 `island-handoff.test.ts`。
-- 后续动效打磨的待做项、复测方法与踩坑记录见 `docs/frontend-animation-handoff.md`（含筛选/排序过渡、画廊交叉淡入、拖拽关闭等）。
+**动效待做项与复测方法**见 `docs/frontend-animation-handoff.md`（含筛选/排序过渡、画廊交叉淡入、拖拽关闭等）。
 
 ## 23. 大屏 UI 等比放大（≥1920）
 
@@ -1342,7 +1334,7 @@ eager 图各 2 张且像素 diff 0 回归。
 - **根字号**：`html { font-size: clamp(1rem, calc(100vw / 120), 2rem) }`（`styles/theme/shared.css`）：1920→16px、2560→21.33px、3840→32px，上限 2×。所有 rem 尺寸（Tailwind spacing/字号/圆角、布局 token、组件 rem 化尺寸）自动等比放大；≤1920 与移动/平板仍为 16px，基线零变化。
 - **字号 token 用 rem**：`--text-xxs/xs/sm/md` = 0.625/0.6875/0.75/0.875rem（10/11/12/14px @16 基准）；跨端刻度脚本按 16px 基准折算回 px 与鸿蒙 FONT.SIZE 对齐。
 - **数值型内联尺寸**：lucide `size={n}` 图标由 `svg.lucide[width][height]:not([class*='size-']) { zoom: var(--cst-ui-scale) }` 统一缩放（`app.html` 首帧写入、`platform` store resize 同步）；Avatar/ActionIconButton/PinMedia/Toggle 等在组件内 rem 化。新增代码禁止裸写 px 尺寸（1px 发丝线、地图瓦片 256px 除外）。
-- **JS 阈值**：滚动阈值（含吸顶页头交接窗口 120→260 / 160→280px）等乘 `platform.uiScale`（PageHeader/DetailHeader 已接）。
+- **JS 阈值**：滚动阈值（页头交接窗口 120→260px、`DetailHeader` 的 `scrollThreshold` 默认 48px）等乘 `platform.uiScale`（PageHeader/DetailHeader 已接）。
 - **验收**：1920 与既有基准一致；2560/3840 读 `getComputedStyle(document.documentElement).fontSize` 与侧栏/顶栏/正文字号，确认比值 = 视口宽度比（±1px）、无横向溢出。
 
 

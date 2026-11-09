@@ -805,9 +805,10 @@
     animation: cst-state-pop var(--cst-motion-standard) var(--cst-ease-bounce);
   }
 
-  /* 灵动岛阈值起飞变形进场动效：
+  /* [legacy·未接线] 灵动岛阈值起飞变形进场动效（现行岛为桌面端常驻模型，无调用方，保留待清理）：
      当滚动越过阈值时，微胶囊沿抛物线滑翔，灵动岛主体在着陆前保持隐蔽，
-     微胶囊抵达泊位瞬间（~60%）由内向外自然横向舒展绽放为完整晶体胶囊。 */
+     微胶囊抵达泊位瞬间（~60%）由内向外自然横向舒展绽放为完整晶体胶囊。
+     紧随其后的 island-bloom / island-land / island-flight-capsule 同样未接线。 */
   @keyframes cst-island-flight-enter {
     0% {
       transform: translate3d(var(--flight-dx, 0px), var(--flight-dy, 0px), 0) scale(var(--flight-scale-x, 1), var(--flight-scale-y, 1));
@@ -856,7 +857,7 @@
     will-change: transform, opacity;
   }
 
-  /* 页面标题进岛微动效：跨越阈值时，标题向微胶囊聚缩渐隐；回顶时自然绽放复原 */
+  /* [legacy·未接线] 页面标题进岛微动效（桌面页头隐藏后无可见效果，保留待清理） */
   [data-island-handoff] {
     transition: opacity 180ms cubic-bezier(0.4, 0, 0.2, 1),
                 transform 180ms cubic-bezier(0.4, 0, 0.2, 1);

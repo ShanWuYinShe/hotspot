@@ -48,11 +48,11 @@
 
 	let scrolled = $state(false);
 	let hidden = $state(false);
-	/** 交接是否已基本落位（达到滚动阈值）：决定页内工具行是否 aria-hidden / inert。 */
+	/** 交接是否已基本落位（达到滚动阈值）：决定移动/平板页内工具行是否 aria-hidden / inert。 */
 	let islandSettled = $state(false);
 	/** 桌面端交接的锚点快照：左侧工具行（返回 + 面包屑）在吸顶容器里位置稳定。 */
 	let islandSource: IslandRect | null = null;
-	// 详情页的桌面岛：滚动过阈值直接动画落位，token 保证路由切换不串台。
+	// 详情页的桌面岛：注册即常驻（滚动不再控制岛显隐），token 保证路由切换不串台。
 	const islandToken: IslandToken = Symbol('detail-header-island');
 
 	// 监听滚动与方向（向上微划滑入 / 向下深划避让 / 顶部常驻）
@@ -95,7 +95,7 @@
 
 			lastScrollTop = Math.max(0, current);
 
-			// 桌面端：在阈值直接用一个动画完成顶栏灵动岛交接（0 或 1），不再逐帧跟手变形
+			// 桌面端：交接帧只供页面侧断言/退场（岛本体常驻，不在阈值处做飞行/显隐）
 			if (platform.platform !== 'desktop') return;
 			headerIsland.setHandoff(
 				islandToken,
@@ -125,7 +125,7 @@
 	}
 
 	// ── 桌面端：页面锚点岛（顶栏中央）────────────────────────────────
-	// 详情页身份（作者/群/用户）在滚动离开首屏后交给顶栏岛；移动/平板保留页内吸顶岛。
+	// 详情页身份（作者/群/用户）由桌面端常驻顶栏岛承担；移动/平板在滚动过阈值后显示页内吸顶胶囊。
 
 	const effectiveAuthor = $derived(
 		author
@@ -166,7 +166,7 @@
 		});
 	});
 
-	// 把交接帧映射成少量响应式状态（几何由 lib/island-handoff.ts 的 action 逐帧写）。
+	// 把交接帧映射成少量响应式状态（岛常驻，这里只驱动页内工具行状态）。
 	$effect(() => {
 		if (platform.platform !== 'desktop') return;
 		return subscribeHandoff((frame) => {
@@ -186,7 +186,7 @@
 >
 	<ContentColumn {maxWidth} class={cn(contentClassName, 'lg:h-0')}>
 		<h1 class="sr-only">{entityName || category || '详情'}</h1>
-		<!-- 初始工具行与收敛态胶囊：滚动过阈值时工具行平滑淡出，桌面端由顶栏灵动岛直接动画完成展现 -->
+		<!-- 初始工具行与收敛态胶囊：滚动过阈值时工具行平滑淡出（移动/平板）；桌面端整条页头隐藏、由常驻岛承担身份 -->
 		<div class="relative h-10 lg:hidden">
 			<!-- ══ 初始态：两侧角落悬浮透亮光斑胶囊（返回 + 桌面实体面包屑 / 操作区）══ -->
 			<!-- 桌面端由顶栏灵动岛常驻呈现完整身份与操作，内页隐藏重复浮层 -->

@@ -1,73 +1,85 @@
-# 前端动效交接（灵动岛与全站衔接）
+# 前端动效交接（灵动岛与页头）
 
-> 本文件用于跨会话接手：记录**当前已生效的基线**、**交接机制速查**、**未完成项（可直接照做）**、**复测命令**。
+> 本文件用于跨会话接手：记录**当前已生效的灵动岛动效基线**、**滚动交接模块现状**、**未完成项**、**复测命令**。
 > 动效契约的权威描述在 `docs/design-system.md` §10 / §22；页面布局契约在 skill `hotspot-frontend-layout`。
 > 本文件不是规范，不要把它当作设计依据——规范以 design-system 为准。
 
 ## 0. 当前基线（勿回退）
 
-- **灵动岛形态**：h-9 胶囊，最右侧 18px 阅读进度圆环（accent 弧 + 极淡底轨，0% 空环 / 100% 整圆），
-  每帧直接写 `stroke-dashoffset`，**无 CSS 过渡**；行动区存在时圆环在行动区外侧（最右）。
-  唯一形态实现 `frontend/src/components/layout/page/IslandCapsule.svelte`。
-- **标题 → 岛：阈值触发从标题栏到灵动岛的平滑动画过渡（threshold-triggered transition）**，不再随滚动逐帧微插值：
-  - 详情页 / 页面在滚动达到阈值时上报落位状态（`p=1` 或 `0`）与标题栏锚点（`islandSource`）；
-  - 跨越阈值瞬间，`islandHandoff` 驱动灵动岛从标题栏胶囊的位置与尺寸平滑飞入顶栏中央泊位（260ms `cubic-bezier(0.16, 1, 0.3, 1)`），正文工具栏配合 CSS transition 平滑淡出；
-  - 回滚至阈值上方时，灵动岛向标题栏锚点位置平滑退回淡出（220ms），页面标题栏平滑恢复；
-  - 既避免了随滚动一帧一帧插值导致中途停滞变形与叠字卡顿，又完整保留了从标题栏到灵动岛的连续动画空间过渡；
-  - 灵动岛右侧阅读进度圆环依然跟随页面滚动进度实时更新。
-- **动态详情页菜单去重与功能完善**：
-  - 提取为独立的 `MomentActionMenu.svelte` 组件，各实例维护独立的 open 与 anchor，避免多处渲染时锚点被互相覆盖；
-  - 菜单去重：由于顶栏操作区已有独立外置的分享/复制链接图标按钮，`MomentActionMenu` 中复制链接设为可选并在详情页缺省略去，彻底消除菜单项与左侧分享按钮的重复；
-  - 菜单功能：访客视角提供刷新动态、举报动态；作者视角提供编辑动态、删除动态，并补齐刷新与复制的 Toast 反馈及路由参数兜底。
-- **页头退场**：`handoffRecede` 逐帧写 inline opacity；`p<0.5` 保持清晰可读，后 35% 进度跨度内快速淡出
-  （避免半透明页头与滚动的正文长时间叠字双曝光）。`.page-header-scroll` 的 transition 列表**不含 opacity**。
-- **首页信息流岛**同样走滚动交接（原 IntersectionObserver + 时长动画已删除）。
-- **reduced-motion**：过闸即切换（`p>0.5` 直接终态），不做连续位移。
-- **文档已同步**：design-system §22、ui-components、frontend/AGENTS.md、layout skill。
+- **灵动岛模型**：桌面端「默认常驻 + 点击向下展开控制中枢」，与滚动无关；移动/平板不渲染岛。
+  形态/尺寸/交互契约见 §22。唯一形态实现 `frontend/src/components/layout/page/IslandCapsule.svelte`，
+  业务组合 `PageIsland.svelte`；首页 `HomeDesktop`、搜索页 `search/+page.svelte` 直接注册 store。
+- **展开/收起连续 morph**（用户点展开箭头触发，220ms `--cst-ease-standard`）：
+  - 常驻 `rounded-lg`(20px) → 展开 `rounded-xl`(24px)，**只插值 20→24px**；
+  - 宽度 260/290→440/460 用 `min-width`/`max-width` 成对插值（`width:auto` 不可插值；显式 `w-*` 会瞬跳）；
+  - 高度由主体 `slide` 驱动；**头部行两态常驻**（只 34→44px 增高 + 原位换展开箭头/关闭钮），
+    禁止整块内容换位（否则首帧闪出 2px 边框细线、标题消失后再出现）；
+  - 禁止用 `rounded-full`（9999px）做常驻圆角：浏览器按半高钳制，过渡末帧圆角骤降 →「大圆角突然变小小圆角」。
+- **hover / focus**：只由胶囊外壳承载（实底 + accent 细边 + `shadow-raised-sm` + scale 1.01）；
+  标题区不画独立灰底（显式 `hover:bg-transparent` 退出全局按钮兜底填充）；展开箭头保留自身圆形淡底；
+  除展开 morph 外不改宽度、不位移布局。键盘聚焦时标题按钮有可见 focus ring。
+- **阅读进度圆环**：最右 18px，每帧直接写 `stroke-dashoffset`，**无 CSS 过渡**；同一读数只此一处。
+- **meta 文本**：变化时 120ms 淡入（`animate-fade-in`）。
+- **页头**：桌面端标准 `PageHeader` 默认 `desktopVisible=false` → `lg:hidden`，上下文由岛承担；
+  `/messages` 左栏传 `desktopVisible` 是登记例外；移动/平板页头照常（岛不渲染）。
+- **reduced-motion**：全局 `@media (prefers-reduced-motion: reduce)` 把动画/过渡瞬时化；新动效必须走
+  CSS transition 或 `motionDuration()`（JS）判断，不要写死时长绕过降级。
 
-提交：`e2a6a8f0`（上一轮全站动效治理）→ `e32bddef`（圆环 + 滚动驱动交接）→ `ab416d7a`（交接 action 默认启用修复）。
+## 1. 滚动交接模块现状（改这里之前先读）
 
-## 1. 交接机制速查（改这里之前先读）
+`lib/island-handoff.ts` 仍保留「滚动驱动交接」实现，但**岛本体已不再消费**（常驻模型）：
 
-- `frontend/src/lib/island-handoff.ts`
-  - `publishHandoff({ p, source })` / `subscribeHandoff(fn)` / `currentHandoff()` / `resetHandoff()`：
-    模块级单例，滚动回调 publish、岛与页头订阅；**只有当前页面在 publish**（页面卸载时归零）。
-  - `scrollHandoffProgress(scrollTop, start, end)`：吸顶页头滚动窗口进度（窗口外 0/1、窗口内线性）。
-  - `anchorHandoffProgress(top, height, barBottom, approach=24, tail=10)`：非吸顶锚点按相对顶栏位置算进度。
-  - `handoffCss(target, source, p, reduced)`：纯函数（单测覆盖）。几何 smoothstep 插值；`p=1` 返回空 transform
-    把 hover 的 1px 上移交还 CSS；内容层 `(eased-0.55)/0.4` 显字；`p/0.35` 壳显影。
-  - `islandHandoff(node, { enabled? })`：胶囊 action，**默认启用**（显式 `enabled:false` 才跳过；
-    这个默认值有 action 级回归单测，见 `lib/__tests__/island-handoff.test.ts`）。
-  - `handoffRecede(node, { enabled, mode: 'band' | 'content' })`：页头退场 action。
-- 状态：`frontend/src/stores/header-island.svelte.ts` —— `setHandoff(token, p, source)` 驱动
-  `visible`（p>0.001 挂载）与 `settled`（p>0.55，页头 inert/aria-hidden）；`progress` 与 token 无关（首页岛同样消费）。
-  页面注册/释放都会把交接归零。
-- 触发方：`PageHeader.svelte`（sticky 窗口 / integrated 锚点模式 + sticky 容器探测）、
-  `DetailHeader.svelte`（160→280 窗口，锚点 y 收紧进顶栏带）、`routes/(app)/+page.svelte` 的 `tabsHandoff`
-  （首页分段器 action）。
-- 几何工具：`frontend/src/lib/island-morph.ts` 只保留 `islandRectOf` / `islandTextRectOf`（Range 文字矩形）/
-  `islandFlight`（中心对齐 + 长宽比缩放，极端比例才 clamp）。**不要再往这里加时长动画**。
-- 测试钩子：页头 `data-island-visible` / `data-island-band-hidden` / `data-island-handoff`；
-  岛根 `data-desktop-dynamic-island`；圆环 `data-island-progress-ring` / `data-island-progress`。
+- 仍接线：`PageHeader` / `DetailHeader` 在滚动回调里 `headerIsland.setHandoff(token, p, source)` →
+  `publishHandoff({ p, source })`；`handoffRecede` action 逐帧写页头 band 的 opacity；`data-island-*`
+  测试钩子（`data-island-visible` / `data-island-band-hidden` / `data-island-handoff`）仍由这些帧驱动。
+  桌面端标准页头已 `lg:hidden`，因此这些帧当前不产生可见效果；移动/平板 `islandEnabled=false` 不触发。
+- **未接线（待清理 backlog，不要在新代码里使用）**：`islandHandoff` 飞行 action、`islandFlight` /
+  `handoffCss` 几何、`.island-flight-enter/-exit`、`.island-bloom`、`.island-land`、
+  `--cst-island-content`；单测 `lib/__tests__/island-handoff.test.ts` 仍锁定这些纯函数。
+- `lib/island-morph.ts`：`islandRectOf` / `islandTextRectOf` 仍被页头用于锚点矩形快照，供上述帧使用。
+- 状态：`stores/header-island.svelte.ts` 的 `visible` / `settled` 仍由 `setHandoff` 派生（页面侧
+  inert/aria 与单测使用），`progress` 与 token 无关（首页/搜索同样消费）。
+- **禁止**在岛渲染路径上重新引入滚动显隐/飞行动画：岛常驻是已确认的交互基线。
 
 ## 2. 复测方法（动效改动必须做）
 
 环境（worktree 独立调试，端口与主环境隔离）：见 skill `hotspot-worktree-debug`；本机可用 8889/5433/8083…
 （`NGINX_PORT=8889` + compose override + `COMPOSE_PROJECT_NAME=<项目名>` 跑 `./scripts/seed-dev.sh`）。
 
-帧级采样（在页面里 eval，验证「跟手 / 可逆 / 停手不动」）：
+展开/收起帧采样（页面里 eval，验收「宽度连续 / 圆角不钳制 / 头部不塌陷」）：
 
 ```js
-const main = document.getElementById('main-content');
-const read = () => {
-  const isl = document.querySelector('[data-desktop-dynamic-island]');
-  return isl ? { op: getComputedStyle(isl).opacity, tr: isl.style.transform,
-                 ct: isl.style.getPropertyValue('--cst-island-content') } : null;
-};
-// 下行：逐个 scrollTop 采样 → 停手 600ms 再采（必须与停手前一致）→ 上行：同一 scrollTop 的 transform 必须一致
+window.__s = [];
+(function () {
+  const el = document.querySelector('[data-desktop-dynamic-island]');
+  const t0 = performance.now();
+  function f() {
+    const b = el.getBoundingClientRect();
+    const head = el.firstElementChild?.getBoundingClientRect();
+    window.__s.push([
+      Math.round(performance.now() - t0),
+      Math.round(b.width),
+      Math.round(b.height),
+      head ? Math.round(head.height) : -1,
+      getComputedStyle(el).borderTopLeftRadius
+    ]);
+    if (performance.now() - t0 < 420) requestAnimationFrame(f);
+  }
+  requestAnimationFrame(f);
+})();
+document.querySelector('[data-desktop-dynamic-island] button[aria-label="展开控制面板"]').click();
+// 稍后读取 window.__s：宽度应连续增长（290→…→460）、圆角只出现 20~24px、高度从 36 起单调增长
+// （首帧不得出现 2px 边框细线），头部行 34→44px。
 ```
 
+hover 验收：headless 下 `:hover` 常不可靠（`matches(':hover')` 可能恒 false）；用真实鼠标/人工复核，
+或用选择器静态核验（标题按钮含 `hover:` 类即会退出全局按钮兜底填充）。
+
+截图：元素级 `agent-browser screenshot '<selector>' <绝对路径>`（fixed 覆盖层用整屏截图再裁）。
+截图裁剪注意：`sips --cropOffset offsetY offsetX`（**先 Y 后 X**，别写反）。
+
 必跑命令（宿主 frontend 目录）：
+
 ```bash
 ./node_modules/.bin/svelte-check --tsconfig ./tsconfig.json --tsgo
 ./node_modules/.bin/eslint .
@@ -78,81 +90,47 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml stop frontend && 
 # 浏览器巡检（需 dev 环境）：
 cd frontend && AB=~/.local/bin/agent-browser bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 ```
+
 合并后主环境 frontend 容器要重启（Vite 在容器内，重启才会稳定加载新代码）。
-截图裁剪注意：`sips --cropOffset offsetY offsetX`（**先 Y 后 X**，别写反）；元素级截图对 fixed 覆盖层不可靠，
-裁景时优先整屏截图再按 Y 裁剪。
 
-## 3. 未完成待做（按优先级；每条都可直接开工）
+## 3. 现行已落地动效（改前先看是否已有现成实现）
 
-### P0 — 流畅度硬伤（进展更新）
+- 筛选/排序切换与空态入场：`lib/motion.ts` 的 `contentFade`（110ms 淡入）、`.empty-state-enter`（150ms）。
+- 详情页画廊切图：`MomentPostBody.svelte` 双层 `<img>` 交叉淡入（140ms）+ 同源模糊背景过渡。
+- SheetShell 拖拽关闭：位移/速度综合判定，顺势滑出（`--cst-motion-rapid`）或 spring 回弹。
+- 移动/平板底部悬浮岛导航：`rounded-[28px]` 毛玻璃胶囊（`MobilePortrait` / `TabletLayout` / `MobileLandscape`）。
+- 主题切换：View Transition 260ms `--cst-ease-standard`，首屏无过渡、reduced 立即。
+- 页面进场 / 内容淡入 / 状态 pop / 评论入场：统一入口 `lib/motion.ts` 与 utilities.css 的 `cst-*` 类。
 
-1. **[已完成] 筛选 / 排序切换过渡与空态平滑入场**（/nearby/people、/nearby/moments、/nearby/groups 等）
-   - 实现：`lib/motion.ts` 的 `contentFade` 扩展支持 `{ showSkeleton, trigger }` 模式；
-     各筛选/hub 页面接入后，切换筛选/分类/排序时平滑淡入（110ms，使用 `--cst-ease-standard`），空态出现伴随 150ms 微升淡入（`.empty-state-enter`），彻底告别硬切生硬感；
-     `prefers-reduced-motion` 显式跳过，无 CLS 与掉帧。测试覆盖见 `motion.test.ts`。
+## 4. 未完成待做（按优先级）
 
-2. **[已完成] 详情页画廊切图双层交叉淡入**（`routes/(app)/moments/[momentId]/MomentPostBody.svelte` 画廊区）
-   - 实现：重构画廊 hero，移除销毁 DOM 的 `{#key imageIndex}` 结构，改用双层 `<img>` 交叉淡入（旧图在底层稳妥托底，新图解码/onload 后 140ms 平滑淡入，随后清理旧层）；高斯模糊背景同源交叉淡入；缩略图加上 `active:scale-95` 微按压触感与 ring 阴影，300ms 安全超时回退防阻塞交互。测试覆盖见 `MomentPostBody.test.ts`。
+1. **滚动交接遗留清理（backlog）**：`islandHandoff` action、`.island-flight-*` / `.island-bloom` /
+   `.island-land` / `--cst-island-content`、`islandFlight`/`handoffCss` 已无调用方；清理时同步
+   `island-handoff.test.ts` 与 §22 说明。清理前不要在原基础上新增交接动画。
+2. **动效改动后的质量门禁**：按 §2 跑 `svelte-check / vitest / build / browser-qa`；
+   UI 改动必须截图对比（改前/改后、明暗双主题、受影响断面），不能只看 diff。
+3. **岛 hover 材质真机取证**：headless 下 `:hover` 不可靠，需真实鼠标/人工复核。
+4. **大量数据/长列表下的岛内容同步稳定性**：meta/筛选状态随页面状态实时更新；若出现频繁重渲染，
+   检查注册方 `update()` 是否传入了不必要的引用。
 
-3. **[已完成] SheetShell 拖拽关闭手势连贯顺势滑出**（底部弹层拖拽关闭）
-   - 实现：重构 `SheetShell.svelte` 下拉手势算法，结合位移（≥64px）与甩动速度（vy > 0.4px/ms）综合判定；
-     判定关闭时直接从当前位移顺势滑出屏幕底端（`var(--cst-motion-rapid)`，不先复位），彻底解决「先弹回再下滑」的方向跳变；
-     未达阈值松手时使用 `var(--cst-motion-spring) var(--cst-ease-bounce)` 弹性回弹复位。测试覆盖见 `SheetShell.test.ts`。
+## 5. 踩过的坑，接手时别再踩
 
-4. **[已完成] 桌面端设置页及全站页面灵动岛全面适配**
-   - 实现：设置页（settings）、个人中心（me）、编辑资料（me/edit）、附近枢纽（nearby）、管理后台（admin）全面改用 `variant="integrated"` 契约与 `islandIcon` 专属锚点；
-     桌面端彻底移除内容区内次级 sticky 色块条，页面滚动时标题在自然流中顺滑向上移动并流式交接（handoff）进顶栏中央灵动岛（PageIsland），内容区零重叠遮挡。
-
-5. **[已完成] 移动端/平板端底部「悬浮孤岛式导航栏 (Floating Island Dock)」**
-   - 实现：重构 `MobilePortrait`、`TabletLayout` 与 `MobileLandscape`，底栏由贴底死条升级为大圆角悬浮孤岛胶囊（`rounded-[28px]`、毛玻璃、物理阴影与高光环）；
-     `NavTab` 图标放大至 25px 并加粗笔画（1.85/2.25），选中项使用温润厚实的 `bg-accent-soft text-text-accent-on-soft rounded-xl` 触觉胶囊；
-     中央 48px 微凸 FAB，`RoutedContentViewport` 预留 `pb-24` 滚动净空，彻底告别单薄线框与空洞感。
-
-### P1 — 审美与一致性打磨
-
-4. **[已完成] 岛 leading 视觉锚点**：
-   - 实现：`PageHeader` 新增可选 `islandIcon?: Snippet` 扩展；普通页面缺省渲染克制精致的 6px accent 状态微锚点（`size-1.5 rounded-full bg-accent-default/70`），与右侧阅读进度圆环形成视觉平衡，胶囊整体不再两头空荡。单测覆盖见 `PageIsland.test.ts`。
-5. **[已完成] 空态 / 筛选结果入场**：
-   - 实现：`EmptyState` 增加 `.empty-state-enter`（150ms 淡入 + 2px 上移微动效，与 P0-1 节奏呼应，reduced 直接终态）。
-6. **[已完成] 主题切换过渡收敛**：
-   - 实现：
-     1. 将 `.nav-glass` 偏长拖沓的 400ms 过渡（`--cst-motion-slow`）收敛为 260ms（`--cst-motion-relaxed`），与卡片 hover 及表面层一致；
-     2. 在 `theme.svelte.ts` 引入 View Transition API 平滑淡入机制（`::view-transition-old(root)` / `new(root)` 统一定为 260ms `--cst-ease-standard`），运行时切主题使用整屏 GPU 交叉过渡，彻底消除上百个 DOM 元素同时触发 CSS transition 的重绘风暴；
-     3. 首屏 `initTheme` 保持瞬出（无过渡），`prefers-reduced-motion` 立即终态。单测覆盖见 `theme.svelte.test.ts`。
-7. **[已完成] 岛落地微动效**：
-   - 实现：在 `lib/island-handoff.ts` 与 `utilities.css` 落地 `.island-land`（抵达终态瞬间 80ms scale 1.006→1 减速缓动 + accent 细边亮度回落一档，无 overshoot）；`prefers-reduced-motion` 显式跳过，反向滚动即可逆清空。单测覆盖见 `island-handoff.test.ts`。
-8. **[已完成] 岛 meta 文本跳变平滑化**：
-   - 实现：`IslandCapsule` 中第二行 meta 文本变动时加入 120ms fade-in 柔和渐变，让状态与数字更新如呼吸般润泽自然。
-
-### P2 — 验证/环境类
-
-9. **岛 hover 材质真机取证**：headless 下 `:hover` 不可靠（`matches(':hover')` 恒 false），
-   本轮未做视觉取证；用真机/手动 hover 确认「实底 + accent 细边 + 抬升 + 1px 上移、宽度不变」。
-10. **动效改动后的质量门禁**：按 §2 跑 `svelte-check / vitest / build / browser-qa`；
-    UI 改动必须截图对比（改前/改后、明暗双主题、受影响断面），不能只看 diff。
-11. **大量数据/长列表下的交接稳定性**：本轮在种子数据下采样正常；若页面首屏骨架高不同导致锚点绝对位置
-    在数据到达后变化，需要复测 integrated 页头（`measureAnchor` 已有 scrollTop<1 时重测逻辑，重点看首屏）。
-12. **95–100% 进度环满圈与 hover 交互**：圆环当前 `aria-hidden` 纯展示、不可点；若后续要「点击回顶」等语义，
-    先补 a11y（button + aria-label）再改视觉，保持「唯一读数只一处表达」。
-
-## 4. 本轮（动效交接）踩过的坑，接手时别再踩
-
-- **`tools.read`（DSH）会静默截断 >~39KB 的文件**：本轮 read→write 曾把 `utilities.css` 截断成半个文件，
-  触发 Tailwind「Missing closing }」导致 dev server 白屏。**大文件不要 read→整写**，用 edit/python 定点替换，
-  或写后核对 `wc -l` / `git diff --stat`。
+- **`tools.read`（DSH）会静默截断 >~39KB 的文件**：read→write 整文件会把 `utilities.css` /
+  `design-system.md` 截断成半个文件（触发 Tailwind「Missing closing }」白屏或直接丢章节）。
+  大文件不要 read→整写，用 node/python 按 marker 拼接，或写后核对 `wc -l` / `git diff --stat`。
 - **CSS 注释里别写会与 Tailwind 解析冲突的内容**：改 `utilities.css` 后若 HMR 报
   `Missing closing } at .page-header-scrolled`，先查文件是否被截断/括号是否配平。
-- **IslandCapsule 的 `use:islandHandoff` 必须默认启用**：简化时漏传 `{{ enabled }}` 导致岛「只在落位后突然出现」；
-  已加 action 级回归测试（不传参数也要消费交接帧）。改这个 action 的默认值前先看 `island-handoff.test.ts`。
-- **sips `--cropOffset` 参数顺序是 Y X**，写反会把图裁到左边并带黑边（本轮因此误判过岛的位置）。
+- **sips `--cropOffset` 参数顺序是 Y X**，写反会把图裁到左边并带黑边。
 - **agent-browser 元素截图对 fixed 覆盖层会裁错**：截图 demo/覆盖层时一次只显示一个 section 再截。
+- **headless 下 `:hover` 不可靠**：`matches(':hover')` 可能恒 false，hover 验收用真实鼠标或人工复核，
+  不要仅凭 headless 截图判定 hover 失效。
 - **worktree 里跑 seed**：seed 脚本按默认 compose 项目名找 backend；用 `COMPOSE_PROJECT_NAME=<项目名>` 覆盖。
 - **主环境生效**：合并到 main 后必须重启 frontend 容器（Vite dev 在容器内），否则 8888 可能仍跑旧模块。
 
-## 5. 交接清单（下一会话开始可照做）
+## 6. 交接清单（下一会话开始可照做）
 
-- [ ] 读 `docs/design-system.md` §22（岛上/交接契约）与本文件 §1/§3。
-- [ ] `git log -3` 确认基线在 `ab416d7a` 之后；`git status` 干净。
+- [ ] 读 `docs/design-system.md` §22（岛契约）与本文件 §0/§1。
+- [ ] `git log -3` 确认基线已包含「灵动岛常驻 + 连续 morph」提交；`git status` 干净。
 - [ ] 开工前建 worktree（`create_worktree`，分支名如 `anim-next`），按 skill `hotspot-worktree-debug` 起 8889 环境。
-- [ ] 先做 P0-1（筛选/排序过渡）或 P0-2（画廊交叉淡入），两者都改 `lib/motion.ts` 的复用面，建议一起评估。
-- [ ] 每项完成后按 §2 跑门禁 + 帧采样 + 截图对比，再 `ff-only` 合并、重启主环境容器、清理 worktree。
+- [ ] 改岛形态/动效前先跑 §2 帧采样拿「改前」数据，改完按同口径复测 + 明暗双主题截图。
+- [ ] 每项完成后按 §2 跑门禁 + 截图对比，再 `ff-only` 合并、重启主环境容器、清理 worktree。

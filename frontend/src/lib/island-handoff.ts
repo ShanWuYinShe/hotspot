@@ -1,21 +1,10 @@
-// 页头标题 → 顶栏灵动岛：滚动驱动的交接（scroll-linked handoff）。
+// 页头滚动交接帧（scroll-linked handoff）。
 //
-// 为什么不用「时长动画」：标题到顶栏岛是「同一个东西被滚进顶栏」的空间变化，
-// 市面上做得最好的同型交互都把它绑在滚动上，而不是点一下再放一段 300ms 动画——
-//  · iOS 大标题 → 导航栏标题（Large Title collapse）：标题随内容上移、渐隐，导航栏标题渐显，
-//    全程由滚动位置驱动，松手即停在半途，反向滚动完全可逆；
-//  · Material 3 的 container transform 强调「共享元素在两点之间连续变形」；
-//  · Apple HIG Motion 的原则是「motion 跟随手势、短而精确」，不要给高频交互加独立时长动画。
-// 时长动画的固有问题：开始后不跟手（用户继续滚，动画还在按自己的节奏走）、反向滚动时要等它播完，
-// 观感就是「不跟手、不自然」。因此这里把交接进度 p（0→1）直接由滚动位置算出，每帧写样式。
-//
-// 进度 p 的语义（由调用方计算）：
-//  - p=0：页头标题完整可见，岛不存在；
-//  - p=1：标题已完全进入顶栏，岛完全落位；
-//  - 中间：岛的位置/尺寸在「锚点矩形 → 顶栏泊位」之间插值，透明度与内容另行分段。
-//
-// 只动 transform / opacity / 内容层透明度；不读布局（锚点绝对位置由调用方缓存），
-// 因此每帧成本与一次 transform 写入相当。reduced-motion 下退化为「过闸即切换」。
+// 现状：PageHeader / DetailHeader 在滚动回调里发布 p（0→1）与锚点矩形，供页面侧
+// band 退场（handoffRecede）、inert/aria 与 data-island-* 测试钩子使用。
+// 灵动岛本体现为「桌面端常驻」模型，不再订阅这些帧做飞行/显隐；islandHandoff action
+// 与飞行几何（islandFlight / handoffCss）已无调用方，仅保留实现与单测（待清理 backlog）。
+// 新动效不要建立在这套飞行铺路上。reduced-motion 下页头退场过闸即切换。
 import {
 	computeFlightCurve,
 	evalBezier,
@@ -96,7 +85,7 @@ export interface HandoffCss {
 }
 
 /**
- * 纯函数：给定目标泊位、锚点矩形与进度，算出胶囊这一帧的样式。
+ * 纯函数：给定目标泊位、锚点矩形与进度，算出胶囊这一帧的样式（**当前无调用方，仅单测**）。
  * 单独导出便于用单测锁定「p=0 贴锚点 / p=1 归位 / 单调」三条契约。
  */
 export function handoffCss(target: IslandRect, source: IslandRect, p: number, reduced = false): HandoffCss {
@@ -156,8 +145,8 @@ const applyFrame = (
 };
 
 /**
- * 灵动岛动作：订阅滚动交接帧，把「锚点矩形 → 顶栏泊位」的插值写成 transform/opacity。
- * 用法：`<div use:islandHandoff={{ enabled: handoff }}>`（非交接模式下直接 no-op）。
+ * 灵动岛飞行 action（**当前无调用方**，保留实现与单测；待清理）。
+ * 订阅滚动交接帧，把「锚点矩形 → 顶栏泊位」的插值写成 transform/opacity。
  */
 export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } = {}) {
 	// 默认启用：胶囊永远走滚动交接；显式传 enabled:false 才跳过（测试/特殊场景）。
@@ -476,6 +465,7 @@ export function islandHandoff(node: HTMLElement, params: { enabled?: boolean } =
 /**
  * 页头退场动作：与交接进度同源的渐隐（整条页头 band）或渐隐+上移（内容层）。
  * 用 inline style 而不是 class 过渡：滚动驱动必须逐帧跟手，不能落后一个 transition 时长。
+ * 注：桌面端标准页头已整体隐藏，当前无可见效果；保留给页面侧测试与后续复用。
  */
 export function handoffRecede(
 	node: HTMLElement,
