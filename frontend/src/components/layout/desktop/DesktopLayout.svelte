@@ -328,7 +328,9 @@
 		</div>
 
 		<!-- Right Sculpted Glass Control Dock (玻璃控制枢纽) -->
-		<div bind:clientWidth={dockW} class="flex shrink-0 items-center gap-2">
+		<!-- 右侧控制坞：组间 gap-3（12px）。图标按钮自带 hit-slop 横向 -6px，
+		     间距 <12px 会让相邻 44px 热区互相覆盖（点歪就命中旁边那颗）。 -->
+		<div bind:clientWidth={dockW} class="flex shrink-0 items-center gap-3">
 			<!-- 探索检索入口 -->
 			<button
 				type="button"
@@ -368,7 +370,7 @@
 
 			<!-- 统一悬浮玻璃工具簇 (通知 / 主题 / 设置) -->
 			<div
-				class="flex items-center gap-0.5 rounded-full border border-border-default/30 bg-surface-primary/60 p-0.5 shadow-xs backdrop-blur-2xl transition-[border-color,background-color] duration-standard hover:border-border-default/50 hover:bg-surface-primary/85"
+				class="flex items-center gap-3 rounded-full border border-border-default/30 bg-surface-primary/60 p-0.5 shadow-xs backdrop-blur-2xl transition-[border-color,background-color] duration-standard hover:border-border-default/50 hover:bg-surface-primary/85"
 			>
 				<!-- 通知 -->
 				<ActionIconButton

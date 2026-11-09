@@ -1,17 +1,11 @@
-// 地图首屏定位 helper（桌面/移动地图页共用）。
+// 地图锚点 helper（桌面/移动地图页共用）。
 //
-// 三件事：
+// 两件事：
 //   1. 上次锚点同步初值 —— 确认页写入 localStorage 的浏览锚点（hotspot_last_location），
 //      页面初始化即用它渲染底图，不再干等 client_config 回来；
-//   2. 进入自动定位一次 —— Geolocation 单次快照（getCurrentPosition 语义：调一次
-//      给一次，不会自动更新；权限按域名持久记忆，允许过之后调用不再弹窗）。
-//      成功由调用方决定是否采纳；拒绝/不支持则记住不再自动打扰（手动定位按钮不受影响）；
-//      超时等临时失败不记，下次进入再试；
-//   3. 锚点读写 —— 存 { lat, lng, name }；兼容历史 [lat, lng] 数组格式。
+//   2. 锚点读写 —— 存 { lat, lng, name }；兼容历史 [lat, lng] 数组格式。
 //      名称随锚点一起持久化，附近页与侧栏才能显示与锚点一致的位置名
 //      （只存坐标会让「XX · 5km 内」的语义与真实距离基准脱节）。
-
-import { GeoError, requestGeoPosition, type GeoFix } from './geolocation.svelte';
 
 export interface MapPoint {
 	lat: number;
@@ -24,8 +18,6 @@ const LAST_KEY = 'hotspot_last_location';
 
 /** 锚点写入后派发（同窗口）：侧栏位置卡等常驻组件据此重读锚点。 */
 export const LOCATION_ANCHOR_UPDATED_EVENT = 'location:anchor-updated';
-const DENIED_KEY = 'hotspot:locate-denied';
-
 function storage(): Storage | null {
 	try {
 		return typeof localStorage === 'undefined' ? null : localStorage;
@@ -97,48 +89,5 @@ export function writeLastLocation(point: MapPoint): void {
 		window.dispatchEvent(new CustomEvent(LOCATION_ANCHOR_UPDATED_EVENT));
 	} catch {
 		/* 隐私模式等存储不可用场景：不打断交互 */
-	}
-}
-
-/**
- * 清除自动定位拒绝标记。用户手动点「定位到我」并成功时调用：权限既已授予，
- * 旧的拒绝标记已过期，下次进地图恢复自动定位，免得回退到默认位置。
- */
-export function clearLocateDeclined(): void {
-	try {
-		storage()?.removeItem(DENIED_KEY);
-	} catch {
-		/* 存储不可用则忽略，下次进入再按拒绝处理 */
-	}
-}
-
-/** 用户是否拒绝过自动定位（拒绝后不再自动打扰）。 */
-export function autoLocateDeclined(): boolean {
-	const store = storage();
-	if (!store) return true;
-	try {
-		return store.getItem(DENIED_KEY) === '1';
-	} catch {
-		return true;
-	}
-}
-
-/**
- * 进入地图时自动定位一次。成功返回 fix（调用方决定是否采纳）；
- * 拿不到时返回 null（拒绝/不支持会顺手记住，下次不再自动问）。
- */
-export async function autoLocateOnce(): Promise<GeoFix | null> {
-	if (autoLocateDeclined()) return null;
-	try {
-		return await requestGeoPosition();
-	} catch (err) {
-		if (err instanceof GeoError && (err.code === 'denied' || err.code === 'unsupported')) {
-			try {
-				storage()?.setItem(DENIED_KEY, '1');
-			} catch {
-				/* 存储不可用则下次再问，不抛错 */
-			}
-		}
-		return null;
 	}
 }

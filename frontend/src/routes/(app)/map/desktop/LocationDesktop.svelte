@@ -6,9 +6,7 @@
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { createLocateAction } from '@/lib/locate-action.svelte';
 	import {
-		autoLocateOnce,
 		clearLastLocation,
-		clearLocateDeclined,
 		LOCATION_ANCHOR_UPDATED_EVENT,
 		readLastLocation,
 		writeLastLocation
@@ -102,23 +100,8 @@
 		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, syncAnchor);
 	});
 
-	// 进入地图自动定位一次（Geolocation 单次快照：调一次给一次，不会自动更新；
-	// 权限按域名持久记忆，用户允许过之后调用不再弹窗）。
-	// 有浏览锚点时以锚点为首屏视野（锚点就是「我下次来要看的基准」），只补我的位置蓝点；
-	// 无锚点才采纳 GPS 为中心；用户已手动选点则让位。
-	// 拒绝/不支持静默回退默认位置、不 toast 打扰（手动定位按钮不受影响）。
-	$effect(() => {
-		void (async () => {
-			const fix = await autoLocateOnce();
-			if (!fix) return;
-			// 真实位置上报（users/update_location）：与是否采纳为中心无关，
-			// 上报的是「用户在哪」；失败静默，不打断交互。
-			void reportLocation({ lat: fix.lat, lng: fix.lng }, auth.isAuthenticated);
-			myLocation = { lat: fix.lat, lng: fix.lng };
-			if (userPicked || anchorPoint) return;
-			mapCenter = { lat: fix.lat, lng: fix.lng };
-		})();
-	});
+	// 地图页不再在进入时自动请求浏览器定位：getCurrentPosition 会弹出定位授权框，
+	// 与当前「静默探索」设计不符。位置仅在用户显式点右下角「回到我的位置」时获取。
 
 	// 视口中心地名：选了地点/图钉直接用其名；否则逆地理编码实际中心。
 	// 防抖 500ms + 网格缓存：Nominatim 经自家 /osm-service 代理免费调用（高德源优先高德 key，
@@ -251,7 +234,6 @@
 			mapCenter = { lat: fix.lat, lng: fix.lng };
 			myLocation = { lat: fix.lat, lng: fix.lng };
 			// 定位只移动视野/蓝点，不静默改写浏览锚点：锚点必须由用户显式点底部 CTA 确认。
-			clearLocateDeclined();
 			selectedLoc = null;
 			searchQuery = '';
 		},
