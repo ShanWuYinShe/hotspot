@@ -1216,10 +1216,10 @@ eager 图各 2 张且像素 diff 0 回归。
 短页/无滚动页不出岛（没有信息丢失，就不打扰）。
 
 **唯一形态实现**：`components/layout/page/IslandCapsule.svelte`（外壳 / hover 呼吸 / 右侧阅读进度圆环 / 滚动交接钩子）；
-页面锚点岛 `PageIsland.svelte` 与首页信息流岛 `components/home/HomeFeedIsland.svelte` 只组合它并注入内容与行为。
+页面锚点岛 `PageIsland.svelte` 与首页信息流岛（`components/home/desktop/HomeDesktop.svelte` 注册内容）只组合它并注入内容与行为。
 两者都由 `DesktopLayout` 绝对居中渲染在顶栏，`[data-desktop-dynamic-island]` 为稳定测试钩子。
 
-**形态（紧凑胶囊，h-9）**
+**形态（紧凑胶囊，h-8.5 = 34px）**
 
 - `leading`：返回按钮（二级页/详情页注册了 `onBack` 才有）/ 作者头像（20px 身份名片，普通页面无）。
 - `title + meta`：标题 12px semibold 单行截断；meta 11px secondary（计数 / 位置 / 结果数 / 当前信息流），
@@ -1230,6 +1230,12 @@ eager 图各 2 张且像素 diff 0 回归。
   否则会落后滚动约 150ms）。
   **同一读数只允许这一处表达**：不提供下划线 / hover 百分比等第二种同值表达；圆环固定在最右，
   有行动区时位于行动区外侧（行动区仍在圆环左侧）。
+- **圆角与展开 morph（连续形变契约）**：常驻态 `rounded-lg`(20px)——34px 高度下渲染即半高胶囊，
+  但有限值让展开/收起全程只插值 20→24px；`rounded-full` 的 9999px 会被浏览器按半高钳制、直到
+  过渡末帧才骤降到卡片圆角，观感是「大圆角突然变小小圆角」（禁止回退）。展开态 `rounded-xl`(24px)。
+  宽度用 `min-width`/`max-width` 成对表达（`width:auto` 下 `min-width` 可插值，显式 `w-*` 会瞬跳），
+  与主体高度 slide 同为 220ms `--cst-ease-standard`；**头部行两态常驻**（只增高 34→44px 并原位
+  切换展开箭头/关闭钮），不做整块内容换位——否则展开首帧会闪出 2px 细线、标题闪一下再出现。
 
 **何时出现：滚动驱动交接（scroll-linked，不做「滚动方向」花活）**
 
@@ -1289,7 +1295,8 @@ eager 图各 2 张且像素 diff 0 回归。
 | 头像 + 标题（中间） | 点击回到页面锚点 | 吸顶页头→页首；非吸顶页头→标题位置；详情页身份卡→作者主页（`onTitleClick` 语义由页面决定） |
 | meta（第二行） | 纯展示 | 页面状态实时同步（搜索：「词 · N 个结果」；首页：当前信息流语境；筛选页：当前标签/分类 + 位置/计数——筛选标签行已随页头退场） |
 | 行动区（trailing） | 点击执行页面主行动 | ≤2 控件、32px 命中、带 `aria-label`；页头原 trailing 入岛时淡出（保留占位），避免两份。**同一目的地的常驻入口不得再进岛**：桌面地图入口唯一 = 左侧栏 LocationCard（折叠态仍可见），nearby 系页头的搜索/地图工具只在移动/平板渲染 |
-| 整个胶囊 | hover / 键盘 focus-within → 表面「醒」起来 | 半透明玻璃转实底 `bg-surface-primary` + accent 细边 `border-accent-border` + `shadow-raised-md` + 上移 1px；**全程不改变宽度**（旧 `max-w-md → max-w-lg` 舒展会让居中胶囊左右同时外扩、整排内容位移，既抖又廉价），也**不再揭示百分比**（与右侧进度圆环同值重复）。标题区保留 `hover-btn` 淡底，明确「这块可点」 |
+| 整个胶囊 | hover / 键盘 focus-within → 表面「醒」起来 | 半透明玻璃转实底 `bg-surface-primary/95` + accent 细边 + `shadow-raised-sm` + 轻微放大（scale 1.01）；**只有展开 morph 才改变宽度**，hover 全程不位移布局。反馈统一由外壳承载：**标题区不画独立 hover 灰底**（显式 `hover:bg-transparent` 退出全局按钮兜底填充，避免胶囊内出现一块覆盖范围尴尬的方形块），键盘聚焦时标题按钮有可见 focus ring |
+| 右侧展开控件 | 点击展开/收起控制中枢 | 常驻态为 chevron（hover 只提亮图标 + 自身圆形淡底）；展开态同一位置替换为关闭钮；Esc / 点击岛外空白同样收起 |
 | 右侧进度圆环 | 只读 | 胶囊最右侧 18px 圆环（accent 弧 + 极淡底轨）跟随页面阅读进度增长，每帧直接写 `stroke-dashoffset`（无 CSS 过渡）；不做点击/拖拽 |
 | 键盘 | Tab 顺序 返回 → 标题/身份 → 行动区 | 全部控件 `focus-ring`；标题按钮 `active:scale-[0.98]` 即时反馈 |
 
@@ -1297,7 +1304,7 @@ eager 图各 2 张且像素 diff 0 回归。
 
 | 页面类型 | title | meta | trailing |
 |---|---|---|---|
-| 首页（HomeFeedIsland） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | 切换信息流 |
+| 首页（HomeDesktop 注册） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | 切换信息流 |
 | hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/notify、/me/relationships、/me/reports） | 页面标题 | 当前筛选标签/分类/tab + 计数 / 位置 / 未读数 | 全部已读 / 清空搜索等 ≤2 入口（地图不进岛：桌面入口唯一=侧栏 LocationCard；移动/平板岛不出现，页头保留地图工具） |
 | /nearby 枢纽 | 附近 | 地点 · 5km 内 | 无（桌面地图入口唯一=侧栏 LocationCard） |
 | 搜索 | 搜索 | 「词 · N 个结果」/ 搜索中 / 失败 / 无匹配 | 清空搜索（有词时） |
@@ -1313,10 +1320,10 @@ eager 图各 2 张且像素 diff 0 回归。
   `lib/island-morph.ts` 只保留锚点矩形与几何差（Range 文字矩形、中心对齐缩放）。
 - 入口：`PageHeader` 的 `island`（默认 true）/ `islandMeta`（缺省 subtitle）/ `islandTrailing`；
   `DetailHeader` 走同一 store 契约；页面无 PageHeader（首页）用 `HomeFeedIsland` + `homeFeed.islandVisible`。
-- 视觉：h-9 胶囊、`bg-surface-primary/90 + border + shadow-raised-sm`；**不挂 backdrop-blur**——岛固定
-  在 52px 顶栏内、背后是静态画布，模糊没有可观察效果，却会在缩放飞行中逐帧重算背景模糊（纯性能损耗）；
-  入场/退场由滚动交接逐帧写 `transform`/`opacity`（无时长动画，reduced-motion 过闸即切换）；
-  hover/focus 只过渡颜色 / 投影 / 1px 位移（宽度全程不变，不触发重排）。
+- 视觉：h-8.5（34px）胶囊、`bg-surface-primary/75 + backdrop-blur-xl + border + shadow-xs`，
+  hover/focus 升 `bg-surface-primary/95 + accent 细边 + shadow-raised-sm`；岛常驻显示（无滚动入场
+  时长动画，路由切换直接卸载），展开/收起是 220ms 的宽度/圆角/高度连续 morph（reduced-motion 下
+  由全局降级规则瞬时化）；hover/focus 只过渡颜色/投影/轻缩放，不改变宽度、不触发重排。
 - 无障碍：`role="group"` + `aria-label`；岛内文字不重复播报（标题按钮有 aria-label，h1 仍在 DOM/landmark）；
   不抢焦点；带返回的页头入岛后返回动作移到岛 leading，页头标题/返回同步淡出（同一动作不出现两份）。
 - 性能：每页一个触发源（页头/详情页各自的滚动监听算出交接进度，无共享全局 scroll 监听），每帧只写 style/transform、不读布局（锚点绝对位置缓存）；阅读进度 listener 由滚动 owner 统一承担（passive + rAF 节流）；
