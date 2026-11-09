@@ -51,7 +51,7 @@
 
 {#snippet commentComposer()}
 	{#if d.replyTarget}
-		<div class="mb-2 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/70 px-3 py-1.5">
+		<div class="mb-2 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/60 px-3 py-1.5">
 			<p class="truncate text-xs text-text-secondary font-medium">回复 @{d.replyTarget.user}</p>
 			<button
 				type="button"

@@ -1,5 +1,4 @@
 import { onMount } from 'svelte';
-import { page } from '$app/state';
 import { auth } from '@/stores/auth.svelte';
 import { homeFeed, type HomeFeedTab } from '@/stores/home-feed.svelte';
 import { createCursorPagination } from '@/lib/composables/cursor-pager.svelte';
@@ -86,7 +85,6 @@ export function useHomeFeedData() {
 	const currentError = $derived(currentPager.error);
 	const hasMore = $derived(currentPager.hasMore);
 	const loadingMore = $derived(currentPager.loadingMore);
-	const demoMode = $derived(page.url.searchParams.get('demo'));
 
 	// 活跃邻居（至多 3 位）
 	const activeNeighbors = $derived.by(() => {
@@ -128,7 +126,6 @@ export function useHomeFeedData() {
 		get currentError() { return currentError; },
 		get hasMore() { return hasMore; },
 		get loadingMore() { return loadingMore; },
-		get demoMode() { return demoMode; },
 		get activeNeighbors() { return activeNeighbors; },
 		get railNearbyMoments() { return railNearbyMoments; },
 		trendingTopics: TRENDING_TOPICS,
