@@ -1,6 +1,18 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { ChevronRight, LayoutGrid, Pencil, Settings, Sparkles, UserRound, Users, UsersRound } from '@lucide/svelte';
+	import {
+		ChevronRight,
+		Heart,
+		LayoutGrid,
+		Pencil,
+		Settings,
+		Sparkles,
+		UserCheck,
+		UserPlus,
+		UserRound,
+		Users,
+		UsersRound
+	} from '@lucide/svelte';
 	import { platform } from '@/stores/platform.svelte';
 	import PageHeader from '@/components/layout/page/PageHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -18,6 +30,7 @@
 	import { useAccountData } from '@/lib/profile-data.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES, ME_SECTION_PATHS, type ProfileSection } from '@/lib/routes';
+	import { relationshipsHref } from '@/lib/relationships';
 
 	// 个人主页（/me）——全设备使用：
 	// 总览 = 身份封面卡（IdentityHero，桌面/移动同构）+ 我的内容入口 + 资料状态，
@@ -103,13 +116,31 @@
 			count: `${stats.groups_count} 个`,
 			icon: UsersRound
 		},
+		// 与移动端 ProfileMobile 同构：好友/关注/粉丝分别深链到关系页对应 tab，
+		// 不再用一条「关系」聚合入口（桌面 3 行 vs 移动 5 行的信息架构不一致）。
 		{
-			id: 'relationships',
-			href: ME_SECTION_PATHS.relationships,
-			title: '关系',
-			description: '关注与粉丝都在这里',
-			count: `${stats.friends_count} 位好友`,
-			icon: Users
+			id: 'friends',
+			href: relationshipsHref('friends'),
+			title: '好友',
+			description: '可以直接聊天的人',
+			count: `${stats.friends_count} 位`,
+			icon: Heart
+		},
+		{
+			id: 'following',
+			href: relationshipsHref('following'),
+			title: '关注',
+			description: '你订阅的创作者',
+			count: `${stats.following_count} 人`,
+			icon: UserPlus
+		},
+		{
+			id: 'fans',
+			href: relationshipsHref('fans'),
+			title: '粉丝',
+			description: '关注你的人',
+			count: `${stats.followers_count} 人`,
+			icon: UserCheck
 		}
 	]);
 
