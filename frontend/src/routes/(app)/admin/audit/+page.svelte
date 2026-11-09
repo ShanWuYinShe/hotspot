@@ -165,10 +165,10 @@
 							<th scope="col" class={TH}>目标</th>
 							<th scope="col" class={TH_TABLET_HIDDEN}>详情</th>
 							<!-- IP / 设备属排障辅助列：1440 及以下折叠进「详情」弹层（避免 8 列挤压后最右列被裁），
-							     1536（项目 xl 断点）以上恢复常驻列 -->
-							<th scope="col" class={`${TH_SECONDARY} max-xl:hidden`}>IP 位置</th>
-							{#if canReadIp}<th scope="col" class={`${TH_SECONDARY} max-xl:hidden`}>IP 地址</th>{/if}
-							<th scope="col" class={`${TH_SECONDARY} max-xl:hidden`}>设备</th>
+							     1536（项目 2xl 断点）以上恢复常驻列 -->
+							<th scope="col" class={`${TH_SECONDARY} max-2xl:hidden`}>IP 位置</th>
+							{#if canReadIp}<th scope="col" class={`${TH_SECONDARY} max-2xl:hidden`}>IP 地址</th>{/if}
+							<th scope="col" class={`${TH_SECONDARY} max-2xl:hidden`}>设备</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -211,9 +211,9 @@
 										{detailsText(log.details)}
 									</button>
 								</td>
-								<td class={`${TD_SECONDARY} max-xl:hidden`}>{log.ip_location ?? '—'}</td>
-								{#if canReadIp}<td class={`${TD_SECONDARY} max-xl:hidden`}>{log.ip_address ?? '—'}</td>{/if}
-								<td class={`${TD_SECONDARY} max-xl:hidden`}>{log.device_summary ?? '—'}</td>
+								<td class={`${TD_SECONDARY} max-2xl:hidden`}>{log.ip_location ?? '—'}</td>
+								{#if canReadIp}<td class={`${TD_SECONDARY} max-2xl:hidden`}>{log.ip_address ?? '—'}</td>{/if}
+								<td class={`${TD_SECONDARY} max-2xl:hidden`}>{log.device_summary ?? '—'}</td>
 							</tr>
 						{/each}
 					</tbody>

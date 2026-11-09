@@ -108,7 +108,7 @@
 				variant="card"
 				count={8}
 				cardClass="h-full"
-				class="grid grid-flow-dense grid-cols-2 gap-3 px-1 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
+				class="grid grid-flow-dense grid-cols-2 gap-3 px-1 max-sm:px-0 sm:grid-cols-3 sm:gap-3.5 lg:grid-cols-[repeat(auto-fill,minmax(18.75rem,1fr))] [grid-auto-rows:clamp(12.1875rem,20vw,17.1875rem)]"
 				label="加载附近群组…"
 			/>
 		{:else if data.loadError}
@@ -120,7 +120,7 @@
 					minTrackRem={18.75}
 					gapRem={[0.75, 0.875, 0.875]}
 					centerSparse={data.bspLayouts.slice(0, data.visibleGroups.length).every((l) => l.tier === '1x1')}
-					class="grid-flow-dense px-1"
+					class="grid-flow-dense px-1 max-sm:px-0"
 					style="grid-auto-rows: clamp(12.1875rem, 20vw, 17.1875rem);"
 				>
 					{#each data.visibleGroups as group, index (group.id)}

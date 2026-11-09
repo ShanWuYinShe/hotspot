@@ -59,7 +59,7 @@
 				<p class="mt-4 text-4xl font-semibold leading-tight tracking-title text-text-primary">
 					在附近，<br />遇见同频的人。
 				</p>
-				<p class="mt-4 max-w-md text-md leading-copy text-text-secondary">
+				<p class="mt-4 max-w-md text-balance text-md leading-copy text-text-secondary">
 					HotSpot 把城市切成一个个可被看见的附近：谁在附近、正在发生什么、有没有人和你同频。
 				</p>
 				<ul class="mt-10 flex max-w-md flex-col gap-5">

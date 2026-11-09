@@ -347,7 +347,7 @@
 					>
 						{#snippet actions()}
 							<Button
-								variant="primary"
+								variant={device === 'desktop' ? 'soft' : 'primary'}
 								size="md"
 								class="hit-slop-44 flex-1 gap-1.5 sm:flex-none"
 								onclick={() => void goto(ROUTES.meEdit)}

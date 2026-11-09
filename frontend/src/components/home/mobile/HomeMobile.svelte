@@ -69,13 +69,13 @@
 				variant="feed"
 				count={4}
 				label="加载动态中…"
-				class="grid grid-cols-2 gap-2.5 px-2.5 pt-2"
+				class="grid grid-cols-2 gap-2.5 px-4 pt-2"
 			/>
 		{:else if data.currentError && data.currentItems.length === 0}
 			<LoadError message={data.currentError} onRetry={() => void data.reload()} />
 		{:else if data.currentItems.length > 0}
 			{#if data.currentItems.length === 1}
-				<div class="mx-auto w-full max-w-md px-2.5 pt-2">
+				<div class="mx-auto w-full max-w-md px-4 pt-2">
 					{#each data.currentItems as moment (moment.moment_id)}
 						<HomeFeedItem
 							{moment}
@@ -86,7 +86,7 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="grid grid-cols-2 gap-2.5 px-2.5 pt-2">
+				<div class="grid grid-cols-2 gap-2.5 px-4 pt-2">
 					{#each data.currentItems as moment, index (moment.moment_id)}
 						<HomeFeedItem
 							{moment}

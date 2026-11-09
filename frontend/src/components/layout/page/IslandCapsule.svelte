@@ -189,7 +189,7 @@
 				{:else}
 					<button
 						type="button"
-						class="flex size-5.5 shrink-0 items-center justify-center rounded-full text-text-secondary/50 transition-all duration-snappy group-hover/island:text-text-primary hover:bg-interactive-hover focus-ring hit-slop"
+						class="flex size-5.5 shrink-0 items-center justify-center rounded-full text-text-secondary transition-all duration-snappy group-hover/island:text-text-primary hover:bg-interactive-hover focus-ring hit-slop"
 						onclick={toggleExpand}
 						aria-label="展开控制面板"
 						title="展开控制面板"
