@@ -91,13 +91,15 @@
 	} = $props();
 </script>
 
-<!-- 发现态布局：默认单列；md（960）起双列（窄平板 768–959 仍单列，避免两列被压成窄条），
-     2xl 超宽屏改「发现区横向多分栏 + 热门动态整行 4 卡」两段式（左栏不再底部大片留白）。
+<!-- 发现态布局：上下两段、每段各自网格——发现区（最近搜索/热门话题/人物/群组）在上，
+     热门动态整行在下。此前 md–2xl 是「左发现 / 右动态」两列，左栏内容随数据结束
+     （常见 y≈452）而右栏动态 2×2 更高，左栏底部留下 ~330px 空洞；改上下两段后
+     两段都按容器宽度摊平，不再出现半屏空场。
      分栏数用 auto-fit 自适应：空分区（如 groups/search 无数据时不渲染推荐群组）轨道折叠为 0，
      由其余分区摊平分栏宽度，不再固定 4 栏留出 1 栏空洞（审计 shell-home F4）。
      卡头统一 SectionHead（icon + 标题 + 可选动作），不再手写 eyebrow 标题行。 -->
-<div class="grid gap-y-6 gap-x-8 md:grid-cols-2 2xl:flex 2xl:flex-col">
-<div class="flex flex-col gap-6 2xl:grid 2xl:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] 2xl:items-start">
+<div class="flex flex-col gap-6">
+<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] 2xl:items-start">
 	<!-- 最近搜索：无记录时整块隐藏（干瘪的「暂无记录」无信息量），首次搜索后自然出现 -->
 	{#if recent.length > 0}
 	<section aria-label="最近搜索">
@@ -243,11 +245,11 @@
 					variant="feed"
 					count={4}
 					label="加载热门动态…"
-					class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4"
+					class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4"
 					cardClass="aspect-[3/4] sm:aspect-[4/5]"
 				/>
 			{:else}
-				<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
+				<div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
 					{#each hotMoments as m, i (m.moment_id)}
 						<div>
 							<HomeFeedItem moment={m} showDistance={false} priority={i < 2} onClick={() => onOpenMoment(m.moment_id)} />
