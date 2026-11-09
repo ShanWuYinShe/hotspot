@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { MapPin } from '@lucide/svelte';
+	import { MapPin, Quote } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import MediaCard from '@/components/data-display/MediaCard.svelte';
@@ -121,14 +121,21 @@
 		</span>
 	{/if}
 
-	<!-- 纯文字动态主体（仅在无图时渲染）：居中展示文字内容，字距舒适，充实卡片版面 -->
+	<!-- 纯文字动态主体（仅在无图时渲染）：文字优先海报式排版（大引号 + 放大正文），
+	     让无图卡读作「文字卡」而不是「缺图卡」；仍保持 4:5 / 3:4 卡位不变。 -->
 	{#if !item.image && item.content}
-		<div class="pointer-events-none absolute inset-x-0 top-10 bottom-14 flex flex-col justify-center px-3.5 sm:px-4 z-[1]">
-			<p class="pointer-events-none line-clamp-3 sm:line-clamp-4 text-xs sm:text-sm font-medium leading-relaxed text-text-primary">
+		<div class="pointer-events-none absolute inset-x-0 top-9 bottom-14 z-[1] flex flex-col justify-center gap-1.5 px-3.5 sm:top-10 sm:gap-2 sm:px-4">
+			<Quote class="size-4 shrink-0 text-accent-default/70 sm:size-5" strokeWidth={1.75} aria-hidden="true" />
+			<p class="pointer-events-none line-clamp-3 text-sm font-semibold leading-relaxed text-text-primary text-balance sm:line-clamp-5 sm:text-base">
 				{item.content}
 			</p>
 		</div>
 	{/if}
+
+	<!-- 无图水印：大引号主题水印，替代默认的小图标，让海报感更完整 -->
+	{#snippet watermark()}
+		<Quote class="size-16 sm:size-20" strokeWidth={1} aria-hidden="true" />
+	{/snippet}
 
 	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}

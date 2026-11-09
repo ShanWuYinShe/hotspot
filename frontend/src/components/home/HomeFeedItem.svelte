@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MapPin, Sparkles, Images } from '@lucide/svelte';
+	import { MapPin, Sparkles, Images, Quote } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
 	import ImageCardActions from '@/components/data-display/ImageCardActions.svelte';
@@ -275,17 +275,30 @@
 			{/if}
 		</div>
 
-		<!-- 无图/加载失败降级：§17.2 要求「主题渐变底 + 居中 64px 主题水印图标」——
-		     由 MediaCard 在 accent 渐变层内以既有 token（--cst-accent-default / --cst-opacity-watermark）渲染。 -->
+		<!-- 无图/加载失败降级：主题渐变底 + 大引号水印；纯文字瞬间改为「文字优先海报」，
+		     大号引号 + 放大的正文居中排版，避免整卡读成「缺图/骨架」。 -->
 		{#snippet watermark()}
-			<Sparkles class="size-16" strokeWidth={1.5} aria-hidden="true" />
+			{#if useFallback}
+				<Quote class="size-20" strokeWidth={1} aria-hidden="true" />
+			{:else}
+				<Sparkles class="size-16" strokeWidth={1.5} aria-hidden="true" />
+			{/if}
 		{/snippet}
+
+		{#if useFallback && moment.description}
+			<div class="pointer-events-none absolute inset-x-0 top-14 bottom-32 z-[1] flex flex-col justify-center gap-2 px-4 sm:top-16 sm:bottom-36 sm:px-5">
+				<Quote class="size-5 shrink-0 text-accent-default/70 sm:size-6" strokeWidth={1.75} aria-hidden="true" />
+				<p class="pointer-events-none line-clamp-5 text-lg font-semibold leading-snug text-text-primary sm:text-xl">
+					{moment.description}
+				</p>
+			</div>
+		{/if}
 
 		<!-- 底部信息托盘（由 NearbyImageCard footer 槽渲染，默认即带 pointer-events-none 包装） -->
 		{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 			{@const onCover = onImage && !horizontal}
 			<div class="pointer-events-none flex flex-col gap-1 p-2 sm:gap-1.5 sm:p-4" data-card-info>
-				{#if moment.description}
+				{#if moment.description && !useFallback}
 					<p class="pointer-events-none line-clamp-2 text-md font-semibold leading-tight sm:text-lg {onCover
 						? 'text-content-inverse'
 						: 'text-text-primary'}">

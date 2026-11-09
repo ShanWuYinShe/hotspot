@@ -194,6 +194,26 @@
 		if (main) main.scrollTo({ top: 0, behavior });
 		else window.scrollTo({ top: 0, behavior });
 	}
+
+	// ── 灵动岛视口居中 ──
+	// 顶栏三栏是「品牌 | 弹性中间区 | 控制枢纽」，中间区居中 ≠ 视口居中（两侧宽度不等会偏左）。
+	// 这里实测三段宽度，优先把岛放到视口中心；空间不足时按可用区夹取，保证展开态不压住两侧控件。
+	let topbarW = $state(0);
+	let middleW = $state(0);
+	let dockW = $state(0);
+	let islandW = $state(0);
+	const TOPBAR_GUTTER = 40; // header 的 px-5 两侧
+	const ISLAND_EDGE_GAP = 12;
+	const islandShift = $derived.by(() => {
+		if (!topbarW || !middleW || !islandW) return 0;
+		const contentW = Math.max(0, topbarW - TOPBAR_GUTTER);
+		const leftW = Math.max(0, contentW - middleW - dockW);
+		const desiredCenter = contentW / 2 - leftW;
+		const minCenter = islandW / 2 + ISLAND_EDGE_GAP;
+		const maxCenter = middleW - islandW / 2 - ISLAND_EDGE_GAP;
+		const center = maxCenter < minCenter ? middleW / 2 : Math.min(maxCenter, Math.max(minCenter, desiredCenter));
+		return Math.round(center - middleW / 2);
+	});
 </script>
 
 <!-- 侧栏分组标签（发现 / 个人中心）唯一实现：同字号/字距/颜色，折叠时高度与透明度同步收起 -->
@@ -220,6 +240,7 @@
 	<AmbientBackdrop />
 	<!-- HEADER — 52px 顶栏：三岛悬浮空间美学（品牌微岛 · 动态地平线/灵动岛 · 统一控制枢纽） -->
 	<header
+		bind:clientWidth={topbarW}
 		class="relative z-[var(--cst-z-chrome)] shrink-0 flex items-center justify-between bg-transparent px-5"
 		style="height:var(--cst-desktop-header-height);"
 	>
@@ -279,13 +300,14 @@
 		{/if}
 
 		<!-- Center Horizon & Page Island — 空间地平线与灵动岛栖息地 -->
-		<div class="relative flex-1 min-w-0 h-full pointer-events-none flex items-center justify-center">
+		<div bind:clientWidth={middleW} class="relative flex-1 min-w-0 h-full pointer-events-none flex items-center justify-center">
 			{#if headerIsland.active}
 				<!-- 默认常驻灵动岛：整条顶栏中央锚定，单向向下舒展展开 -->
 				<div
 					out:fade={{ duration: motionDuration(220) }}
-					class="pointer-events-auto absolute left-1/2 z-50 -translate-x-1/2"
-					style="top: calc((var(--cst-desktop-header-height, 52px) - 34px) / 2);"
+					bind:clientWidth={islandW}
+					class="pointer-events-auto absolute left-1/2 z-50"
+					style="top: calc((var(--cst-desktop-header-height, 52px) - 34px) / 2); transform: translateX(calc(-50% + {islandShift}px));"
 				>
 					<PageIsland
 						title={headerIsland.title}
@@ -306,7 +328,7 @@
 		</div>
 
 		<!-- Right Sculpted Glass Control Dock (玻璃控制枢纽) -->
-		<div class="flex shrink-0 items-center gap-2">
+		<div bind:clientWidth={dockW} class="flex shrink-0 items-center gap-2">
 			<!-- 探索检索入口 -->
 			<button
 				type="button"
