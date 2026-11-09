@@ -158,7 +158,7 @@
 						<span class="truncate text-xs font-semibold leading-[1.15] text-text-primary tracking-tight">{title}</span>
 						{#if meta}
 							{#key meta}
-								<span class="animate-fade-in truncate text-[11px] font-normal leading-[1.15] text-text-secondary/80 mt-0.5">{meta}</span>
+								<span class="animate-fade-in truncate text-[11px] font-normal leading-[1.15] text-text-secondary mt-0.5">{meta}</span>
 							{/key}
 						{/if}
 					</span>

@@ -71,7 +71,7 @@
 {#snippet headerActions()}
 	<button
 		type="button"
-		class="relative flex size-9 items-center justify-center rounded-full text-text-primary hover:bg-interactive-hover focus-ring"
+		class="hit-slop relative flex size-9 items-center justify-center rounded-full text-text-primary hover:bg-interactive-hover focus-ring"
 		aria-label={d.shareStatus === 'copied' ? '已复制动态链接' : '分享动态'}
 		onclick={() => void d.copyMomentLink()}
 	>

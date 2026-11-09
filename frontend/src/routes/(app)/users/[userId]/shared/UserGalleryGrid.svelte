@@ -58,8 +58,8 @@
 	{:else}
 		<EmptyState
 			iconTone="accent"
-			title="还没有照片"
-			description="该用户发布带图瞬间后会显示在这里。"
+			title="还没有带图瞬间"
+			description="带图瞬间会展示在这里；文字瞬间暂不计入画廊。"
 		>
 			{#snippet icon()}
 				<ImageIcon class="size-7" strokeWidth={1.5} />

@@ -323,7 +323,7 @@
 			>
 				<Search size={13} strokeWidth={2} class="shrink-0 transition-transform duration-rapid group-hover:scale-110 {pathname === ROUTES.search ? 'text-accent-default' : 'text-text-secondary'}" />
 				<span class="tracking-wide text-xs">探索</span>
-				<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary/70 select-none">⌘K</kbd>
+				<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary select-none">⌘K</kbd>
 			</button>
 
 			<!-- 创作明珠：发布按钮 -->

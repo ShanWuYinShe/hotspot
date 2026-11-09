@@ -124,7 +124,7 @@
 
 {#snippet islandSearchTrailing()}
 	{#if !data.query.trim()}
-		<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary/70 select-none">
+		<kbd class="hidden sm:inline-flex items-center rounded border border-border-default/35 bg-surface-island/50 px-1 py-0.2 text-[10px] font-mono text-text-secondary select-none">
 			{searchShortcut}
 		</kbd>
 	{/if}
@@ -209,6 +209,8 @@
 {/snippet}
 
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
+	<!-- 桌面端自定义搜索岛不渲染 PageHeader，补唯一可访问 h1（移动端页头已有视觉 h1，此处 display:none 不重复） -->
+	<h1 class="sr-only hidden lg:block">搜索</h1>
 	<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
 		{#snippet header()}
 			{#if device !== 'desktop'}

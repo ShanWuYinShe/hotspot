@@ -99,6 +99,27 @@
 					</Button>
 				{/if}
 			{/snippet}
+			{#snippet islandExpanded()}
+				<!-- 桌面岛面板是模块导航的唯一常驻入口：10 项一屏放不下 → 面板内两行网格（5×2）。
+				     不用 below 默认展开片段：它会与 IslandCapsule 外壳的统一 footer 重复一份控制条。 -->
+				{#if admin.isAdmin}
+					<div class="flex flex-col gap-2.5">
+						<div class="flex items-center justify-between text-xs">
+							<span class="font-medium text-text-primary">管理模块</span>
+							<span class="text-xxs text-text-secondary">共 {MODULES.length} 个模块</span>
+						</div>
+						<TabBar
+							items={MODULES.map((m) => ({ id: m.id, label: m.label, count: m.id === 'reports' && pendingReports ? pendingReports : undefined }))}
+							value={activeId}
+							onChange={(id) => {
+								const target = MODULES.find((m) => m.id === id);
+								if (target && target.href !== pathname) void goto(target.href);
+							}}
+							class="flex-wrap gap-1.5"
+						/>
+					</div>
+				{/if}
+			{/snippet}
 			{#snippet below()}
 				{#if admin.isAdmin}
 					<div class="mt-3 overflow-x-auto pr-1" role="group" aria-label="管理模块导航">

@@ -115,7 +115,7 @@
 	)}
 >
 	{#snippet placeholder()}
-		<div class="flex items-center justify-center {isHorizontal ? 'h-full w-full' : isHero ? 'mt-12' : 'mt-8'}">
+		<div class="flex items-center justify-center {isHorizontal ? 'h-full w-full' : isHero ? 'mt-12' : '-translate-y-10'}">
 			<span class="flex items-center justify-center rounded-full bg-accent-soft shadow-xs transition-transform group-hover:scale-105 {isHero ? 'size-22' : 'size-16'}">
 				<span class="text-accent-default {isHero ? 'text-4xl' : 'text-3xl'} font-semibold">{Array.from(group.name)[0] ?? '群'}</span>
 			</span>

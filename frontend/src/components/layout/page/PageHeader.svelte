@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack, type Snippet } from 'svelte';
-	import { ArrowLeft, ArrowUp } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import ContentColumn from './ContentColumn.svelte';
 	import { platform } from '@/stores/platform.svelte';
@@ -347,23 +347,6 @@ import {
 				{/if}
 			</div>
 		{/if}
-		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-			<div class="flex items-center gap-1.5 text-text-secondary/70">
-				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-				<span>收起</span>
-			</div>
-			<button
-				type="button"
-				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-				onclick={() => {
-					const scroller = document.getElementById('main-content');
-					scroller?.scrollTo({ top: 0, behavior: 'smooth' });
-				}}
-			>
-				<span>平滑回顶</span>
-				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-			</button>
-		</div>
 	</div>
 {/snippet}
 
@@ -518,3 +501,9 @@ import {
 		{/if}
 	</ContentColumn>
 </header>
+
+{#if !desktopVisible}
+	<!-- 桌面端页头整条隐藏（lg:hidden），但 h1 不能随视觉消失：保留唯一可访问一级标题
+	     （移动端 display:none 不重复，桌面端 1px 视觉隐藏仍在无障碍树内；axe page-has-heading-one）。 -->
+	<h1 class="sr-only hidden lg:block">{title}</h1>
+{/if}

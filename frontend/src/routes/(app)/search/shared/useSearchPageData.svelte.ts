@@ -123,6 +123,32 @@ export function useSearchPageData() {
 		clear: () => (discoveryTopics = [])
 	});
 
+	// 结果页热门话题兜底：直接深链/刷新 ?query= 时发现态不会加载，
+	// 空态「从下面的话题开始探索」的 chips 需要独立取数（与桌面/移动无关）。
+	$effect(() => {
+		void keyword;
+		if (!keyword || hotTopics.length > 0) return;
+		const controller = new AbortController();
+		void searchMoments({ sort_by: 'popular', pagination: { limit: 12 } }, { signal: controller.signal })
+			.then((res) => {
+				if (controller.signal.aborted || hotTopics.length > 0) return;
+				if (res.code !== 0 || !res.data) return;
+				const seen = new Set<string>();
+				const list: string[] = [];
+				for (const m of res.data.items ?? []) {
+					for (const t of m.tags ?? []) {
+						if (t && !seen.has(t)) {
+							seen.add(t);
+							list.push(t);
+						}
+					}
+				}
+				hotTopics = list.slice(0, 10);
+			})
+			.catch(() => {});
+		return () => controller.abort();
+	});
+
 	// 发现态热门推荐
 	$effect(() => {
 		void keyword;
