@@ -253,13 +253,15 @@ describe('SearchDiscovery', () => {
 		}
 	});
 
-	// 回归（审计 shell-home F4）：2xl 固定 4 栏 + 「无数据不渲染分区」会在缺推荐群组时
-	// 第 4 轨留 381px 空洞；改 auto-fit（空轨折叠、其余分区摊平）自适应列数。
-	it('发现态分栏栅格自适应（auto-fit），不固定 4 栏', () => {
+	// 回归（审计 shell-home F4 + 搜索发现态左栏空洞）：发现区不再与热门动态左右分栏，
+	// 改为上下两段；发现区用 auto-fit（空轨折叠、其余分区摊平），动态整行 4 卡。
+	it('发现态改上下两段栅格：发现区 auto-fit、动态整行', () => {
 		const { container } = render(SearchDiscovery, {
 			props: {
 				recent: ['回龙窝'],
 				hotTopics: ['松弛'],
+				hotMoments: [{ moment_id: 'm1', description: '周末市集', created_at: new Date().toISOString() } as never],
+				momentsLoading: false,
 				hotUsers: [{ id: 'u1', name: '鹿鸣', avatar: '', tag: '摄影', distance: '300m', isOnline: true }],
 				onChoose: () => {},
 				onChooseTopic: () => {},
@@ -269,9 +271,17 @@ describe('SearchDiscovery', () => {
 				onClear: () => {}
 			}
 		});
-		const grid = container.querySelector('[class*="2xl:grid"]') as HTMLElement;
-		expect(grid).toBeTruthy();
-		expect(grid.className).toContain('auto-fit');
-		expect(grid.className).not.toContain('2xl:grid-cols-4');
+		const root = container.firstElementChild as HTMLElement;
+		expect(root.className).toContain('flex-col');
+		expect(root.className).not.toContain('md:grid-cols-2');
+
+		const grids = [...container.querySelectorAll('.grid')] as HTMLElement[];
+		const discovery = grids.find((g) => g.className.includes('auto-fit'));
+		expect(discovery).toBeTruthy();
+		expect(discovery!.className).toContain('md:grid-cols');
+		expect(discovery!.className).not.toContain('grid-cols-4');
+
+		const momentGrid = grids.find((g) => g.className.includes('xl:grid-cols-4'));
+		expect(momentGrid).toBeTruthy();
 	});
 });

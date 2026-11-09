@@ -156,7 +156,9 @@
 		>
 
 			<div class={TABLE_WRAP} use:scrollFade>
-				<table class={TABLE}>
+				<!-- ≥2xl 收紧单元格横向内边距（px-4→px-2），让 8 列（含 IP/设备辅助列）
+				     在内容上限 ~1224px 内完整放下，避免宽屏还要横向滚动。 -->
+				<table class={`${TABLE} 2xl:[&_th]:px-2 2xl:[&_td]:px-2`}>
 					<thead>
 						<tr>
 							<th scope="col" class={TH}>时间</th>

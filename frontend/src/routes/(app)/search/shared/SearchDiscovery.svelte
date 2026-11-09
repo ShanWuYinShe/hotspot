@@ -99,7 +99,7 @@
      由其余分区摊平分栏宽度，不再固定 4 栏留出 1 栏空洞（审计 shell-home F4）。
      卡头统一 SectionHead（icon + 标题 + 可选动作），不再手写 eyebrow 标题行。 -->
 <div class="flex flex-col gap-6">
-<div class="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] 2xl:items-start">
+<div class="grid gap-6 md:grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] md:items-start">
 	<!-- 最近搜索：无记录时整块隐藏（干瘪的「暂无记录」无信息量），首次搜索后自然出现 -->
 	{#if recent.length > 0}
 	<section aria-label="最近搜索">
