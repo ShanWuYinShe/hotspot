@@ -32,12 +32,12 @@
 	<title>附近群组 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
+<StandardPageLayout contentClassName="pt-3 lg:pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
 			title="附近群组"
-			subtitle={data.pageSubtitle}
+			subtitle={device === 'mobile' ? data.mobilePageSubtitle : data.pageSubtitle}
 			islandMeta={data.islandMetaText}
 		>
 			{#snippet islandIcon()}

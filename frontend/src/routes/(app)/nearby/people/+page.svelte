@@ -32,7 +32,7 @@
 	<title>附近的人 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
+<StandardPageLayout contentClassName="pt-3 lg:pt-4 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"

@@ -24,6 +24,8 @@ export interface NearbyGroupsData {
 	readonly pendingApprovals: Map<string, string>;
 	leaveTarget: Group | null;
 	readonly pageSubtitle: string;
+	/** 移动端页头副标题：370px 级宽度下省略「5km 内」避免 truncate 成「…5 个...」 */
+	readonly mobilePageSubtitle: string;
 	readonly islandMetaText: string;
 	setCategory: (cat: string) => void;
 	reload: () => void;
@@ -191,6 +193,11 @@ export function useNearbyGroupsData(): NearbyGroupsData {
 			? `${locationName} · 5km 内${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
 			: `5km 内 · 实时更新${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
 	);
+	const mobilePageSubtitle = $derived(
+		locationName
+			? `${locationName}${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
+			: `5km 内${!loading && !loadError && filtered.length ? ` · ${filtered.length} 个群组` : ''}`
+	);
 	const islandMetaText = $derived(
 		activeCategory === '全部' ? pageSubtitle : `${activeCategory} · ${pageSubtitle}`
 	);
@@ -212,6 +219,7 @@ export function useNearbyGroupsData(): NearbyGroupsData {
 		get leaveTarget() { return leaveTarget; },
 		set leaveTarget(v: Group | null) { leaveTarget = v; },
 		get pageSubtitle() { return pageSubtitle; },
+		get mobilePageSubtitle() { return mobilePageSubtitle; },
 		get islandMetaText() { return islandMetaText; },
 		setCategory: (cat: string) => { activeCategory = cat; },
 		reload: () => { reloadKey++; },
