@@ -397,9 +397,6 @@ import {
 								class="shrink-0"
 							/>
 						</div>
-					{:else}
-						<!-- 统一 leading 槽位：无返回钮时占位同尺寸，保证跨页标题左缘不随「有无返回」跳变 -->
-						<span class="size-[2.375rem] shrink-0" aria-hidden="true"></span>
 					{/if}
 					<h1 bind:this={islandMorphEl} class="min-w-0 truncate text-lg font-semibold text-text-primary sm:text-xl">{title}</h1>
 					{#if subtitle}
@@ -467,9 +464,6 @@ import {
 							class="shrink-0"
 						/>
 					</div>
-				{:else}
-					<!-- 统一 leading 槽位：无返回钮时占位同尺寸，保证跨页标题左缘不随「有无返回」跳变 -->
-					<span class="size-[2.375rem] shrink-0" aria-hidden="true"></span>
 				{/if}
 			<!-- 标题列恒为弹性列（flex-1 min-w-0）：窄屏下标题区先让位收缩，
 			     trailing 操作簇由 shrink-0 锁定不被压缩；溢出优先级 = 操作钮 > 装饰 chip > 副标题尾字。

@@ -183,8 +183,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 - **桌面页头**：标准 `PageHeader` 默认 `desktopVisible={false}` → `lg:hidden`（标题/副标题/`below`
   筛选行都交给岛）；隐藏时组件额外输出 `sr-only` h1（`hidden lg:block`，移动端 display:none 不重复）
   保证唯一可访问一级标题，搜索页自定义岛同样补 `sr-only` h1；`/messages` 左栏传 `desktopVisible`
-  是登记例外。移动/平板不渲染岛、页头照常；移动/平板端预留统一 leading 槽位（无返回钮时渲染同尺寸
-  占位），标题左缘不随「有无返回」跳变（390 实测各页 x=64–66，修前 16/66 两档）。
+  是登记例外。移动/平板不渲染岛、页头照常；移动端**有返回钮的子页标题让返回位**（常规 iOS 习惯，
+  390 实测 x≈66），**顶层页不占位、标题与正文同轴**（x≈16）——这是已登记例外，不要给无返回页加占位
+  导致全局标题右移。
 - **形态**：常驻胶囊高 34px、宽 min 260/290 / max 380（center 搜索态 360/400）；展开中枢宽固定
   440/460、头部行 44px、主体高度自适应。圆角常驻 `rounded-lg`(20px)（34px 高渲染即半高胶囊）、
   展开 `rounded-xl`(24px)；宽度用 min/max-width 插值 + 高度 slide，220ms `--cst-ease-standard`；
