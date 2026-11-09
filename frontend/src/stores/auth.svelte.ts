@@ -89,17 +89,23 @@ export function initAuth(): () => void {
     // 匿名，避免后端短暂不可用造成“发版即掉登录”且永不恢复。
     let res: Awaited<ReturnType<typeof checkAuthStatus>> | null = null;
     transportFailed = false;
+    // 冷启动的会话探测只有「会话确实无效（10100/102xx）」才应落匿名；限流 10500
+    // 与服务端 5xx/10600 不代表没有登录态，按传输类失败退避重试，避免把一次
+    // 429 当成「未登录」把顶栏切成登录入口。
+    const RETRYABLE_AUTH_CODES = new Set([10500, 10600]);
     for (let attempt = 0; ; attempt++) {
       try {
         res = await checkAuthStatus();
-        break;
       } catch {
-        if (attempt >= 2) {
-          transportFailed = true;
-          break;
-        }
-        await new Promise<void>((r) => setTimeout(r, attempt === 0 ? 2000 : 5000));
+        res = null;
       }
+      const retryable = res === null || RETRYABLE_AUTH_CODES.has(res.code);
+      if (!retryable) break;
+      if (attempt >= 2) {
+        transportFailed = true;
+        break;
+      }
+      await new Promise<void>((r) => setTimeout(r, attempt === 0 ? 2000 : 5000));
     }
     const data = res && res.code === 0 ? res.data : null;
     if (data) {
@@ -108,6 +114,9 @@ export function initAuth(): () => void {
       setKnownAccessExpiry(data.expires_at);
       await refreshUser();
     } else {
+      // 重试耗尽仍被限流/服务端异常：先按匿名继续浏览，但保留自愈标记——
+      // 网络恢复/切回前台时 recheckAuth 会重试并恢复登录态，而不是永久掉登录。
+      if (res && RETRYABLE_AUTH_CODES.has(res.code)) transportFailed = true;
       setKnownAccessExpiry(null);
       status = 'anonymous';
       user = null;
