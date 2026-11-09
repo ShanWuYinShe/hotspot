@@ -19,6 +19,13 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   ```
   `backend-test` 为独立测试后端（`RATE_LIMIT_BYPASS=1` 显式跳过限流 + 独立 `hotspot_test` 数据库，见 `docker-compose.dev.yml`），不污染 dev 主库。
 
+- **dev 环境限流默认关闭**：`docker-compose.dev.yml` 的 backend 注入 `RATE_LIMIT_BYPASS: ${RATE_LIMIT_BYPASS:-1}`，
+  联调 / UI 审计 / 自动化测试不会被 `user_per_hour`、`auth_signin_per_10minutes` 等桶打出 429。
+  需要验证限流行为时显式打开（env 变更必须 recreate 容器）：
+  `RATE_LIMIT_BYPASS=0 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate backend`；
+  限流阈值本身在 DB `AppConfig.rate_limits`（管理员配置，变更即时生效），可配合调小验证。
+  生产 compose 不注入该变量，始终启用限流。
+
 ### 推送前门禁（硬性）：`./scripts/verify-backend-ci.sh`
 
 > 路径说明：本文所有 `scripts/xxx.sh` 都在**仓库根 `hotspot/scripts/`**，不是 `backend-go/scripts/`（该目录不存在）。

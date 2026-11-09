@@ -229,11 +229,11 @@ func WebsocketHandshakeMiddleware(next http.Handler) http.Handler {
 
 // bypassWarnOnce 保证「显式关闭限流」只告警一次：限流被关闭必须可观测（P3-1），
 // 防止配置误用导致部署悄悄跑在无限流状态。逐请求告警会淹没日志，One-shot 足够。
-// 测试基建（docker backend-test / CI e2e）统一通过 RATE_LIMIT_BYPASS=1 显式开启；
+// 测试/联调环境（docker backend-test 固定、dev 主后端默认）通过 RATE_LIMIT_BYPASS=1 显式开启；
 // 不再用 APP_ENV=test 隐式推断——APP_ENV 一旦误配，生产会静默失去限流。
 var bypassWarnOnce sync.Once
 
-// rateLimitBypass 报告是否显式关闭限流（仅测试基建使用，生产不得设置）。
+// rateLimitBypass 报告是否显式关闭限流（仅测试/联调环境使用，生产不得设置）。
 func rateLimitBypass() bool {
 	return os.Getenv("RATE_LIMIT_BYPASS") == "1"
 }

@@ -57,6 +57,12 @@ services:
       # dev 默认 50ms 就记账慢查询：本地数据量小，超过 50ms 基本就是查询写坏了或漏了索引。
       # 需要临时观察更细的慢查询时：SLOW_QUERY_THRESHOLD=1ms docker compose ... up -d backend
       SLOW_QUERY_THRESHOLD: ${SLOW_QUERY_THRESHOLD:-50ms}
+      # 联调 / UI 审计 / 自动化测试默认跳过限流：避免并发请求把 user_per_hour / auth_* 桶打满后
+      # 出现 429「请求过于频繁」（顶栏掉成未登录、页面加载失败），把环境噪声误判成 UI 缺陷。
+      # 需要验证限流行为时显式打开（改 env 需 recreate 容器才生效）：
+      #   RATE_LIMIT_BYPASS=0 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --force-recreate backend
+      # 生产 compose 不注入该变量，始终启用限流；关闭时后端会打一条一次性 Warn 便于发现误配。
+      RATE_LIMIT_BYPASS: ${RATE_LIMIT_BYPASS:-1}
     # 覆盖 base healthcheck：air 首次全量编译较慢，放宽启动窗口。
     # 就绪探针 /readyz：DB 不可达返回 503；Redis 故障仅 degraded（仍 200）。
     healthcheck:
@@ -66,7 +72,7 @@ services:
       retries: 60
       start_period: 180s
 
-  # ── 后端（集成测试实例，RATE_LIMIT_BYPASS=1 跳过限流）─────────────────
+  # ── 后端（集成测试实例，RATE_LIMIT_BYPASS=1 固定跳过限流）─────────────────
   # 使用: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test up -d backend-test
   # 然后: BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/ (backend-go 目录)
   backend-test:
@@ -86,8 +92,8 @@ services:
       - backend_gocache:/root/.cache/go-build   # 复用编译缓存，启动即增量编译
     environment:
       APP_ENV: test
-      # 显式关闭限流(ratelimit.Middleware)：不再由 APP_ENV=test 隐式推断，
-      # 避免生产误配 APP_ENV 时静默无限流；仅测试基建可设置。
+      # 显式关闭限流(ratelimit.Middleware)：集成测试实例固定关闭，不受环境变量覆盖；
+      # 避免生产误配 APP_ENV 时静默无限流（dev 主后端默认关闭，见上方 backend 服务）。
       RATE_LIMIT_BYPASS: "1"
       LOG_LEVEL: warn
       GOCACHE: /root/.cache/go-build
