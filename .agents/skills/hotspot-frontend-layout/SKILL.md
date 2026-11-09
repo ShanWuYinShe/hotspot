@@ -181,7 +181,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
   `PageIsland.svelte` 组合业务内容（leading/标题/默认面板）；首页 `HomeDesktop`、搜索页
   `search/+page.svelte` 直接向 store 注册；`DesktopLayout` 在顶栏中央绝对定位渲染。
 - **桌面页头**：标准 `PageHeader` 默认 `desktopVisible={false}` → `lg:hidden`（标题/副标题/`below`
-  筛选行都交给岛）；`/messages` 左栏传 `desktopVisible` 是登记例外。移动/平板不渲染岛、页头照常。
+  筛选行都交给岛）；隐藏时组件额外输出 `sr-only` h1（`hidden lg:block`，移动端 display:none 不重复）
+  保证唯一可访问一级标题，搜索页自定义岛同样补 `sr-only` h1；`/messages` 左栏传 `desktopVisible`
+  是登记例外。移动/平板不渲染岛、页头照常。
 - **形态**：常驻胶囊高 34px、宽 min 260/290 / max 380（center 搜索态 360/400）；展开中枢宽固定
   440/460、头部行 44px、主体高度自适应。圆角常驻 `rounded-lg`(20px)（34px 高渲染即半高胶囊）、
   展开 `rounded-xl`(24px)；宽度用 min/max-width 插值 + 高度 slide，220ms `--cst-ease-standard`；
@@ -190,8 +192,9 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
   trailing ≤2 控件 · 最右 18px 阅读进度圆环（每帧写 `stroke-dashoffset`，无 CSS 过渡；同一读数只一处）。
   hover/focus 只由外壳承载（实底 + accent 细边 + 抬升 + 轻缩放；标题区不再画独立灰底），除展开 morph
   外不改宽度；`Esc`/点岛外空白收起。
-- **展开中枢**：`PageHeader` 有 `below` 时自动映射（筛选/工具行 + `islandTrailing`/`trailing` + Esc/回顶）；
-  `DetailHeader` 为作者名片面板；首页/搜索页自定义。面板底部统一「Esc 收起 / 平滑回顶」。
+- **展开中枢**：`PageHeader` 有 `below` 时自动映射（筛选/工具行 + `islandTrailing`/`trailing`）；
+  `DetailHeader` 为作者名片面板；首页/搜索页自定义；后台页传 `islandExpanded` 放 10 模块两行网格。
+  面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule` 外壳；页面片段不得自带 footer）。
 - **注册 API**：`PageHeader` 的 `island`（默认 true）/`islandMeta`/`islandTrailing`/`islandExpanded`/
   `islandIcon`；`DetailHeader` 走同一 store 契约；state 在 `stores/header-island.svelte.ts`
   （token 注册、最后注册者生效、路由切换不串台）；阅读进度由唯一滚动 owner `RoutedContentViewport` 上报。

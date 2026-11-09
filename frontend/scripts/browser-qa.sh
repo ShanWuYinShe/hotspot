@@ -60,7 +60,12 @@ audit_js='(() => {
 		const s = im.getAttribute("src") || "";
 		if (s && im.complete && im.naturalWidth === 0) issues.push("broken " + s.slice(0, 80));
 	});
-	const h1 = document.querySelectorAll("h1").length;
+	// 只计视觉上生效的 h1：桌面端隐藏页头保留的 sr-only 无障碍标题（display:block 但 1px 裁切）
+	// 与隐藏页头里的视觉 h1（桌面 display:none）都不应造成重复标题误报。
+	const h1 = [...document.querySelectorAll("h1")].filter((el) => {
+		const cs = getComputedStyle(el);
+		return cs.display !== "none" && cs.visibility !== "hidden" && el.getClientRects().length > 0;
+	}).length;
 	if (h1 !== 1) issues.push("h1=" + h1);
 	// 底部主导航 = MobilePortrait/TabletLayout 的 nav[aria-label="主导航"]；
 	// 桌面（侧边栏）与手机横屏（无底栏）合法值为 0，故仅记录不做硬断言。

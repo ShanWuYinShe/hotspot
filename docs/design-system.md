@@ -1258,12 +1258,13 @@ eager 图各 2 张且像素 diff 0 回归。
 **展开中枢（注册方决定内容）**
 
 - `PageHeader`：传 `islandExpanded` 时用它；否则若页面有 `below`，自动映射为
-  `below`（筛选/标签/工具行）+ `islandTrailing`（缺省 `trailing`）+ 底部「Esc 收起 / 平滑回顶」。
+  `below`（筛选/标签/工具行）+ `islandTrailing`（缺省 `trailing`）；面板底部控制条统一由
+  `IslandCapsule` 外壳渲染，页面片段不得自带 footer（否则两层重复）。
 - `PageHeader` 无 `below` 且无 `islandExpanded`：`PageIsland` 的「页面控制与导航」默认面板（meta + trailing）。
 - `DetailHeader`：作者名片面板（头像 + 名称/角色徽章 + 地点·时间 + 「查看资料」主按钮）。
 - 首页：信息流频道面板（`为你推荐 / 正在关注` 分段切换 + 刷新动态）。
 - 搜索：搜索中枢面板（搜索类型/结果计数 + 热门话题）。
-- 面板底部统一「Esc 收起 / 平滑回顶」（滚动 owner `#main-content`，reduced 直接跳）。
+- 面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule`；滚动 owner `#main-content`，reduced 直接跳）。
 
 **岛内交互（统一契约）**
 
@@ -1302,6 +1303,9 @@ eager 图各 2 张且像素 diff 0 回归。
 
 - `role="group"` + `aria-label`；标题按钮、返回、展开/收起、清空等全部带可访问名；`Esc` 收起；
   键盘焦点可见；岛内文字不重复播报。
+- 桌面端标准页头整条隐藏（`lg:hidden`）时，`PageHeader` 额外输出 `sr-only` h1
+  （`hidden lg:block`，移动端 display:none 不重复），保证每页唯一可访问一级标题；
+  `/search` 自定义岛同样补 `sr-only` h1。展开面板 footer 唯一渲染点在 `IslandCapsule`。
 - 测试钩子：岛根 `data-desktop-dynamic-island`；进度圆环 `data-island-progress-ring` /
   `data-island-progress`；页面侧 `data-island-visible` / `data-island-band-hidden` / `data-island-handoff`
   （页面退场与断言用，不参与岛样式）。
@@ -1317,11 +1321,12 @@ eager 图各 2 张且像素 diff 0 回归。
 | /nearby 枢纽 | 附近 | 地点 · 5km 内 | — | 页面控制与导航（当前定位） |
 | /search（自定义注册） | —（`center` 内联搜索框 + ⌘K 提示） | — | 清空搜索（有词时） | 搜索中枢（类型/结果计数 + 热门话题） |
 | 详情（瞬间/群组/他人主页，`DetailHeader`） | 作者名 / 实体名 | 作者地点 · 时间；群组为分类 · 成员数 | 分享动态 / 分享资料 / 更多操作（≤2） | 作者/用户/群组卡（头像 + 名称/角色 + 地点·时间 + 查看资料/查看群组） |
-| /messages（左栏 PageHeader 桌面可见的登记例外） | 消息 | 全部已读 | — | 会话操作（全部已读 / 发起新会话 / 创建群聊）+ 页面级页脚 + Esc/回顶 |
-| /map（左侧面板 PageHeader 注册） | 位置选择 | 地点 · 5km 内 | — | 位置与漫游锚点（重置默认 / 完成返回）+ 返回上一页页脚 + Esc/回顶 |
-| /me、/me/edit、/settings、/admin、/admin/reports 等 | 页面标题（/me/edit 无 meta） | 计数 / 模块 / 平台管理 | 编辑资料 / 保存 / 返回概览（按页；/settings 等无 trailing） | 页面控制与导航（页面工具；/admin 无权限时仅 Esc/回顶） |
+| /messages（左栏 PageHeader 桌面可见的登记例外） | 消息 | 全部已读 | — | 会话操作（全部已读 / 发起新会话 / 创建群聊） |
+| /map（左侧面板 PageHeader 注册） | 位置选择 | 地点 · 5km 内 | — | 位置与漫游锚点（重置默认 / 完成返回） |
+| /me、/me/edit、/settings 等 | 页面标题（/me/edit 无 meta） | 计数 / 模块 | 编辑资料 / 保存（按页；/settings 等无 trailing） | 页面控制与导航（页面工具） |
+| /admin 及子页 | 管理后台 / 模块名 | 平台管理 | 返回概览（子页） | 平台管理员：管理模块 10 项两行网格（概览/统计/用户/群组/举报/标签/公告/角色权限/审计日志/系统配置）；非管理员为空面板 |
 
-> 已知问题（待清理，不计入契约）：`/me/relationships`、`/me/reports`、`/admin`、`/admin/reports` 的展开面板出现两组「Esc 收起 / 平滑回顶」（页面级页脚与全局页脚重复）；`/admin`、`/admin/reports` 在无权限账号下仍显示管理上下文。
+> 已知问题（待清理，不计入契约）：`/admin` 在无权限账号下仍显示管理上下文（岛标题「管理后台 / 平台管理」，正文为无访问权限）。
 
 **动效待做项与复测方法**见 `docs/frontend-animation-handoff.md`（含筛选/排序过渡、画廊交叉淡入、拖拽关闭等）。
 
