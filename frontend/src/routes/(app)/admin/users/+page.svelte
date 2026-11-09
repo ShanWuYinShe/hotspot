@@ -17,7 +17,7 @@
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
-		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY, TD_ACTIONS,
+		TABLE_WRAP, TABLE, TH, TH_TABLET_HIDDEN, TR, TD, TD_TABLET_HIDDEN, TD_ACTIONS,
 		ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META, META_MONO
 	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
@@ -163,11 +163,11 @@
 					<thead>
 						<tr>
 							<th scope="col" class={TH}>用户</th>
-							<th scope="col" class={TH_SECONDARY}>登录 ID</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>登录 ID</th>
 							<th scope="col" class={TH}>状态</th>
-							<th scope="col" class={TH_SECONDARY}>邮箱</th>
-							<th scope="col" class={TH_SECONDARY}>注册时间</th>
-							<th scope="col" class={TH_SECONDARY}>最后活跃</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>邮箱</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>注册时间</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>最后活跃</th>
 							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
@@ -180,7 +180,7 @@
 										<span class={`${META_MONO} max-sm:hidden`}>{u.user.user_id}</span>
 									</span>
 								</td>
-								<td class={TD_SECONDARY}>{u.login_id}</td>
+								<td class={TD_TABLET_HIDDEN}>{u.login_id}</td>
 								<td class={TD}>
 									{#if u.status === 'banned'}
 										<Badge tone="danger">已封禁</Badge>
@@ -191,9 +191,9 @@
 										<Badge>正常</Badge>
 									{/if}
 								</td>
-								<td class={TD_SECONDARY}>{u.email ?? '—'}</td>
-								<td class={TD_SECONDARY}>{formatDateTime(u.created_at)}</td>
-								<td class={TD_SECONDARY}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
+								<td class={TD_TABLET_HIDDEN}>{u.email ?? '—'}</td>
+								<td class={TD_TABLET_HIDDEN}>{formatDateTime(u.created_at)}</td>
+								<td class={TD_TABLET_HIDDEN}>{u.last_active_at ? formatDateTime(u.last_active_at) : '—'}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
 										<button type="button" class={u.status === 'banned' ? ROW_BTN : ROW_BTN_DANGER} onclick={() => openBan(u)}>

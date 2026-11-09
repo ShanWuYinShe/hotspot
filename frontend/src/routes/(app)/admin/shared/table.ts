@@ -54,6 +54,13 @@ export const TH_SECONDARY_NUM = `${TH_BASE} text-right max-sm:hidden`;
 /** 移动端隐藏的数字单元格 */
 export const TD_SECONDARY_NUM = `${TD} text-right tabular-nums max-sm:hidden`;
 
+/** 平板（<lg=1024px）裁剪的低优先级列：768 平板宽度不足以承载全列，先隐藏细节列，
+ *  保住「主体 / 关键状态 / 操作」三类列首屏可见（操作列不再落在横向滚动区外）。 */
+export const TH_TABLET_HIDDEN = `${TH_SECONDARY} max-lg:hidden`;
+
+/** 同 TH_TABLET_HIDDEN 的数据单元格 */
+export const TD_TABLET_HIDDEN = `${TD_SECONDARY} max-lg:hidden`;
+
 // 行内动作说明（R13）：ui/button 已提供 soft（中性软填）变体，但后台表格行内动作需要
 // 28px 紧凑高度 + hit-slop-44 热区 + 同构的 soft-danger，故保留本文件的行内按钮常量；
 // 页面级动作（新建/发布/授予/裁决）统一使用 ui/button。

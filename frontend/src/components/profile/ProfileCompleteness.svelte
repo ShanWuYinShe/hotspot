@@ -22,9 +22,12 @@
 
 	let {
 		items,
+		variant = 'card',
 		class: className = ''
 	}: {
 		items: CompletenessItem[];
+		/** card（默认，移动端/单栏）：标题在卡内；section（桌面双栏）：标题在卡外，与左列 SectionHead 同基线 */
+		variant?: 'card' | 'section';
 		class?: string;
 	} = $props();
 
@@ -34,8 +37,7 @@
 	const hint = $derived(`再补 ${missing.length} 项就完整了——完善后的主页更容易被附近的人记住。`);
 </script>
 
-<aside class={cn('rounded-lg bg-surface-island p-4 shadow-xs', className)} aria-label="资料状态">
-	<SectionHead title="资料状态" icon={ShieldCheck} count={`${filledCount}/${items.length} 项`} />
+{#snippet body()}
 
 	{#if missing.length === 0}
 		<!-- 完成态：不画进度条（100% 长条会被读成一条装饰横线），直接给状态说明 -->
@@ -88,4 +90,18 @@
 			</div>
 		</div>
 	{/if}
-</aside>
+{/snippet}
+
+{#if variant === 'section'}
+	<section aria-label="资料状态" class={cn('flex min-w-0 flex-col', className)}>
+		<SectionHead title="资料状态" icon={ShieldCheck} count={`${filledCount}/${items.length} 项`} />
+		<div class="rounded-lg bg-surface-island p-4 shadow-xs">
+			{@render body()}
+		</div>
+	</section>
+{:else}
+	<aside class={cn('rounded-lg bg-surface-island p-4 shadow-xs', className)} aria-label="资料状态">
+		<SectionHead title="资料状态" icon={ShieldCheck} count={`${filledCount}/${items.length} 项`} />
+		{@render body()}
+	</aside>
+{/if}

@@ -12,7 +12,7 @@
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
-		TABLE_WRAP, TABLE, TH, TH_NUM, TH_SECONDARY, TR, TD, TD_NUM, TD_SECONDARY, TD_ACTIONS,
+		TABLE_WRAP, TABLE, TH, TH_NUM, TH_TABLET_HIDDEN, TR, TD, TD_NUM, TD_TABLET_HIDDEN, TD_ACTIONS,
 		ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META_MONO
 	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
@@ -87,7 +87,7 @@
 							<th scope="col" class={TH}>群组</th>
 							<th scope="col" class={TH}>群主</th>
 							<th scope="col" class={TH_NUM}>成员数</th>
-							<th scope="col" class={TH_SECONDARY}>创建时间</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>创建时间</th>
 							<th scope="col" class={TH}><span class="sr-only">操作</span></th>
 						</tr>
 					</thead>
@@ -102,7 +102,7 @@
 								</td>
 								<td class={TD}>{g.owner?.nickname ?? '—'}</td>
 								<td class={TD_NUM}>{g.group.members_count}</td>
-								<td class={TD_SECONDARY}>{formatDateTime(g.created_at)}</td>
+								<td class={TD_TABLET_HIDDEN}>{formatDateTime(g.created_at)}</td>
 								<td class={TD_ACTIONS}>
 									{#if canWrite}
 										<button

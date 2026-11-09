@@ -551,16 +551,8 @@
 
 		<!-- Scrollable content — 收起(min)时隐藏而非卸载（保留滚动位置/输入状态；横屏恒定展示） -->
 		<div style={scrollStyle} class="no-scrollbar" aria-hidden={!isLandscape && snap === 'min'}>
-			<!-- 浏览锚点卡片：与桌面端同组件，明确「已保存锚点 / 地图中心」并支持恢复默认 -->
-			<div class="px-4 pb-3">
-				<BrowseAnchorCard
-					anchor={anchorPoint}
-					center={mapCenter}
-					centerName={locationName}
-					{defaultName}
-					onReset={handleResetAnchor}
-				/>
-			</div>
+			<!-- 搜索建议/选中地点/最近使用贴着搜索框（主操作路径）；浏览锚点卡片下沉到列表之后，
+			     避免它在 mid 档把「最近使用」空态顶到首屏之外（射程内仍可滚动查看）。 -->
 			<LocationSheetList
 				bind:searchQuery
 				{searchResults}
@@ -572,6 +564,16 @@
 				onOpenPinDetail={openPinDetail}
 				onClearPin={() => (selectedPin = null)}
 			/>
+			<!-- 浏览锚点卡片：与桌面端同组件，明确「已保存锚点 / 地图中心」并支持恢复默认 -->
+			<div class="px-4 pt-1 pb-3">
+				<BrowseAnchorCard
+					anchor={anchorPoint}
+					center={mapCenter}
+					centerName={locationName}
+					{defaultName}
+					onReset={handleResetAnchor}
+				/>
+			</div>
 		</div>
 
 		{#if isLandscape}

@@ -10,7 +10,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
-		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TR, TD, TD_SECONDARY
+		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TH_TABLET_HIDDEN, TR, TD, TD_SECONDARY, TD_TABLET_HIDDEN
 	} from '../shared/table';
 	import { AUDIT_ACTION_LABELS, AUDIT_TARGET_LABELS } from '../shared/labels';
 	import * as Dialog from '@/components/ui/dialog';
@@ -163,7 +163,7 @@
 							<th scope="col" class={TH}>操作者</th>
 							<th scope="col" class={TH}>动作</th>
 							<th scope="col" class={TH}>目标</th>
-							<th scope="col" class={TH_SECONDARY}>详情</th>
+							<th scope="col" class={TH_TABLET_HIDDEN}>详情</th>
 							<!-- IP / 设备属排障辅助列：1440 及以下折叠进「详情」弹层（避免 8 列挤压后最右列被裁），
 							     1536（项目 xl 断点）以上恢复常驻列 -->
 							<th scope="col" class={`${TH_SECONDARY} max-xl:hidden`}>IP 位置</th>
@@ -200,7 +200,7 @@
 									<span class="text-xs text-text-secondary">{AUDIT_TARGET_LABELS[log.target_type] ?? log.target_type}</span>
 									{#if log.target_name}<span class="ml-1">{log.target_name}</span>{:else}<span class="ml-1 font-mono text-xs text-text-secondary">{log.target_id}</span>{/if}
 								</td>
-								<td class={TD_SECONDARY}>
+								<td class={TD_TABLET_HIDDEN}>
 									<!-- 截断 + 点击弹窗看全文（r59：生硬截断→可展开） -->
 									<button
 										type="button"

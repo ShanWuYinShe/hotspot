@@ -396,7 +396,7 @@
 						</ListContainer>
 					</section>
 
-					<ProfileCompleteness items={COMPLETENESS} class="self-start" />
+					<ProfileCompleteness items={COMPLETENESS} variant="section" class="self-start" />
 				</div>
 			</div>
 		{/if}
