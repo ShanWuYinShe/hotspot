@@ -200,7 +200,7 @@
 	{#snippet footer()}
 		<!-- 全端常驻贴底：桌面由 SplitPageLayout footer 的 sticky bottom-0 承载，
 		     移动端为 fixed 底栏并由布局补内容内距。输入器随时可发，不再随内容滚走。 -->
-		<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md">
+		<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md xl:mx-[var(--cst-page-gutter)] xl:w-auto">
 			{@render commentComposer()}
 		</div>
 	{/snippet}

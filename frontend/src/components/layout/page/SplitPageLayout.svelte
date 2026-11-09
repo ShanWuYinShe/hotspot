@@ -79,7 +79,7 @@
 					</ContentColumn>
 				</div>
 				{#if footer}
-					<div class="shrink-0 sticky bottom-0 z-10 w-full bg-surface-primary">
+					<div class="shrink-0 sticky bottom-0 z-10 w-full">
 						{@render footer()}
 					</div>
 				{/if}

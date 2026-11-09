@@ -19,7 +19,9 @@
 	} = $props();
 
 	const canSend = $derived(input.trim().length > 0);
-	const shell = 'w-full px-3 py-2 flex items-center gap-2.5';
+	// 桌面 docked 栏与内容卡同宽后，内部左右 padding 对齐内容列 gutter（28px），
+	// 头像/发送钮与评论内容轴齐平；平板/手机保持通栏 12px。
+	const shell = 'w-full px-3 xl:px-[var(--cst-page-gutter)] py-2 flex items-center gap-2.5';
 </script>
 
 <div class={cn('flex items-center', shell)}>
