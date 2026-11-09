@@ -20,7 +20,8 @@
 		chat,
 		canRecall,
 		showSenderNames = false,
-		onReport
+		onReport,
+		errorText = '消息加载失败，请检查网络后重试'
 	}: {
 		chat: ChatController;
 		canRecall: (msg: ChatMessage) => boolean;
@@ -28,6 +29,8 @@
 		showSenderNames?: boolean;
 		/** 收到消息的举报入口（reports/create target_type='message'）；缺省不渲染 */
 		onReport?: (messageId: string) => void;
+		/** 加载失败文案；群聊可注入「未加入该群」等权限语义（默认网络失败） */
+		errorText?: string;
 	} = $props();
 
 	// 「没有更多了」只在真正有意义时出现（R16 降噪）：
@@ -105,7 +108,7 @@
 			<InlineLoading label="加载消息…" class="h-full justify-center" />
 		{:else if chat.loadError}
 			<!-- 错误态统一 LoadError（与全站一致），不再各页手搓文案 + 按钮 -->
-			<LoadError message="消息加载失败，请检查网络后重试" onRetry={() => void chat.reload()} class="h-full" />
+			<LoadError message={errorText} onRetry={() => void chat.reload()} class="h-full" />
 		{:else if visibleGroups.length === 0}
 			<!-- 空会话（含「全部消息内容为空」的脏数据场景）：统一 EmptyState 空态 -->
 			<EmptyState class="h-full" title="还没有消息" description="打个招呼，开始这段对话吧" bare>

@@ -163,6 +163,19 @@ describe('GroupChatView', () => {
 		expect(screen.queryByText('重试')).toBeNull();
 		expect(screen.queryByLabelText('消息输入框')).toBeNull();
 	});
+
+	it('10200 not_group_member 时显示未入群文案而非网络失败', async () => {
+		mocks.getGroupMessages.mockResolvedValue({
+			code: 10200,
+			message: 'forbidden',
+			data: { forbidden_reason: 'not_group_member' }
+		});
+		renderGroup();
+		await waitFor(() => {
+			expect(screen.getByText('你还不是这个群组的成员，加入后才能查看群消息')).toBeTruthy();
+		});
+		expect(screen.queryByText('消息加载失败，请检查网络后重试')).toBeNull();
+	});
 	// R16 内容轴契约：此前群聊头部只有 max-w-3xl（缺 lg:max-w-5xl），宽屏群名/成员数与
 	// 消息列错位 128-256px；现在统一由 ChatColumn 提供宽度。
 	it('页头/消息列/输入栏共用同一内容轴（3 个 ChatColumn）', () => {

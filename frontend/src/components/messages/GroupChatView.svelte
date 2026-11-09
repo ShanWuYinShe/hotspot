@@ -91,6 +91,10 @@
 		};
 	});
 
+	// 群聊历史加载的权限类失败文案：非群成员直链（10200 + forbidden_reason）时不能
+	// 笼统写「网络失败」，否则用户会在「已加载空会话/重试」之间反复打转。
+	let loadErrorText = $state('消息加载失败，请检查网络后重试');
+
 	const chat = useChat({
 		targetId: () => groupId,
 		loadHistory: async (cursor) => {
@@ -103,6 +107,17 @@
 				return null;
 			}
 			needsAuth = false;
+			if (res && res.code !== 0) {
+				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
+				loadErrorText =
+					res.code === 10200 && reason === 'not_group_member'
+						? '你还不是这个群组的成员，加入后才能查看群消息'
+						: res.code === 10200
+							? '你没有权限查看这个群组的消息'
+							: (res.message || '消息加载失败，请检查网络后重试');
+				return null;
+			}
+			loadErrorText = '消息加载失败，请检查网络后重试';
 			if (!res || res.code !== 0 || !res.data) return null;
 			const items = res.data.items;
 			const mapped: ChatMessage[] = items.map((m) => ({
@@ -295,7 +310,13 @@
 		</div>
 	{:else}
 		<!-- Messages -->
-		<ChatMessageList {chat} canRecall={canRecallMessage} showSenderNames onReport={(id) => (reportMessageId = id)} />
+		<ChatMessageList
+			{chat}
+			canRecall={canRecallMessage}
+			showSenderNames
+			onReport={(id) => (reportMessageId = id)}
+			errorText={loadErrorText}
+		/>
 
 		<!-- Input bar -->
 		<ChatInputBar {chat} {mentionCandidates} />

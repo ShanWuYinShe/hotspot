@@ -90,7 +90,7 @@
 				/>
 				<button
 					type="button"
-					class="hover-btn flex w-full items-start gap-3 rounded-lg bg-surface-subtle/50 p-3.5 text-left transition-colors focus-ring hover:bg-surface-subtle"
+					class="hover-btn flex w-full items-start gap-3 rounded-lg bg-surface-subtle/60 p-3.5 text-left transition-colors focus-ring hover:bg-surface-subtle"
 					onclick={onViewAnnouncements}
 				>
 					<span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-default">
