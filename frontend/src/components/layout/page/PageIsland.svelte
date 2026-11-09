@@ -113,9 +113,6 @@
 	<div class="flex flex-col gap-2">
 		<div class="flex items-center justify-between text-xs text-text-secondary pb-0.5">
 			<span class="font-medium text-text-primary">页面控制与导航</span>
-			{#if metaText}
-				<span class="font-mono text-xxs text-accent-default">{metaText}</span>
-			{/if}
 		</div>
 		{#if trailing}
 			<div class="flex items-center gap-2 pt-0.5">

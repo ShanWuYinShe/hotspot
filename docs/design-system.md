@@ -1264,7 +1264,7 @@ eager 图各 2 张且像素 diff 0 回归。
 - `DetailHeader`：作者名片面板（头像 + 名称/角色徽章 + 地点·时间 + 「查看资料」主按钮）。
 - 首页：信息流频道面板（`为你推荐 / 正在关注` 分段切换 + 刷新动态）。
 - 搜索：搜索中枢面板（搜索类型/结果计数 + 热门话题）。
-- 面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule`；滚动 owner `#main-content`，reduced 直接跳）。
+- 面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule`；滚动 owner `#main-content`，reduced 直接跳）。「平滑回顶」只在页面实际可滚动（`scrollHeight - clientHeight > 8`）时渲染：短页只保留 Esc，不暴露死操作；展开后再量一次以覆盖异步数据。
 
 **岛内交互（统一契约）**
 

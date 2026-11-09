@@ -55,6 +55,30 @@
 
 	let islandEl = $state<HTMLElement | undefined>(undefined);
 	let isExpanded = $state(false);
+	// 展开面板的「平滑回顶」只在页面确实可滚动时出现：短页（内容一屏放得下）回顶
+	// 是死操作，暴露出来只会让面板多一行无效控制。
+	let contentScrollable = $state(false);
+
+	function syncContentScrollable() {
+		const scroller = document.getElementById('main-content');
+		contentScrollable = !!scroller && scroller.scrollHeight - scroller.clientHeight > 8;
+	}
+
+	$effect(() => {
+		if (!isExpanded) {
+			contentScrollable = false;
+			return;
+		}
+		// 展开动画/异步数据渲染完成后再量一次，避免首帧 clientHeight 未稳定
+		const raf = requestAnimationFrame(syncContentScrollable);
+		const timer = setTimeout(syncContentScrollable, 260);
+		window.addEventListener('resize', syncContentScrollable);
+		return () => {
+			cancelAnimationFrame(raf);
+			clearTimeout(timer);
+			window.removeEventListener('resize', syncContentScrollable);
+		};
+	});
 
 	const hasCenter = $derived(Boolean(center));
 
@@ -255,14 +279,16 @@
 					<kbd class="rounded border border-border-default/30 bg-surface-island px-1.5 py-0.5 font-mono text-[10px] shadow-xs">Esc</kbd>
 					<span>收起</span>
 				</div>
-				<button
-					type="button"
-					class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-					onclick={handleScrollToTop}
-				>
-					<span>平滑回顶</span>
-					<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-				</button>
+				{#if contentScrollable}
+					<button
+						type="button"
+						class="group hit-slop-44 flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
+						onclick={handleScrollToTop}
+					>
+						<span>平滑回顶</span>
+						<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
+					</button>
+				{/if}
 			</div>
 		</div>
 	{/if}

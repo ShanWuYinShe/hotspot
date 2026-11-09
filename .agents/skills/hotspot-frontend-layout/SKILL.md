@@ -196,7 +196,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
   外不改宽度；`Esc`/点岛外空白收起。
 - **展开中枢**：`PageHeader` 有 `below` 时自动映射（筛选/工具行 + `islandTrailing`/`trailing`）；
   `DetailHeader` 为作者名片面板；首页/搜索页自定义；后台页传 `islandExpanded` 放 10 模块两行网格。
-  面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule` 外壳；页面片段不得自带 footer）。
+  面板底部统一「Esc 收起 / 平滑回顶」（唯一渲染点在 `IslandCapsule` 外壳；页面片段不得自带 footer）。回顶仅在页面可滚动时出现：短页只留 Esc，不暴露死操作；展开后再量一次覆盖异步数据。
 - **注册 API**：`PageHeader` 的 `island`（默认 true）/`islandMeta`/`islandTrailing`/`islandExpanded`/
   `islandIcon`；`DetailHeader` 走同一 store 契约；state 在 `stores/header-island.svelte.ts`
   （token 注册、最后注册者生效、路由切换不串台）；阅读进度由唯一滚动 owner `RoutedContentViewport` 上报。
