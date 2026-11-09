@@ -173,13 +173,13 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 
 ## 页面锚点岛（Page Island，桌面端）
 
-桌面端 52px 顶栏中央的常驻信息位：页面级上下文（标题/身份/meta）与 ≤2 页面行动固定于此，
+桌面端 52px 顶栏视口中部的常驻信息位：页面级上下文（标题/身份/meta）与 ≤2 页面行动固定于此（按视口居中，空间不足按可用区夹取），
 正文区不再显示页头标题栏。**现行模型是「默认常驻 + 点击向下展开控制中枢」**，与滚动无关：
 不做滚动飞入/缩放入场，也不按滚动显隐。
 
 - **唯一形态实现**：`components/layout/page/IslandCapsule.svelte`（外壳/交互/展开容器/进度圆环）；
   `PageIsland.svelte` 组合业务内容（leading/标题/默认面板）；首页 `HomeDesktop`、搜索页
-  `search/+page.svelte` 直接向 store 注册；`DesktopLayout` 在顶栏中央绝对定位渲染。
+  `search/+page.svelte` 直接向 store 注册；`DesktopLayout` 在顶栏绝对定位渲染，按视口居中（实测品牌区/控制枢纽宽度补偿，空间不足夹取，展开态不压控件）。
 - **桌面页头**：标准 `PageHeader` 默认 `desktopVisible={false}` → `lg:hidden`（标题/副标题/`below`
   筛选行都交给岛）；隐藏时组件额外输出 `sr-only` h1（`hidden lg:block`，移动端 display:none 不重复）
   保证唯一可访问一级标题，搜索页自定义岛同样补 `sr-only` h1；`/messages` 左栏传 `desktopVisible`
