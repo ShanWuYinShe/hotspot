@@ -137,7 +137,7 @@
 </div>
 
 <!-- Search -->
-<div class="relative shrink-0 px-4 pb-3">
+<div class="relative shrink-0 px-4 pt-6 pb-3">
 	<SearchInput
 		value={searchQuery}
 		onChange={(v) => {

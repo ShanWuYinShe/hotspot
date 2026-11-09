@@ -37,7 +37,7 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
 ## 交互契约
 
 - 滚轮缩放：以**光标位置为锚**（标准地图行为），deltaY 累计 120 触发一级，
-  范围 `MAP_MIN_ZOOM` 3 ~ `MAP_MAX_ZOOM` 19。
+  范围 `MAP_MIN_ZOOM` 3 ~ `MAP_MAX_ZOOM` 18（实测上限：高德 z=19 返回 HTTP 200 空白瓦片、`tile.openstreetmap.de` z=19 返回 404，继续放大只会整屏空白）。
 - 滚轮监听必须用非 passive 原生监听挂**画布的父级**（Svelte 5 的 `onwheel` 属性是
   passive，preventDefault 不生效会页面跟着滚）；挂父级是因为 marker 覆盖层与画布平级，
   悬停在 marker 上滚动的事件不经过画布。

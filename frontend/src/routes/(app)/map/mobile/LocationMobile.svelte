@@ -274,7 +274,6 @@
 			selectedLoc = null;
 			searchQuery = '';
 			snapTo('mid');
-			showToast(`已定位到我的位置（精度约 ${Math.round(fix.accuracy)} 米）`, 'success');
 		},
 		onError: (err) => {
 			showToast(err.message, 'danger');
