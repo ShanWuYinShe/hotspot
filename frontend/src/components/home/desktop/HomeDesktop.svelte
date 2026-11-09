@@ -19,6 +19,7 @@
 	import Button from '@/components/ui/button.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import RailSection from '@/components/rail/RailSection.svelte';
+	import RailUserRow from '@/components/rail/RailUserRow.svelte';
 	import RailMomentThumb from '@/components/rail/RailMomentThumb.svelte';
 	import type { HomeFeedData } from '../shared/home-feed-data.svelte';
 
@@ -317,21 +318,12 @@
 							<RailSection title="活跃邻居" variant="island">
 								<div class="flex flex-col divide-y divide-border-subtle/30">
 									{#each data.activeNeighbors as neighbor (neighbor.userId)}
-										<div class="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-											<Avatar src={neighbor.avatarUrl} name={neighbor.nickname} size="sm" />
-											<div class="min-w-0 flex-1">
-												<button
-													type="button"
-													class="text-left text-xs font-semibold text-text-primary hover:text-accent-default hover:underline transition-colors truncate block w-full"
-													onclick={() => void goto(ROUTES.user(neighbor.userId))}
-												>
-													{neighbor.nickname}
-												</button>
-												{#if neighbor.location}
-													<span class="text-xxs text-text-secondary truncate block mt-0.5">{neighbor.location}</span>
-												{/if}
-											</div>
-										</div>
+										<RailUserRow
+											avatar={neighbor.avatarUrl ?? ''}
+											name={neighbor.nickname}
+											sub={neighbor.location || undefined}
+											onClick={() => void goto(ROUTES.user(neighbor.userId))}
+										/>
 									{/each}
 								</div>
 							</RailSection>

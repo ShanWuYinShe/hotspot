@@ -62,7 +62,7 @@
 {:else if error}
 	<LoadError message={error} onRetry={retry} />
 {:else if filtered.length > 0}
-	<div class="flex w-full flex-col gap-3">
+	<div class="grid w-full grid-cols-1 gap-3 xl:grid-cols-2">
 		{#each filtered as g (g.id)}
 			<ProfileGroupTile group={g} onLeft={() => handleLeft(g.id)} />
 		{/each}

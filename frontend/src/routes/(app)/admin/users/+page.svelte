@@ -175,9 +175,9 @@
 						{#each list.items as u (u.user.user_id)}
 							<tr class={TR}>
 								<td class={TD}>
-									<span class="flex items-center gap-2">
+									<span class="flex flex-col gap-0.5">
 										<span class="text-text-primary">{u.user.nickname}</span>
-										<span class={`${META_MONO} max-sm:hidden`}>{u.user.user_id}</span>
+										<span class="max-sm:hidden font-mono text-xxs text-text-secondary">{u.user.user_id}</span>
 									</span>
 								</td>
 								<td class={TD_TABLET_HIDDEN}>{u.login_id}</td>

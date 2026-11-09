@@ -83,7 +83,7 @@
 			variant="integrated"
 			maxWidth="var(--cst-content-breath)"
 			title={pageTitle}
-			subtitle="平台管理（仅平台管理员可见）"
+			subtitle="平台管理"
 			islandMeta="平台管理"
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
@@ -122,7 +122,7 @@
 			{/snippet}
 			{#snippet below()}
 				{#if admin.isAdmin}
-					<div class="mt-3 overflow-x-auto pr-1" role="group" aria-label="管理模块导航">
+					<div class="mt-3" role="group" aria-label="管理模块导航">
 						<TabBar
 							items={MODULES.map((m) => ({ id: m.id, label: m.label, count: m.id === 'reports' && pendingReports ? pendingReports : undefined }))}
 							value={activeId}
@@ -130,6 +130,7 @@
 								const target = MODULES.find((m) => m.id === id);
 								if (target && target.href !== pathname) void goto(target.href);
 							}}
+							class="flex-wrap gap-1.5"
 						/>
 					</div>
 				{/if}
