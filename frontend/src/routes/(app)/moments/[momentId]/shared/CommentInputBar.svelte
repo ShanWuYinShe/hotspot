@@ -5,27 +5,21 @@
 	import { cn } from '@/lib/utils';
 
 	// CommentInputBar —— 瞬间详情的评论输入器（Enter/按钮发送均走 onSend）。
-	// 视觉契约：
-	//   inline（桌面/平板）：自然内嵌于评论讨论区顶部，胶囊输入槽与卡片背景无缝融合，消除外层嵌套异色灰框；
-	//   docked（移动端）：通栏贴底底栏（横向 padding + 顶部分割线 + 毛玻璃实底），消除悬浮漏光与双色割裂。
+	// 视觉契约：全端 docked（由 SplitPageLayout footer 承载，桌面 sticky bottom-0 /
+	// 移动 fixed），通栏底栏（横向 padding + 顶部分割线 + 毛玻璃实底），
+	// 不再提供 inline 内嵌形态——评论输入器始终常驻贴底，随时可发。
 	let {
 		input = $bindable(''),
 		inputEl = $bindable(null),
-		onSend,
-		variant = 'docked'
+		onSend
 	}: {
 		input?: string;
 		inputEl?: HTMLInputElement | null;
 		onSend: () => void;
-		variant?: 'inline' | 'docked' | 'floating';
 	} = $props();
 
 	const canSend = $derived(input.trim().length > 0);
-	const shell = $derived(
-		variant === 'inline'
-			? 'w-full py-1 flex items-center gap-2.5 sm:gap-3'
-			: 'w-full px-3 py-2 flex items-center gap-2.5'
-	);
+	const shell = 'w-full px-3 py-2 flex items-center gap-2.5';
 </script>
 
 <div class={cn('flex items-center', shell)}>

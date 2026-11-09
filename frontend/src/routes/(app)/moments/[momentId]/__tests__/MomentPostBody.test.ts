@@ -1,7 +1,6 @@
 // MomentPostBody 详情改版契约（2026-10-29）：
 // 单图按原比例完整展示（object-contain、无固定 cover 高度）；动作条所有端内嵌；评论区可注入输入器。
 import { describe, it, expect, vi } from 'vitest';
-import { createRawSnippet } from 'svelte';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import MomentPostBody from '../MomentPostBody.svelte';
 
@@ -78,14 +77,6 @@ describe('MomentPostBody 详情媒体与布局契约', () => {
 		expect(screen.getByRole('button', { name: '点赞' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: '查看评论' })).toBeTruthy();
 		expect(screen.getByRole('button', { name: '收藏' })).toBeTruthy();
-	});
-
-	it('commentComposer snippet 注入评论区顶部', () => {
-		const composer = createRawSnippet(() => ({ render: () => '<div data-test="composer">输入器</div>' }));
-		render(MomentPostBody, { props: { ...baseProps, commentComposer: composer } });
-		const node = document.querySelector('[data-test="composer"]');
-		expect(node).toBeTruthy();
-		expect(node?.closest('section')?.id).toBe('moment-comments');
 	});
 
 	it('多图画廊：切换缩略图时保留双层交叉过渡，角标同步', async () => {

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import type { Snippet } from 'svelte';
 	import { MapPin, Heart, MessageCircle, Bookmark } from '@lucide/svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import Badge from '@/components/data-display/Badge.svelte';
@@ -20,8 +19,7 @@
 	import { auth } from '@/stores/auth.svelte';
 
 	// 动态详情内容体：作者/正文/图片（单图按原比例、多图网格）/操作条/评论区。
-	// 评论输入器通过 commentComposer snippet 注入评论区（桌面内嵌）或由页面移动端悬浮 dock 渲染；
-	// 本组件只负责内容体与评论区骨架。
+	// 评论输入器统一由页面 footer 的常驻贴底栏承载（全端同形态），本组件只负责内容体与评论区骨架。
 	// 页面私有组件（colocate），由 moments/[momentId]/+page.svelte 渲染。
 	//
 	// R13 视觉改版口径（对齐 MomentCard 已升级语言）：
@@ -86,8 +84,7 @@
 		onToggleCommentLike,
 		onReportComment,
 		onDeleteComment,
-		onLoadMoreComments,
-		commentComposer
+		onLoadMoreComments
 	}: {
 		moment: MomentData;
 		comments: MomentComment[];
@@ -115,8 +112,6 @@
 		/** 删除自己的评论（comments/delete，作者本人；页面负责确认层） */
 		onDeleteComment: (commentId: string) => void;
 		onLoadMoreComments: () => void;
-		/** 桌面/平板：评论区顶部内嵌评论输入器（移动端由页面底部悬浮 dock 承载） */
-		commentComposer?: Snippet;
 	} = $props();
 
 	// 大图查看器状态
@@ -400,10 +395,6 @@
 	<!-- 6. 评论讨论区：与动作条之间用一条内容分隔发丝线（非卡片边界），自然在画卷内延展 -->
 	<section class="mt-2 flex-1 border-t border-border-subtle/40 pt-6 px-4 sm:px-0" id="moment-comments">
 		<SectionHead title="评论讨论" count={commentCount} />
-		{#if commentComposer}
-			<!-- 桌面/平板：输入器内嵌评论区顶部（与卡片同语言），不再固定在视口底部形成独立横条 -->
-			<div class="mt-3 mb-4">{@render commentComposer()}</div>
-		{/if}
 		{#if comments.length === 0}
 			<div class="py-4">
 				<EmptyState bare title="还没有评论" description="来说点什么吧，成为第一个评论的人。">

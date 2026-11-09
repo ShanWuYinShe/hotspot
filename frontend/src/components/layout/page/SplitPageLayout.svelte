@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { page } from '$app/state';
 	import { platform } from '@/stores/platform.svelte';
 	import ContextRail from '@/components/layout/ContextRail.svelte';
 	import ContentColumn from './ContentColumn.svelte';
@@ -41,7 +40,6 @@
 	const isDesktop = $derived(platform.platform === 'desktop');
 	/** 移动端固定底栏高度：滚动内容据此补内距，末条内容不被底栏遮挡 */
 	let footerHeight = $state(0);
-	const demoMode = $derived(page.url.searchParams.get('demo'));
 	const isConstrained = $derived(contentMaxWidth != null);
 </script>
 
@@ -49,124 +47,48 @@
 	{#if isDesktop}
 		<!-- 桌面主区与 rail 聚合成自适应工作台，保持视觉邻近（gap: rail-gap），
 		     在超宽/高分屏上居中聚合，杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的撕裂感 -->
-		{#if demoMode === 'a'}
-			<!-- 备选方案 A：统一中轴舞台（对称居中，两端均匀呼吸） -->
-			<div class="mx-auto flex h-full w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[88rem] justify-center" style="gap:var(--cst-context-rail-gap);">
-				<div class="flex min-w-0 flex-1 flex-col">
-					{#if header}
-						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
-					{/if}
-					<div class="min-h-0 flex-1">
-						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
-							{@render children()}
-						</ContentColumn>
-					</div>
-					{#if footer}
-						<div class="shrink-0 sticky bottom-0 z-10">{@render footer()}</div>
-					{/if}
-				</div>
-				<ContextRail attached>{@render rail()}</ContextRail>
-			</div>
-		{:else if demoMode === 'b'}
-			<!-- 备选方案 B：统一左锚定工站（左基准线对齐，内容列 680px，右侧跟随扩展画布） -->
-			<div class="flex h-full w-full justify-start px-[var(--cst-page-gutter)]" style="gap:var(--cst-context-rail-gap);">
-				<div class="flex min-w-0 max-w-2xl flex-1 flex-col">
-					{#if header}
-						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
-					{/if}
-					<div class="min-h-0 flex-1">
-						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
-							{@render children()}
-						</ContentColumn>
-					</div>
-					{#if footer}
-						<div class="shrink-0 sticky bottom-0 z-10">{@render footer()}</div>
-					{/if}
-				</div>
-				<ContextRail attached>{@render rail()}</ContextRail>
-			</div>
-		{:else if demoMode === 'c'}
-			<!-- 备选方案 C：超宽屏双列瀑布流（容器拓宽至 96rem，为双列卡片预留充足呼吸宽度） -->
-			<div class="mx-auto flex h-full w-full max-w-7xl xl:max-w-[88rem] 2xl:max-w-[96rem] justify-center" style="gap:var(--cst-context-rail-gap);">
-				<div class="flex min-w-0 flex-1 flex-col">
-					{#if header}
-						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
-					{/if}
-					<div class="min-h-0 flex-1">
-						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
-							{@render children()}
-						</ContentColumn>
-					</div>
-					{#if footer}
-						<div class="shrink-0 sticky bottom-0 z-10">{@render footer()}</div>
-					{/if}
-				</div>
-				<ContextRail attached>{@render rail()}</ContextRail>
-			</div>
-		{:else if demoMode === 'd'}
-			<!-- 备选方案 D：LBS 双核分屏（左侧 58% 社交动态流 + 右侧 42% 实时雷达与地图画板） -->
-			<div class="flex h-full w-full px-[var(--cst-page-gutter)]" style="gap:var(--cst-context-rail-gap);">
-				<div class="flex min-w-0 flex-1 max-w-[58%] flex-col">
-					{#if header}
-						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">{@render header()}</div>
-					{/if}
-					<div class="min-h-0 flex-1">
-						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
-							{@render children()}
-						</ContentColumn>
-					</div>
-					{#if footer}
-						<div class="shrink-0 sticky bottom-0 z-10">{@render footer()}</div>
-					{/if}
-				</div>
-				<section class="flex min-w-0 flex-1 max-w-[42%] h-full flex-col py-2 overflow-y-auto" aria-label="雷达探索中心">
-					{@render rail()}
-				</section>
-			</div>
-		{:else}
-			<!-- 方案 E（默认标准）：超宽屏流式 3 列满铺画廊 + 右侧 Bento 侧栏（满幅无死角）
-			     若页面指定了 contentMaxWidth（如详情/个人主页/通知），则在超宽屏下居中聚合，
-			     杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的 1000px 撕裂断层。
-			     内容轴（2026-11-03）：**主列外层不再加左内距**——ContentColumn 是 gutter 唯一
-			     管理者，主列左侧若无条件再叠一层 --cst-page-gutter 会让正文比标准页右移 28px
-			     （1920 实测：Split 正文 312 vs Standard 正文 284，切页横向跳动）。外层只保留
-			     右内距（给 rail 留呼吸），主列由 ContentColumn 自己给左右 gutter。 -->
+		<!-- 默认标准：超宽屏流式 3 列满铺画廊 + 右侧 Bento 侧栏（满幅无死角）
+		     若页面指定了 contentMaxWidth（如详情/个人主页/通知），则在超宽屏下居中聚合，
+		     杜绝内容孤悬与 ContextRail 飘到屏幕极右缘的 1000px 撕裂断层。
+		     内容轴（2026-11-03）：**主列外层不再加左内距**——ContentColumn 是 gutter 唯一
+		     管理者，主列左侧若无条件再叠一层 --cst-page-gutter 会让正文比标准页右移 28px
+		     （1920 实测：Split 正文 312 vs Standard 正文 284，切页横向跳动）。外层只保留
+		     右内距（给 rail 留呼吸），主列由 ContentColumn 自己给左右 gutter。 -->
+		<div
+			class={isConstrained
+				? 'mx-auto flex min-h-full w-full justify-center pr-0 xl:pr-[var(--cst-page-gutter)]'
+				: 'flex min-h-full w-full justify-between pr-0 xl:pr-[var(--cst-page-gutter)]'}
+			style={isConstrained
+				? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + var(--cst-page-gutter));gap:var(--cst-context-rail-gap);`
+				: 'gap:var(--cst-context-rail-gap);'}
+		>
 			<div
-				class={isConstrained
-					? 'mx-auto flex min-h-full w-full justify-center pr-0 xl:pr-[var(--cst-page-gutter)]'
-					: 'flex min-h-full w-full justify-between pr-0 xl:pr-[var(--cst-page-gutter)]'}
+				class="flex min-w-0 flex-1 flex-col"
 				style={isConstrained
-					? `max-width:calc(${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth} + 21rem + var(--cst-context-rail-gap) + var(--cst-page-gutter));gap:var(--cst-context-rail-gap);`
-					: 'gap:var(--cst-context-rail-gap);'}
+					? `max-width:${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth};`
+					: undefined}
 			>
-				<div
-					class="flex min-w-0 flex-1 flex-col"
-					style={isConstrained
-						? `max-width:${typeof contentMaxWidth === 'number' ? `${contentMaxWidth}px` : contentMaxWidth};`
-						: undefined}
-				>
-					{#if header}
-						<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">
-							{@render header()}
-						</div>
-					{/if}
-					<div class="min-h-0 flex-1">
-						<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
-							{@render children()}
-						</ContentColumn>
+				{#if header}
+					<div class="sticky top-0 z-[var(--cst-z-sticky)] shrink-0">
+						{@render header()}
 					</div>
-					{#if footer}
-						<div class="shrink-0 sticky bottom-0 z-10 w-full bg-surface-primary">
-							{@render footer()}
-						</div>
-					{/if}
+				{/if}
+				<div class="min-h-0 flex-1">
+					<ContentColumn maxWidth={contentMaxWidth} class={contentClassName}>
+						{@render children()}
+					</ContentColumn>
 				</div>
-				<!-- rail 宽度由 --cst-context-rail-width（clamp 18→21rem）提供，不再写死 w-84：
-				     1024–1279 的桌面主列会被 336px rail 压到 ~418px（比 768 平板还稀）。
-				     该区间直接收起 rail，主列独占宽度；≥1280 恢复分栏。 -->
-				<ContextRail attached class="max-xl:hidden shrink-0">{@render rail()}</ContextRail>
+				{#if footer}
+					<div class="shrink-0 sticky bottom-0 z-10 w-full bg-surface-primary">
+						{@render footer()}
+					</div>
+				{/if}
 			</div>
-		{/if}
+			<!-- rail 宽度由 --cst-context-rail-width（clamp 18→21rem）提供，不再写死 w-84：
+			     1024–1279 的桌面主列会被 336px rail 压到 ~418px（比 768 平板还稀）。
+			     该区间直接收起 rail，主列独占宽度；≥1280 恢复分栏。 -->
+			<ContextRail attached class="max-xl:hidden shrink-0">{@render rail()}</ContextRail>
+		</div>
 	{:else}
 		<!-- 移动端：滚动交还 RoutedContentViewport（唯一滚动 owner），此处只承载
 		     header 吸顶 / 内容列 / 固定 footer，避免双层嵌套滚动 -->

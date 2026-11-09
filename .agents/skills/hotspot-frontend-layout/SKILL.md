@@ -105,7 +105,7 @@ StandardPageLayout                     # 全站唯一外层布局（components/l
 | 区块内元素 | 16 | `gap-4` |
 
 - **根容器唯一例外**：根容器直接承载多个带标题分区（如「附近」枢纽页 = HeroStats + 附近的人/瞬间/群组）时用 `gap-6`(24)，并在页面注释说明；其余一律 `gap-4`。
-- **`contentClassName` 白名单**：标准 header 页 `pt-4 pb-6`（页顶 16 由页头自身内距承接）；长表单（settings、me/edit）`pt-4 pb-10`（尾部加大留白）；封面型（groups/[groupId]）`pb-6`；资料总览（ProfilePage 总览）`pt-6 pb-8`；移动端固定底部操作条净空 `pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}`（users/[userId]）；状态/空态区 `py-20`（样板 `feedState` + `EmptyState` 内置）。**已登记例外**：首页（`routes/(app)/+page.svelte`）`pt-0 pb-8`（自建移动顶栏，正文顶不留白）；群详情移动端 `pb-8`（无固定底栏的 32px 净空）；用户详情 `pt-1 pb-6`（DetailHeader 后紧接内容）；瞬间详情 `pt-0 sm:pt-1 pb-0 sm:pb-6`（edge-to-edge 画廊，移动端 docked 输入条自行净空）。其它散值（`pb-16`、全端 `pb-28`、`py-5` 等）一律改白名单值。
+- **`contentClassName` 白名单**：标准 header 页 `pt-4 pb-6`（页顶 16 由页头自身内距承接）；长表单（settings、me/edit）`pt-4 pb-10`（尾部加大留白）；封面型（groups/[groupId]）`pb-6`；资料总览（ProfilePage 总览）`pt-6 pb-8`；移动端固定底部操作条净空 `pt-4 {platform.platform === 'mobile' ? 'pb-28' : 'pb-6'}`（users/[userId]）；状态/空态区 `py-20`（样板 `feedState` + `EmptyState` 内置）。**已登记例外**：首页（`routes/(app)/+page.svelte`）`pt-0 pb-8`（自建移动顶栏，正文顶不留白）；群详情移动端 `pb-8`（无固定底栏的 32px 净空）；用户详情 `pt-1 pb-6`（DetailHeader 后紧接内容）；瞬间详情 `pt-0 sm:pt-1 pb-0 sm:pb-6`（edge-to-edge 画廊，全端 docked 输入条由 `SplitPageLayout` footer 承载并补净空）。其它散值（`pb-16`、全端 `pb-28`、`py-5` 等）一律改白名单值。
 - **间距只允许单侧提供**：父容器 gap 与子块 mt/mb 不得叠成 40/44 的双倍间距；`contentClassName` 已带页顶/底留白时，首/末块不再叠 `mt-*`/`pb-*`（同页内同类间距必须同值）。
 - **不归三档的部分**：组件内部刻度（`py-2.5`/`py-3.5`/`gap-1.5`/`mt-0.5` 等）、`PageHeader` 自身上下内距、头像叠压 `-mt-8`、封面负 margin、网格单元 gap、纯横向列距（桌面双栏拆成 `gap-y-6 lg:gap-x-*` 保留列距）。
 - **横向列距拆分写法**：`grid gap-8` 在移动单列时是纵向 32 → 改为 `gap-y-6 lg:grid-cols-[...] lg:gap-x-8`。

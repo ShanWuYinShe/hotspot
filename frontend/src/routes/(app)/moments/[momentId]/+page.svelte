@@ -7,7 +7,6 @@
 	import Button from '@/components/ui/button.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
 	import SplitPageLayout from '@/components/layout/page/SplitPageLayout.svelte';
-	import { platform } from '@/stores/platform.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import MomentPostBody from './MomentPostBody.svelte';
 	import MomentDetailRail from './shared/MomentDetailRail.svelte';
@@ -64,7 +63,6 @@
 		bind:input={d.input}
 		bind:inputEl={commentInputEl}
 		onSend={() => void d.handleComment()}
-		variant={platform.platform === 'mobile' ? 'docked' : 'inline'}
 	/>
 {/snippet}
 
@@ -195,17 +193,16 @@
 				onReportComment={(id: string) => (d.reportTarget = { target_type: 'comment', target_id: id })}
 				onDeleteComment={(id: string) => (d.commentDeleteTarget = id)}
 				onLoadMoreComments={() => void d.loadMoreComments()}
-				commentComposer={platform.platform === 'mobile' ? undefined : commentComposer}
 			/>
 		{/if}
 	</div>
 
 	{#snippet footer()}
-		{#if platform.platform === 'mobile'}
-			<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md">
-				{@render commentComposer()}
-			</div>
-		{/if}
+		<!-- 全端常驻贴底：桌面由 SplitPageLayout footer 的 sticky bottom-0 承载，
+		     移动端为 fixed 底栏并由布局补内容内距。输入器随时可发，不再随内容滚走。 -->
+		<div class="w-full border-t border-border-default/60 bg-surface-primary/95 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md">
+			{@render commentComposer()}
+		</div>
 	{/snippet}
 
 	{#snippet rail()}
