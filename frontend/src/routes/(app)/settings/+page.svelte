@@ -34,7 +34,7 @@
 	<title>设置 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth={device === 'desktop' ? '1040px' : 'var(--cst-content-form)'} contentClassName="pt-4 sm:pt-6 pb-12">
+<StandardPageLayout contentMaxWidth={device === 'desktop' ? '1040px' : 'var(--cst-content-form)'} contentClassName="pt-3 lg:pt-2.5 pb-12">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -109,23 +109,6 @@
 						>
 							<Info class="size-3 text-accent-default" />
 							<span>系统关于</span>
-						</button>
-					</div>
-					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-						<div class="flex items-center gap-1.5 text-text-secondary/70">
-							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-							<span>收起</span>
-						</div>
-						<button
-							type="button"
-							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-							onclick={() => {
-								const scroller = document.getElementById('main-content');
-								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
-							}}
-						>
-							<span>平滑回顶</span>
-							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
 						</button>
 					</div>
 				</div>

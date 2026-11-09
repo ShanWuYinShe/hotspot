@@ -285,7 +285,7 @@
 				<div
 					out:fade={{ duration: motionDuration(220) }}
 					class="pointer-events-auto absolute left-1/2 z-50 -translate-x-1/2"
-					style="top: calc((var(--cst-desktop-header-height, 52px) - 32px) / 2);"
+					style="top: calc((var(--cst-desktop-header-height, 52px) - 34px) / 2);"
 				>
 					<PageIsland
 						title={headerIsland.title}

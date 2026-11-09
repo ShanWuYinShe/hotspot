@@ -31,7 +31,7 @@
 	<title>编辑资料 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="pt-4 pb-10">
+<StandardPageLayout contentMaxWidth="var(--cst-content-form-narrow)" contentClassName="pt-3 lg:pt-2.5 pb-10">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"

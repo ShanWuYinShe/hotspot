@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, ArrowUp } from '@lucide/svelte';
+	import { ArrowLeft } from '@lucide/svelte';
 	import type { Snippet } from 'svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import Avatar from '@/components/shared/Avatar.svelte';
@@ -11,7 +11,7 @@
 	// 现升级为「默认常驻 + 交互中枢」模型：
 	//   - 默认常驻：页面只要注册即在顶栏中央稳定呈现，不再依赖滚动飞行动画；
 	//   - 交互中枢：点击胶囊可单向向下展开控制面板，承载分类切换、排序、作者互动与回顶；
-	//   - 紧凑尺寸：32px（h-8）极薄胶囊，彻底解放页面首屏内容。
+	//   - 紧凑尺寸：34px（h-8.5）极薄黄金比例胶囊，彻底解放页面首屏内容。
 
 	let {
 		title = '',
@@ -62,11 +62,11 @@
 </script>
 
 {#snippet defaultAuthorPanel()}
-	<div class="flex flex-col gap-2.5">
+	<div class="flex flex-col gap-2">
 		<div class="flex items-center justify-between gap-3">
 			<button
 				type="button"
-				class="hover-btn flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1 text-left -ml-1 active:scale-[0.98]"
+				class="hover-btn flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-left -ml-1 transition-all active:scale-[0.98]"
 				onclick={() => {
 					if (onAuthorClick) {
 						onAuthorClick();
@@ -76,14 +76,14 @@
 				}}
 				aria-label={author?.role === '社群' ? `查看群组 ${author.name}` : `查看 ${author?.name ?? '用户'} 的资料`}
 			>
-				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={36} class="shrink-0 ring-2 ring-accent-border/30" />
+				<Avatar src={author?.avatar} name={author?.name ?? '作者'} size={38} class="shrink-0 ring-2 ring-accent-border/30" />
 				<div class="min-w-0 flex-1">
 					<div class="flex items-center gap-1.5">
 						<span class="truncate text-xs font-semibold text-text-primary">{author?.name}</span>
 						<span class="rounded bg-accent-soft px-1.5 py-0.2 text-[10px] font-medium text-text-accent-on-soft">{author?.role ?? '作者'}</span>
 					</div>
 					{#if author?.location || author?.time}
-						<div class="truncate text-xxs font-mono text-text-secondary">
+						<div class="truncate text-xxs text-text-secondary mt-0.5">
 							{[author.location, author.time].filter(Boolean).join(' · ')}
 						</div>
 					{/if}
@@ -106,25 +106,11 @@
 				</Button>
 			</div>
 		</div>
-		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-			<div class="flex items-center gap-1.5 text-text-secondary/70">
-				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-				<span>收起</span>
-			</div>
-			<button
-				type="button"
-				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-				onclick={() => onTitleClick?.()}
-			>
-				<span>平滑回顶</span>
-				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-			</button>
-		</div>
 	</div>
 {/snippet}
 
 {#snippet defaultPagePanel()}
-	<div class="flex flex-col gap-2.5">
+	<div class="flex flex-col gap-2">
 		<div class="flex items-center justify-between text-xs text-text-secondary pb-0.5">
 			<span class="font-medium text-text-primary">页面控制与导航</span>
 			{#if metaText}
@@ -136,20 +122,6 @@
 				{@render trailing()}
 			</div>
 		{/if}
-		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-			<div class="flex items-center gap-1.5 text-text-secondary/70">
-				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-				<span>收起</span>
-			</div>
-			<button
-				type="button"
-				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-				onclick={() => onTitleClick?.()}
-			>
-				<span>平滑回顶</span>
-				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-			</button>
-		</div>
 	</div>
 {/snippet}
 
@@ -174,11 +146,11 @@
 				tone="muted"
 				size={32}
 			/>
-			<div class="mx-1 h-3.5 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
+			<div class="mx-1 h-3 w-px shrink-0 bg-border-default/40" aria-hidden="true"></div>
 		{:else if author}
-			<Avatar src={author.avatar} name={author.name} size={24} class="shrink-0" />
+			<Avatar src={author.avatar} name={author.name} size={22} class="shrink-0 ring-1 ring-border-default/30" />
 		{:else if icon}
-			<span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
+			<span class="flex size-5.5 shrink-0 items-center justify-center rounded-full bg-accent-soft text-text-accent-on-soft">
 				{@render icon()}
 			</span>
 		{:else}

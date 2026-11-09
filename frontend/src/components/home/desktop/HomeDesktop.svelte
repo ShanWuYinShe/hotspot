@@ -98,8 +98,8 @@
 			/>
 		</div>
 
-		<!-- 快捷操作与回顶 -->
-		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
+		<!-- 快捷刷新操作 -->
+		<div class="flex items-center justify-between pt-1 text-xxs text-text-secondary">
 			<button
 				type="button"
 				class="group flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-xxs"
@@ -108,20 +108,6 @@
 				<RotateCcw class="size-3 transition-transform duration-snappy group-active:-rotate-90" />
 				<span>刷新动态</span>
 			</button>
-			<div class="flex items-center gap-3">
-				<div class="flex items-center gap-1 text-text-secondary/70">
-					<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-					<span>收起</span>
-				</div>
-				<button
-					type="button"
-					class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-					onclick={scrollToTop}
-				>
-					<span>平滑回顶</span>
-					<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-				</button>
-			</div>
 		</div>
 	</div>
 {/snippet}

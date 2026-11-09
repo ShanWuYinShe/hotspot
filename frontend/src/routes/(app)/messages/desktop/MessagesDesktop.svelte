@@ -34,6 +34,7 @@
 		<PageHeader
 			title="消息"
 			sticky
+			desktopVisible
 			titleSize="xl"
 			contentClassName="px-4"
 			islandMeta={islandMetaText}

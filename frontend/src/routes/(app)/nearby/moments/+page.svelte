@@ -29,7 +29,7 @@
 	<title>附近瞬间 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="pt-4 pb-6">
+<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -52,13 +52,13 @@
 				</div>
 			{/snippet}
 			{#snippet islandExpanded()}
-				<div class="flex flex-col gap-2.5">
+				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between text-xs pb-0.5">
 						<span class="font-medium text-text-primary">话题筛选</span>
 						{#if data.activeTag}
 							<button
 								type="button"
-								class="text-xxs text-accent-default hover:underline"
+								class="text-xs text-accent-default hover:underline"
 								onclick={() => data.setTag(null)}
 							>
 								重置筛选
@@ -66,32 +66,15 @@
 						{/if}
 					</div>
 					{#if data.tags.length > 0}
-						<div class="w-full overflow-x-auto no-scrollbar py-0.5">
+						<div class="w-full">
 							<TabBar
 								items={[{ id: '', label: '全部' }, ...data.tags.map((t) => ({ id: t, label: t }))]}
 								value={data.activeTag ?? ''}
 								onChange={(id) => data.setTag(id === '' || data.activeTag === id ? null : id)}
-								class="pr-1 whitespace-nowrap"
+								class="flex-wrap gap-1.5"
 							/>
 						</div>
 					{/if}
-					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-						<div class="flex items-center gap-1.5 text-text-secondary/70">
-							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-							<span>收起</span>
-						</div>
-						<button
-							type="button"
-							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-							onclick={() => {
-								const scroller = document.getElementById('main-content');
-								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
-							}}
-						>
-							<span>平滑回顶</span>
-							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-						</button>
-					</div>
 				</div>
 			{/snippet}
 			{#snippet below()}

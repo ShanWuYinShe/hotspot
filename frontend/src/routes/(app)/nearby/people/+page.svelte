@@ -32,7 +32,7 @@
 	<title>附近的人 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="pt-4 pb-6">
+<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -55,10 +55,10 @@
 				</div>
 			{/snippet}
 			{#snippet islandExpanded()}
-				<div class="flex flex-col gap-2.5">
+				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between text-xs pb-0.5">
-						<span class="font-medium text-text-primary">分类与排序</span>
-						<label class="inline-flex shrink-0 items-center gap-1.5 text-xxs text-text-secondary">
+						<span class="font-medium text-text-primary">分类筛选</span>
+						<label class="inline-flex shrink-0 items-center gap-1.5 text-xs text-text-secondary">
 							<span>排序</span>
 							<Select value={data.effectiveSort} onChange={(v) => data.setSort(v)} ariaLabel="排序方式" variant="ghost">
 								{#each data.sortOptions as option (option)}
@@ -68,31 +68,13 @@
 						</label>
 					</div>
 
-					<div class="w-full overflow-x-auto no-scrollbar py-0.5">
+					<div class="w-full">
 						<TabBar
 							items={NEARBY_CATEGORIES.map((t) => ({ id: t, label: t }))}
 							value={data.tagFilter}
 							onChange={(id) => data.setTagFilter(id)}
-							class="pr-1 whitespace-nowrap"
+							class="flex-wrap gap-1.5"
 						/>
-					</div>
-
-					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-						<div class="flex items-center gap-1.5 text-text-secondary/70">
-							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-							<span>收起</span>
-						</div>
-						<button
-							type="button"
-							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-							onclick={() => {
-								const scroller = document.getElementById('main-content');
-								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
-							}}
-						>
-							<span>平滑回顶</span>
-							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-						</button>
 					</div>
 				</div>
 			{/snippet}

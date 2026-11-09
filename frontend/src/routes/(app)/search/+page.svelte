@@ -205,29 +205,11 @@
 			</div>
 		{/if}
 
-		<!-- 快捷操作与回顶 -->
-		<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-			<div class="flex items-center gap-1.5 text-text-secondary/70">
-				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">↵</kbd>
-				<span>检索</span>
-				<span class="text-border-default/40">·</span>
-				<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-				<span>收起</span>
-			</div>
-			<button
-				type="button"
-				class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-				onclick={scrollToTop}
-			>
-				<span>平滑回顶</span>
-				<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-			</button>
-		</div>
 	</div>
 {/snippet}
 
 <div class="flex flex-col flex-1 min-h-full" data-search-root>
-	<StandardPageLayout contentClassName="pt-4 pb-6">
+	<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
 		{#snippet header()}
 			{#if device !== 'desktop'}
 				<PageHeader

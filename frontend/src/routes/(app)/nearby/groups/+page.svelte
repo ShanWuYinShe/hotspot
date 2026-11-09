@@ -32,7 +32,7 @@
 	<title>附近群组 · HotSpot</title>
 </svelte:head>
 
-<StandardPageLayout contentClassName="pt-4 pb-6">
+<StandardPageLayout contentClassName="pt-3 lg:pt-2.5 pb-6">
 	{#snippet header()}
 		<PageHeader
 			variant="integrated"
@@ -61,40 +61,23 @@
 				</div>
 			{/snippet}
 			{#snippet islandExpanded()}
-				<div class="flex flex-col gap-2.5">
+				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between text-xs pb-0.5">
 						<span class="font-medium text-text-primary">圈子分类</span>
 						{#if data.totalOnline > 0}
-							<span class="inline-flex items-center gap-1 text-xxs text-text-status-online-on-soft">
+							<span class="inline-flex items-center gap-1.5 text-xs text-text-status-online-on-soft">
 								<span class="size-1.5 rounded-full bg-status-online"></span>
 								<span>{formatCount(data.totalOnline)} 人在线</span>
 							</span>
 						{/if}
 					</div>
-					<div class="w-full overflow-x-auto no-scrollbar py-0.5">
+					<div class="w-full">
 						<TabBar
 							items={NEARBY_CATEGORIES.map((c) => ({ id: c, label: c }))}
 							value={data.activeCategory}
 							onChange={(id) => data.setCategory(id)}
-							class="pr-1 whitespace-nowrap"
+							class="flex-wrap gap-1.5"
 						/>
-					</div>
-					<div class="flex items-center justify-between border-t border-border-default/15 pt-2 text-xxs text-text-secondary">
-						<div class="flex items-center gap-1.5 text-text-secondary/70">
-							<kbd class="rounded border border-border-default/30 bg-surface-island px-1 py-0.2 font-mono text-[10px]">Esc</kbd>
-							<span>收起</span>
-						</div>
-						<button
-							type="button"
-							class="group flex items-center gap-1 text-accent-default hover:underline transition-colors font-medium text-xxs"
-							onclick={() => {
-								const scroller = document.getElementById('main-content');
-								scroller?.scrollTo({ top: 0, behavior: 'smooth' });
-							}}
-						>
-							<span>平滑回顶</span>
-							<ArrowUp class="size-3 transition-transform group-hover:-translate-y-0.5" />
-						</button>
 					</div>
 				</div>
 			{/snippet}

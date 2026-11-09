@@ -59,6 +59,7 @@ import {
 		below,
 		sticky = true,
 		showBackOnDesktop = false,
+		desktopVisible = false,
 		maxWidth,
 		/** 标题字号档位（--text-* 刻度，替代内联 px：18→lg、20→xl、22/24→2xl、16→base）。 */
 		titleSize = 'lg',
@@ -95,6 +96,7 @@ import {
 		below?: Snippet;
 		sticky?: boolean;
 		showBackOnDesktop?: boolean;
+		desktopVisible?: boolean;
 		maxWidth?: number | string;
 		titleSize?: 'md' | 'base' | 'lg' | 'xl' | '2xl' | '3xl';
 		subtitleSize?: 'xxs' | 'xs' | 'sm' | 'md';
@@ -387,15 +389,15 @@ import {
 						// 岛已接管：整条页头已由 handoffRecede 淡到 0（逐帧、可逆），这里只切断指针事件。
 						islandBandHidden && 'pointer-events-none'
 					],
-		!below && 'lg:hidden',
+		!desktopVisible && 'lg:hidden',
 		className
 	)}
 >
 	<ContentColumn {maxWidth} class={cn(headerPadding, contentClassName)}>
 		{#if integrated}
 			<!-- hub/列表页「内容内页头」：标题 + 副标题/计数 + 工具同一行；筛选紧随；桌面/平板无背景/边框/吸顶，移动端例外吸顶 -->
-			<!-- 桌面端标题栏由顶栏灵动岛常驻承担，内页容器通过 lg:sr-only 隐去视觉呈现同时保留无障碍大纲 -->
-			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 lg:sr-only">
+			<!-- 桌面端标题栏由顶栏灵动岛常驻承担，内页容器在桌面端统一 hidden 隐藏，同时保留语义无障碍 -->
+			<div data-page-intro bind:this={islandAnchorEl} class="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
 				<div
 					data-island-handoff={islandActive ? 'true' : undefined}
 					class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2.5 gap-y-1"
@@ -431,8 +433,7 @@ import {
 				{/if}
 			</div>
 			{#if below}
-				<!-- 筛选/标签随标题一起退场：入岛后内容区必须干净（岛 meta 承接当前筛选状态） -->
-				<div data-island-handoff={islandActive ? 'true' : undefined} class="mt-2.5 lg:mt-0">
+				<div data-island-handoff={islandActive ? 'true' : undefined} class="mt-2.5">
 					{@render below()}
 				</div>
 			{/if}
@@ -440,7 +441,7 @@ import {
 			<!-- 整行悬浮工具条：返回 / 标题 / 更多收进同一块玻璃面板，而不是两枚孤立圆钮 -->
 			<div
 				data-floating-toolbar
-				class="pointer-events-auto flex items-center gap-2 rounded-md border border-border-default/60 bg-surface-primary/85 px-1.5 py-1 shadow-raised-sm backdrop-blur-md lg:sr-only"
+				class="pointer-events-auto flex items-center gap-2 rounded-md border border-border-default/60 bg-surface-primary/85 px-1.5 py-1 shadow-raised-sm backdrop-blur-md"
 			>
 				{#if showBack}
 					<div class="pointer-events-auto flex items-center rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md shrink-0">
@@ -465,7 +466,7 @@ import {
 				{/if}
 			</div>
 		{:else}
-			<div class="flex items-center gap-3 lg:sr-only">
+			<div class="flex items-center gap-3">
 				{#if showBack}
 					<!-- 全局统一返回按钮：38px 现代微毛玻璃圆钮（p-0.5 + 36px 幽灵钮），触控区经 hit-slop 达 44px；
 					     入岛后返回动作移到岛上（leading），页头返回淡出，避免同一动作出现两份 -->
@@ -511,8 +512,7 @@ import {
 		</div>
 		{/if}
 		{#if below && !floating && !integrated}
-			<!-- 与 integrated 同规则：入岛后整块页头（含下方工具行）一起退场，内容区保持干净 -->
-			<div data-island-handoff={islandActive ? 'true' : undefined} class="lg:mt-0">
+			<div class="mt-2.5">
 				{@render below()}
 			</div>
 		{/if}

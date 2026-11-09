@@ -21,7 +21,7 @@
 	let {
 		header,
 		children,
-		contentClassName = 'pt-4 pb-6',
+		contentClassName = 'pt-4 lg:pt-2.5 pb-6',
 		contentMaxWidth
 	}: {
 		header?: Snippet;
