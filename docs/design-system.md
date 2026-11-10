@@ -780,8 +780,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 
 ### 17.2 结构与几何
 
-- 图片 `object-cover` 铺满整卡；卡片**不设 border**，圆角 `rounded-lg`(20) / 鸿蒙 `SHAPE.CARD`；
-  投影只在 hover 抬升时出现（`card-hover` 语言）。
+- 图片 `object-cover` 铺满整卡；所有卡片统一 **1px `ring-border-strong` 轮廓**（图片卡/文字卡一致，浅画布上不糊边），圆角 `rounded-lg`(20) / 鸿蒙 `SHAPE.CARD`；投影只在 hover 抬升时出现（`card-hover` 语言）。
 - 比例：feed 卡 `aspect-[4/5]`；网格卡（附近人/群、我的瞬间/群组、群组精选）`aspect-[3/4]`；
   同一视图只用一档。BSP 瓦片墙按布局单元铺满（登记例外）；横排 `horizontal` 紧凑卡保留两段式（例外）。
 - 两层覆盖（装饰层 `pointer-events-none`，交互按钮自身可点）：
