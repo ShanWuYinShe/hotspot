@@ -62,6 +62,11 @@ export struct SystemPageHeader {
   /** 副标题前置图标（可选；对齐前端 PageHeader subtitleIcon，如附近页 MapPin 位置行）。
    *  注：不用 @BuilderParam——ArkTS trailing lambda 要求唯一 BuilderParam，多参数会破坏全部现有调用。 */
   @Prop subtitleIcon: AppIcon | null = null;
+  /**
+   * 副标题胶囊（对齐 web PageHeader 位置 pill）：surface-island 底 + ring 描边 + 全圆角。
+   * 仅用于「附近」这类以位置为副标题的页面，默认关闭保持其他页纯文本副标题。
+   */
+  @Prop subtitleCapsule: boolean = false;
   /** 标题对齐，默认 Start；详情页居中标题用 Center。 */
   @Prop titleAlign: TextAlign = TextAlign.Start;
   /** 标题字号，默认 FONT.SIZE.XL（20）。顶级 Tab 页对齐前端传 XXL（24）。 */
@@ -234,6 +239,14 @@ export struct SystemPageHeader {
             }
             .alignItems(VerticalAlign.Center)
             .margin({ top: DesignConstants.SPACING.XS })
+            .padding(this.subtitleCapsule
+              ? { left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF }
+              : 0)
+            .borderRadius(this.subtitleCapsule ? DesignConstants.RADIUS.FULL : 0)
+            .backgroundColor(this.subtitleCapsule ? this.getPalette().surfaceIsland : DesignConstants.COLOR.TRANSPARENT)
+            .border(this.subtitleCapsule
+              ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor }
+              : { width: 0 })
           }
         }
         .layoutWeight(1)

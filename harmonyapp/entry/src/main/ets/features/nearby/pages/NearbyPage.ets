@@ -211,6 +211,7 @@ export struct NearbyPage {
           subtitle: this.getLocationSubtitle(),
           // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
           subtitleIcon: AppIcon.LOCATION,
+          subtitleCapsule: true,
           titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent'
