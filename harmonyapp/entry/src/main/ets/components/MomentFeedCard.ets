@@ -225,6 +225,11 @@ export struct MomentFeedCard {
     return this.isOverlayFallback() ? this.getPalette().textSecondary : DesignConstants.COLOR.WHITE;
   }
 
+  /** 卡片 meta 字号：dense 双列卡用 10（对齐 web text-xxs），大卡 11 */
+  private getMetaFontSize(): number {
+    return this.dense ? DesignConstants.FONT.SIZE.XS2 : DesignConstants.FONT.SIZE.XS;
+  }
+
   private getOverlayLikeCount(): number {
     return this.getMomentState()?.likes_count ?? sumReactionCounts(this.moment.reactions);
   }
@@ -342,7 +347,7 @@ export struct MomentFeedCard {
       Row({ space: DesignConstants.SPACING.XS }) {
         if (this.moment.tags && this.moment.tags.length > 0) {
           Text('#' + this.moment.tags[0])
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(this.getMetaFontSize())
             .fontColor(this.getOverlayMetaColor())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -350,30 +355,33 @@ export struct MomentFeedCard {
         if (this.getOverlayLocationText().length > 0) {
           if (this.moment.tags && this.moment.tags.length > 0) {
             Text('·')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontSize(this.getMetaFontSize())
               .fontColor(this.getOverlayMetaColor())
           }
           LucideIcon({
             icon: AppIcon.LOCATION,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            iconSize: this.dense ? DesignConstants.FONT.SIZE.XS2 : DesignConstants.COMPONENT.ICON_SIZE_2XS,
             color: this.getOverlayMetaColor()
           })
           Text(this.getOverlayLocationText())
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(this.getMetaFontSize())
             .fontColor(this.getOverlayMetaColor())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+            // 地点可压缩，保证右侧相对时间不被挤出卡片
+            .layoutWeight(1)
         }
         if (formatFeedRelativeTime(this.moment.created_at).length > 0) {
           if ((this.moment.tags && this.moment.tags.length > 0) || this.getOverlayLocationText().length > 0) {
             Text('·')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontSize(this.getMetaFontSize())
               .fontColor(this.getOverlayMetaColor())
           }
           Text(formatFeedRelativeTime(this.moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontSize(this.getMetaFontSize())
             .fontColor(this.getOverlayMetaColor())
             .flexShrink(0)
+            .maxLines(1)
         }
       }
       .width('100%')
