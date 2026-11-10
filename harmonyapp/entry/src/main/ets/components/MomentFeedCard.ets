@@ -19,8 +19,8 @@ import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
-import { formatCardTime, cleanPlainText } from '../core/utils/FormatUtil';
-import { CardScrimTop, CardScrimBottom, CardFallbackBackground, MediaOverlayBadge, MediaActionButton } from './media/MediaOverlay';
+import { formatCardTime, formatRelativeTime, cleanPlainText } from '../core/utils/FormatUtil';
+import { CardScrimTop, CardScrimBottom, MediaOverlayBadge, MediaActionButton } from './media/MediaOverlay';
 
 @Reusable
 @Component
@@ -36,6 +36,8 @@ export struct MomentFeedCard {
   @Prop showFavorite: boolean = true;
   @Prop textMaxLines: number = 3;
   @Prop textFontSize: number = DesignConstants.FONT.SIZE.SM;
+  /** 紧凑双列 feed 卡（web 移动端首页 2 列）：缩小字号/内距、顶栏不放时间/位置、隐藏收藏/分享 */
+  @Prop dense: boolean = false;
   /** R6：首屏优先（首 2 张卡封面高清档 900，其余 720） */
   @Prop priority: boolean = false;
   onOpenDetail?: (moment: MomentItem) => void;
@@ -256,7 +258,7 @@ export struct MomentFeedCard {
         Column({ space: DesignConstants.SPACING.XS }) {
           Row({ space: DesignConstants.SPACING.SM2 }) {
             Text(this.moment.user?.nickname ?? '匿名用户')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontSize(this.dense ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.MD)
               .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
               .fontColor(this.getOverlayTitleColor())
               .maxLines(1)
@@ -264,7 +266,8 @@ export struct MomentFeedCard {
               .flexShrink(1)
               .onClick(() => this.openUserProfile(this.moment.user))
 
-            if (this.moment.author_relation?.is_following) {
+            // 对齐 web 移动端 HomeFeedItem：关注/推荐 chip 在 <sm 隐藏；双列卡不显示
+            if (!this.dense && this.moment.author_relation?.is_following) {
               MediaOverlayBadge({
                 text: '已关注',
                 showIcon: false,
@@ -272,7 +275,7 @@ export struct MomentFeedCard {
               })
             }
 
-            if (this.getRecommendationLabel().length > 0) {
+            if (!this.dense && this.getRecommendationLabel().length > 0) {
               MediaOverlayBadge({
                 text: this.getRecommendationLabel(),
                 showIcon: false,
@@ -282,10 +285,13 @@ export struct MomentFeedCard {
           }
           .alignItems(VerticalAlign.Center)
 
-          Text(this.formatTime(this.moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getOverlayMetaColor())
-            .opacity(this.isOverlayFallback() ? 1 : DesignConstants.OPACITY.SUBTLE)
+          // 对齐 web：顶部作者行只留昵称，时间/位置移到卡片底部 meta；双列卡不重复时间
+          if (!this.dense) {
+            Text(this.formatTime(this.moment.created_at))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getOverlayMetaColor())
+              .opacity(this.isOverlayFallback() ? 1 : DesignConstants.OPACITY.SUBTLE)
+          }
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
@@ -301,7 +307,7 @@ export struct MomentFeedCard {
             onMedia: !this.isOverlayFallback()
           })
         }
-        if (this.getOverlayLocationText().length > 0) {
+        if (!this.dense && this.getOverlayLocationText().length > 0) {
           MediaOverlayBadge({
             icon: AppIcon.LOCATION,
             text: this.getOverlayLocationText(),
@@ -314,16 +320,17 @@ export struct MomentFeedCard {
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
-    .padding(DesignConstants.SPACING.LG)
+    .padding(this.dense ? DesignConstants.SPACING.MD2 : DesignConstants.SPACING.LG)
   }
 
   @Builder
   private buildOverlayBottom() {
     Column({ space: DesignConstants.SPACING.SM2 }) {
-      if (this.moment.description) {
+      // 无图卡正文已在中央文字海报里渲染，底部不再重复标题
+      if (!this.isOverlayFallback() && this.moment.description) {
         Text(cleanPlainText(this.moment.description))
-          .fontSize(DesignConstants.FONT.SIZE.LG)
-          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.CARD))
+          .fontSize(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG)
+          .lineHeight(lineHeightFor(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.CARD))
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
           .fontColor(this.getOverlayTitleColor())
           .maxLines(2)
@@ -331,21 +338,42 @@ export struct MomentFeedCard {
           .width('100%')
       }
 
-      // 元信息：位置只在右上胶囊出现一次（避免同卡重复），此处只留 时间 · 标签
+      // 元信息：对齐 web 顺序 #标签 · 地点 · 相对时间；dense 卡用 XS 档
       Row({ space: DesignConstants.SPACING.XS }) {
-        Text(this.formatTime(this.moment.created_at))
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getOverlayMetaColor())
-          .flexShrink(0)
         if (this.moment.tags && this.moment.tags.length > 0) {
-          Text('·')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.getOverlayMetaColor())
           Text('#' + this.moment.tags[0])
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getOverlayMetaColor())
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        if (this.getOverlayLocationText().length > 0) {
+          if (this.moment.tags && this.moment.tags.length > 0) {
+            Text('·')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getOverlayMetaColor())
+          }
+          LucideIcon({
+            icon: AppIcon.LOCATION,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getOverlayMetaColor()
+          })
+          Text(this.getOverlayLocationText())
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getOverlayMetaColor())
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        if (formatRelativeTime(this.moment.created_at).length > 0) {
+          if ((this.moment.tags && this.moment.tags.length > 0) || this.getOverlayLocationText().length > 0) {
+            Text('·')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getOverlayMetaColor())
+          }
+          Text(formatRelativeTime(this.moment.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getOverlayMetaColor())
+            .flexShrink(0)
         }
       }
       .width('100%')
@@ -371,27 +399,32 @@ export struct MomentFeedCard {
             accessibilityLabel: '评论',
             onPress: () => this.openMomentDetail(this.moment)
           })
-          MediaActionButton({
-            icon: this.isOverlayFavorited() ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
-            label: '',
-            active: this.isOverlayFavorited(),
-            activeColor: this.getPalette().accentBackground,
-            onMedia: !this.isOverlayFallback(),
-            accessibilityLabel: this.isOverlayFavorited() ? '已收藏' : '收藏',
-            onPress: () => this.onFavoriteClick(this.moment)
-          })
+          // 首页 feed 极简操作：仅点赞/评论；收藏/分享留在详情与非 dense 网格
+          if (!this.dense) {
+            MediaActionButton({
+              icon: this.isOverlayFavorited() ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
+              label: '',
+              active: this.isOverlayFavorited(),
+              activeColor: this.getPalette().accentBackground,
+              onMedia: !this.isOverlayFallback(),
+              accessibilityLabel: this.isOverlayFavorited() ? '已收藏' : '收藏',
+              onPress: () => this.onFavoriteClick(this.moment)
+            })
+          }
         }
         .alignItems(VerticalAlign.Center)
 
         Blank()
 
-        MediaActionButton({
-          icon: AppIcon.SHARE,
-          label: this.moment.shares_count > 0 ? this.formatCount(this.moment.shares_count) : '',
-          onMedia: !this.isOverlayFallback(),
-          accessibilityLabel: '分享动态',
-          onPress: () => this.shareMoment(this.moment)
-        })
+        if (!this.dense) {
+          MediaActionButton({
+            icon: AppIcon.SHARE,
+            label: this.moment.shares_count > 0 ? this.formatCount(this.moment.shares_count) : '',
+            onMedia: !this.isOverlayFallback(),
+            accessibilityLabel: '分享动态',
+            onPress: () => this.shareMoment(this.moment)
+          })
+        }
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
@@ -399,18 +432,21 @@ export struct MomentFeedCard {
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.LG
+      left: this.dense ? DesignConstants.SPACING.SM : DesignConstants.SPACING.LG,
+      right: this.dense ? DesignConstants.SPACING.SM : DesignConstants.SPACING.LG,
+      bottom: this.dense ? DesignConstants.SPACING.SM : DesignConstants.SPACING.LG
     })
   }
 
   @Builder
   private buildOverlayCard() {
     Stack({ alignContent: Alignment.TopStart }) {
-      // 背景：封面铺满整卡；无图/失败 → 主题渐变 fallback
+      // 背景：封面铺满整卡；无图/失败 → 纯色卡面 + 中央文字海报（对齐 web HomeFeedItem）
       if (this.isOverlayFallback()) {
-        CardFallbackBackground({ icon: AppIcon.IMAGES })
+        Column()
+          .width('100%')
+          .height('100%')
+          .backgroundColor(this.getPalette().surfaceBackground)
       } else {
         Column()
           .width('100%')
@@ -440,10 +476,34 @@ export struct MomentFeedCard {
         .accessibilityLevel('no')
       }
 
-      // 信息层：顶部作者行 / 底部标题+元信息+操作行
+      // 信息层：顶部作者行 / 中央文字海报（无图）/ 底部元信息+操作行
       Column() {
         this.buildOverlayTop()
-        Blank()
+        if (this.isOverlayFallback() && this.moment.description) {
+          Column({ space: DesignConstants.SPACING.SM2 }) {
+            Text('“')
+              .fontSize(DesignConstants.FONT.SIZE.XL)
+              .fontColor(this.getPalette().accentBackground)
+              .opacity(DesignConstants.OPACITY.WATERMARK)
+            Text(cleanPlainText(this.moment.description))
+              .fontSize(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG_PLUS)
+              .lineHeight(lineHeightFor(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG_PLUS, DesignConstants.FONT.LINE_RATIO.CARD))
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(this.getPalette().textPrimary)
+              .maxLines(this.dense ? 3 : 5)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+          }
+          .layoutWeight(1)
+          .justifyContent(FlexAlign.Center)
+          .alignItems(HorizontalAlign.Start)
+          .padding({
+            left: this.dense ? DesignConstants.SPACING.SM : DesignConstants.SPACING.LG,
+            right: this.dense ? DesignConstants.SPACING.SM : DesignConstants.SPACING.LG
+          })
+        } else {
+          Blank()
+        }
         this.buildOverlayBottom()
       }
       .width('100%')
@@ -495,11 +555,78 @@ export struct MomentFeedCard {
     }
   }
 
+  /** 双列纯文字卡：由内容撑高（固定 3:4 会把长文/操作行挤出卡片） */
+  @Builder
+  private buildDenseTextCard(): void {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.getPalette().surfaceBackground)
+
+      Column() {
+        this.buildOverlayTop()
+        Column({ space: DesignConstants.SPACING.SM2 }) {
+          Text('“')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.getPalette().accentBackground)
+            .opacity(DesignConstants.OPACITY.WATERMARK)
+          Text(cleanPlainText(this.moment.description))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(6)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Start)
+        .padding({
+          left: DesignConstants.SPACING.SM,
+          right: DesignConstants.SPACING.SM,
+          top: DesignConstants.SPACING.SM,
+          bottom: DesignConstants.SPACING.SM
+        })
+
+        this.buildOverlayBottom()
+      }
+      .width('100%')
+      .height('100%')
+      .accessibilityGroup(true)
+      .accessibilityText(this.moment.user?.nickname ? '查看' + this.moment.user.nickname + '的瞬间详情' : '查看瞬间详情')
+    }
+    .width('100%')
+    .constraintSize({ minHeight: 180 })
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .clip(true)
+    .backgroundColor(this.getPalette().surfaceSubtle)
+    .shadow(this.getPalette().surfaceShadow)
+    .scale(this.isPressed
+      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
+      : { x: 1, y: 1 })
+    .animation({ duration: DesignConstants.ANIMATION.DURATION_FAST, curve: DesignConstants.ANIMATION.CURVE_EASE_OUT })
+    .onTouch((event: TouchEvent) => {
+      if (event.type === TouchType.Down) {
+        this.isPressed = true;
+      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+        this.isPressed = false;
+      }
+    })
+    .onClick(() => this.openMomentDetail(this.moment))
+  }
+
   build() {
     if (this.variant === 'postCard') {
       this.buildPostCard()
     } else if (this.variant === 'overlay') {
-      this.buildOverlayCard()
+      if (this.dense && this.isOverlayFallback()) {
+        this.buildDenseTextCard()
+      } else {
+        this.buildOverlayCard()
+      }
     } else {
       Column() {
         SystemCard({

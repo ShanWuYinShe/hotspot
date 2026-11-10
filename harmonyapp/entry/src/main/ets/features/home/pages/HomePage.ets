@@ -302,8 +302,12 @@ export struct HomePage {
               }
             }
           })
+            .width('100%')
+            // 对齐 web 移动端 TabBar：容器 max-w-[13.75rem]（220px），居中，不铺满整行
+            .constraintSize({ maxWidth: 220 })
         }
         .width('100%')
+        .justifyContent(FlexAlign.Center)
         .padding({ bottom: DesignConstants.SPACING.XS })
 
         // 整页下拉刷新：Refresh 包内容区（sticky header 保持粘性在外）
@@ -486,42 +490,72 @@ export struct HomePage {
     .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
   }
 
-  /** 动态列表：全面采用高质感富媒体社交卡片（MomentFeedCard） */
+  /** 把当前流按 2 列切行，List 行内双卡（GridItem 行高不由 aspectRatio 撑开，易内容溢出） */
+  private feedRows(): MomentItem[][] {
+    const moments: MomentItem[] = this.currentTabMoments();
+    const rows: MomentItem[][] = [];
+    for (let i = 0; i < moments.length; i += 2) {
+      const row: MomentItem[] = [moments[i]];
+      if (i + 1 < moments.length) {
+        row.push(moments[i + 1]);
+      }
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  /** 动态流：双列图片卡（对齐 web 移动端首页 grid-cols-2 + 3:4 卡） */
   @Builder
   private buildFeed() {
-    List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP, scroller: this.backToTopScroller }) {
-      ForEach(this.currentTabMoments(), (moment: MomentItem, index: number) => {
+    List({ space: DesignConstants.SPACING.MD2, scroller: this.backToTopScroller }) {
+      ForEach(this.feedRows(), (row: MomentItem[], rowIndex: number) => {
         ListItem() {
-          MomentFeedCard({
-            moment: moment,
-            // R2 整卡图片卡：图片铺满 4:5、信息覆盖图面（对齐 web HomeFeedItem card variant）
-            variant: 'overlay',
-            // R6 首屏优先：首 2 张卡封面高清档 + 立即创建（ArkUI 无 fetchpriority，登记平台差异）
-            priority: index < 2,
-            onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
-          })
+          Row({ space: DesignConstants.SPACING.MD2 }) {
+            ForEach(row, (moment: MomentItem, columnIndex: number) => {
+              MomentFeedCard({
+                moment: moment,
+                // R2 整卡图片卡：双列 3:4、信息覆盖图面（对齐 web HomeFeedItem mobile）
+                variant: 'overlay',
+                overlayAspectRatio: 0.75,
+                dense: true,
+                // R6 首屏优先：首 2 张卡封面高清档 + 立即创建（ArkUI 无 fetchpriority，登记平台差异）
+                priority: rowIndex === 0 && columnIndex < 2,
+                onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
+              })
+                .layoutWeight(1)
+            }, (moment: MomentItem) => moment.moment_id)
+            if (row.length === 1) {
+              Blank()
+                .layoutWeight(1)
+            }
+          }
+          .width('100%')
+          .alignItems(VerticalAlign.Top)
         }
-      }, (moment: MomentItem) => moment.moment_id)
+      }, (row: MomentItem[], rowIndex: number) => row.length > 0 ? row[0].moment_id : 'row-' + rowIndex)
     }
     .width('100%')
     .height('100%')
     .edgeEffect(EdgeEffect.None)
     .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
+    .onDidScroll(() => { this.updateBackToTop(); })
   }
 
   @Builder
   private buildStickyHeader() {
     // 沉浸流顶栏：左侧品牌字标锚点，右侧搜索/通知/地图动作，平衡首屏视觉重心
     Row() {
-      Row({ space: DesignConstants.SPACING.XS }) {
-        LucideIcon({
-          icon: AppIcon.NEARBY,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-          color: this.getPalette().accentBackground
-        })
+      Row({ space: DesignConstants.SPACING.SM }) {
+        // 对齐 web 移动端首页：真实品牌 Logo（同源 hotspot-logo.png）+ 14px 粗体字标，
+        // 不再用「附近」Lucide 图标充当品牌。
+        Image($r('app.media.hotspot_logo'))
+          .width(DesignConstants.COMPONENT.ICON_SIZE_LG)
+          .height(DesignConstants.COMPONENT.ICON_SIZE_LG)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .objectFit(ImageFit.Cover)
         Text('HotSpot')
-          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
           .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
           .fontColor(this.getPalette().textPrimary)
       }

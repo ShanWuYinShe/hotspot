@@ -315,27 +315,45 @@ export struct PhoneLayout {
             SystemBadge({ count: this.unreadCount })
           }
         }
+        // 对齐 web NavTab：图标选中微放大 1.1、文字选中 semibold，不再用整块选中底色
+        .scale(this.currentTabIndex === index ? { x: 1.1, y: 1.1 } : { x: 1, y: 1 })
+        .animation({
+          duration: DesignConstants.ANIMATION.DURATION_FAST,
+          curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+        })
+
         Text(TAB_ITEMS[index].label)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
           .fontColor(
             this.currentTabIndex === index
               ? this.getPalette().accentBackground
               : this.getPalette().tabBarInactive
           )
           .fontWeight(
-            this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.REGULAR
+            this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.MEDIUM
           )
-          .margin({ top: DesignConstants.SPACING.HALF })
+          .margin({ top: DesignConstants.SPACING.XS })
+
+        // web 底部 NavTab 的选中指示微胶囊（占位常驻，仅切透明度/缩放，防止文字上下跳动）
+        Column()
+          .width(DesignConstants.SPACING.MD3)
+          .height(DesignConstants.SPACING.THREE)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().accentBackground)
+          .shadow({
+            radius: DesignConstants.SHADOW.SMALL.radius,
+            color: this.getPalette().accentBackground
+          })
+          .opacity(this.currentTabIndex === index ? 1 : 0)
+          .scale(this.currentTabIndex === index ? { x: 1, y: 1 } : { x: 0.5, y: 0.5 })
+          .animation({
+            duration: DesignConstants.ANIMATION.DURATION_FAST,
+            curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+          })
       }
       .width(DesignConstants.LAYOUT.LABEL_WIDTH)
       .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
-      .borderRadius(DesignConstants.RADIUS.LG)
-      .backgroundColor(
-        this.currentTabIndex === index
-          ? this.getPalette().tabBarActiveBackground
-          : DesignConstants.COLOR.TRANSPARENT
-      )
-      // 按压差异：选中 tab 按压不缩放（accent 底已表达选中），未选中按压缩放预览
+      // 按压差异：选中 tab 按压不缩放（accent 指示条已表达选中），未选中按压缩放预览
       .scale(
         this.pressedTabIndex === index && this.currentTabIndex !== index
           ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL }

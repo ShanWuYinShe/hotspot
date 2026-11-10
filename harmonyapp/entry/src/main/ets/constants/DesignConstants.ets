@@ -266,6 +266,8 @@ export interface OpacitySystem {
   MUTED: number;
   /** 强调内容淡化（对齐前端 opacity-80） */
   EMPHASIZED: number;
+  /** 装饰水印透明度（对齐前端 --cst-opacity-watermark = 0.08） */
+  WATERMARK: number;
 }
 
 export interface BorderWidthSystem {
@@ -875,6 +877,7 @@ const OPACITY: OpacitySystem = {
   SUBTLE: 0.85,
   MUTED: 0.5,
   EMPHASIZED: 0.8,
+  WATERMARK: 0.08,
 };
 
 // ==================== 边框宽度系统（对齐前端 --cst-border-width-* 档位）====================
