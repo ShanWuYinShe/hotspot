@@ -1,6 +1,6 @@
 import { UserItem } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
-import { UserRelationState, interactionEventHub} from '../../../core/state/InteractionStateStore'
+import { UserRelationState, interactionEventHub } from '../../../core/state/InteractionStateStore';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
@@ -8,31 +8,33 @@ import { DesignConstants, textLineHeight } from '../../../constants/DesignConsta
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { Pressable } from '../../../components/Pressable';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
 /**
- * 附近用户卡 — portrait 3:4 图片卡,头像即卡图,对齐前端 nearby/people/UserCard——
- * 右上距离毛玻璃徽章;底部托盘 = 昵称 + bio 副行 + 在线点、#tag 徽章 + 28vp 圆形关注钮。
- * (原 compact 竖排白卡随前端 /nearby 聚合门户删除一并移除,附近页改用本卡双列卡墙)
- * 关注态优先读 InteractionStateStore 乐观更新,回退响应 relation。
+ * 附近用户卡 — web 白底名片卡（对齐前端 components/data-display/UserCard.svelte 1x1 变体）：
+ * - card：双列网格卡。20 圆角白卡 + ring 描边 + shadow-xs；顶栏分类 chip + 距离，
+ *   中部居中头像（字母 fallback = accent-soft 圆）/姓名 14·600/副行 11 次色，
+ *   底部居中关注 pill（视觉 36vp，热区外扩 44vp）。
+ * - row：附近枢纽「附近的人」行式列表行（透明底，由外层软岛 ListGroup 承担外框）：
+ *   avatar 44 + 名/副行 + 右侧关注 pill。
+ * 关注态优先读 InteractionStateStore 乐观更新，回退响应 relation；
+ * 事件总线按 user_id 过滤定向更新（快照冷启动播种见 aboutToAppear）。
  */
 @Reusable
 @Component
 export struct UserCard {
   @Prop user: UserItem;
   @Prop showDistance: boolean = true;
+  /** 形态：card = 白底名片卡（列表页双列）；row = 枢纽行式列表行 */
+  @Prop variant: string = 'card';
   // 仅持本卡关系态：整 Map 订阅会让任意用户关注动作触发全部卡重算。
-  // 事件总线按 user_id 过滤定向更新（快照冷启动播种见 aboutToAppear）。
   @State private socialState: UserRelationState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private followInFlight: boolean = false;
   @State private followPopped: boolean = false;
-  /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
-  @State private mediaActive: boolean = true;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -62,6 +64,10 @@ export struct UserCard {
     return this.user.user?.user_id ?? '';
   }
 
+  private getNickname(): string {
+    return this.user.user?.nickname ?? '';
+  }
+
   private isFollowing(): boolean {
     const state = this.socialState;
     return state?.relation?.is_following ?? this.user.relation?.is_following ?? false;
@@ -73,6 +79,18 @@ export struct UserCard {
 
   private getPrimaryTag(): string {
     return this.user.tags && this.user.tags.length > 0 ? this.user.tags[0] : '';
+  }
+
+  /** 顶栏左侧分类 chip：无标签时回退「#热点邻居」（对齐 web UserCard 缺省档） */
+  private getBadgeText(): string {
+    const tag = this.getPrimaryTag();
+    return tag.length > 0 ? `#${tag}` : '#热点邻居';
+  }
+
+  /** 副行：简介缺省「热点邻居」（对齐 web note || '热点邻居'） */
+  private getSubtitle(): string {
+    const bio = this.user.bio;
+    return bio && bio.length > 0 ? bio : '热点邻居';
   }
 
   private getDistanceText(): string {
@@ -105,151 +123,253 @@ export struct UserCard {
     }
   }
 
+  /** 名片卡高度：由 token 档位推导（padding + 顶栏 chip + 头像/姓名/副行 + 底部 pill），
+   *  ArkUI 的 height 为 border-box（含 padding）；末尾留 XS 余量吸收行高取整，保证不裁切。 */
+  private getCardHeight(): number {
+    return DesignConstants.SPACING.MD2 * 2
+      + DesignConstants.SPACING.LG2
+      + DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM
+      + DesignConstants.SPACING.SM
+      + textLineHeight(DesignConstants.FONT.SIZE.MD)
+      + DesignConstants.SPACING.HALF
+      + textLineHeight(DesignConstants.FONT.SIZE.XS)
+      + DesignConstants.COMPONENT.BUTTON_HEIGHT_SM
+      + DesignConstants.SPACING.XS;
+  }
+
+  private getFollowForeground(): ResourceColor {
+    return this.isFollowing() ? this.getPalette().textSecondary : this.getPalette().accentBackground;
+  }
+
   @Builder
-  private buildFollowButton() {
-    // 按压反馈统一走 Pressable（P3-1）：原双态按压（未关注缩放/已关注边框加深）
-    // 收敛为统一 spring 缩放手感；id 保留在内部 Row 供 NearbyImageCard
-    // CHILD_CONTROL_PREFIX 约定识别行内子控件（属性放内容组件上——自定义组件
-    // 尾随闭包后不可链式属性）
+  private buildFollowPill() {
     Pressable({
       onPress: () => this.toggleFollow(),
-      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
-      // 行内小控件不得撑满整行：fillWidth 缺省 true，会把 28vp 圆形关注钮的
-      // 按压容器拉成整行宽（卡片里看起来是一条通栏底色块，且热区覆盖整行）
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
+      // 行内小控件不得撑满整行：fillWidth 缺省 true 会把 pill 的按压容器拉成整行宽
       fillWidth: false
     }) {
-      Row() {
+      Row({ space: DesignConstants.SPACING.XS }) {
         LucideIcon({
-          // 图标语义对齐前端 FollowButton(iconOnly)：未关注 UserPlus、已关注 Check
+          // 图标语义对齐前端 FollowButton：未关注 UserPlus、已关注 Check
           icon: this.isFollowing() ? AppIcon.CHECK : AppIcon.PERSON_ADD,
-          // web FollowButton iconOnly：图标 size-4(16)
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-          color: this.mediaActive ? DesignConstants.COLOR.WHITE :
-            (this.isFollowing() ? this.getPalette().textSecondary : this.getPalette().accentBackground)
+          // 与同档文字（XS=11）并排时允许用字号档作图标尺寸（skill 已登记例外）
+          iconSize: DesignConstants.FONT.SIZE.XS,
+          color: this.getFollowForeground()
         })
+        Text(this.isFollowing() ? '已关注' : '关注')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(this.isFollowing() ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getFollowForeground())
+          .maxLines(1)
       }
-      .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}follow-${this.getUserId()}`)
-      .scale({ x: MotionUtil.popScale(this.followPopped), y: MotionUtil.popScale(this.followPopped) })
-      // web：size-9 = 36vp 圆钮（28vp 偏小，与 16vp 图标比例不匹配）
-      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_SM)
+      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
       .borderRadius(DesignConstants.RADIUS.FULL)
+      // 未关注 = accent-soft 淡底（引导点击）；已关注 = 中性软填（回到信息态），对齐 web FollowButton
+      .backgroundColor(this.isFollowing() ? this.getPalette().surfaceSubtle : this.getPalette().accentMuted)
       .justifyContent(FlexAlign.Center)
-      // 未关注 = accent-soft 淡底、无描边；已关注 = 透明底 + 强描边（web outline 变体）
-      // 对齐 web FollowButton onMedia：两态均为强遮罩底 + 白色描边（未操作 40% / 已操作 70%），
-      // 形状线索 = UserPlus ↔ Check，不只靠颜色
-      .backgroundColor(this.mediaActive
-        ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG
-        : (this.isFollowing() ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().accentMuted))
-      .border({
-        width: this.mediaActive ? DesignConstants.BORDER_WIDTH.HAIRLINE :
-          (this.isFollowing() ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0),
-        color: this.mediaActive
-          ? (this.isFollowing() ? DesignConstants.COLOR.MEDIA_BORDER_WHITE_STRONG : DesignConstants.COLOR.MEDIA_BORDER_WHITE_SOFT)
-          : this.getPalette().accentBackground
-      })
-      .accessibilityText(this.isFollowing() ?
-        `取消关注 ${this.user.user?.nickname ?? ''}` :
-        `关注 ${this.user.user?.nickname ?? ''}`)
-      // 触控热区：视觉 36vp，responseRegion 外扩到 44vp（不占布局）
+      .alignItems(VerticalAlign.Center)
+      .scale({ x: MotionUtil.popScale(this.followPopped), y: MotionUtil.popScale(this.followPopped) })
+      .accessibilityText(this.isFollowing() ? `取消关注 ${this.getNickname()}` : `关注 ${this.getNickname()}`)
+      // 触控热区：视觉 36vp，responseRegion 纵向外扩到 MIN_HIT_TARGET(44)（不占布局）
       .responseRegion({
-        x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+        x: 0,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.BUTTON_HEIGHT_SM) / 2,
+        width: '100%',
         height: DesignConstants.LAYOUT.MIN_HIT_TARGET
       })
     }
   }
-  build() {
-    NearbyImageCard({
-      imageUrl: this.user.user?.avatar_url ?? '',
-      imageAlt: this.user.user?.nickname ?? '',
-      cardAspectRatio: 0.75,
-      cardRadius: DesignConstants.SHAPE.CARD,
-      // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面（对齐 BRIEF §A 网格卡）
-      mediaOverlay: true,
-      placeholderText: this.user.user?.nickname ?? '',
-      badgeText: this.showDistance ? this.getDistanceText() : '',
-      badgeIcon: AppIcon.LOCATION,
-      badgeShape: 'pill',
-      badgeAlign: 'topRight',
-      onMediaStateChange: (active: boolean) => {
-        this.mediaActive = active;
-      },
-      onPress: () => this.openProfile()
-    }) {
-      Column({ space: DesignConstants.SPACING.THREE }) {
-        // 在线点紧贴昵称右侧（对齐前端 nearby/people/UserCard：name+dot 同行左对齐）
-        // web：名称 truncate 后**在线点紧跟其右**（不是被顶到行尾）——
-        // 原 layoutWeight(1) 把点推到卡片右缘，与前端「绿点贴着昵称」的语义不符
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text(this.user.user?.nickname ?? '')
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 对齐前端 nearby/people 卡片名 text-sm（项目口径 12px）
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .flexShrink(1)
 
-          if (this.isOnline()) {
-            // 前端 nearby/people：size-2(8) + ring-2；本端统一 ONLINE_DOT_MD(10，含 2vp 描边)
-            Row()
-              .flexShrink(0)
-              .width(DesignConstants.COMPONENT.ONLINE_DOT_MD)
-              .height(DesignConstants.COMPONENT.ONLINE_DOT_MD)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().online)
-              .border({
-                width: DesignConstants.BORDER_WIDTH.STRONG,
-                color: this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : this.getPalette().surfaceElevated
-              })
-          }
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
+  @Builder
+  private buildCardTopRow() {
+    Row() {
+      // 左上分类 chip（10px neutral 底），无标签回退 #热点邻居
+      Row() {
+        Text(this.getBadgeText())
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontColor(this.getPalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .height(DesignConstants.SPACING.LG2)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      .backgroundColor(this.getPalette().surfaceSubtle)
+      .borderRadius(DesignConstants.RADIUS.FULL)
 
-        if (this.user.bio) {
-          Text(this.user.bio)
-            .fontSize(DesignConstants.FONT.SIZE.XS2) // 对齐前端次要行 text-xxs(10)
+      Blank()
+
+      // 右上距离（MapPin + 10px 次色）
+      if (this.showDistance && this.getDistanceText().length > 0) {
+        Row({ space: DesignConstants.SPACING.HALF }) {
+          LucideIcon({
+            icon: AppIcon.LOCATION,
+            iconSize: DesignConstants.FONT.SIZE.XS2,
+            color: this.getPalette().accentBackground
+          })
+          Text(this.getDistanceText())
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
-            .opacity(this.mediaActive ? DesignConstants.OPACITY.SUBTLE : 1)
+            .fontColor(this.getPalette().textSecondary)
             .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
+        .alignItems(VerticalAlign.Center)
+      }
+    }
+    .width('100%')
+    .height(DesignConstants.SPACING.LG2)
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildCardCenter() {
+    Column() {
+      // 居中头像：字母 fallback = accent-soft 圆（SystemAvatar 内建占位/渐显/失败降级）
+      SystemAvatar({
+        avatarUrl: this.user.user?.avatar_url ?? '',
+        name: this.getNickname(),
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
+        isOnline: this.isOnline(),
+        onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_LG,
+        shape: 'circle',
+        decorative: true
+      })
+        .shadow(this.getPalette().surfaceShadow)
+
+      Text(this.getNickname())
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .textAlign(TextAlign.Center)
+        .width('100%')
+        .margin({ top: DesignConstants.SPACING.SM })
+
+      Text(this.getSubtitle())
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontColor(this.getPalette().textSecondary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .textAlign(TextAlign.Center)
+        .width('100%')
+        .margin({ top: DesignConstants.SPACING.HALF })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  private buildCard() {
+    Pressable({
+      onPress: () => this.openProfile(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_CARD,
+      hoverFill: this.getPalette().surfaceSubtle
+    }) {
+      Column() {
+        this.buildCardTopRow()
+        this.buildCardCenter()
+
         Row() {
-          if (this.getPrimaryTag().length > 0) {
-            Text(`#${this.getPrimaryTag()}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground)
-              .backgroundColor(this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : this.getPalette().accentMuted)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({
-                left: DesignConstants.SPACING.SM2,
-                right: DesignConstants.SPACING.SM2,
-                top: DesignConstants.SPACING.HALF,
-                bottom: DesignConstants.SPACING.HALF
-              })
-              .maxLines(1)
-          }
-
-          Blank()
-
-          this.buildFollowButton()
+          this.buildFollowPill()
         }
         .width('100%')
-        .alignItems(VerticalAlign.Center)
-        .margin({ top: DesignConstants.SPACING.SM })
+        .justifyContent(FlexAlign.Center)
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
+      .height(this.getCardHeight())
+      .padding(DesignConstants.SPACING.MD2)
+      .backgroundColor(this.getPalette().surfaceIsland)
+      // web 名片卡：ring-1 border-strong + rounded-lg(20) + shadow-xs
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getPalette().surfaceShadow)
+      .clip(true)
+      .accessibilityText(`查看${this.getNickname()}的主页`)
+    }
+  }
+
+  @Builder
+  private buildRow() {
+    Pressable({
+      onPress: () => this.openProfile(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_INPUT_ROW,
+      hoverFill: this.getPalette().surfaceSubtle
+    }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        SystemAvatar({
+          avatarUrl: this.user.user?.avatar_url ?? '',
+          name: this.getNickname(),
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          isOnline: this.isOnline(),
+          onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD,
+          shape: 'circle',
+          decorative: true
+        })
+
+        Column() {
+          Text(this.getNickname())
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+
+          Row({ space: DesignConstants.SPACING.SM2 }) {
+            if (this.getPrimaryTag().length > 0) {
+              Text(`#${this.getPrimaryTag()}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getPalette().accentBackground)
+                .maxLines(1)
+            }
+            if (this.getPrimaryTag().length > 0 && this.showDistance && this.getDistanceText().length > 0) {
+              Text('·')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getPalette().textSecondary)
+                .opacity(DesignConstants.OPACITY.MUTED)
+                .maxLines(1)
+            }
+            if (this.showDistance && this.getDistanceText().length > 0) {
+              Text(this.getDistanceText())
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getPalette().textSecondary)
+                .maxLines(1)
+            }
+          }
+          .alignItems(VerticalAlign.Center)
+          .margin({ top: DesignConstants.SPACING.HALF })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        this.buildFollowPill()
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
       .padding({
-        left: DesignConstants.SPACING.LG,
-        right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.LG
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
       })
+    }
+  }
+
+  build() {
+    if (this.variant === 'row') {
+      this.buildRow()
+    } else {
+      this.buildCard()
     }
   }
 }

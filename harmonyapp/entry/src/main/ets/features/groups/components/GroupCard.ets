@@ -5,32 +5,39 @@ import { LocationUtil } from '../../../core/location/LocationUtil';
 import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { Pressable } from '../../../components/Pressable';
+import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemDialog } from '../../../components/SystemDialog';
 
 /**
- * 附近群组卡 — 基于 NearbyImageCard 的图片卡（对齐前端 nearby/groups/shared/GroupCard）。
- * featured=false：3:4 网格卡（左上分类胶囊 + 群名/成员/距离/活动行 + 加入 pill）；
- * featured=true：全宽精选大卡（「本周精选」玻璃徽章 + 大号 footer）。
- * 成员头像堆叠前端使用群内好友头像列表，本端契约仅有 friends_in_group 计数，
- * 降级为成员数文本。加入/退出走 InteractionActions 乐观更新（写 InteractionStateStore
- * 并发 group_membership_updated 事件），本卡订阅该事件刷新加入态——viewer_state 只是
- * 搜索响应的静态快照，加入后不会自动更新。
+ * 群组卡（附近域） — 两种形态，均对齐 web 移动端：
+ * - card（默认）：白底名片卡，对齐 web /nearby/groups 双列卡。20 圆角白卡 + ring 描边 +
+ *   shadow-xs；左上分类 chip（深色强遮罩白字）、右上私密锁圆；居中字母圆（accent-soft 底）
+ *   + 群名 14/600 + 成员/距离 meta 行 + 底部「加入」pill（视觉 36vp、热区 44vp）。
+ *   不再整卡铺封面图（web 该卡的无图形态，避免 3:4 图片卡与名片卡两种语言并存）。
+ * - carousel：附近枢纽「附近群组」横滑卡（对齐 web GroupCarousel 140×140 方形图卡）：
+ *   封面铺满 + 底部姓名/成员/距离托盘 + 右上隐私圆徽章。
+ * 加入/退出走 InteractionActions 乐观更新（写 InteractionStateStore 并广播
+ * group_membership_updated），本卡订阅该事件刷新加入态——viewer_state 只是搜索响应的
+ * 静态快照，加入后不会自动更新。
  */
 @Reusable
 @Component
 export struct GroupCard {
   @Prop group: GroupItem;
-  @Prop featured: boolean = false;
-  /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
-  @State private mediaActive: boolean = true;
+  /** 形态：card = 白底名片卡（列表双列）；carousel = 枢纽横滑方形图卡 */
+  @Prop variant: string = 'card';
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+
+  /** 群组名片居中字母圆直径（对齐 web 群卡占位圆 size-16=64；AVATAR 刻度无 64 档，
+   *  按布局几何登记在该组件内） */
+  private static readonly AVATAR_SIZE: number = 64;
 
   // 加入态（对齐 UserCard / MomentFeedCard 的 store 订阅范式）：
   // 事件到达本群时写入 @State 触发重渲染，真值判定见 hasJoined()。
@@ -38,10 +45,16 @@ export struct GroupCard {
   /** memberState 归属的群 id：@Reusable 复用不重放 aboutToAppear，@State 可能仍属于
    *  上一个群，故仅在与当前群 id 一致时才采信，否则现查 store / 回退响应快照。 */
   private memberStateGroupId: string = '';
+  /** carousel 图卡：是否有封面图（false = fallback，底部托盘换主题文字色） */
+  @State private mediaActive: boolean = true;
+  @State private showLeaveConfirm: boolean = false;
+  @State private joinPopped: boolean = false;
 
   aboutToAppear(): void {
     this.memberState = interactionEventHub.getGroupState(this.getGroupId())?.my_state;
     this.memberStateGroupId = this.getGroupId();
+    // 横滑卡：无封面时底部托盘走主题文字色（有封面时由 NearbyImageCard 回调同步）
+    this.mediaActive = (this.group.group?.avatar_url ?? '').length > 0;
     interactionEventHub.on('group_membership_updated', this.handleGroupMembershipUpdate);
   }
 
@@ -63,6 +76,10 @@ export struct GroupCard {
 
   private getGroupId(): string {
     return this.group.group?.group_id ?? '';
+  }
+
+  private getGroupName(): string {
+    return this.group.group?.name ?? '';
   }
 
   private hasJoined(): boolean {
@@ -131,10 +148,6 @@ export struct GroupCard {
     }
   }
 
-  /** 退出群组二次确认可见性（destructive 防误触：已加入态一点即静默退群） */
-  @State private showLeaveConfirm: boolean = false;
-  @State private joinPopped: boolean = false;
-
   private toggleJoin(): void {
     const groupId = this.getGroupId();
     if (!groupId) {
@@ -151,289 +164,405 @@ export struct GroupCard {
     }
   }
 
+  /** 名片卡高度：由 token 档位推导（padding + 顶栏 chip + 字母圆/群名/meta + 底部 pill），
+   *  ArkUI 的 height 为 border-box（含 padding）；末尾留 XS 余量吸收行高取整，保证不裁切。 */
+  private getCardHeight(): number {
+    return DesignConstants.SPACING.MD2 * 2
+      + DesignConstants.SPACING.LG2
+      + GroupCard.AVATAR_SIZE
+      + DesignConstants.SPACING.SM2
+      + textLineHeight(DesignConstants.FONT.SIZE.MD)
+      + DesignConstants.SPACING.HALF
+      + textLineHeight(DesignConstants.FONT.SIZE.XS)
+      + DesignConstants.COMPONENT.BUTTON_HEIGHT_SM
+      + DesignConstants.SPACING.XS;
+  }
+
+  private getJoinForeground(): ResourceColor {
+    return this.hasJoined() ? this.getPalette().textSecondary : this.getPalette().accentBackground;
+  }
+
   @Builder
-  private buildJoinButton() {
-    // 按压反馈统一走 Pressable（P3-1，springMotion 手感）；fillWidth:false 自适应
-    // 药丸内容宽（默认撑满会破坏 footer Row 的 Blank 布局）；id 保留在内部 Text
-    // 供 NearbyImageCard CHILD_CONTROL_PREFIX 约定识别行内子控件
+  private buildJoinPill() {
+    // 按压反馈统一走 Pressable（springMotion 手感）；fillWidth:false 自适应 pill 内容宽
     Pressable({
       onPress: () => this.toggleJoin(),
       pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
       fillWidth: false
     }) {
-      Text(this.hasJoined() ? '已加入' : '加入')
-        .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}join-${this.getGroupId()}`)
-        .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.hasJoined() ?
-          (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary) :
-          this.getPalette().accentText)
-        .backgroundColor(this.hasJoined()
-          ? (this.mediaActive ? DesignConstants.COLOR.MEDIA_SCRIM_STRONG : DesignConstants.COLOR.TRANSPARENT)
-          : this.getPalette().accentBackground)
-        .border(this.hasJoined()
-          ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-            color: this.mediaActive ? DesignConstants.COLOR.MEDIA_BORDER_WHITE_SOFT : this.getPalette().borderColor } :
-          { width: 0 })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .padding({
-          left: DesignConstants.SPACING.MD,
-          right: DesignConstants.SPACING.MD,
-          top: DesignConstants.SPACING.THREE,
-          bottom: DesignConstants.SPACING.THREE
-        })
-        .shadow(this.hasJoined() ? undefined : this.getPalette().surfaceShadow)
-        .accessibilityText(this.hasJoined() ? `退出群组 ${this.group.group?.name ?? ''}` : `加入群组 ${this.group.group?.name ?? ''}`)
-        // 触控热区：视觉高 ~18vp（Text+3vp padding），responseRegion 外扩到 44vp
-        .responseRegion({
-          x: -DesignConstants.SPACING.MD,
-          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-          width: '130%',
-          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-        })
+      Row({ space: DesignConstants.SPACING.HALF }) {
+        if (this.hasJoined()) {
+          LucideIcon({
+            icon: AppIcon.CHECK,
+            iconSize: DesignConstants.FONT.SIZE.XS,
+            color: this.getJoinForeground()
+          })
+        }
+        Text(this.hasJoined() ? '已加入' : '加入')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(this.hasJoined() ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getJoinForeground())
+          .maxLines(1)
+      }
+      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_SM)
+      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.hasJoined() ? this.getPalette().surfaceSubtle : this.getPalette().accentMuted)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+      .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
+      .accessibilityText(this.hasJoined() ? `退出群组 ${this.getGroupName()}` : `加入群组 ${this.getGroupName()}`)
+      // 触控热区：视觉 36vp，responseRegion 纵向外扩到 MIN_HIT_TARGET(44)（不占布局）
+      .responseRegion({
+        x: 0,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.BUTTON_HEIGHT_SM) / 2,
+        width: '100%',
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
     }
   }
 
   @Builder
-  private buildNameLockIcon() {
+  private buildPrivacyBadge() {
     if (this.isPrivate()) {
-      LucideIcon({
+      Row() {
+        LucideIcon({
           icon: AppIcon.LOCK,
           iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary
+          color: DesignConstants.COLOR.WHITE
         })
-      .margin({ left: DesignConstants.SPACING.HALF })
+      }
+      .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      // 深色强遮罩圆徽章（对齐 web media-badge--icon；纯装饰，不进读屏）
+      .backgroundColor(DesignConstants.COLOR.MEDIA_SCRIM_STRONG)
+      .justifyContent(FlexAlign.Center)
+      .accessibilityLevel('no')
     }
   }
 
   @Builder
-  private buildCompactFooter() {
-    Column({ space: DesignConstants.SPACING.XS }) {
+  private buildCategoryChip() {
+    if (this.getCategory().length > 0) {
       Row() {
-        Text(this.group.group?.name ?? '')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        this.buildNameLockIcon()
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        LucideIcon({
-            icon: AppIcon.GROUP,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
-          })
-        Text(`${this.formatMembers()} 人`)
+        Text(this.getCategory())
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
-
-        Blank()
-
-        if (this.getDistanceText().length > 0) {
-          Row({ space: DesignConstants.SPACING.HALF }) {
-            LucideIcon({
-                icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground)
-              })
-            Text(this.getDistanceText())
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground))
-          }
-          .alignItems(VerticalAlign.Center)
-        }
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontColor(DesignConstants.COLOR.WHITE)
+          .maxLines(1)
       }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+      .height(DesignConstants.SPACING.LG2)
+      .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+      // 深色强遮罩底白字（对齐 web 群卡分类角标 media-badge）
+      .backgroundColor(DesignConstants.COLOR.MEDIA_SCRIM_STRONG)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+    }
+  }
 
-      Row() {
-        if (this.getActivityText().length > 0) {
-          Row({ space: DesignConstants.SPACING.HALF }) {
-            LucideIcon({
-                icon: AppIcon.TIME,
-                iconSize: DesignConstants.FONT.SIZE.XS2,
-                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online)
-              })
-            Text(this.getActivityText())
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
-          }
-          .alignItems(VerticalAlign.Center)
-        }
-
-        Blank()
-
-        this.buildJoinButton()
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
+  @Builder
+  private buildCardTopRow() {
+    Row() {
+      this.buildCategoryChip()
+      Blank()
+      this.buildPrivacyBadge()
     }
     .width('100%')
-    .alignItems(HorizontalAlign.Start)
-    .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.MD
-    })
+    .height(DesignConstants.SPACING.LG2)
+    .alignItems(VerticalAlign.Center)
   }
 
   @Builder
-  private buildFeaturedFooter() {
-    Column({ space: DesignConstants.SPACING.XS }) {
+  private buildCardCenter() {
+    Column() {
+      // 居中字母圆：群头像缺省时 SystemAvatar 用 accent-soft 底 + 首字母兜底
+      SystemAvatar({
+        avatarUrl: this.group.group?.avatar_url ?? '',
+        name: this.getGroupName(),
+        avatarSize: GroupCard.AVATAR_SIZE,
+        shape: 'circle',
+        decorative: true
+      })
+        .shadow(this.getPalette().surfaceShadow)
+
+      Text(this.getGroupName())
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .textAlign(TextAlign.Center)
+        .width('100%')
+        .margin({ top: DesignConstants.SPACING.SM2 })
+
+      // meta 行：左「成员数」/ 右「距离」（对齐 web 群卡 meta 行）
       Row() {
-        Text(this.group.group?.name ?? '')
-          // 前端 featured 群名 text-lg = 18px（本端 18 档是 LG_PLUS；LG=16 是平台适配档）
-          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
-          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-        this.buildNameLockIcon()
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-
-      if (this.group.description) {
-        Text(this.group.description)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
-      }
-
-      Row({ space: DesignConstants.SPACING.MD }) {
         Row({ space: DesignConstants.SPACING.HALF }) {
           LucideIcon({
-              icon: AppIcon.GROUP,
-              iconSize: DesignConstants.FONT.SIZE.XS,
-              color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
-            })
+            icon: AppIcon.GROUP,
+            iconSize: DesignConstants.FONT.SIZE.XS,
+            color: this.getPalette().textSecondary
+          })
           Text(`${this.formatMembers()} 人`)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary))
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontColor(this.getPalette().textSecondary)
+            .maxLines(1)
         }
         .alignItems(VerticalAlign.Center)
-
-        Row({ space: DesignConstants.SPACING.HALF }) {
-          Row()
-            .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
-            .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
-          Text(`${this.group.online_members_count ?? 0} 在线`)
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
-        }
-        .alignItems(VerticalAlign.Center)
-
-        if (this.getDistanceText().length > 0) {
-          Text(this.getDistanceText())
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground))
-        }
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: DesignConstants.SPACING.SM })
-
-      Row() {
-        if (this.getActivityText().length > 0) {
-          Row({ space: DesignConstants.SPACING.HALF }) {
-            LucideIcon({
-                icon: AppIcon.TIME,
-                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                color: (this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online)
-              })
-            Text(this.getActivityText())
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .fontColor((this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().online))
-          }
-          .alignItems(VerticalAlign.Center)
-        }
 
         Blank()
 
-        this.buildJoinButton()
+        if (this.getDistanceText().length > 0) {
+          Row({ space: DesignConstants.SPACING.HALF }) {
+            LucideIcon({
+              icon: AppIcon.LOCATION,
+              iconSize: DesignConstants.FONT.SIZE.XS,
+              color: this.getPalette().accentBackground
+            })
+            Text(this.getDistanceText())
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getPalette().accentBackground)
+              .maxLines(1)
+          }
+          .alignItems(VerticalAlign.Center)
+        }
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: DesignConstants.SPACING.SM })
+      .margin({ top: DesignConstants.SPACING.HALF })
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .justifyContent(FlexAlign.Center)
+  }
+
+  @Builder
+  private buildCardBottomRow() {
+    Row() {
+      if (this.getActivityText().length > 0) {
+        Row({ space: DesignConstants.SPACING.HALF }) {
+          LucideIcon({
+            icon: AppIcon.TIME,
+            iconSize: DesignConstants.FONT.SIZE.XS2,
+            color: this.getPalette().online
+          })
+          Text(this.getActivityText())
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.getPalette().online)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(VerticalAlign.Center)
+        .flexShrink(1)
+      }
+
+      Blank()
+
+      this.buildJoinPill()
+    }
+    .width('100%')
+    .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_SM)
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildNameCard() {
+    Pressable({
+      onPress: () => this.openGroupDetail(),
+      pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_CARD,
+      hoverFill: this.getPalette().surfaceSubtle
+    }) {
+      Column() {
+        this.buildCardTopRow()
+        this.buildCardCenter()
+        this.buildCardBottomRow()
+      }
+      .width('100%')
+      .height(this.getCardHeight())
+      .padding(DesignConstants.SPACING.MD2)
+      .backgroundColor(this.getPalette().surfaceIsland)
+      // web 群卡：ring-1 border-strong + rounded-lg(20) + shadow-xs
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getPalette().surfaceShadow)
+      .clip(true)
+      .accessibilityText(`查看群组 ${this.getGroupName()}`)
+    }
+  }
+
+  @Builder
+  private buildCarouselFooter() {
+    Column({ space: DesignConstants.SPACING.HALF }) {
+      Text(this.getGroupName())
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.isOnMedia() ? DesignConstants.COLOR.WHITE : this.getPalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .width('100%')
+
+      Row() {
+        Row({ space: DesignConstants.SPACING.HALF }) {
+          LucideIcon({
+            icon: AppIcon.GROUP,
+            iconSize: DesignConstants.FONT.SIZE.XS2,
+            color: this.isOnMedia() ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary
+          })
+          Text(`${this.formatMembers()} 成员`)
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.isOnMedia() ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
+            .opacity(this.isOnMedia() ? DesignConstants.OPACITY.EMPHASIZED : 1)
+            .maxLines(1)
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Blank()
+
+        if (this.getDistanceText().length > 0) {
+          Row({ space: DesignConstants.SPACING.HALF }) {
+            LucideIcon({
+              icon: AppIcon.LOCATION,
+              iconSize: DesignConstants.FONT.SIZE.XS2,
+              color: this.isOnMedia() ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground
+            })
+            Text(this.getDistanceText())
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+              .fontColor(this.isOnMedia() ? DesignConstants.COLOR.WHITE : this.getPalette().accentBackground)
+              .maxLines(1)
+          }
+          .alignItems(VerticalAlign.Center)
+        }
+      }
+      .width('100%')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.LG
+      left: DesignConstants.SPACING.MD2,
+      right: DesignConstants.SPACING.MD2,
+      top: DesignConstants.SPACING.SM,
+      bottom: DesignConstants.SPACING.SM
     })
+  }
+
+  /** 群名字面圆首字（无封面横滑卡的占位字母） */
+  /** 横滑卡当前是否「压在封面图上」（决定底部托盘白字/主题字）：无封面或图加载失败走主题字 */
+  private isOnMedia(): boolean {
+    return (this.group.group?.avatar_url ?? '').length > 0 && this.mediaActive;
+  }
+
+  private getInitialChar(): string {
+    const name: string = this.getGroupName();
+    return name.length > 0 ? name.substring(0, 1) : '群';
+  }
+
+  /** 无封面横滑卡：accent 渐变底 + 居中字母圆（对齐 web GroupCarousel 占位形态） */
+  @Builder
+  private buildCarouselFallback() {
+    Column() {
+      Stack() {
+        Column()
+          .width('100%')
+          .height('100%')
+          .linearGradient({
+            angle: 135,
+            colors: [
+              [this.getPalette().accentMuted, 0],
+              [this.getPalette().surfaceIsland, 1]
+            ] as [ResourceColor, number][]
+          })
+
+        Row() {
+          Text(this.getInitialChar())
+            .fontSize(DesignConstants.FONT.SIZE.XXXL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().accentBackground)
+        }
+        .width(GroupCard.AVATAR_SIZE)
+        .height(GroupCard.AVATAR_SIZE)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().accentMuted)
+        .justifyContent(FlexAlign.Center)
+      }
+      .width('100%')
+      .layoutWeight(1)
+
+      this.buildCarouselFooter()
+    }
+    .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
+    .height(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
+    .backgroundColor(this.getPalette().surfaceIsland)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .clip(true)
+  }
+
+  @Builder
+  private buildCarouselCard() {
+    Column() {
+      if ((this.group.group?.avatar_url ?? '').length === 0) {
+        this.buildCarouselFallback()
+      } else if (this.isPrivate()) {
+        // 右上隐私圆徽章（仅私密群）：公开群组不渲染角标（web 用 globe，
+        // 本端 AppIcon 无 globe 符号，登记为平台差异）
+        NearbyImageCard({
+          imageUrl: this.group.group?.avatar_url ?? '',
+          imageAlt: this.getGroupName(),
+          cardAspectRatio: 1,
+          cardRadius: DesignConstants.SHAPE.CARD,
+          mediaOverlay: true,
+          fallbackIcon: AppIcon.GROUP,
+          placeholderText: this.getGroupName(),
+          badgeShape: 'circle',
+          badgeIcon: AppIcon.LOCK,
+          badgeAlign: 'topRight',
+          onMediaStateChange: (active: boolean) => {
+            this.mediaActive = active;
+          },
+          onPress: () => this.openGroupDetail()
+        }) {
+          this.buildCarouselFooter()
+        }
+      } else {
+        NearbyImageCard({
+          imageUrl: this.group.group?.avatar_url ?? '',
+          imageAlt: this.getGroupName(),
+          cardAspectRatio: 1,
+          cardRadius: DesignConstants.SHAPE.CARD,
+          mediaOverlay: true,
+          fallbackIcon: AppIcon.GROUP,
+          placeholderText: this.getGroupName(),
+          onMediaStateChange: (active: boolean) => {
+            this.mediaActive = active;
+          },
+          onPress: () => this.openGroupDetail()
+        }) {
+          this.buildCarouselFooter()
+        }
+      }
+    }
+    .width(DesignConstants.COMPONENT.GROUP_CARD_WIDTH)
   }
 
   build() {
     Stack() {
-      if (this.featured) {
-      NearbyImageCard({
-        imageUrl: this.group.group?.avatar_url ?? '',
-        imageAlt: this.group.group?.name ?? '',
-        // 无封面时：降高 + **不传 placeholderText**（NearbyImageCard 在该字段为空时不画占位圆，
-        // 否则圆会被 footer 压住裁切——2026-10-21 端上实测）。留一条紧凑渐变条即可。
-        fixedHeight: (this.group.group?.avatar_url ?? '').length > 0
-          ? DesignConstants.COMPONENT.GROUP_FEATURED_HEIGHT
-          : DesignConstants.COMPONENT.GROUP_FEATURED_HEIGHT_NO_COVER,
-        placeholderText: (this.group.group?.avatar_url ?? '').length > 0
-          ? (this.group.group?.name ?? '')
-          : '',
-        badgeText: '本周精选',
-        badgeIcon: AppIcon.STAR,
-        badgeShape: 'pill',
-        badgeVariant: 'glass',
-        badgeAlign: 'topLeft',
-        cardRadius: DesignConstants.SHAPE.CARD,
-        mediaOverlay: true,
-        fallbackIcon: AppIcon.GROUP,
-        onMediaStateChange: (active: boolean) => {
-          this.mediaActive = active;
-        },
-        onPress: () => this.openGroupDetail()
-      }) {
-        this.buildFeaturedFooter()
+      if (this.variant === 'carousel') {
+        this.buildCarouselCard()
+      } else {
+        this.buildNameCard()
       }
-    } else {
-      NearbyImageCard({
-        imageUrl: this.group.group?.avatar_url ?? '',
-        imageAlt: this.group.group?.name ?? '',
-        // 前端 nearby/groups/shared/GroupCard 非精选卡在双列网格（手机端）是 **aspect 0.75 (3:4) 竖版**
-        // 保证封面图片有充足高度（140vp+），避免 4/3 横版导致底部 footer 挤占 70% 空间仅剩 40vp 图条
-        cardAspectRatio: 0.75,
-        placeholderText: this.group.group?.name ?? '',
-        badgeText: this.getCategory(),
-        badgeShape: 'pill',
-        // 分类胶囊走 glass（图上毛玻璃），对齐前端：accent 实底收给主按钮，
-        // 卡片角标用弱对比玻璃底，避免每张卡一个高饱和色块
-        badgeVariant: 'glass',
-        badgeAlign: 'topLeft',
-        cardRadius: DesignConstants.SHAPE.CARD,
-        mediaOverlay: true,
-        fallbackIcon: AppIcon.GROUP,
-        onMediaStateChange: (active: boolean) => {
-          this.mediaActive = active;
-        },
-        onPress: () => this.openGroupDetail()
-      }) {
-        this.buildCompactFooter()
-      }
-      }
+
       // 退出群组二次确认（destructive 防误触）
       SystemDialog({
         visible: this.showLeaveConfirm,
         title: '退出群组',
-        description: `退出「${this.group.group?.name ?? '该群组'}」后需要重新申请加入`,
+        description: `退出「${this.getGroupName() || '该群组'}」后需要重新申请加入`,
         confirmText: '退出',
         confirmVariant: 'danger',
         onCancel: () => { this.showLeaveConfirm = false; },
@@ -446,5 +575,6 @@ export struct GroupCard {
         }
       })
     }
+    .width('100%')
   }
 }

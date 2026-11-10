@@ -1,7 +1,8 @@
 /**
  * 附近的群组 - 独立列表页
- * 对齐前端 /nearby/groups：2 列 3:4 群组图片卡墙（桌面 3 列）+ 移动端首卡 featured
- * 全宽精选大卡；搜索/分类/统计行保留；下拉刷新 + 上拉分页。
+ * 对齐前端 /nearby/groups（web 390 移动端）：页头 18/600 + 位置副标题 + 标题行内
+ * 「● N 人在线」；正文 2 列白底名片卡墙（桌面 3 列，列/行间距 12）。
+ * 分类胶囊行保留在页头 below；下拉刷新 + 上拉分页。
  * 数据来自 groups/search（reference_point + radius + sort_by=distance）。
  */
 
@@ -191,26 +192,12 @@ export struct NearbyGroupsListPage {
     return this.isDesktop() ? 3 : 2;
   }
 
-  /** featured 首卡仅移动/平板端（对齐前端移动端首卡精选，桌面 BSP 无 featured） */
-  private getFeaturedGroup(): GroupItem | null {
-    if (this.isDesktop() || this.groups.length === 0) {
-      return null;
-    }
-    return this.groups[0];
-  }
-
-  /** featured 之后的卡按列数分块（Scroll + ForEach chunk，分页规模可控） */
-  private getWallGroups(): GroupItem[] {
-    const featured = this.getFeaturedGroup();
-    return featured ? this.groups.slice(1) : this.groups;
-  }
-
+  /** 名片卡按列数分块（Scroll + ForEach chunk，分页规模可控；不再有 featured 大卡） */
   private getWallRows(): GroupItem[][] {
     const columns = this.getColumnCount();
-    const items = this.getWallGroups();
     const rows: GroupItem[][] = [];
-    for (let index = 0; index < items.length; index += columns) {
-      rows.push(items.slice(index, index + columns));
+    for (let index = 0; index < this.groups.length; index += columns) {
+      rows.push(this.groups.slice(index, index + columns));
     }
     return rows;
   }
@@ -225,17 +212,34 @@ export struct NearbyGroupsListPage {
           title: '附近群组',
           subtitle: this.getLocationSubtitle(),
           subtitleIcon: AppIcon.LOCATION,
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           backgroundVariant: 'transparent',
           hasBelowContent: true,
           showDivider: false
         }) {
-          // trailing：搜索/地图两个页面级工具入口（对齐 web 移动端 /nearby/groups 页头
-          // trailing —— 内页统一 surface 浅底圆钮；搜索在移动端显示、桌面隐藏，本端统一显示）
+          // trailing：在线人数 + 搜索/地图（对齐 web 移动端 /nearby/groups 页头 trailing：
+          // 标题行内右侧「● N 人在线」11/500 online 色，随后两枚页面级工具圆钮）
           Row({ space: DesignConstants.SPACING.SM }) {
+            if (!this.isLoading && this.errorMessage.length === 0 && this.groups.length > 0) {
+              Row({ space: DesignConstants.SPACING.SM2 }) {
+                Row()
+                  .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+                  .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+                  .borderRadius(DesignConstants.RADIUS.FULL)
+                  .backgroundColor(this.getCurrentThemePalette().online)
+                Text(`${this.getOnlineTotalCount()} 人在线`)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().textStatusOnlineOnSoft)
+                  .maxLines(1)
+              }
+              .alignItems(VerticalAlign.Center)
+            }
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
@@ -320,36 +324,10 @@ export struct NearbyGroupsListPage {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
             Scroll() {
               Column() {
-                // section header（对齐前端：eyebrow「此刻附近群组」+ status-online trailing，
-                // 前端内容列 pt-4(16)、眉标行 mb-3(12)）
-                Row() {
-                  Text('此刻附近群组')
-                    .fontSize(DesignConstants.FONT.SIZE.XS2)
-                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                    .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                    .fontColor(this.getCurrentThemePalette().textSecondary)
-                    .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
-                    .textCase(TextCase.UpperCase)
-                  Blank()
-                  Text(`${this.getOnlineTotalCount()} 人正在群聊`)
-                    .fontSize(DesignConstants.FONT.SIZE.XS)
-                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                    .fontColor(this.getCurrentThemePalette().online)
-                }
-                .width('100%')
-                .alignItems(VerticalAlign.Center)
-                // 眉标行 → 精选卡 12（前端 mb-3）
-                .margin({ bottom: DesignConstants.SPACING.MD })
-
-                // 移动/平板端首卡 featured 全宽精选大卡（前端 mb-5=20）
-                if (this.getFeaturedGroup()) {
-                  GroupCard({ group: this.getFeaturedGroup() as GroupItem, featured: true })
-                    .margin({ bottom: DesignConstants.SPACING.LG })
-                }
-
-                // 2/3 列图片卡墙
+                // 2/3 列白底名片卡墙（对齐 web /nearby/groups：手机 2 列、桌面 3 列，
+                // 列/行间距 12；在线人数已上移到页头 trailing，正文不再重复眉标行）
                 ForEach(this.getWallRows(), (rowGroups: GroupItem[]) => {
-                  Row({ space: DesignConstants.SPACING.LG }) {
+                  Row({ space: DesignConstants.SPACING.MD }) {
                     ForEach(rowGroups, (group: GroupItem) => {
                       GroupCard({ group: group })
                         .layoutWeight(1)
@@ -357,14 +335,14 @@ export struct NearbyGroupsListPage {
                   }
                   .width('100%')
                   .alignItems(VerticalAlign.Top)
-                  .margin({ bottom: DesignConstants.SPACING.LG })
+                  .margin({ bottom: DesignConstants.SPACING.MD })
                 }, (rowGroups: GroupItem[], index: number) => `row-${index}`)
 
                 // 分页状态条
                 if (this.hasMore) {
                   LoadingMoreIndicator()
                 } else {
-                                    ListEnd()
+                  ListEnd()
                 }
               }
               .width('100%')

@@ -222,11 +222,6 @@ export struct MomentsFeedPage {
     }
   }
 
-  private getMomentsSectionTitle(): string {
-    // 本页只承担地理流（原先随 tab 切换三套标题，tab 已移除）
-    return '周边动态';
-  }
-
   /** 数据加载版本号：快速切 tab 时旧响应不覆盖新 tab 内容 */
   private loadVersion: number = 0;
 
@@ -316,8 +311,9 @@ export struct MomentsFeedPage {
           title: '附近瞬间',
           subtitle: this.getLocationSubtitle(),
           subtitleIcon: AppIcon.LOCATION,
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent',
           showBackButton: this.showBackButton,
           onBack: this.showBackButton ? () => { AppRouter.pop(); } : null
@@ -424,21 +420,9 @@ export struct MomentsFeedPage {
   @Builder
   buildMomentFeed() {
     Column() {
-      // section 标题（对齐前端：eyebrow 小标 + 主标题层级）
-      Row() {
-        Text(this.getMomentsSectionTitle())
-          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS) // 18，对齐前端 page-title
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG_PLUS))
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-      }
-      .width('100%')
-      .padding({
-        top: DesignConstants.SPACING.LG,
-        bottom: DesignConstants.SPACING.SM
-      })
-
       // R7 内容进场（只包内容区，不含粘性头）
+      // 注意：web /nearby/moments 页头已有「附近瞬间」标题，正文不再重复一层分区标题
+      // （对齐 web：筛选胶囊后直接进入卡片墙）。
       Column() {
       if (this.getVisibleMoments().length > 0) {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
@@ -453,8 +437,8 @@ export struct MomentsFeedPage {
                     moment: moment,
                     // R6 首屏优先：前 2 张高清档（LazyForEach 离屏不创建）
                     priority: index < 2,
-                    // 2 列窄墙用 3:4 竖版（对齐 web 移动端）；3 列用 4:3
-                    cardAspectRatio: this.getWallColumns() === 2 ? 0.75 : 1.333,
+                    // 2 列窄墙用近 8:9（web 173×195）；3 列用 4:3
+                    cardAspectRatio: this.getWallColumns() === 2 ? 8 / 9 : 1.333,
                     onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
                     onImagePreview: (momentId: string, images: string[], index: number) => {
                       this.previewImage(momentId, images, index);
@@ -466,8 +450,9 @@ export struct MomentsFeedPage {
             .width('100%')
             .layoutWeight(1)
             .columnsTemplate(this.getWallColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
-            .columnsGap(DesignConstants.SPACING.LG)
-            .rowsGap(DesignConstants.SPACING.LG)
+            // 卡片墙列/行间距 10（对齐任务口径：web 390 宽下 2 列卡 173×195，列间 10）
+            .columnsGap(DesignConstants.SPACING.MD2)
+            .rowsGap(DesignConstants.SPACING.MD2)
             .padding({
               bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
             })

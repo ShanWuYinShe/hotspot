@@ -1,7 +1,8 @@
 /**
  * 附近的人 - 独立列表页
- * 对齐前端 /nearby/people：2 列 3:4 用户图片卡墙（桌面 3 列）+ 距离徽章 + 行内关注，
- * 搜索/排序/统计行保留；下拉刷新 + 上拉分页。数据来自 users/search。
+ * 对齐前端 /nearby/people（web 390 移动端）：页头 18/600 + 位置副标题；正文 2 列
+ * 白底名片卡墙（桌面 3 列，列/行间距 12；卡内居中头像/姓名/副行 + 关注 pill）；
+ * 搜索/排序/分类行保留；下拉刷新 + 上拉分页。数据来自 users/search。
  */
 
 import { GlobalStateManager, KEY_BROWSE_ANCHOR, KEY_CURRENT_LOCATION } from '../../../core/state/GlobalStateManager';
@@ -239,8 +240,9 @@ export struct NearbyUsersListPage {
           title: '附近的人',
           subtitle: this.getLocationSubtitle(),
           subtitleIcon: AppIcon.LOCATION,
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           backgroundVariant: 'transparent',
@@ -376,9 +378,11 @@ export struct NearbyUsersListPage {
         } else {
           Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
             Column() {
-              Grid() {
+              // 名片卡为内容自撑高（非图片比例），用 WaterFlow 承载双列网格：
+              // Grid 的行高不会由子项 aspectRatio/内容撑开（实测内容溢出），WaterFlow 按子项实测高排版
+              WaterFlow() {
                 LazyForEach(this.usersDataSource, (user: UserItem) => {
-                  GridItem() {
+                  FlowItem() {
                     UserCard({ user: user })
                   }
                 }, (user: UserItem) => user.user?.user_id ?? '')
@@ -386,8 +390,8 @@ export struct NearbyUsersListPage {
               .width('100%')
               .layoutWeight(1)
               .columnsTemplate(this.getGridColumnCount() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
-              .columnsGap(DesignConstants.SPACING.LG)
-              .rowsGap(DesignConstants.SPACING.LG)
+              .columnsGap(DesignConstants.SPACING.MD)
+              .rowsGap(DesignConstants.SPACING.MD)
               .cachedCount(4)
               .edgeEffect(EdgeEffect.None)
               .scrollBar(BarState.Off)

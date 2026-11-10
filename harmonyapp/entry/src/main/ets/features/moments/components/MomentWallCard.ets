@@ -29,9 +29,9 @@ import { LucideIcon } from '../../../components/LucideIcon';
 @Component
 export struct MomentWallCard {
   @Prop moment: MomentItem;
-  /** 卡片宽高比（宽/高）：2 列窄墙用 0.75（3:4），3 列用 1.333（4:3）。
-   *  2026-10-20：此前写死 1.333，手机 2 列时卡高仅 ~128px、底部托盘吃掉 70%+ 图片。 */
-  @Prop cardAspectRatio: number = 1.333;
+  /** 卡片宽高比（宽/高）：2 列窄墙用近 8:9（web /nearby/moments 卡 173×195），
+   *  3 列用 4:3；附近枢纽预览传 3:4。调用方直接传生效值（组件内不再改写）。 */
+  @Prop cardAspectRatio: number = 8 / 9;
   /** R6：首屏前 2 张（LazyForEach index<2）高清档 */
   @Prop priority: boolean = false;
   onOpenDetail?: (moment: MomentItem) => void;
@@ -252,7 +252,7 @@ export struct MomentWallCard {
       imageUrl: this.getCoverUrl(),
       priority: this.priority,
       imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
-      cardAspectRatio: this.cardAspectRatio > 1 ? 0.75 : this.cardAspectRatio,
+      cardAspectRatio: this.cardAspectRatio,
       cardRadius: DesignConstants.SHAPE.CARD,
       // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面
       mediaOverlay: true,
