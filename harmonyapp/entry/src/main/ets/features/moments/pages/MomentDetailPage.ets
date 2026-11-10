@@ -26,12 +26,9 @@ import {
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { Skeleton } from '../../../components/states/Skeleton';
-import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { LoginGate } from '../../../core/state/LoginGate';
-import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemDialog } from '../../../components/SystemDialog';
-import { SystemButton } from '../../../components/SystemButton';
 import { SystemInput } from '../../../components/SystemInput';
 import { EmptyState, LoadingMoreIndicator } from '../../../components/EmptyState';
 import { Pressable } from '../../../components/Pressable';
@@ -541,76 +538,55 @@ export struct MomentDetailPage {
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
-      Column() {
+      Stack({ alignContent: Alignment.TopStart }) {
         Column() {
-          this.buildTopBar()
-        }
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
-        if (this.isLoading) {
-          // r4：对齐 fe moment detail 骨架（媒体块 + 作者行 + 正文两行 + 评论行）
-          Column({ space: DesignConstants.SPACING.LG }) {
-            SkeletonShimmer({ active: true }) {
-              Column({ space: DesignConstants.SPACING.MD }) {
-                Skeleton({ blockWidth: '100%', blockHeight: DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT, cornerRadius: DesignConstants.SHAPE.HERO_CARD })
-                Row({ space: DesignConstants.SPACING.MD }) {
-                  Skeleton({ blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS, blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS, cornerRadius: DesignConstants.RADIUS.FULL })
-                  Column({ space: DesignConstants.SPACING.SM }) {
-                    Skeleton({ blockWidth: '42%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
-                    Skeleton({ blockWidth: '28%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
-                  }
-                  .alignItems(HorizontalAlign.Start)
-                  .layoutWeight(1)
-                }
-                .width('100%')
-                Skeleton({ blockWidth: '92%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
-                Skeleton({ blockWidth: '64%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
-              }
-              .width('100%')
-            }
-          }
-          .width('100%')
-          .padding(DesignConstants.SPACING.LG)
-        } else if (!this.moment) {
-          EmptyState({
-            bare: true,
-            icon: AppIcon.WARNING,
-            message: this.errorMessage || '动态不存在或已被删除',
-            actionLabel: '重试',
-            onAction: () => { this.loadMomentDetail(); }
-          })
-        } else {
-          Scroll(this.contentScroller) {
-            // 正文区与评论区：间距由评论区自身 margin-top(24, 对齐前端 mt-6) 承担，
-            // 不再叠加 SECTION_GAP（否则 24+24=48，与前端不一致）
+          if (this.isLoading) {
+            this.buildDetailSkeleton()
+          } else if (!this.moment) {
             Column() {
-              // r4 单帖软岛（对齐 fe MomentPostBody）：无描边 + surfaceIsland + shadow + 圆角 20
-              Column() {
-                this.buildMomentContent(this.moment as MomentItem)
-              }
-              .width('100%')
-              .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD })
-              .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
-              .borderRadius(DesignConstants.SHAPE.CARD)
-              .shadow(this.getCurrentThemePalette().surfaceShadow)
-              .clip(true)
-
-              Column() {
-            this.buildCommentsSection()
-          }
-          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+              EmptyState({
+                bare: true,
+                icon: AppIcon.WARNING,
+                message: this.errorMessage || '动态不存在或已被删除',
+                actionLabel: '重试',
+                onAction: () => { this.loadMomentDetail(); }
+              })
             }
             .width('100%')
-            .opacity(this.enterOpacity)
-            .translate({ y: this.enterOffset })
-          }
-          .layoutWeight(1)
-          .width('100%')
-          .align(Alignment.TopStart)
+            .layoutWeight(1)
+            .padding({
+              top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop,
+                DesignConstants.LAYOUT.ICON_BUTTON_SIZE + DesignConstants.SPACING.XXL)
+            })
+          } else {
+            Scroll(this.contentScroller) {
+              // 对齐 web moments/[momentId]：hero 通栏贴顶，正文/评论区在同一张
+              // surfaceIsland 内容面上（手机端无圆角、无卡片描边）。
+              Column() {
+                this.buildMomentContent(this.moment as MomentItem)
+                Column() {
+                  this.buildCommentsSection()
+                }
+                .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+              }
+              .width('100%')
+              .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+              .opacity(this.enterOpacity)
+              .translate({ y: this.enterOffset })
+            }
+            .layoutWeight(1)
+            .width('100%')
+            .align(Alignment.TopStart)
+            .scrollBar(BarState.Off)
 
-          if (this.moment) {
             this.buildUnifiedBottomBar(this.moment as MomentItem)
           }
         }
+        .width('100%')
+        .height('100%')
+
+        // web 详情页无标准页头：返回/分享/更多是浮在 hero 上的玻璃圆钮。
+        this.buildFloatingTools()
       }
       .width('100%')
       .height('100%')
@@ -636,53 +612,177 @@ export struct MomentDetailPage {
   }
 
   @Builder
-  private buildTopBar() {
-    // 统一走 SystemPageHeader（标题 + 返回 + 作者视角更多菜单）。
-    // 对齐前端 moments/[momentId] 的 more-menu（编辑动态/删除动态）：作者视角
-    // 用 trailing 更多钮 + bindMenu 承载，编辑入口从 rightAction 迁移至此，
-    // 使删除入口有处可挂（此前端内无删除入口，而 CreateMomentPage 编辑态文案
-    // 却引导用户「删除后重新发布」，形成死胡同，审计 P2-5）。
-    SystemPageHeader({
-      title: '瞬间详情',
-      showBackButton: true,
-      onBack: () => { AppRouter.pop(); },
-      // 对齐前端 moments/[momentId]：PageHeader titleSize=base(16) + font-medium
-      titleSize: DesignConstants.FONT.SIZE.XXL,
-      titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
-      backgroundVariant: 'transparent',
-      rightAction: null
-    }) {
-      if (this.isOwner()) {
-        Row() {
-          LucideIcon({
-            icon: AppIcon.MORE,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            paletteRole: 'textSecondary'
-          })
-        }
-        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-        .justifyContent(FlexAlign.Center)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-        .responseRegion({
-          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-        })
-        .bindMenu([
-          {
-            value: '编辑动态',
-            action: () => { this.editMoment(); }
-          },
-          {
-            value: '删除动态',
-            action: () => { this.showDeleteConfirm = true; }
+  private buildDetailSkeleton() {
+    Scroll() {
+      Column() {
+        Skeleton({ blockWidth: '100%', blockHeight: DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT, cornerRadius: 0 })
+        Column({ space: DesignConstants.SPACING.MD }) {
+          Row({ space: DesignConstants.SPACING.MD }) {
+            Skeleton({
+              blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+              blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+              cornerRadius: DesignConstants.RADIUS.FULL
+            })
+            Column({ space: DesignConstants.SPACING.SM }) {
+              Skeleton({ blockWidth: '42%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+              Skeleton({ blockWidth: '28%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+            }
+            .alignItems(HorizontalAlign.Start)
+            .layoutWeight(1)
           }
-        ])
+          .width('100%')
+          Skeleton({ blockWidth: '92%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+          Skeleton({ blockWidth: '64%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+          Row({ space: DesignConstants.SPACING.XL }) {
+            Skeleton({ blockWidth: 64, blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+            Skeleton({ blockWidth: 48, blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+          }
+          .width('100%')
+          Skeleton({ blockWidth: '36%', blockHeight: DesignConstants.FONT.SIZE.MD, cornerRadius: DesignConstants.RADIUS.SM })
+          ForEach([0, 1, 2], (index: number) => {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Skeleton({
+                blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                cornerRadius: DesignConstants.RADIUS.FULL
+              })
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Skeleton({ blockWidth: '38%', blockHeight: DesignConstants.FONT.SIZE.XS, cornerRadius: DesignConstants.RADIUS.SM })
+                Skeleton({ blockWidth: '82%', blockHeight: DesignConstants.FONT.SIZE.SM, cornerRadius: DesignConstants.RADIUS.SM })
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+          }, (index: number) => `detail-skeleton-${index}`)
+        }
+        .width('100%')
+        .padding(DesignConstants.SPACING.LG)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .align(Alignment.TopStart)
+    .scrollBar(BarState.Off)
+  }
+
+  /** 浮层玻璃圆钮（对齐 web DetailHeader：36 圆钮 + 85% 表面 + 发丝边 + 轻投影） */
+  @Builder
+  private buildGlassIconButton(icon: AppIcon, label: string, onPress: () => void) {
+    Row() {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().controlShadow)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .accessibilityText(label)
+    .onClick(onPress)
+  }
+
+  /** 胶囊内的无底色图标钮（外框由右侧玻璃胶囊统一承担，避免圆钮套圆钮） */
+  @Builder
+  private buildPillIconButton(icon: AppIcon, label: string, onPress: () => void) {
+    Row() {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .accessibilityText(label)
+    .onClick(onPress)
+  }
+
+  @Builder
+  private buildMoreButton() {
+    Row() {
+      LucideIcon({
+        icon: AppIcon.MORE,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .bindMenu(this.isOwner() ? [
+      {
+        value: '刷新动态',
+        action: () => { this.loadMomentDetail(); }
+      },
+      {
+        value: '编辑动态',
+        action: () => { this.editMoment(); }
+      },
+      {
+        value: '删除动态',
+        action: () => { this.showDeleteConfirm = true; }
+      }
+    ] : [
+      {
+        value: '刷新动态',
+        action: () => { this.loadMomentDetail(); }
+      }
+    ])
+    .accessibilityText('更多操作')
+  }
+
+  @Builder
+  private buildFloatingTools() {
+    Row() {
+      this.buildGlassIconButton(AppIcon.BACK, '返回', () => { AppRouter.pop(); })
+      Blank()
+      if (this.moment) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          this.buildPillIconButton(AppIcon.SHARE, '分享动态', () => { this.shareMoment(); })
+          this.buildMoreButton()
+        }
+        .padding(DesignConstants.SPACING.HALF)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+        .shadow(this.getCurrentThemePalette().controlShadow)
       }
     }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.SM)
+    })
+    .hitTestBehavior(HitTestMode.Transparent)
   }
 
   /**
@@ -712,8 +812,7 @@ export struct MomentDetailPage {
   @Builder
   private buildMomentContent(moment: MomentItem) {
     Column() {
-      // ── 封面媒体全幅（对齐前端 MomentPostBody -mx-page-gutter 通栏封面,
-      //    高度对齐 --cst-cover-height-lg clamp 下限 220;页面已关容器横向留白）──
+      // ── hero 通栏（对齐 web MomentPostBody：贴顶、满宽、无圆角/无外边距）──
       if (moment.images && moment.images.length > 0) {
         Stack({ alignContent: Alignment.BottomEnd }) {
           Pressable({ onPress: () => { this.previewImage(0); } }) {
@@ -721,7 +820,7 @@ export struct MomentDetailPage {
               .width('100%')
               .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
               .objectFit(ImageFit.Cover)
-              .backgroundColor(this.getSurfaceBackground())
+              .backgroundColor(this.getSurfaceSubtle())
               .opacity(this.isImageLoaded(moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
               .animation({
                 duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
@@ -730,7 +829,7 @@ export struct MomentDetailPage {
               .onComplete(() => this.markImageLoaded(moment.images[0].url))
           }
           if (moment.images.length > 1) {
-            Text(`共 ${moment.images.length} 张`)
+            Text(`1 / ${moment.images.length}`)
               .fontSize(DesignConstants.FONT.SIZE.XS2)
               .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
@@ -738,27 +837,22 @@ export struct MomentDetailPage {
               .backgroundColor(this.getCurrentThemePalette().overlayStrong)
               .borderRadius(DesignConstants.RADIUS.FULL)
               .padding({
-                left: DesignConstants.SPACING.SM2,
-                right: DesignConstants.SPACING.SM2,
-                top: DesignConstants.SPACING.HALF,
-                bottom: DesignConstants.SPACING.HALF
+                left: DesignConstants.SPACING.MD2,
+                right: DesignConstants.SPACING.MD2,
+                top: DesignConstants.SPACING.XS,
+                bottom: DesignConstants.SPACING.XS
               })
               .margin({ right: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
         }
         .width('100%')
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
         .backgroundColor(this.getSurfaceSubtle())
-        .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-        .clip(true)
-        .shadow(this.getCurrentThemePalette().controlShadow)
       } else if (moment.location?.location_name) {
         // 无图占位（对齐前端：accent 底 + MapPin + 「来自 X 的动态」，通栏）
         Column({ space: DesignConstants.SPACING.SM2 }) {
           LucideIcon({
             icon: AppIcon.LOCATION,
             iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
-            // 淡底（accentMuted）上的图形用 accent 本色；accentText 仅用于亮实底
             color: this.getCurrentThemePalette().textAccentOnSoft
           })
           Text(`来自 ${moment.location.location_name} 的动态`)
@@ -770,15 +864,11 @@ export struct MomentDetailPage {
         .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
         .justifyContent(FlexAlign.Center)
         .backgroundColor(this.getCurrentThemePalette().accentMuted)
-        .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG })
-        .borderRadius(DesignConstants.SHAPE.HERO_CARD)
-        .clip(true)
-        .shadow(this.getCurrentThemePalette().controlShadow)
       }
 
-      // ── 以下内容在 gutter 内（页面已关容器留白，分区自带 16 横向留白）──
+      // ── 内容列（与容器同一 gutter；页面已关容器留白）──
       Column() {
-        // 多图：首图外 3 列方格（对齐前端 grid-cols-3 gap-0.5）
+        // 多图：首图外 3 列方格（web 详情多图缩略图条；App 沿用 3 列方格）
         if (moment.images && moment.images.length > 1) {
           ForEach(this.chunkMomentImages(moment.images), (rowImages: MomentImage[], rowIndex: number) => {
             Row({ space: DesignConstants.SPACING.HALF }) {
@@ -789,7 +879,7 @@ export struct MomentDetailPage {
                       .width('100%')
                       .aspectRatio(1)
                       .objectFit(ImageFit.Cover)
-                      .backgroundColor(this.getSurfaceBackground())
+                      .backgroundColor(this.getSurfaceSubtle())
                       .opacity(this.isImageLoaded(img.url) || MotionUtil.reduced() ? 1 : 0)
                       .animation({
                         duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
@@ -802,61 +892,34 @@ export struct MomentDetailPage {
                 .backgroundColor(this.getSurfaceSubtle())
                 .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
                 .clip(true)
-                .shadow(this.getCurrentThemePalette().controlShadow)
               }, (img: MomentImage, colIndex: number) => `${img.url}_r${rowIndex}_c${colIndex}`)
             }
             .width('100%')
+            .margin({ bottom: DesignConstants.SPACING.SM })
           }, (rowImages: MomentImage[], rowIndex: number) => `moment-img-row-${rowIndex}`)
         }
 
-        // tag 实底胶囊（对齐前端：mt-3, px-2.5 py-0.5, text-xxs, rounded-full）
-        if (moment.tags && moment.tags.length > 0) {
-          Flex({ wrap: FlexWrap.Wrap }) {
-            ForEach(moment.tags, (tag: string, index: number) => {
-              Text(`#${tag}`)
-                .fontSize(DesignConstants.FONT.SIZE.XS2)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                .fontColor(this.getCurrentThemePalette().accentText)
-                .backgroundColor(this.getCurrentThemePalette().accentBackground)
-                .padding({
-                  left: DesignConstants.SPACING.MD,
-                  right: DesignConstants.SPACING.MD,
-                  top: DesignConstants.SPACING.XS,
-                  bottom: DesignConstants.SPACING.XS
-                })
-                .borderRadius(DesignConstants.RADIUS.FULL)
-            }, (tag: string, index: number) => `${tag}_${index}`)
-          }
-          .width('100%')
-          .margin({ top: DesignConstants.SPACING.MD })
-        }
-
-        // 作者行（头像 44 accent 描边 + 昵称/📍地点 两行 + 日期右端，对齐前端 MomentPostBody）
+        // 作者行（web：头像 36 + 昵称 14 semibold + 「地点 · 时间」11 次级单行）
         Row({ space: DesignConstants.SPACING.MD }) {
-          Stack() {
-            SystemAvatar({
-              decorative: true,
-              avatarUrl: moment.user?.avatar_url ?? '',
-              name: moment.user?.nickname ?? '未知用户',
-              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-              shape: 'circle',
-            })
-          }
-          .border({ width: 2, color: this.getCurrentThemePalette().accentBackground })
-          .borderRadius(DesignConstants.RADIUS.FULL)
+          SystemAvatar({
+            decorative: true,
+            avatarUrl: moment.user?.avatar_url ?? '',
+            name: moment.user?.nickname ?? '未知用户',
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+            shape: 'circle',
+          })
 
-          Column() {
+          Column({ space: DesignConstants.SPACING.HALF }) {
             Text(moment.user?.nickname ?? '未知用户')
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
               .fontColor(this.getCurrentThemePalette().textPrimary)
 
-            if (moment.location?.location_name) {
-              // 地点随作者行展示；点击=设为浏览锚点（保留原快捷功能）
-              Row({ space: DesignConstants.SPACING.HALF }) {
+            Row({ space: DesignConstants.SPACING.XS }) {
+              if (moment.location?.location_name) {
                 LucideIcon({
                   icon: AppIcon.LOCATION,
                   iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
@@ -865,49 +928,159 @@ export struct MomentDetailPage {
                 Text(moment.location.location_name)
                   .fontSize(DesignConstants.FONT.SIZE.XS)
                   .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .fontColor(this.getCurrentThemePalette().accentBackground)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
                   .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .constraintSize({ maxWidth: '60%' })
+                Text('·')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontColor(this.getCurrentThemePalette().textTertiary)
               }
-              .onClick(() => {
-                if (moment.location?.point) {
-                  const locationInfo: LocationInfo = {
-                    latitude: moment.location.point.latitude,
-                    longitude: moment.location.point.longitude,
-                    locationName: moment.location.location_name ?? ''
-                  };
-                  GlobalStateManager.setBrowseAnchor(locationInfo);
-                  SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
-                }
-              })
-              .responseRegion({
-                x: 0,
-                y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.FONT.SIZE.SM) / 2,
-                width: '100%',
-                height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-              })
+              Text(this.formatTime(moment.created_at))
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
             }
+            .alignItems(VerticalAlign.Center)
+            .onClick(() => {
+              if (moment.location?.point) {
+                const locationInfo: LocationInfo = {
+                  latitude: moment.location.point.latitude,
+                  longitude: moment.location.point.longitude,
+                  locationName: moment.location.location_name ?? ''
+                };
+                GlobalStateManager.setBrowseAnchor(locationInfo);
+                SystemToast.showSuccess('已设为浏览锚点', this.getUIContext());
+              }
+            })
           }
           .layoutWeight(1)
           .alignItems(HorizontalAlign.Start)
-
-          Text(this.formatTime(moment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
+        .padding({ top: DesignConstants.SPACING.LG })
 
-        // 正文（web text-sm=12 + leading-copy；作者行 mb-3=12 用 margin-top 表达）
-        Text(cleanPlainText(moment.description))
+        // 正文（web text-md=14 + leading-copy 1.75）
+        if (cleanPlainText(moment.description).length > 0) {
+          Text(cleanPlainText(moment.description))
+            .width('100%')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.COPY))
+            .margin({ top: DesignConstants.SPACING.MD })
+        }
+
+        // 话题标签：accent-soft 胶囊（web Badge tone=accent）
+        if (moment.tags && moment.tags.length > 0) {
+          Flex({ wrap: FlexWrap.Wrap }) {
+            ForEach(moment.tags, (tag: string, index: number) => {
+              Text(`#${tag}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getCurrentThemePalette().textAccentOnSoft)
+                .backgroundColor(this.getCurrentThemePalette().accentMuted)
+                .padding({
+                  left: DesignConstants.SPACING.MD2,
+                  right: DesignConstants.SPACING.MD2,
+                  top: DesignConstants.SPACING.XS,
+                  bottom: DesignConstants.SPACING.XS
+                })
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+            }, (tag: string, index: number) => `${tag}_${index}`)
+          }
           .width('100%')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getCurrentThemePalette().textPrimary)
-          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.COPY))
-          .margin({ top: DesignConstants.SPACING.MD })
+          .margin({ top: DesignConstants.SPACING.SM })
+        }
+
+        // 操作行（web：点赞/评论靠左、收藏靠右；图标 18 + 计数 12）
+        Row() {
+          Row({ space: DesignConstants.SPACING.XL }) {
+            Pressable({
+              onPress: () => { this.toggleLike(); },
+              pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+              fillWidth: false
+            }) {
+              Row({ space: DesignConstants.SPACING.SM2 }) {
+                LucideIcon({
+                  icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_MEDIA_ACTION,
+                  color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+                })
+                Text(formatCount(this.getMomentLikesCount(moment)))
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+              }
+              .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+              .alignItems(VerticalAlign.Center)
+              .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
+              .scale({ x: MotionUtil.popScale(this.likePop), y: MotionUtil.popScale(this.likePop) })
+            }
+
+            Pressable({
+              onPress: () => { this.contentScroller.scrollEdge(Edge.Bottom); },
+              pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+              fillWidth: false
+            }) {
+              Row({ space: DesignConstants.SPACING.SM2 }) {
+                LucideIcon({
+                  icon: AppIcon.MESSAGE,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_MEDIA_ACTION,
+                  color: this.getCurrentThemePalette().textSecondary
+                })
+                Text(formatCount(this.getCommentCount(moment)))
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+              }
+              .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+              .alignItems(VerticalAlign.Center)
+              .accessibilityText('查看评论')
+            }
+          }
+
+          Blank()
+
+          Pressable({
+            onPress: () => { this.toggleFavorite(); },
+            pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+            fillWidth: false
+          }) {
+            Row() {
+              LucideIcon({
+                icon: this.isMomentFavorited(moment) ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_MEDIA_ACTION,
+                color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+              })
+            }
+            .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+            .alignItems(VerticalAlign.Center)
+            .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
+            .scale({ x: MotionUtil.popScale(this.favoritePop), y: MotionUtil.popScale(this.favoritePop) })
+          }
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ top: DesignConstants.SPACING.XS })
+
+        // 评论区顶部分区线（web border-t border-border-subtle/40 pt-6）
+        Column()
+          .width('100%')
+          .height(DesignConstants.BORDER_WIDTH.HAIRLINE)
+          .backgroundColor(this.getCurrentThemePalette().floatingBorderColor)
+          .margin({ top: DesignConstants.SPACING.SM })
       }
-      .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        bottom: DesignConstants.SPACING.MD
+      })
       .width('100%')
       .alignItems(HorizontalAlign.Start)
     }
@@ -932,13 +1105,12 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentRow(comment: CommentItem) {
     Row({ space: DesignConstants.SPACING.MD }) {
-      // 次级回复：左侧微灰竖线 + 缩进（Gemini 审查规格：24px 左边距 + 竖线引导层级）
+      // 次级回复：左侧发丝竖线 + 缩进，表达两级评论层级（web 的楼中楼软底卡的端上等价物）
       if (comment.parent_id) {
         Column()
           .width(DesignConstants.BORDER_WIDTH.REGULAR)
           .height('100%')
-          .backgroundColor(this.getCurrentThemePalette().borderColor)
-          .margin({ left: DesignConstants.SPACING.MD })
+          .backgroundColor(this.getCurrentThemePalette().floatingBorderColor)
       }
       SystemAvatar({
         decorative: true,
@@ -947,48 +1119,61 @@ export struct MomentDetailPage {
         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
         shape: 'circle'
       })
-      Column({ space: DesignConstants.SPACING.XS }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
+      Column({ space: DesignConstants.SPACING.SM2 }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
           Text(comment.user?.nickname ?? '匿名')
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getCurrentThemePalette().textPrimary)
+          if (comment.user?.user_id && comment.user.user_id === (this.moment?.user?.user_id ?? '')) {
+            Text('作者')
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(this.getCurrentThemePalette().textAccentOnSoft)
+              .backgroundColor(this.getCurrentThemePalette().accentMuted)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2 })
+          }
+          Blank()
           Text(this.formatTime(comment.created_at))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width('100%')
+        .alignItems(VerticalAlign.Center)
+
         Text(cleanPlainText(comment.content))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .width('100%')
           .textAlign(TextAlign.Start)
 
-        // 评论点赞 + 回复（对齐前端评论行：点赞 Heart+计数 / 回复按钮）；
-        // 点赞按压反馈统一走 Pressable（P3-1）
-        Row({ space: DesignConstants.SPACING.MD }) {
+        // 评论点赞 + 回复（web：心形 14 + 计数 12、回复 11 次级）
+        Row({ space: DesignConstants.SPACING.LG }) {
           Pressable({
             onPress: () => { this.toggleCommentLike(comment.comment_id); },
             pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
             fillWidth: false
           }) {
-            Row({ space: DesignConstants.SPACING.XS }) {
+            Row({ space: DesignConstants.SPACING.SM2 }) {
               LucideIcon({
                 icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
                 iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
                 color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
               })
               Text(formatCount(this.getCommentLikesCount(comment)))
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
             }
-            .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+            .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+            .alignItems(VerticalAlign.Center)
             .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
           }
 
@@ -996,21 +1181,11 @@ export struct MomentDetailPage {
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
-            .padding({
-              left: DesignConstants.SPACING.SM,
-              right: DesignConstants.SPACING.SM,
-              top: DesignConstants.SPACING.SM2,
-              bottom: DesignConstants.SPACING.SM2
-            })
+            .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
             .onClick(() => { this.replyToComment(comment); })
             .accessibilityText('回复评论')
-            .responseRegion({
-              x: 0,
-              y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-              width: '100%',
-              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-            })
         }
+        .width('100%')
         .alignItems(VerticalAlign.Center)
       }
       .alignItems(HorizontalAlign.Start)
@@ -1023,14 +1198,19 @@ export struct MomentDetailPage {
   @Builder
   private buildCommentsSection() {
     Column({ space: DesignConstants.SPACING.MD }) {
-      // 分区标题（对齐前端 MomentPostBody h2：text-md=14 + semibold + mt-6 mb-3，
-      // 见 skill hotspot-harmony-ui 的「分区标题 14px semibold」登记）
-      Text(`评论 · ${formatCount(this.getCommentCount(this.moment as MomentItem))}`)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
-        .width('100%')
+      // 分区标题（对齐 web SectionHead：标题 14 semibold + 计数 11 次级）
+      Row({ space: DesignConstants.SPACING.SM2 }) {
+        Text('评论讨论')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+        Text(formatCount(this.getCommentCount(this.moment as MomentItem)))
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+      }
+      .width('100%')
 
       if (this.commentsLoading && this.comments.length === 0) {
         // 首屏加载：区块级加载指示器（SystemLoadingView 为整页形态，根节点 height('100%')
@@ -1052,7 +1232,8 @@ export struct MomentDetailPage {
         // 空态（对齐 HomePage 区块级空态范式：EmptyState bare 替代单行灰字）
         EmptyState({
           icon: AppIcon.MESSAGE,
-          message: '还没有评论，来抢沙发',
+          title: '还没有评论',
+          message: '来说点什么吧，成为第一个评论的人。',
           bare: true
         })
           .width('100%')
@@ -1066,140 +1247,95 @@ export struct MomentDetailPage {
       }
     }
     .width('100%')
-    // 对齐前端：正文→评论区标题 mt-6(24)；横向留白由页面 gutter 包装层提供
-    .margin({ top: DesignConstants.SPACING.XL })
+    // 对齐 web：内容分隔线后 pt-6；端上由内容列的发丝线 + LG 间距承担
+    .margin({ top: DesignConstants.SPACING.LG })
     .alignItems(HorizontalAlign.Start)
   }
 
   @Builder
   /**
-   * 紧凑单行互动操作条（融合输入栏与社交动作）：
-   * 未输入文字时左侧单行输入框、右侧点赞/收藏/分享图标；
-   * 输入文字时右侧动态让位给「发送」按钮，释放超过 50vp 垂直浏览高度。
+   * 常驻贴底评论输入条（对齐 web CommentInputBar）：
+   * 头像 32 + 胶囊输入框 39 + 发送圆钮 40；点赞/收藏/分享已回到内容内操作行。
    */
   private buildUnifiedBottomBar(moment: MomentItem) {
     Column() {
       // 回复目标指示条（可取消；对齐前端 replyTo 的可视化反馈）
       if (this.replyTarget) {
         Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text(`正在回复 @${this.replyTarget.user?.nickname ?? ''}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          Text(`回复 @${this.replyTarget.user?.nickname ?? ''}`)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
             .layoutWeight(1)
             .maxLines(1)
-          Text('取消')
-            .fontSize(DesignConstants.FONT.SIZE.XS2)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          Text('取消回复')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().accentBackground)
             .onClick(() => { this.replyTarget = null; })
             .accessibilityText('取消回复')
         }
         .width('100%')
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS })
+        .padding({
+          left: DesignConstants.SPACING.MD3,
+          right: DesignConstants.SPACING.MD3,
+          top: DesignConstants.SPACING.SM2,
+          bottom: DesignConstants.SPACING.SM2
+        })
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
+        .margin({ bottom: DesignConstants.SPACING.SM })
       }
 
-      Row({ space: DesignConstants.SPACING.SM }) {
-        // 单行输入条（占主要宽度）
-        SystemInput({
-          value: this.commentText,
-          placeholder: this.replyTarget ? `回复 @${this.replyTarget.user?.nickname ?? ''}…` : '说点什么…',
-          showPrefixIcon: false,
-          inputHeight: 36,
-          onChange: (value: string) => {
-            this.commentText = value;
-          }
+      Row({ space: DesignConstants.SPACING.MD2 }) {
+        SystemAvatar({
+          decorative: false,
+          avatarUrl: this.currentUser?.avatar_url ?? '',
+          name: this.currentUser?.nickname ?? '我',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+          shape: 'circle'
         })
-        .layoutWeight(1)
 
-        // 输入内容时显示发送按钮；无内容时显示互动操作（赞/藏/享）
-        if (this.commentText.trim().length > 0) {
-          SurfaceIconButton({
-            icon: AppIcon.SEND,
-            kind: 'primary',
-            buttonSize: 36,
-            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            disabled: this.commentSending,
-            accessibilityLabel: '发送评论',
-            onPress: () => { this.sendComment(); }
+        // 单行输入条（占主要宽度）：外层胶囊裁切出搜索式圆角
+        Row() {
+          SystemInput({
+            value: this.commentText,
+            placeholder: '写下你的评论…',
+            showPrefixIcon: false,
+            inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+            fontSize: DesignConstants.FONT.SIZE.MD,
+            onChange: (value: string) => {
+              this.commentText = value;
+            }
           })
-        } else {
-          Row({ space: DesignConstants.SPACING.XS }) {
-            // 点赞
-            Row() {
-              Pressable({
-                onPress: () => { this.toggleLike(); },
-                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-              }) {
-                Row({ space: DesignConstants.SPACING.HALF }) {
-                  LucideIcon({
-                    icon: this.isMomentLiked(moment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                    color: this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-                  })
-                  if (this.getMomentLikesCount(moment) > 0) {
-                    Text(formatCount(this.getMomentLikesCount(moment)))
-                      .fontSize(DesignConstants.FONT.SIZE.XS)
-                      .fontColor(this.isMomentLiked(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
-                  }
-                }
-                .height(36)
-                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
-                .alignItems(VerticalAlign.Center)
-              }
-            }
-            .accessibilityText(this.isMomentLiked(moment) ? '取消点赞' : '点赞')
-            .scale({ x: MotionUtil.popScale(this.likePop), y: MotionUtil.popScale(this.likePop) })
-
-            // 收藏
-            Row() {
-              Pressable({
-                onPress: () => { this.toggleFavorite(); },
-                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-              }) {
-                Row() {
-                  LucideIcon({
-                    icon: this.isMomentFavorited(moment) ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                    color: this.isMomentFavorited(moment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-                  })
-                }
-                .height(36)
-                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
-                .alignItems(VerticalAlign.Center)
-              }
-            }
-            .accessibilityText(this.isMomentFavorited(moment) ? '取消收藏' : '收藏')
-            .scale({ x: MotionUtil.popScale(this.favoritePop), y: MotionUtil.popScale(this.favoritePop) })
-
-            // 分享
-            Row() {
-              Pressable({
-                onPress: () => { this.shareMoment(); },
-                pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON
-              }) {
-                Row() {
-                  LucideIcon({
-                    icon: AppIcon.SHARE,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                    color: this.getCurrentThemePalette().textSecondary
-                  })
-                }
-                .height(36)
-                .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
-                .alignItems(VerticalAlign.Center)
-              }
-            }
-            .accessibilityText('分享动态')
-          }
+            .layoutWeight(1)
         }
+        .layoutWeight(1)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .clip(true)
+
+        SurfaceIconButton({
+          icon: AppIcon.SEND,
+          kind: this.commentText.trim().length > 0 ? 'primary' : 'surface',
+          buttonSize: DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD,
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          disabled: this.commentText.trim().length === 0 || this.commentSending,
+          accessibilityLabel: '发送评论',
+          onPress: () => { this.sendComment(); }
+        })
       }
       .width('100%')
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .alignItems(VerticalAlign.Center)
     }
     .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.SM,
+      bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
+    })
     .backgroundColor(this.getSurfaceBackground())
-    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getSurfaceBorder() })
+    .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getCurrentThemePalette().floatingBorderColor })
   }
 }
 

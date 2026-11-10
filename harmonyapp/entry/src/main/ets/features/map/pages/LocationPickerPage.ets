@@ -211,7 +211,13 @@ export struct LocationPickerPage {
   }
 
   private getConfirmButtonLabel(): string {
-    return this.isLocationPickMode() ? '使用此位置' : '设为浏览锚点';
+    return this.isLocationPickMode() ? '使用此位置' : '将地图中心设为浏览锚点';
+  }
+
+  private getConfirmHint(): string {
+    return this.isLocationPickMode()
+      ? '确认后返回上一页，并使用该位置'
+      : '设置后，附近页按此计算距离与推荐';
   }
 
   private applyMapRegion(lat: number, lng: number): void {
@@ -1024,6 +1030,10 @@ export struct LocationPickerPage {
                 },
                 onToggleMoments: () => {
                   this.applyFilterChange(() => { this.showMoments = !this.showMoments; });
+                },
+                onLocateAnchor: () => {
+                  this.showFilterPanel = false;
+                  this.locateBrowseAnchor();
                 }
               })
             }
@@ -1066,6 +1076,7 @@ export struct LocationPickerPage {
             anchorHistory: this.anchorHistory,
             panelHeight: this.panelHeight,
             confirmLabel: this.getConfirmButtonLabel(),
+            hintText: this.getConfirmHint(),
             onSearchClick: (): void => { this.openSearchPanel(); },
             onClearHistory: (): void => { this.clearAnchorHistory(); },
             onSelectHistory: (item: AnchorHistoryItem): void => {
@@ -1207,32 +1218,85 @@ export struct LocationPickerPage {
               .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_MEDIUM, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
           )
         }
+        // 右侧地图浮钮（对齐 web：± 缩放胶囊 / 定位圆钮 / 图层圆钮，36 圆、白玻璃底）
+        Column({ space: DesignConstants.SPACING.SM }) {
+          Column() {
+            Column() {
+              LucideIcon({
+                icon: AppIcon.ADD,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+                color: this.getCurrentThemePalette().textPrimary
+              })
+            }
+            .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+            .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+            .justifyContent(FlexAlign.Center)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .scale(this.pressedMapControl === 'zoomIn' ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedMapControl = 'zoomIn';
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedMapControl = '';
+              }
+            })
+            .accessibilityText('放大地图')
+            .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
 
-        // 自定义地图控件：用 position(Edges) 定位到右下角，仅占按钮实际面积，
-        // 既不阻塞地图拖拽，又能独占按钮区域的点击事件
-        Column({ space: DesignConstants.SPACING.MD }) {
+            Column()
+              .width(DesignConstants.SPACING.LG)
+              .height(DesignConstants.BORDER_WIDTH.HAIRLINE)
+              .backgroundColor(this.getCurrentThemePalette().floatingBorderColor)
+
+            Column() {
+              LucideIcon({
+                icon: AppIcon.REMOVE,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+                color: this.getCurrentThemePalette().textPrimary
+              })
+            }
+            .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+            .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+            .justifyContent(FlexAlign.Center)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .scale(this.pressedMapControl === 'zoomOut' ?
+              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
+              { x: 1, y: 1 })
+            .onTouch((event: TouchEvent) => {
+              if (event.type === TouchType.Down) {
+                this.pressedMapControl = 'zoomOut';
+              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+                this.pressedMapControl = '';
+              }
+            })
+            .accessibilityText('缩小地图')
+            .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
+          }
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .clip(true)
+
           Column() {
             LucideIcon({
-                icon: AppIcon.LOCATION,
-                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                color: this.getCurrentThemePalette().mapUser
-              })
+              icon: AppIcon.LOCATION,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+              color: this.getCurrentThemePalette().accentBackground
+            })
           }
-          .width(DesignConstants.LAYOUT.FAB_SIZE)
-          .height(DesignConstants.LAYOUT.FAB_SIZE)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
+          .shadow(this.getCurrentThemePalette().controlShadow)
           .scale(this.pressedMapControl === 'locate' ?
             { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
             { x: 1, y: 1 })
-          .animation({ curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          ) })
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down) {
               this.pressedMapControl = 'locate';
@@ -1240,105 +1304,64 @@ export struct LocationPickerPage {
               this.pressedMapControl = '';
             }
           })
-          .accessibilityText('定位到当前位置')
+          .responseRegion({
+            x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+            height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+          })
+          .accessibilityText('回到我的位置')
           .onClick(() => { this.locateUser(); })
 
           Column() {
-            // 图标宽高取同一档（原先 width 用 ICON_SIZE_SM、height 误用按钮高度 token
-            // ACTION_BUTTON_HEIGHT(42)，20×42 会把钉图纵向拉伸变形）
-            Image($rawfile('marker_center_pin.svg'))
-              .width(DesignConstants.COMPONENT.ICON_SIZE_SM)
-              .height(DesignConstants.COMPONENT.ICON_SIZE_SM)
-              .objectFit(ImageFit.Contain)
-          }
-          .width(DesignConstants.LAYOUT.FAB_SIZE)
-          .height(DesignConstants.LAYOUT.FAB_SIZE)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
-          .scale(this.pressedMapControl === 'anchor' ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-            { x: 1, y: 1 })
-          .animation({ curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          ) })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.pressedMapControl = 'anchor';
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.pressedMapControl = '';
-            }
-          })
-          .accessibilityText('定位到浏览锚点')
-          .onClick(() => { this.locateBrowseAnchor(); })
-
-          Column() {
             LucideIcon({
-                icon: AppIcon.ADD,
-                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
-              })
+              icon: AppIcon.FILTER,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+              color: this.getCurrentThemePalette().textPrimary
+            })
           }
-          .width(DesignConstants.LAYOUT.FAB_SIZE)
-          .height(DesignConstants.LAYOUT.FAB_SIZE)
+          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
           .justifyContent(FlexAlign.Center)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
-          .scale(this.pressedMapControl === 'zoomIn' ?
+          .shadow(this.getCurrentThemePalette().controlShadow)
+          .scale(this.pressedMapControl === 'layers' ?
             { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
             { x: 1, y: 1 })
-          .animation({ curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          ) })
           .onTouch((event: TouchEvent) => {
             if (event.type === TouchType.Down) {
-              this.pressedMapControl = 'zoomIn';
+              this.pressedMapControl = 'layers';
             } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
               this.pressedMapControl = '';
             }
           })
-          .accessibilityText('放大地图')
-          .onClick(() => { if (this.mapActions) this.mapActions.zoomIn(); })
-
-          Column() {
-            LucideIcon({
-                icon: AppIcon.REMOVE,
-                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-                color: resolveLocationPickerPalette(this.resolvedThemeId).textPrimary
-              })
-          }
-          .width(DesignConstants.LAYOUT.FAB_SIZE)
-          .height(DesignConstants.LAYOUT.FAB_SIZE)
-          .justifyContent(FlexAlign.Center)
-           .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .shadow(DesignConstants.SHADOW.MEDIUM)
-           .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          // 按压反馈（对齐圆钮 SCALE_PRESSED_ICON 语义）
-          .scale(this.pressedMapControl === 'zoomOut' ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-            { x: 1, y: 1 })
-          .animation({ curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          ) })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.pressedMapControl = 'zoomOut';
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.pressedMapControl = '';
-            }
+          .responseRegion({
+            x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+            height: DesignConstants.LAYOUT.MIN_HIT_TARGET
           })
-          .accessibilityText('缩小地图')
-          .onClick(() => { if (this.mapActions) this.mapActions.zoomOut(); })
+          .accessibilityText('地图图层')
+          .bindMenu([
+            {
+              value: `${this.showUsers ? '✓ ' : ''}用户`,
+              action: () => { this.applyFilterChange(() => { this.showUsers = !this.showUsers; }); }
+            },
+            {
+              value: `${this.showGroups ? '✓ ' : ''}群组`,
+              action: () => { this.applyFilterChange(() => { this.showGroups = !this.showGroups; }); }
+            },
+            {
+              value: `${this.showMoments ? '✓ ' : ''}动态`,
+              action: () => { this.applyFilterChange(() => { this.showMoments = !this.showMoments; }); }
+            },
+            {
+              value: '回到浏览锚点',
+              action: () => { this.locateBrowseAnchor(); }
+            }
+          ])
         }
         .position({ right: DesignConstants.SPACING.MD, bottom: this.getControlsBottomOffset() })
       }

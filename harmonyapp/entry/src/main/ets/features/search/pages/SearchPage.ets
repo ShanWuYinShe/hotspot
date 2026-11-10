@@ -1,7 +1,7 @@
 import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_CONFIG } from '../../../core/state/GlobalStateManager';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
-import { LocationInfo } from '../../../core/location/LocationUtil';
+import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
 import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
@@ -17,8 +17,10 @@ import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
 import { SearchSuggestRow, SearchMomentRow } from '../components/SearchRows';
 import { EmptyState } from '../../../components/EmptyState';
-import { SearchPageHeader } from '../../../components/SearchPageHeader';
+import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { Skeleton } from '../../../components/states/Skeleton';
+import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
+import { MomentFeedCard } from '../../../components/MomentFeedCard';
 import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
@@ -93,6 +95,10 @@ export struct SearchPage {
   @State recentSearches: string[] = [];
 
   @State discoveryTopics: string[] = [];
+  /** 发现态人物推荐（对齐 web SearchDiscovery：users/search 距离排序前 3） */
+  @State hotUsers: UserItem[] = [];
+  /** 发现态热门动态（复用 moments/search popular 响应，零额外请求） */
+  @State hotMoments: MomentItem[] = [];
   /** R6：搜索结果图已加载 URL（onComplete 渐显） */
   @State loadedImageUrls: string[] = [];
   @State failedImageUrls: string[] = [];
@@ -275,11 +281,10 @@ export struct SearchPage {
     this.persistRecentSearches();
   }
 
-  /** 空查询发现态：对齐前端 SearchDiscovery（空查询不调 suggest，前端以 prefix.length>=1 为阈值） */
+  /** 空查询发现态：对齐前端 SearchDiscovery（热门话题 / 人物推荐 / 热门动态） */
   private async loadDiscovery(): Promise<void> {
-    // 空 prefix 调 search/suggest 会 10000（spec prefix 1-50），故热门/话题取热门动态
-    //（moments/search sort_by=popular，已有热门模式）的 tags 派生；取不到则留空，
-    // 渲染层按空隐藏对应卡片（不留“暂无”死区块）
+    // 空 prefix 调 search/suggest 会 10000（spec prefix 1-50），热门话题改由
+    // moments/search sort_by=popular 的 tags 聚合；人物推荐按距离取前 3。
     try {
       const response = await ApiClient.searchMoments({ sort_by: 'popular', pagination: { limit: 20 } });
       if (this.isDestroyed || response.code !== 0 || !response.data) {
@@ -305,8 +310,27 @@ export struct SearchPage {
       }
 
       this.discoveryTopics = tags;
+      this.hotMoments = (response.data.items ?? []).slice(0, 4);
     } catch (_) {
       // 取不到则不填充，卡片按空隐藏
+    }
+
+    try {
+      const usersResp = await ApiClient.searchUsers({
+        radius: 5000,
+        sort_by: 'distance',
+        reference_point: this.getReferencePoint() ?? undefined,
+        pagination: { limit: 3 }
+      });
+      if (this.isDestroyed || usersResp.code !== 0 || !usersResp.data) {
+        return;
+      }
+      const myId = await AuthAccountManager.getCurrentUserId();
+      this.hotUsers = usersResp.data.items
+        .filter((user: UserItem) => user.user?.user_id && user.user.user_id !== myId)
+        .slice(0, 3);
+    } catch (_) {
+      // 人物推荐失败按空隐藏（诚实空态）
     }
   }
 
@@ -574,6 +598,100 @@ export struct SearchPage {
   }
 
   @Builder
+  private buildSearchHeader() {
+    Column() {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        SurfaceIconButton({
+          icon: AppIcon.BACK,
+          kind: 'surface',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          accessibilityLabel: '返回',
+          onPress: () => { AppRouter.pop(); }
+        })
+        Text('搜索')
+          .fontSize(DesignConstants.FONT.SIZE.LG_PLUS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.LG_PLUS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      // 39 胶囊搜索框：静态发丝边、聚焦 1.5 accent 边框（对齐 web SearchInput）
+      Row({ space: DesignConstants.SPACING.MD2 }) {
+        LucideIcon({
+          icon: AppIcon.SEARCH,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          color: this.getCurrentThemePalette().textSecondary
+        })
+        TextInput({ placeholder: '搜索用户、瞬间、群组、地点或话题', text: this.keyword })
+          .layoutWeight(1)
+          .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
+          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
+          .background(DesignConstants.COLOR.TRANSPARENT)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .placeholderColor(this.getCurrentThemePalette().textSecondary)
+          .placeholderFont({ size: DesignConstants.FONT.SIZE.MD })
+          .caretColor(this.getCurrentThemePalette().accentBackground)
+          .padding(0)
+          .borderRadius(0)
+          .accessibilityText('搜索用户、瞬间、群组、地点或话题')
+          .onFocus(() => { this.isSearchFocused = true; })
+          .onBlur(() => { this.isSearchFocused = false; })
+          .onChange((value: string) => {
+            this.keyword = value;
+            this.hasSearched = false;
+            this.scheduleSuggest();
+          })
+          .onSubmit(() => { this.doSearch(); })
+        if (this.keyword.length > 0) {
+          LucideIcon({
+            icon: AppIcon.CLOSE,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getCurrentThemePalette().textSecondary
+          })
+            .padding(DesignConstants.SPACING.SM2)
+            .responseRegion({
+              x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ICON_SIZE_2XS) / 2,
+              y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ICON_SIZE_2XS) / 2,
+              width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+              height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+            })
+            .accessibilityText('清空搜索')
+            .onClick(() => {
+              this.keyword = '';
+              this.hasSearched = false;
+              this.suggestItems = [];
+            })
+        }
+      }
+      .width('100%')
+      .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
+      .padding({
+        left: DesignConstants.SPACING.MD3,
+        right: DesignConstants.SPACING.MD3
+      })
+      .alignItems(VerticalAlign.Center)
+      .backgroundColor(this.getSurfaceBackground())
+      .border({
+        width: this.isSearchFocused ? DesignConstants.BORDER_WIDTH.REGULAR : DesignConstants.BORDER_WIDTH.HAIRLINE,
+        color: this.isSearchFocused ? this.getCurrentThemePalette().accentBackground : this.getSurfaceBorder()
+      })
+      .borderRadius(DesignConstants.SHAPE.BUTTON)
+      .clip(true)
+      .margin({ top: DesignConstants.SPACING.MD })
+    }
+    .width('100%')
+    .padding({
+      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.MD),
+      bottom: DesignConstants.SPACING.MD
+    })
+  }
+
+  @Builder
   private buildBackToTopOverlay() {
     BackToTopButton({
       visible: this.showBackToTop,
@@ -586,20 +704,8 @@ export struct SearchPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
       Column() {
-        // Search header —— 统一走 SearchPageHeader（返回 + 内联搜索框）
-        SearchPageHeader({
-          title: '搜索',
-          keyword: this.keyword,
-          placeholder: '搜索用户、动态、地点或话题',
-          onBack: () => { AppRouter.pop(); },
-          onChange: (value: string) => {
-            this.keyword = value;
-            this.hasSearched = false;
-            this.scheduleSuggest();
-          },
-          onSubmit: () => { this.doSearch(); },
-          onFocusChange: (focused: boolean) => { this.isSearchFocused = focused; }
-        })
+        // 搜索页头对齐 web：36 返回圆钮 + 18 标题 + 39 胶囊搜索框（聚焦 accent 边框）
+        this.buildSearchHeader()
 
         if (this.isLoading || (this.isSuggesting && !this.hasSearched)) {
           // 搜索/建议词加载态：复用全站 Skeleton 几何（头像块 + 两行文本条），
@@ -963,140 +1069,286 @@ export struct SearchPage {
   }
 
   @Builder
-  private buildDiscoveryCard(title: string, trailing?: () => void) {
-    Row() {
+  private buildDiscoverySectionHead(icon: AppIcon, title: string) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().accentBackground
+      })
       Text(title)
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getCurrentThemePalette().textPrimary)
-        .layoutWeight(1)
-      if (trailing) {
-        Text('清除')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-          .fontColor(this.getCurrentThemePalette().accentBackground)
-          .padding(DesignConstants.SPACING.MD)
-          .onClick(trailing)
-      }
     }
     .width('100%')
-    // 左右内边距与卡内正文（LG=16）对齐：页面 gutter 只管卡片外留白，管不到卡内标题
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildDiscoverySectionHeadAction(icon: AppIcon, title: string, actionLabel: string, onAction: () => void) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().accentBackground
+      })
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+      Blank()
+      Text(actionLabel)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontColor(this.getCurrentThemePalette().accentBackground)
+        .padding({
+          left: DesignConstants.SPACING.SM,
+          right: DesignConstants.SPACING.SM,
+          top: DesignConstants.SPACING.XS,
+          bottom: DesignConstants.SPACING.XS
+        })
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.FONT.SIZE.XS) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.FONT.SIZE.XS) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
+        .onClick(onAction)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildTopicChip(topic: string) {
+    Text(`#${topic}`)
+      .fontSize(DesignConstants.FONT.SIZE.XS)
+      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+      .fontColor(this.getCurrentThemePalette().textSecondary)
+      .backgroundColor(this.getSurfaceBackground())
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.XS,
+        bottom: DesignConstants.SPACING.XS
+      })
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+      .responseRegion({
+        x: 0,
+        y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.FILTER_CHIP_HEIGHT) / 2,
+        width: '100%',
+        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      })
+      .onClick(() => this.applyKeywordAndSearch(topic))
+  }
+
+  private getDiscoveryUserTag(user: UserItem): string {
+    return user.tags && user.tags.length > 0 ? user.tags[0] : '';
+  }
+
+  private getDiscoveryUserDistance(user: UserItem): string {
+    const distance = user.location?.distance;
+    return distance !== undefined && distance !== null ? LocationUtil.formatDistance(distance) : '';
+  }
+
+  @Builder
+  private buildDiscoveryUserRow(user: UserItem) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        SystemAvatar({
+          avatarUrl: user.user?.avatar_url ?? '',
+          name: user.user?.nickname ?? '用户',
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          shape: 'circle'
+        })
+        if (user.presence_status === 'online') {
+          Column()
+            .width(DesignConstants.COMPONENT.ONLINE_DOT_MD)
+            .height(DesignConstants.COMPONENT.ONLINE_DOT_MD)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getCurrentThemePalette().online)
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getSurfaceBackground() })
+        }
+      }
+
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(user.user?.nickname ?? '用户')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          if (this.getDiscoveryUserTag(user).length > 0) {
+            Text(`#${this.getDiscoveryUserTag(user)}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().accentBackground)
+          }
+          if (this.getDiscoveryUserTag(user).length > 0 && this.getDiscoveryUserDistance(user).length > 0) {
+            Text('·')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+          }
+          if (this.getDiscoveryUserDistance(user).length > 0) {
+            Text(this.getDiscoveryUserDistance(user))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+        }
+        .alignItems(VerticalAlign.Center)
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
+    }
+    .width('100%')
     .padding({
       left: DesignConstants.SPACING.LG,
       right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD2,
+      bottom: DesignConstants.SPACING.MD2
+    })
+    .alignItems(VerticalAlign.Center)
+    .accessibilityText(`查看 ${user.user?.nickname ?? ''} 的资料`)
+    .onClick(() => { this.openUserProfile(user); })
+  }
+
+  @Builder
+  private buildDiscoveryRecentRow(item: string) {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      LucideIcon({
+        icon: AppIcon.TIME,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
+      Text(item)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .layoutWeight(1)
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    // r3：sticky 分区头无硬线（BRIEF B）
+    .alignItems(VerticalAlign.Center)
+    .onClick(() => { this.applyKeywordAndSearch(item); })
   }
 
   @Builder
   DiscoveryView() {
     Scroll() {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        // 最近搜索：**无记录时整卡不渲染**（对齐 web SearchDiscovery：空卡片只是占位噪音，
-        // 端上实测会占掉约 1/6 屏却只有一行「还没有搜索记录。」——2026-10-21 走查）。
+      Column({ space: DesignConstants.PAGE_SHELL.SECTION_GAP }) {
+        // 最近搜索：无记录时整块不渲染（对齐 web SearchDiscovery）
         if (this.recentSearches.length > 0) {
-          Column() {
-            this.buildDiscoveryCard('最近搜索', () => this.clearRecentSearches())
-            ForEach(this.recentSearches, (item: string, index: number) => {
-              if (index > 0) {
-                Column().height(DesignConstants.SPACING.HALF)
-              }
-              Pressable({ onPress: () => this.applyKeywordAndSearch(item) }) {
-                Row({ space: DesignConstants.SPACING.MD }) {
-                  LucideIcon({
-                    icon: AppIcon.TIME,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                    color: this.getCurrentThemePalette().textSecondary
-                  })
-                  Text(item)
-                    .fontSize(DesignConstants.FONT.SIZE.MD)
-                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-                    .fontColor(this.getCurrentThemePalette().textPrimary)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-                    .layoutWeight(1)
-                  LucideIcon({
-                    icon: AppIcon.ARROW_RIGHT,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                    color: this.getCurrentThemePalette().textSecondary
-                  })
+          Column({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+            this.buildDiscoverySectionHead(AppIcon.TIME, '最近搜索')
+            ListGroup() {
+              ForEach(this.recentSearches, (item: string, index: number) => {
+                if (index > 0) {
+                  ListRowDivider({ startMargin: DesignConstants.SPACING.LG })
                 }
-                .width('100%')
-                .padding({
-                  left: DesignConstants.SPACING.LG,
-                  right: DesignConstants.SPACING.LG,
-                  top: DesignConstants.SPACING.MD,
-                  bottom: DesignConstants.SPACING.MD
-                })
-              }
-            }, (item: string) => `recent-${item}`)
+                this.buildDiscoveryRecentRow(item)
+              }, (item: string) => `recent-${item}`)
+            }
           }
           .width('100%')
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-          .shadow(this.getCurrentThemePalette().surfaceShadow)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+          .alignItems(HorizontalAlign.Start)
         }
 
-        // 热门话题（唯一列表）：此前还有一张「正在关注」编号卡，与这里同源重复，已删除
-        // （2026-10-20 端上走查：两卡内容完全相同 #夜色/#新标签）。取不到热门 tags 时不渲染。
+        // 热门话题：无界流式标签云（chip 本身即操作，不套卡片壳）
         if (this.discoveryTopics.length > 0) {
-        Column() {
-          this.buildDiscoveryCard('热门话题')
-          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
-            ForEach(this.discoveryTopics, (topic: string) => {
-              Text(`#${topic}`)
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                .fontColor(this.getCurrentThemePalette().textPrimary)
-                .backgroundColor(this.getSurfaceSubtle())
-                .padding({
-                  left: DesignConstants.SPACING.MD,
-                  right: DesignConstants.SPACING.MD,
-                  top: DesignConstants.SPACING.SM,
-                  bottom: DesignConstants.SPACING.SM
-                })
-                .borderRadius(DesignConstants.RADIUS.FULL)
-                .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-                .margin({ right: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
-                .responseRegion({
-                  x: -DesignConstants.SPACING.SM2,
-                  y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - 39) / 2,
-                  width: '120%',
-                  height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-                })
-                .onClick(() => this.applyKeywordAndSearch(topic))
-            }, (topic: string) => `topic-chip-${topic}`)
+          Column({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+            this.buildDiscoverySectionHead(AppIcon.SPARKLES, '热门话题')
+            Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Start }) {
+              ForEach(this.discoveryTopics, (topic: string) => {
+                this.buildTopicChip(topic)
+              }, (topic: string) => `topic-chip-${topic}`)
+            }
+            .width('100%')
           }
           .width('100%')
-          .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
-            top: DesignConstants.SPACING.MD,
-            bottom: DesignConstants.SPACING.LG
-          })
+          .alignItems(HorizontalAlign.Start)
         }
-        .width('100%')
-        .backgroundColor(this.getSurfaceBackground())
-        .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
+
+        // 人物推荐：距离排序前 3，行卡（头像 + 名 + #tag·距离 + chevron）
+        if (this.hotUsers.length > 0) {
+          Column({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+            this.buildDiscoverySectionHeadAction(AppIcon.PERSON, '人物推荐', '查看全部', () => {
+              AppRouter.push(PageNames.NEARBY_USERS);
+            })
+            ListGroup() {
+              ForEach(this.hotUsers, (user: UserItem, index: number) => {
+                if (index > 0) {
+                  ListRowDivider({ startMargin: DesignConstants.SPACING.MD + DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS })
+                }
+                this.buildDiscoveryUserRow(user)
+              }, (user: UserItem) => `hot-user-${user.user?.user_id ?? ''}`)
+            }
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+        }
+
+        // 热门动态：与首页同款整卡大图（4:5）
+        if (this.hotMoments.length > 0) {
+          Column({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
+            this.buildDiscoverySectionHead(AppIcon.CHART, '热门动态')
+            Column({ space: DesignConstants.SPACING.MD }) {
+              ForEach(this.hotMoments, (moment: MomentItem, index: number) => {
+                MomentFeedCard({
+                  moment: moment,
+                  variant: 'overlay',
+                  overlayAspectRatio: 0.8,
+                  priority: index < 2,
+                  onOpenDetail: (item: MomentItem) => { this.openMomentDetail(item); }
+                })
+              }, (moment: MomentItem) => `hot-moment-${moment.moment_id}`)
+            }
+            .width('100%')
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
         }
       }
       .width('100%')
       .padding({
-        top: DesignConstants.SPACING.LG,
-        bottom: DesignConstants.SPACING.LG
+        top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP,
+        bottom: DesignConstants.PAGE_SHELL.SECTION_GAP
       })
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
     .layoutWeight(1)
     .scrollBar(BarState.Off)
     .align(Alignment.Top)
     .edgeEffect(EdgeEffect.Spring)
+    .onDidScroll(() => { this.updateBackToTop(); })
+    .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
   }
 
   @Builder

@@ -27,7 +27,8 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem } from '../../../core/types/api';
+import { LoginPromptView } from '../../../components/LoginPromptView';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem, UserSharePayload } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
@@ -200,6 +201,27 @@ export struct ProfilePage {
       }
     } finally {
       this.viewedFollowPending = false;
+    }
+  }
+
+  /** 分享他人主页（对齐 web users/[userId] 右上分享：share_code → 系统分享面板） */
+  private async shareViewedUser(): Promise<void> {
+    if (this.isDestroyed || !this.viewedUserId) {
+      return;
+    }
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const nickname = this.viewedUserProfile?.user?.nickname ?? '用户';
+      const payload: UserSharePayload = { shared_user_id: this.viewedUserId };
+      await ShareActionHelper.shareResource(
+        context,
+        'user',
+        payload,
+        `${nickname} 的个人主页`,
+        '来 HotSpot 看看 TA 的主页'
+      );
+    } catch {
+      // 用户取消分享
     }
   }
 
@@ -752,13 +774,11 @@ export struct ProfilePage {
                 onBack: () => { this.cancelEdit(); }
               })
             } else if (this.isExternalProfileMode()) {
-              SystemPageHeader({
-                title: this.resolveHeaderTitle(),
-                titleSize: DesignConstants.FONT.SIZE.XXL,
-                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
-                showBackButton: true,
-                onBack: () => { AppRouter.pop(); }
-              })
+              // 外部主页对齐 web users/[userId]：无标准页头，返回/更多为内容顶部浮层圆钮
+              // （见 buildExternalFloatingTools；内容顶部由 ExternalProfileView.topInset 让位）。
+              Row()
+                .width('100%')
+                .height(0)
             } else if (this.showUpgradeForm) {
               // 升级态：与编辑态同规格的页头（返回 = 取消升级），
               // 否则此聚焦任务页没有返回钮、且顶部空洞
@@ -779,7 +799,12 @@ export struct ProfilePage {
 
             if (this.isExternalProfileMode()) {
               Column() {
-                this.buildExternalProfileView()
+                Stack({ alignContent: Alignment.TopStart }) {
+                  this.buildExternalProfileView()
+                  this.buildExternalFloatingTools()
+                }
+                .width('100%')
+                .height('100%')
               }
               .width('100%')
               .justifyContent(FlexAlign.Start)
@@ -854,19 +879,123 @@ export struct ProfilePage {
     })
   }
 
+  /** 胶囊内的无底色图标钮（外框由右侧玻璃胶囊统一承担） */
+  @Builder
+  private buildExternalPillButton(icon: AppIcon, label: string, onPress: () => void) {
+    Row() {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .accessibilityText(label)
+    .onClick(onPress)
+  }
+
+  @Builder
+  private buildExternalGlassButton(icon: AppIcon, label: string, onPress: () => void) {
+    Row() {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().controlShadow)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .accessibilityText(label)
+    .onClick(onPress)
+  }
+
+  /** 外部主页浮层工具（对齐 web DetailHeader：返回 + 分享/更多玻璃胶囊） */
+  @Builder
+  private buildExternalFloatingTools() {
+    Row() {
+      this.buildExternalGlassButton(AppIcon.BACK, '返回', () => { AppRouter.pop(); })
+
+      Blank()
+
+      Row({ space: DesignConstants.SPACING.XS }) {
+        if (this.viewedUserId.length > 0) {
+          this.buildExternalPillButton(AppIcon.SHARE, '分享资料', () => { this.shareViewedUser(); })
+        }
+        Row() {
+          LucideIcon({
+            icon: AppIcon.MORE,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.getCurrentThemePalette().textPrimary
+          })
+        }
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .justifyContent(FlexAlign.Center)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
+        .bindMenu([
+          {
+            value: '设置备注',
+            action: () => { this.openRemarkSheet(); }
+          }
+        ])
+        .accessibilityText('更多操作')
+      }
+      .padding(DesignConstants.SPACING.HALF)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+      .shadow(this.getCurrentThemePalette().controlShadow)
+    }
+    .width('100%')
+    .padding({
+      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.MD)
+    })
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
   /** 他人资料视图：渲染在 ExternalProfileView 组件（资料/统计/回调经 props 注入） */
   @Builder
   private buildExternalProfileView(): void {
     ExternalProfileView({
       resolvedThemeId: this.resolvedThemeId,
+      topInset: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.MD) +
+        DesignConstants.LAYOUT.ICON_BUTTON_SIZE + DesignConstants.SPACING.LG,
       loading: this.viewedUserLoading,
       errorMessage: this.viewedUserError,
       hasProfile: this.viewedUserProfile !== null,
       avatarUrl: this.viewedUserProfile?.user?.avatar_url ?? '',
       nickname: this.viewedUserProfile?.user?.nickname ?? '',
+      handle: this.viewedUserId,
       locationName: this.viewedUserProfile?.location?.location_name ?? '',
       bio: this.viewedUserProfile?.bio ?? '',
       isOnline: this.viewedUserProfile?.presence_status === 'online',
+      presenceKnown: this.viewedUserProfile?.presence_status != null,
       tags: this.viewedUserProfile?.tags ?? [],
       momentsCount: `${this.viewedUserProfile?.stats?.moments_count ?? 0}`,
       followersCount: `${this.viewedUserProfile?.stats?.followers_count ?? 0}`,

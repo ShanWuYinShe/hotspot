@@ -8,7 +8,7 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
 import { LocationResultRow } from '../components/LocationResultRow';
 import { Pressable } from '../../../components/Pressable';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { curves } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -27,7 +27,7 @@ export const TAG: string = 'LocationPickerPage';
 export const SEARCH_PANEL_HEIGHT: number = 440;
 export const MAX_HISTORY_ITEMS: number = 5;
 // 底部面板三段式吸附位置（内容高度，不含 safeAreaBottom）
-export const PANEL_SNAP_MIN: number = 164;       // 收起：手柄 + 搜索栏 + 确认按钮完整露出（避免被 clip 裁剪）
+export const PANEL_SNAP_MIN: number = 184;       // 收起：手柄 + 搜索栏 + 确认按钮 + 说明完整露出（避免被 clip 裁剪）
 export const PANEL_SNAP_HALF: number = 248;      // 半展开：显示部分历史记录
 export const PANEL_SNAP_MAX: number = 392;       // 全展开：完整内容
 export const DEFAULT_GESTURE_HINT: string = '长按地图即可快速选点';
@@ -213,6 +213,8 @@ export interface FilterPanelProps {
   onToggleUsers: () => void;
   onToggleGroups: () => void;
   onToggleMoments: () => void;
+  /** 「回到浏览锚点」快捷动作（原右侧独立图钉钮移入图层面板，底部浮钮只保留 ±/定位/图层） */
+  onLocateAnchor?: () => void;
 }
 
 @Builder
@@ -255,6 +257,32 @@ export function FilterDropdownPanel(props: FilterPanelProps) {
       resolvedThemeId: props.resolvedThemeId,
       onToggle: props.onToggleMoments
     })
+
+    if (props.onLocateAnchor) {
+      Column()
+        .width('100%')
+        .height(DesignConstants.BORDER_WIDTH.HAIRLINE)
+        .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).floatingBorderColor)
+        .margin({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+      Row({ space: DesignConstants.SPACING.MD }) {
+        LucideIcon({
+          icon: AppIcon.LOCATION,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          color: resolveLocationPickerPalette(props.resolvedThemeId).accentBackground
+        })
+        Text('回到浏览锚点')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(resolveLocationPickerPalette(props.resolvedThemeId).textPrimary)
+          .layoutWeight(1)
+      }
+      .width('100%')
+      .height(DesignConstants.COMPONENT.SHEET_ACTION_HEIGHT)
+      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      .alignItems(VerticalAlign.Center)
+      .borderRadius(DesignConstants.RADIUS.LG)
+      .accessibilityText('回到浏览锚点')
+      .onClick(props.onLocateAnchor)
+    }
   }
   .width(DesignConstants.LAYOUT.FILTER_PANEL_WIDTH)
   .padding(DesignConstants.SPACING.SM)
@@ -331,7 +359,7 @@ export struct SearchPanel {
         })
           .id('locationPickerSearchInput')
           .layoutWeight(1)
-          .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+          .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
           .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .shadow(DesignConstants.SHADOW.INSET)
@@ -365,7 +393,7 @@ export struct SearchPanel {
             .fontSize(DesignConstants.FONT.SIZE.MD)
             .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
         }
-        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
         .justifyContent(FlexAlign.Center)
         .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
         .scale(this.cancelPressed
@@ -544,6 +572,8 @@ export struct MainPanel {
   onSelectHistory: (item: AnchorHistoryItem) => void = (item) => {};
   onConfirm: () => void = () => {};
   @Prop confirmLabel: string = '设为浏览锚点';
+  /** 主按钮下方说明（对齐 web anchorPurposeHint） */
+  @Prop hintText: string = '';
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
 
   /** 底部手势区兜底：safeAreaBottom 上报为 0 时按 XL(20vp) 处理 */
@@ -621,12 +651,12 @@ export struct MainPanel {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .width('100%')
-      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
-      .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+      .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
+      .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
       .alignItems(VerticalAlign.Center)
-      .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
+      .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceElevated)
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
       .borderRadius(DesignConstants.RADIUS.FULL)
-      .shadow(DesignConstants.SHADOW.INSET)
       .margin({ bottom: DesignConstants.SPACING.MD })
       // 按压反馈（对齐 tap-97 语义）
       .scale(this.searchEntryPressed ?
@@ -652,8 +682,8 @@ export struct MainPanel {
             // 最近使用标题
             Row() {
               Text('最近使用')
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
                 .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
               Blank()
               if (this.anchorHistory.length > 0) {
@@ -734,7 +764,33 @@ export struct MainPanel {
               .width('100%')
               .divider({ strokeWidth: 0, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
             } else {
-              EmptyState({ icon: AppIcon.TIME, title: '暂无最近使用的地点', bare: true })
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Column() {
+                  LucideIcon({
+                    icon: AppIcon.TIME,
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                    color: resolveLocationPickerPalette(this.resolvedThemeId).textSecondary
+                  })
+                }
+                .width(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+                .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+                .justifyContent(FlexAlign.Center)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).surfaceSubtle)
+                Text('暂无最近记录')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textPrimary)
+                Text('搜索并选择地点后，会记录在这里')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Center)
+              .padding({
+                top: DesignConstants.SPACING.XL,
+                bottom: DesignConstants.SPACING.XL
+              })
             }
           }
           .width('100%')
@@ -749,17 +805,26 @@ export struct MainPanel {
       }
 
       Button(this.confirmLabel)
-        .type(ButtonType.Capsule)
+        .type(ButtonType.Normal)
         .width('100%')
         .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_LG)
         .backgroundColor(resolveLocationPickerPalette(this.resolvedThemeId).accentBackground)
         .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).accentText)
-        .fontSize(DesignConstants.FONT.SIZE.LG)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .shadow(DesignConstants.SHADOW.SMALL)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: resolveLocationPickerPalette(this.resolvedThemeId).borderColor })
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .borderRadius(DesignConstants.RADIUS.SM)
         .margin({ top: DesignConstants.SPACING.SM })
         .onClick(this.onConfirm)
+
+      if (this.hintText.length > 0) {
+        Text(this.hintText)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontColor(resolveLocationPickerPalette(this.resolvedThemeId).textSecondary)
+          .textAlign(TextAlign.Center)
+          .width('100%')
+          .margin({ top: DesignConstants.SPACING.SM2 })
+      }
     }
     .height(this.panelHeight + this.resolveBottomInset())
     .clip(true)

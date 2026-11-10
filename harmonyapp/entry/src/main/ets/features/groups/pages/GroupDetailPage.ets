@@ -18,7 +18,6 @@ import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState } from '../../../components/EmptyState';
-import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
@@ -26,7 +25,6 @@ import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemToggle } from '../../../components/SystemToggle';
 import { AppIcon } from '../../../components/SystemIcon';
-import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { ShareActionHelper } from '../../../core/utils/ShareActionHelper';
 import { SystemShareService } from '../../../core/services/SystemShareService';
 import { common } from '@kit.AbilityKit';
@@ -210,8 +208,8 @@ export struct GroupDetailPage {
 
   /** 封面返回按钮顶部安全区避让（对齐 SystemPageHeader 内聚逻辑） */
   private getHeaderTopPadding(): number {
-    // extra 0 对齐 SystemPageHeader：页头内容贴状态栏下缘（2026-10-10 布局审查）。
-    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0);
+    // web 详情浮层圆钮距状态栏下缘保持 8vp 呼吸（对齐 DetailHeader 顶部留白）
+    return SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.SM);
   }
 
   private getSurfaceBackground(): string {
@@ -1509,7 +1507,7 @@ export struct GroupDetailPage {
               Text(this.groupInfo.group.name)
                 .fontSize(DesignConstants.FONT.SIZE.XXL)
                 .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
-                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
                 .fontColor(DesignConstants.COLOR.WHITE)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -1522,34 +1520,16 @@ export struct GroupDetailPage {
         }
         .width('100%')
 
-        // 顶部按钮行（返回左 / 分享右）：全宽透明 Row 会遮挡返回钮点击（已实测），
-        // 两钮必须同行；标题列已在内层 Stack 锚定封面左下，不与此行冲突。
-        // hero 封面上的媒体镀铬钮：白字 + 透明底（iconColor 逃逸口），a11y 补齐
+        // 顶部浮层（返回左 / 更多右）：web 详情页无标准页头，使用白色玻璃圆钮压在 hero 上，
+        // 图标用主题文字色（浅色主题下不再依赖白色图标 + 深色遮罩）。
         Row() {
-          SurfaceIconButton({
-            icon: AppIcon.BACK,
-            kind: 'neutral',
-            buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            iconColor: DesignConstants.COLOR.WHITE,
-            accessibilityLabel: '返回',
-            onPress: () => { AppRouter.pop(); }
-          })
+          this.buildHeroIconButton(AppIcon.BACK, '返回', () => { AppRouter.pop(); })
           Blank()
-          // web 群详情封面右上角是「更多操作」(MoreHorizontal overlay) —— 内含举报群组；
-          // 原「分享」在前端群详情页不存在（分享入口在群分享码/我的分享）
-          SurfaceIconButton({
-            icon: AppIcon.MORE,
-            kind: 'neutral',
-            buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
-            glyphSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            iconColor: DesignConstants.COLOR.WHITE,
-            accessibilityLabel: '更多操作',
-            onPress: () => { this.showGroupMoreSheet = true; }
-          })
+          this.buildHeroIconButton(AppIcon.MORE, '更多操作', () => { this.showGroupMoreSheet = true; })
         }
         .width('100%')
         .margin({ top: this.getHeaderTopPadding() })
+        .hitTestBehavior(HitTestMode.Transparent)
       }
       .width('100%')
       // 封面与下方 Tab/卡片同宽（都落在容器 gutter 内）。
@@ -1579,6 +1559,20 @@ export struct GroupDetailPage {
         }
       })
 
+      // 离开群组二次确认：挂在页根 Stack 上（放在底部操作栈内会被 100% 高度弹层撑破布局）
+      SystemDialog({
+        visible: this.showLeaveConfirm,
+        title: '退出群组',
+        description: `退出「${this.groupInfo?.group?.name ?? '该群组'}」后需要重新申请加入`,
+        confirmText: '退出',
+        confirmVariant: 'danger',
+        onCancel: () => { this.showLeaveConfirm = false; },
+        onConfirm: () => {
+          this.showLeaveConfirm = false;
+          this.leaveGroup();
+        }
+      })
+
       if (this.isLoading) {
         SystemLoadingView({ message: '加载群组信息中…' })
           .layoutWeight(1)
@@ -1602,6 +1596,7 @@ export struct GroupDetailPage {
         // 三 Tab（对齐前端 TabBar 胶囊：简介/成员/公告）
         TabsPillGroup({
           variant: 'pills',
+          freeWidth: true,
           tabs: [
             { label: '简介' },
             { label: '成员' },
@@ -1791,111 +1786,85 @@ export struct GroupDetailPage {
             endMargin: DesignConstants.SPACING.LG
           })
 
-          // 4. 操作按钮区域（独立分组）：按钮是页面级主操作、不是「列表行」，
-          // 混在导航行分组里会被行分隔线上下夹住，形成「按钮被框住」的怪异观感
-          ListItemGroup() {
-          ListItem() {
-             Column({ space: DesignConstants.SPACING.SM }) {
-                if (this.isMember) {
-                  if (this.canEditGroupInfo()) {
-                    SystemButton({
-                      label: '编辑群组信息',
-                      variant: 'surface-accent',
-                      buttonSize: 'default',
-                      pill: true,
-                      fullWidth: true,
-                      shadowed: true,
-                      loading: this.isSavingGroupInfo,
-                      onPress: () => { this.openEditGroupSheet(); }
-                    })
-
-                    // 邀请成员 / 封禁名单（对齐前端成员 Tab 管理入口，owner/admin 可见）
-                    SystemButton({
-                      label: '邀请成员',
-                      variant: 'surface',
-                      buttonSize: 'default',
-                      pill: true,
-                      fullWidth: true,
-                      shadowed: true,
-                      onPress: () => { this.openInviteSheet(); }
-                    })
-
-                    SystemButton({
-                      label: '封禁名单',
-                      variant: 'surface',
-                      buttonSize: 'default',
-                      pill: true,
-                      fullWidth: true,
-                      shadowed: true,
-                      onPress: () => { this.openBannedListSheet(); }
-                    })
-                  }
+          // 群管理入口（owner/admin）：从原滚动底部操作区迁入，底部主操作栈只保留
+          // 「打开群聊 + 退出」/「加入群组」，对齐 web GroupActionCard 的双按钮栈。
+          if (this.isMember && this.canEditGroupInfo()) {
+            ListItemGroup() {
+              ListItem() {
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  Text('群管理')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                    .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .width('100%')
 
                   SystemButton({
-                    label: '进入聊天',
-                    variant: 'primary',
-                    buttonSize: 'default',
-                    pill: true,
-                    fullWidth: true,
-                    onPress: () => { this.enterChat(); }
-                  })
-
-                  SystemButton({
-                    label: '离开群组',
+                    label: '编辑群组信息',
                     variant: 'surface',
                     buttonSize: 'default',
-                    pill: true,
                     fullWidth: true,
-                    shadowed: true,
-                    disabled: this.isLeaving,
-                    onPress: () => { this.showLeaveConfirm = true; }
+                    loading: this.isSavingGroupInfo,
+                    onPress: () => { this.openEditGroupSheet(); }
                   })
-                    .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
-
-                  // 离开群组二次确认（对齐 GroupCard.ets / Web 同页规范形态）
-                  SystemDialog({
-                    visible: this.showLeaveConfirm,
-                    title: '退出群组',
-                    description: `退出「${this.groupInfo?.group?.name ?? '该群组'}」后需要重新申请加入`,
-                    confirmText: '退出',
-                    confirmVariant: 'danger',
-                    onCancel: () => { this.showLeaveConfirm = false; },
-                    onConfirm: () => {
-                      this.showLeaveConfirm = false;
-                      this.leaveGroup();
-                    }
+                  SystemButton({
+                    label: '邀请成员',
+                    variant: 'surface',
+                    buttonSize: 'default',
+                    fullWidth: true,
+                    onPress: () => { this.openInviteSheet(); }
                   })
-                } else {
-                  if (this.groupInfo?.join_method === 'password') {
-                    SystemInput({
-                      value: this.joinPassword,
-                      placeholder: '请输入群组密码',
-                      passwordMode: true,
-                      fontSize: DesignConstants.FONT.SIZE.MD,
-                      onChange: (value: string) => { this.joinPassword = value; }
-                    })
-                      .padding(DesignConstants.SPACING.MD)
-                      .backgroundColor(this.getSurfaceSubtle())
-                      .shadow(this.getCurrentThemePalette().controlShadow)
-                      .borderRadius(DesignConstants.RADIUS.XL)
-                      .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
-                  }
-
-                    SystemButton({
-                      label: this.groupInfo?.join_method === 'password' ? '加入群组（需要密码）' : '加入群组',
-                      variant: 'primary',
-                      buttonSize: 'default',
-                      pill: true,
-                      fullWidth: true,
-                      loading: this.isJoining,
-                      onPress: () => { this.joinGroup(); }
-                    })
-                      .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
+                  SystemButton({
+                    label: '封禁名单',
+                    variant: 'surface',
+                    buttonSize: 'default',
+                    fullWidth: true,
+                    onPress: () => { this.openBannedListSheet(); }
+                  })
                 }
-             }
-             .padding(DesignConstants.SPACING.LG)
+                .padding(DesignConstants.SPACING.LG)
+                .width('100%')
+              }
+            }
+            .divider({
+              strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+              color: this.getSurfaceBorder(),
+              startMargin: DesignConstants.SPACING.LG,
+              endMargin: DesignConstants.SPACING.LG
+            })
           }
-          }  // 操作区分组结束
+
+          // 需要密码的群：密码输入留在内容区，主按钮由底部操作栈承担（避免双主按钮）
+          if (!this.isMember && this.groupInfo?.join_method === 'password') {
+            ListItemGroup() {
+              ListItem() {
+                Column({ space: DesignConstants.SPACING.MD }) {
+                  Text('加入群组')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                    .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                    .width('100%')
+                  SystemInput({
+                    value: this.joinPassword,
+                    placeholder: '请输入群组密码',
+                    passwordMode: true,
+                    fontSize: DesignConstants.FONT.SIZE.MD,
+                    onChange: (value: string) => { this.joinPassword = value; }
+                  })
+                    .onBlur(() => KeyboardDismissManager.getInstance().dismiss())
+                }
+                .padding(DesignConstants.SPACING.LG)
+                .width('100%')
+              }
+            }
+            .divider({
+              strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
+              color: this.getSurfaceBorder(),
+              startMargin: DesignConstants.SPACING.LG,
+              endMargin: DesignConstants.SPACING.LG
+            })
+          }
 
           // Tab 2 公告（对齐前端 AnnouncementsList：标题/内容/时间/置顶徽章；
           // owner/admin 可发布/编辑/删除，对齐前端 canManageAnnouncements 门控）
@@ -2019,9 +1988,7 @@ export struct GroupDetailPage {
         .layoutWeight(1)
         .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
-        .padding({
-          bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, DesignConstants.SPACING.LG)
-        })
+        .padding({ bottom: DesignConstants.SPACING.LG })
         // r4 软岛：Tab 内容分组卡（去描边、surfaceIsland、圆角 20、轻投影；行间发丝线保留）
         .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
         .borderRadius(DesignConstants.SHAPE.CARD)
@@ -2034,6 +2001,8 @@ export struct GroupDetailPage {
           TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
             .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
         )
+
+        this.buildBottomActionTray()
       }
     }
     .width('100%')
@@ -2103,24 +2072,120 @@ export struct GroupDetailPage {
     })
   }
 
-  // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
+  /**
+   * 底部主操作栈（对齐 web GroupActionCard）：
+   * 白玻璃卡 + 通栏主按钮「打开群聊」+ 安静危险档「已加入 · 点击退出」；
+   * 未加入时为主按钮「加入群组」+ 通知说明。
+   */
   @Builder
-  private buildStatsGrid(): void {
+  private buildBottomActionTray() {
     Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        this.StatsCell(formatCount(this.groupInfo?.group?.members_count ?? 0), '成员')
-        this.StatsCell(this.formatOnlineCount(), '在线')
+      if (this.isMember) {
+        SystemButton({
+          label: '打开群聊',
+          variant: 'primary',
+          buttonSize: 'large',
+          showIcon: true,
+          icon: AppIcon.MESSAGE,
+          fullWidth: true,
+          onPress: () => { this.enterChat(); }
+        })
+        SystemButton({
+          label: '已加入 · 点击退出',
+          variant: 'surface-danger',
+          buttonSize: 'default',
+          fullWidth: true,
+          disabled: this.isLeaving,
+          onPress: () => { this.showLeaveConfirm = true; }
+        })
+          .opacity(this.isLeaving ? DesignConstants.OPACITY.LOADING : 1)
+
+      } else {
+        SystemButton({
+          label: '加入群组',
+          variant: 'primary',
+          buttonSize: 'large',
+          fullWidth: true,
+          loading: this.isJoining,
+          onPress: () => { this.joinGroup(); }
+        })
+          .scale({ x: MotionUtil.popScale(this.joinPopped), y: MotionUtil.popScale(this.joinPopped) })
+
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          LucideIcon({
+            icon: AppIcon.NOTIFICATION,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getCurrentThemePalette().accentBackground
+          })
+          Text('加入后可管理群组通知并进入群聊')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .justifyContent(FlexAlign.Center)
+        .width('100%')
       }
-      .width('100%')
-      Row({ space: DesignConstants.SPACING.SM }) {
-        this.StatsCell(this.formatDistanceCell(), '距你')
-        this.StatsCell(this.formatCategoryCell(), '分类')
-      }
-      .width('100%')
     }
     .width('100%')
-    // 与卡内位置行的 LG(16) 对齐：瓦片原先 0 内边距贴卡缘（实拍反馈「紧贴边缘」）
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+    .padding(DesignConstants.SPACING.LG)
+    .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .shadow(this.getCurrentThemePalette().surfaceShadow)
+    .margin({
+      top: DesignConstants.SPACING.SM,
+      bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
+    })
+  }
+
+  /** hero 浮层玻璃圆钮（对齐 web DetailHeader：36 圆钮 + 85% 表面 + 发丝边 + 轻投影） */
+  @Builder
+  private buildHeroIconButton(icon: AppIcon, label: string, onPress: () => void) {
+    Row() {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textPrimary
+      })
+    }
+    .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+    .justifyContent(FlexAlign.Center)
+    .borderRadius(DesignConstants.RADIUS.FULL)
+    .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+    .shadow(this.getCurrentThemePalette().controlShadow)
+    .responseRegion({
+      x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
+      width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .accessibilityText(label)
+    .onClick(onPress)
+  }
+
+  // 四列数据条（对齐 web MetricRow variant=strip：群成员 / 在线 / 距你 / 公告，列间竖线）
+  @Builder
+  private buildStatsGrid(): void {
+    Row() {
+      this.StatsCell(formatCount(this.groupInfo?.group?.members_count ?? 0), '群成员', this.getCurrentThemePalette().textPrimary)
+      this.buildStatsDivider()
+      this.StatsCell(this.formatOnlineCount(), '在线', this.getCurrentThemePalette().online)
+      this.buildStatsDivider()
+      this.StatsCell(this.formatDistanceCell(), '距你', this.getCurrentThemePalette().textPrimary)
+      this.buildStatsDivider()
+      this.StatsCell(formatCount(this.announcements.length), '公告', this.getCurrentThemePalette().textPrimary)
+    }
+    .width('100%')
+    .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+  }
+
+  @Builder
+  private buildStatsDivider() {
+    Column()
+      .width(DesignConstants.BORDER_WIDTH.HAIRLINE)
+      .height(DesignConstants.SPACING.XL)
+      .backgroundColor(this.getCurrentThemePalette().floatingBorderColor)
   }
 
   private formatOnlineCount(): string {
@@ -2141,15 +2206,14 @@ export struct GroupDetailPage {
   }
 
   @Builder
-  private StatsCell(value: string, label: string) {
-    // 按用户重设计方案：去瓦片盒（surfaceSubtle 底+圆角），纯「数值+标签」列
-    // 直接落在卡面上，留足呼吸感（数值 XL 半粗 / 标签 XS 次要色，间距放宽）
+  private StatsCell(value: string, label: string, valueColor: string) {
+    // 对齐 web MetricRow strip：数值 24/600、标签 11 次级，四列等宽落在卡面上
     Column({ space: DesignConstants.SPACING.SM }) {
       Text(value)
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .fontColor(valueColor)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
       Text(label)
