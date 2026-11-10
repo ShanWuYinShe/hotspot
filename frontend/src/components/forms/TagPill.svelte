@@ -38,7 +38,7 @@
 		// 注意不用 surface-ghost：它声明 border: solid transparent 且层叠在后，
 		// 会覆盖下面的 border-border-default。底色/边框由激活态显式承载。
 		class={cn(
-			'hit-slop-y-44 inline-flex items-center justify-center gap-1 rounded-full leading-none transition-colors cursor-pointer focus-ring',
+			'hit-slop-y-44 inline-flex min-w-11 items-center justify-center gap-1 rounded-full leading-none transition-colors cursor-pointer focus-ring',
 			sizeClasses[size],
 			disabled && 'pointer-events-none opacity-subtle',
 			active
