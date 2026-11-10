@@ -25,7 +25,7 @@ import { KEY_IS_LOGGED_IN } from '../core/state/GlobalStateManager';
 import { WebSocketService } from '../core/network/WebSocketService';
 import { PreferencesUtil } from '../core/storage/PreferencesUtil';
 import { TokenAssetStore } from '../core/storage/TokenAssetStore';
-import { PageNames, StorageKeys } from '../constants/AppConstants';
+import { DEBUG_BUILD, PageNames, StorageKeys } from '../constants/AppConstants';
 import { ApiClient } from '../core/api/ApiClient';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DarkModePreference } from '../core/theme/AppThemeTypes';
@@ -225,7 +225,9 @@ export default class EntryAbility extends UIAbility {
   private async initializeNotifications(): Promise<void> {
     try {
       const enabled = await notificationManager.isNotificationEnabled();
-      if (!enabled) {
+      // DEBUG 构建不在冷启动时弹系统通知授权：模拟器/自动化走查会被无法注入点击的系统弹窗挡住；
+      // release 构建仍在启动时请求一次（首次安装/用户关闭后）。
+      if (!enabled && !DEBUG_BUILD) {
         // 首次安装/用户关闭后主动拉起系统授权弹窗（1600004=已拒绝、1600013=弹窗已在展示，均不阻塞启动）
         try {
           await notificationManager.requestEnableNotification(this.context);
