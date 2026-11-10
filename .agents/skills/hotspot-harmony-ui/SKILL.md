@@ -7,6 +7,15 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 > 设计 token 的**全部数值档位**（颜色/字号/间距/圆角/边框/动效/交互反馈/透明度/尺寸/阴影/模糊）、双端共享组件映射表与跨端投影契约速查的唯一权威是 [docs/design-system.md](../../../docs/design-system.md)（仓库根 docs/）。本文件只保留强制规则、原语契约与鸿蒙端专项口径；web 端对应规则见 skill `hotspot-frontend-style` / `hotspot-frontend-layout` / `hotspot-frontend-theme`。
 
+## 视觉基线（与 web 移动端对齐，现行）
+
+- **首页**：顶栏品牌 = 同源 `hotspot_logo.png` 26vp 圆形 + 14/700 字标 + 两枚 36 ghost 图标钮；分段器限宽 220vp 居中（segmented，选中 accent 实底 + ✓ + 11/600 白字）；内容流 = 双列 3:4 卡片，列/行间距 10，整卡点击。
+- **卡片分两种语言，不可混用**：内容流（首页/附近瞬间/我的瞬间）= 整卡图片卡 `MomentFeedCard variant='overlay'` 3:4，顶部头像 24 + 11/600 名、右上 1/N、底部标题 14/600 + meta 10（#tag · 地点 · 相对时间）+ 仅点赞/评论；无图走「引号 + 16/600 主题色正文」文字海报。附近的人/群组 = 白底名片卡（20 圆角 + 描边 + shadow-xs，居中头像/字母圆 + 姓名 14/600 + 副行 11 + 底部关注/加入 pill），不得用整卡图片卡。
+- **底部导航**：手机 = 悬浮胶囊 Dock（max 448、28 圆角、玻璃/描边/投影，页底内缩 14/12），5 slot；选中态仅图标 scale 1.1 + 文字 semibold + 底部 3×14 微胶囊指示条，禁止整块底色；中央 48 FAB 同层。
+- **页头**：按页分档——消息/我的 24，附近域/设置/搜索/编辑资料 18，通知 20；返回钮视觉 36（热区 44）。顶级页工具钮 ghost，内页 surface；位置用页头 subtitle + MapPin（胶囊等待共享组件扩展，暂不做假胶囊）。
+- **详情/搜索/地图**：详情页不用标准页头，改浮层 36 圆形返回 + 玻璃分享/更多；群组 hero 24 圆角 + segmented + 底部双按钮；搜索 = 36 返回 + 18 标题 + 39 胶囊搜索框 + 话题 chips + 人物推荐行卡 + 热门动态卡；地图底部 28 圆角 sheet + 搜索胶囊 + 主按钮 + 右侧浮钮。
+- **游客态**：页面内联引导（图标圆 64 + 标题 14/600 + 说明 12 + 能力行 + 登录/注册主按钮 + ghost 次按钮）；「我的」游客身份卡 + 探索推荐，不用通用 spotlight 空态。
+
 ## UI/UX 设计规范（强制）
 
 - **禁止硬编码**：颜色一律使用 `AppThemeManager.getPaletteById(resolvedThemeId)` 的 palette token（或 `DesignConstants` 系统/图片固定色），禁止硬编码色值；字号/间距/圆角/边框/动效/透明度/尺寸一律用 `DesignConstants` 对应 token 档位，禁止裸 `fontSize(N)` / `padding({left:N})` / `width(N)` / `duration: N` / `scale(...)`；`$r('app.color.*')` 资源仅用于启动窗口等系统场景（当前 color.json 只保留 start_window_background）。
@@ -69,7 +78,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 ## 内容软岛与整卡图片卡（两端同 spec，鸿蒙实现）
 
 - **内容软岛**：`ListGroup`/`SystemCard` = `surfaceIsland` + `surfaceShadow` + `SHAPE.CARD`(20) + padding 8、行透明 + 行间距 2、行内 hover 填充离岛边 8；**禁止 1px hairline 全框**；`SettingsSectionCard` 同。`surfaceIsland` 与 web `--cst-surface-island` 逐值一致（light = `withAlpha(surfaceBackground,0.86)`；dark = `mixOpaque(surfaceBackground,0.94,textPrimary,0.06)`；6 套组合，实测 6/6，记录见 `docs/frontend-ui-audit.md`）。改 token 后按两端代码逐值比对（web `themes/*.css` 的 `--cst-surface-island` ↔ 鸿蒙 `AppThemeManager` 的 `surfaceIsland`，仓库无独立入库校验脚本）。按钮安静化同 web：次级动作 `withAlpha(surfaceSubtle,0.60)` 软填底、无描边、hover 全量；主操作 accent 实底；危险 soft danger；同级动作不混用描边/软填。页面级硬线清零：`SystemPageHeader`/自定义页头/分区头不得有 1px 底线（功能线：聊天输入条/粘底条/表格行/消息分栏发丝线）。页面结构与 web 端同一套规则，见 skill `hotspot-frontend-layout`「内容软岛与长尾/后台页面」。
-- **整卡图片卡**（视觉目标「图片占满整个卡片、信息覆盖在图上」，与 `docs/design-system.md` §17 同源，视觉细则见 skill `hotspot-frontend-style`「媒体与图片」）：适用 `MomentFeedCard variant='overlay'`（首页 feed，4:5）、`NearbyImageCard mediaOverlay`（网格 3:4，含附近三叶/我的瞬间/我的群组/群组精选）；`horizontal` 横排两段式保留为列表例外。卡片无 border、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/白图标操作行压在图；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 + ≤.10 水印 + 主题色文字（不压白字）。压图文字对比度 ≥4.5:1（字形区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态用「填充形状 + 白描边」不只色相；操作热区 ≥44。骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
+- **整卡图片卡**（视觉目标「图片占满整个卡片、信息覆盖在图上」，与 `docs/design-system.md` §17 同源，视觉细则见 skill `hotspot-frontend-style`「媒体与图片」）：适用 `MomentFeedCard variant='overlay'`（首页 feed / 附近瞬间，双列 3:4，dense 文字卡由内容撑高）、`NearbyImageCard mediaOverlay`（详情 hero/群组横滑等整卡图场景；附近的人/群组已改用白底名片卡）；`horizontal` 横排两段式保留为列表例外。卡片 1px 主题描边（同 web ring）、圆角 `SHAPE.CARD`(20)；图片 object-cover 铺满；顶部作者行/徽章 + 底部标题/元信息/白图标操作行压在图；位置只在右上出现一次；多图首图 + 1/N 徽章；无图 fallback = 主题渐变 + ≤.10 水印 + 主题色文字（不压白字）。压图文字对比度 ≥4.5:1（字形区像素实测，亮暗都测）；徽章深色强遮罩 + 白字；点赞/收藏状态用「填充形状 + 白描边」不只色相；操作热区 ≥44。骨架屏同步：`Skeleton` 的 feed 形态按整卡形状（图片块 + 底部文本条），骨架→内容零位移。
 
 ## 主题、A11y 与触控验收
 
