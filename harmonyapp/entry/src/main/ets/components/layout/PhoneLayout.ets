@@ -166,9 +166,13 @@ export struct PhoneLayout {
                   // LoginPromptView 保持透明才能让中间的 AmbientBackdrop 透出
                   // （此前传 pageBackground 会让其根 Stack 不透明底把氛围层盖住）。
                   LoginPromptView({
-                    spotlight: true,
-                    title: '消息功能需要登录',
-                    subtitle: '登录后可与好友实时聊天、加入群组讨论'
+                    title: '登录后查看消息',
+                    subtitle: '登录后即可查看和发起会话',
+                    highlights: [
+                      { icon: AppIcon.MESSAGE, text: '私聊与群聊会话' },
+                      { icon: AppIcon.GROUP, text: '在线好友与群组' },
+                      { icon: AppIcon.SYNC, text: '消息实时同步' }
+                    ]
                   })
                 }
                 .width('100%')

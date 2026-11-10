@@ -151,8 +151,8 @@ export struct MyReportsPage {
         Column() {
         SystemPageHeader({
           title: '我的举报',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
           backgroundVariant: 'transparent',

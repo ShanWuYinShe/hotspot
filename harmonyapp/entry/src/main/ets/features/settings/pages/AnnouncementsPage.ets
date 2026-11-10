@@ -80,8 +80,8 @@ export struct AnnouncementsPage {
       Column() {
         SystemPageHeader({
           title: '系统公告',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })

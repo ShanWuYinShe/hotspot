@@ -12,7 +12,8 @@ import {
   RelatedUserItem
 } from '../../../core/types/api';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID, ThemeMode } from '../../../core/theme/AppThemeTypes';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -167,39 +168,106 @@ export struct SettingsThemeSegmentCard {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  /** 主题代表色：直接取该主题族的 palette token（accent / subtle / page），不硬编码色值 */
+  private getThemePalette() {
+    return AppThemeManager.getPaletteForMode(this.mode as ThemeMode);
+  }
+
   build() {
-    Row({ space: DesignConstants.SPACING.SM }) {
-      Column()
-        .width(DesignConstants.SPACING.LG)
-        .height(DesignConstants.SPACING.LG)
+    // web AppearanceSection 主题卡：swatch 色点组（左上）+ 选中蓝环/✓（右上）+ 名称；
+    // 选中 = surface-island 底 + 2px accent 环 + shadow，未选中 = surface-subtle/70 + 发丝边。
+    Column() {
+      Row() {
+        // swatch 三色点（主题主色 / 次色 / 画布），胶囊底 + 发丝环
+        Row({ space: DesignConstants.SPACING.HALF }) {
+          Column()
+            .width(DesignConstants.SPACING.SM)
+            .height(DesignConstants.SPACING.SM)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getThemePalette().accentBackground)
+          Column()
+            .width(DesignConstants.SPACING.SM2)
+            .height(DesignConstants.SPACING.SM2)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getThemePalette().surfaceSubtle)
+            .opacity(DesignConstants.OPACITY.EMPHASIZED)
+          Column()
+            .width(DesignConstants.SPACING.SM2)
+            .height(DesignConstants.SPACING.SM2)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getThemePalette().pageBackground)
+            .opacity(DesignConstants.OPACITY.MUTED)
+        }
+        .alignItems(VerticalAlign.Center)
+        .padding({
+          left: DesignConstants.SPACING.SM2,
+          right: DesignConstants.SPACING.SM2,
+          top: DesignConstants.SPACING.HALF,
+          bottom: DesignConstants.SPACING.HALF
+        })
+        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceBackground, 0.9))
+        .border({
+          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: AppThemeVisuals.withAlpha(this.getPalette().borderColor, 0.4)
+        })
         .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.swatch)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+
+        Blank()
+
+        // 选中：accent 实底圆 + ✓；未选中：空心圆（形状线索，不依赖颜色）
+        Row() {
+          if (this.selected) {
+            LucideIcon({
+              icon: AppIcon.CHECK,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+              color: this.getPalette().accentText
+            })
+          }
+        }
+        .width(DesignConstants.SPACING.LG_PLUS)
+        .height(DesignConstants.SPACING.LG_PLUS)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .backgroundColor(this.selected ? this.getPalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
+        .border(this.selected ? {
+          width: 0,
+          color: DesignConstants.COLOR.TRANSPARENT
+        } : {
+          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: AppThemeVisuals.withAlpha(this.getPalette().borderColor, 0.6)
+        })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
 
       Text(this.label)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        // 选中态底色是 accentMuted（淡底 + accent 描边），文字必须用 accent 本色
-        // （accentText 是 accent 亮实底上的反色前景，配淡底会不可读）
-        .fontColor(this.selected ?
-          this.getPalette().textAccentOnSoft :
-          this.getPalette().textSecondary)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.selected ? this.getPalette().textPrimary : this.getPalette().textSecondary)
+        .width('100%')
+        .textAlign(TextAlign.Start)
+        .margin({ top: DesignConstants.SPACING.SM })
     }
     .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.selected ?
-      this.getPalette().accentMuted :
-      DesignConstants.COLOR.TRANSPARENT)
+    .alignItems(HorizontalAlign.Start)
+    .padding(DesignConstants.SPACING.MD2)
     .border({
-      width: this.selected ? DesignConstants.BORDER_WIDTH.HAIRLINE : 0,
-      color: this.getPalette().accentBackground
+      width: this.selected ? DesignConstants.BORDER_WIDTH.STRONG : DesignConstants.BORDER_WIDTH.HAIRLINE,
+      color: this.selected
+        ? this.getPalette().accentBackground
+        : AppThemeVisuals.withAlpha(this.getPalette().borderColor, 0.6)
     })
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .backgroundColor(this.selected
+      ? this.getPalette().surfaceIsland
+      : AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.70))
+    .shadow(this.selected ? this.getPalette().surfaceShadow : DesignConstants.SHADOW.SMALL)
+    // 触控热区：卡片视觉高度 ~61，外扩 responseRegion 不占布局
     .responseRegion({
       x: 0,
-      y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - 32) / 2,
+      y: 0,
       width: '100%',
       height: DesignConstants.LAYOUT.MIN_HIT_TARGET
     })
@@ -233,21 +301,20 @@ export struct SettingsEntryRow {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: DesignConstants.SPACING.XS }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.item.title)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+          // web forms/SettingRow：标题 text-sm(12)/500，描述 text-xs(11) mt-0.5
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.item.subtitle) {
-          // 单行 + 省略：分组列表里同组条目必须等高（若允许 2 行，长副标题会把该行
-          // 撑高一截，整组行高参差，并让行的点击热区中心偏移）
+          // 副标题允许两行：单行 + ellipsis 会把「消息、提及与新动态提醒（仅本机）」截成「（…」，
+          // 括号只露一半比直接断行更难看（2026-10-21 端上走查）。
           Text(this.item.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
             .fontColor(this.getPalette().textSecondary)
-            // 副标题允许两行：单行 + ellipsis 会把「消息、提及与新动态提醒（仅本机）」截成「（…」，
-            // 括号只露一半比直接断行更难看（2026-10-21 端上走查）。
             .maxLines(2)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
@@ -255,17 +322,20 @@ export struct SettingsEntryRow {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start)
 
-      SurfaceIconButton({
+      // web SettingRow 右侧为纯 chevron 图标（无按钮外壳；整行点击由行本身承载）
+      LucideIcon({
         icon: AppIcon.ARROW_RIGHT,
-        accessibilityLabel: this.item.title,
-        kind: 'neutral',
-        buttonSize: 28,
-        glyphSize: 14,
-        onPress: this.item.action
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getPalette().textSecondary
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
     // 行只保留按压填充：分组外框与行间分隔线由 SettingsSectionCard（ListGroup 契约）承担。
     // 原为行级白卡背景 + 圆角（getListItemCardStyle），导致「一行一张浮卡」。
     .backgroundColor(this.isPressed ? this.getPalette().surfaceSubtle : DesignConstants.COLOR.TRANSPARENT)
@@ -307,9 +377,10 @@ export struct SettingsGroupLabel {
 
   build() {
     Column({ space: 0 }) {
+      // web SettingsSection：<h2 class="text-md font-semibold"> + <p class="mt-1 text-xs leading-relaxed">
       Text(this.label)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
         .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
         .fontColor(this.getPalette().textPrimary)
         .width('100%')
@@ -324,10 +395,11 @@ export struct SettingsGroupLabel {
     }
     .alignItems(HorizontalAlign.Start)
     .width('100%')
-    // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供
+    // 分组标题与分组卡左边缘严格对齐：横向留白只由容器 gutter 提供；
+    // 上下留白 = 标题→卡 12（web mb-3），区块间距由页面 getSectionMargin 统一承担。
     .padding({
-      top: DesignConstants.SPACING.MD,
-      bottom: DesignConstants.SPACING.SM
+      top: 0,
+      bottom: DesignConstants.SPACING.MD
     })
   }
 }
@@ -367,17 +439,17 @@ export struct SettingsToggleRow {
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: DesignConstants.SPACING.XS }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.title)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+          // 与 SettingsEntryRow 同栅格（web SettingRow：text-sm/500 + text-xs/11）
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.getPalette().textPrimary)
         if (this.subtitle) {
-          // 与 SettingsEntryRow 同契约：分组内条目等高，副标题单行省略
           Text(this.subtitle)
             .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
             .fontColor(this.getPalette().textSecondary)
             // 与 SettingsEntryRow 一致：副标题允许两行，避免「（仅本机）」这类括号被截成「（…」
             .maxLines(2)
@@ -396,7 +468,12 @@ export struct SettingsToggleRow {
       })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
     // 同 SettingsEntryRow：行不再自带卡片背景/圆角，容器（SettingsSectionCard）承担分组框
     .onClick(() => {
       if (!this.pending) {
@@ -1043,3 +1120,169 @@ export struct RelationshipListSection {
     .padding(DesignConstants.SPACING.LG)
   }
 }
+/**
+ * 设置「选择器行」——图标 + 标题/描述 + 全宽控件（对齐 web settings/SettingsControlRow.svelte 的 R13 口径）。
+ * 主题 / 外观模式这类分段控件必须给整行宽度：放在窄列里标签会被压成一字。
+ * 开关类行仍用 SettingsToggleRow（控件贴右、拇指可达），两类行的图标/标题/描述栅格一致。
+ */
+@Component
+export struct SettingsControlRow {
+  @Prop icon: AppIcon = AppIcon.SETTINGS;
+  @Prop title: string = '';
+  @Prop description: string = '';
+  @BuilderParam control: () => void;
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  build() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Row() {
+          LucideIcon({
+            icon: this.icon,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.getPalette().textAccentOnSoft
+          })
+        }
+        .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().accentMuted)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+
+        Column({ space: DesignConstants.SPACING.HALF }) {
+          Text(this.title)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getPalette().textPrimary)
+          if (this.description.length > 0) {
+            Text(this.description)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
+              .fontColor(this.getPalette().textSecondary)
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Column() {
+        this.control()
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    // web ListItem px-4 py-3.5（16 / 14）
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
+  }
+}
+
+/**
+ * 外观模式三选卡（跟随系统 / 浅色 / 深色）——对齐 web AppearanceSection 的 3 张 tile：
+ * 图标容器 24 圆角 12 + 右侧选中环/✓ + 名称 11/600；选中 = island 底 + 2px accent 环。
+ */
+@Component
+export struct SettingsAppearanceOptionTile {
+  @Prop icon: AppIcon = AppIcon.MOON;
+  @Prop label: string = '';
+  @Prop selected: boolean = false;
+  onSelect: () => void = () => {};
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
+  }
+
+  build() {
+    Column() {
+      Row() {
+        Row() {
+          LucideIcon({
+            icon: this.icon,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.selected ? this.getPalette().accentBackground : this.getPalette().textSecondary
+          })
+        }
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
+        .borderRadius(DesignConstants.RADIUS.SM)
+        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceBackground, 0.9))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+
+        Blank()
+
+        Row() {
+          if (this.selected) {
+            LucideIcon({
+              icon: AppIcon.CHECK,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+              color: this.getPalette().accentText
+            })
+          }
+        }
+        .width(DesignConstants.SPACING.LG_PLUS)
+        .height(DesignConstants.SPACING.LG_PLUS)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
+        .backgroundColor(this.selected ? this.getPalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
+        .border(this.selected ? {
+          width: 0,
+          color: DesignConstants.COLOR.TRANSPARENT
+        } : {
+          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: AppThemeVisuals.withAlpha(this.getPalette().borderColor, 0.6)
+        })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      Text(this.label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.selected ? this.getPalette().textPrimary : this.getPalette().textSecondary)
+        .width('100%')
+        .textAlign(TextAlign.Start)
+        .margin({ top: DesignConstants.SPACING.SM })
+    }
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Start)
+    .padding(DesignConstants.SPACING.MD2)
+    .border({
+      width: this.selected ? DesignConstants.BORDER_WIDTH.STRONG : DesignConstants.BORDER_WIDTH.HAIRLINE,
+      color: this.selected
+        ? this.getPalette().accentBackground
+        : AppThemeVisuals.withAlpha(this.getPalette().borderColor, 0.6)
+    })
+    .borderRadius(DesignConstants.RADIUS.XL)
+    .backgroundColor(this.selected
+      ? this.getPalette().surfaceIsland
+      : AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.70))
+    .shadow(this.selected ? this.getPalette().surfaceShadow : DesignConstants.SHADOW.SMALL)
+    .responseRegion({
+      x: 0,
+      y: 0,
+      width: '100%',
+      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+    })
+    .onClick(() => { this.onSelect(); })
+  }
+}
+

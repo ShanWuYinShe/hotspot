@@ -24,7 +24,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { hasLetterAndDigit as hasLetterAndDigitShared, isValidNickname as isValidNicknameShared, isValidOptionalNickname as isValidOptionalNicknameShared, isPhoneOrEmailLoginId as isPhoneOrEmailLoginIdShared, isValidPassword as isValidPasswordShared } from '../../../core/utils/AccountValidation';
-import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { curves } from '@kit.ArkUI';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -258,44 +258,40 @@ export struct LoginPage {
           )
       } else {
         Column() {
-          // 顶部导航栏（固定）- 使用 SafeArea 避免与状态栏重叠
-          Row() {
-            // 返回钮：统一 lucide chevron-left + 按压缩放
+          // 顶部品牌行（对齐 web 移动端认证页：图片 logo 26 圆 + HotSpot 14/700；
+          // 返回钮保留：App 以 NavDestination 推入，必须有可预期返回入口）
+          Row({ space: DesignConstants.SPACING.MD }) {
             LucideIcon({
               icon: AppIcon.BACK,
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
               paletteRole: 'textPrimary'
             })
             .accessibilityText('返回')
-            .onClick(() => {
-              AppRouter.pop();
-            })
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
             .responseRegion({
               x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM) / 2,
               y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM) / 2,
               width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
               height: DesignConstants.LAYOUT.MIN_HIT_TARGET
             })
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-            .scale(this.isBackPressed ?
-              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-              { x: 1, y: 1 })
-            .animation({
-              curve: curves.springMotion(
-                DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-                DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-              )
-            })
-            .onTouch((event: TouchEvent) => {
-              if (event.type === TouchType.Down) {
-                this.isBackPressed = true;
-              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                this.isBackPressed = false;
-              }
-            })
+            .onClick(() => { AppRouter.pop(); })
 
             Blank()
+
+            Row({ space: DesignConstants.SPACING.SM2 }) {
+              Image($r('app.media.hotspot_logo'))
+                .width(DesignConstants.SPACING.XL + DesignConstants.SPACING.HALF)
+                .height(DesignConstants.SPACING.XL + DesignConstants.SPACING.HALF)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .objectFit(ImageFit.Cover)
+              Text('HotSpot')
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
+            }
+            .alignItems(VerticalAlign.Center)
           }
           .width('100%')
           .alignItems(VerticalAlign.Center)
@@ -305,130 +301,106 @@ export struct LoginPage {
             top: this.getHeaderTopPadding(),
             bottom: DesignConstants.SPACING.SM
           })
-          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
           .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP])
 
-          // 登录卡片容器（对齐前端 /login：400px 居中卡片 + 品牌区/表单/操作同卡）
-          Column() {
-          // 品牌区（对齐前端 /login 品牌契约：44 圆标 + eyebrow 品牌名 accent 色
-          // + 标语 2xl medium + 副文案 sm secondary）
-          Column({ space: DesignConstants.SPACING.SM }) {
-            Row() {
-              Image($r('app.media.foreground'))
-                .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                .objectFit(ImageFit.Contain)
-            }
-            .width(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .justifyContent(FlexAlign.Center)
-            .backgroundColor(this.getCurrentThemePalette().accentBackground)
-            .shadow(this.getCurrentThemePalette().surfaceShadow)
-
-            Text('热点')
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-              .fontColor(this.getCurrentThemePalette().accentBackground)
-              .textCase(TextCase.UpperCase)
-              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
-              .margin({ top: DesignConstants.SPACING.LG })
-
-            Text('回来看看附近的故事。')
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .letterSpacing(DesignConstants.FONT.LETTER_SPACING.TITLE)
-              .textAlign(TextAlign.Center)
-              .margin({ top: DesignConstants.SPACING.XS })
-
-            Text('使用手机号、邮箱或账号登录。')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .textAlign(TextAlign.Center)
-              .margin({ top: DesignConstants.SPACING.XS })
-          }
-          .width('100%')
-          .alignItems(HorizontalAlign.Center)
-          .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
-            bottom: DesignConstants.SPACING.LG })
-
-          // 模式切换标签（统一 TabsPillGroup）
-          TabsPillGroup({
-            variant: 'segmented',
-            // 胶囊填满分段槽：默认胶囊只包文字，在灰底轨道里显得偏小、像没垂直居中（录屏反馈）
-            pillFill: true,
-            tabs: [{ label: '登录' }, { label: '注册' }, { label: '访客' }],
-            activeIndex: Math.max(0, ['login', 'register', 'guest'].indexOf(this.loginMode)),
-            actions: {
-              onChange: (index: number) => {
-                const mode = ['login', 'register', 'guest'][index] || 'login';
-                if (mode === 'login') {
-                  this.loginMode = 'login';
-                  this.registerNickname = '';
-                  this.registerLoginId = '';
-                  this.registerPassword = '';
-                  this.registerPasswordConfirm = '';
-                  this.resetRegisterCodeState();
-                } else if (mode === 'register') {
-                  this.loginMode = 'register';
-                  this.loginId = '';
-                  this.password = '';
-                } else {
-                  this.loginMode = 'guest';
-                  this.loginId = '';
-                  this.password = '';
-                  this.registerNickname = '';
-                  this.registerLoginId = '';
-                  this.registerPassword = '';
-                  this.registerPasswordConfirm = '';
-                  this.resetRegisterCodeState();
-                }
-              }
-            }
-          })
-            .margin({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL })
-
-          // 表单区域（可滚动，凸起卡片包裹）
           Scroll() {
             Column() {
+              // 居中认证卡（web：surface-primary 底 + 20 圆角 + 阴影 + p-6；移动端单列）
               Column() {
-                if (this.loginMode === 'login') {
-                  this.buildLoginForm()
-                } else if (this.loginMode === 'register') {
-                  this.buildRegisterForm()
-                } else {
-                  this.buildGuestForm()
+                Text(this.getModeEyebrow())
+                  .fontSize(DesignConstants.FONT.SIZE.XS2)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+                  .textCase(TextCase.UpperCase)
+                  .fontColor(this.getCurrentThemePalette().accentBackground)
+                  .width('100%')
+                  .textAlign(TextAlign.Start)
+
+                Text(this.getModeTitle())
+                  .fontSize(DesignConstants.FONT.SIZE.XXL)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.TITLE)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                  .width('100%')
+                  .textAlign(TextAlign.Start)
+                  .margin({ top: DesignConstants.SPACING.SM2 })
+
+                Text(this.getModeSubtitle())
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .width('100%')
+                  .textAlign(TextAlign.Start)
+                  .margin({ top: DesignConstants.SPACING.SM2 })
+
+                // 登录 / 注册 / 访客 三态切换（segmented）
+                TabsPillGroup({
+                  variant: 'segmented',
+                  pillFill: true,
+                  tabs: [{ label: '登录' }, { label: '注册' }, { label: '访客' }],
+                  activeIndex: Math.max(0, ['login', 'register', 'guest'].indexOf(this.loginMode)),
+                  actions: {
+                    onChange: (index: number) => {
+                      const mode = ['login', 'register', 'guest'][index] || 'login';
+                      this.switchLoginMode(mode === 'register' ? 'register' : (mode === 'guest' ? 'guest' : 'login'));
+                    }
+                  }
+                })
+                  .margin({ top: DesignConstants.SPACING.LG2 })
+
+                // 表单（不再套第二层卡片：web 表单直接排在卡片内）
+                Column() {
+                  if (this.loginMode === 'login') {
+                    this.buildLoginForm()
+                  } else if (this.loginMode === 'register') {
+                    this.buildRegisterForm()
+                  } else {
+                    this.buildGuestForm()
+                  }
                 }
+                .width('100%')
+                .margin({ top: DesignConstants.SPACING.LG })
+
+                // 次要链接组（web 登录页：注册新账号 / 忘记密码 / 访客模式；本端无找回密码流程，不展示死链）
+                this.buildModeLinks()
               }
               .width('100%')
-              .padding(DesignConstants.SPACING.LG)
+              .constraintSize({ maxWidth: DesignConstants.LAYOUT.LOGIN_CARD_MAX_WIDTH })
+              // 320vp 逻辑宽机型上 web p-6 会把 24vp 标题逼成两行；横向收到 16、纵向保留 20
+              .padding({
+                left: DesignConstants.SPACING.LG,
+                right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.LG2,
+                bottom: DesignConstants.SPACING.LG2
+              })
               .backgroundColor(this.getSurfaceBackground())
               .borderRadius(DesignConstants.RADIUS.LG)
               .shadow(this.getCurrentThemePalette().surfaceShadow)
-              .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-              .margin({ bottom: DesignConstants.SPACING.LG })
+
+              // 卡片外页脚标语（web 移动端：让附近有温度 · 随时可以退出）
+              Text('让附近有温度 · 随时可以退出')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+                .textAlign(TextAlign.Center)
+                .width('100%')
+                .margin({ top: DesignConstants.SPACING.LG2 })
             }
             .width('100%')
-            .padding({ left: DesignConstants.SPACING.XXL, right: DesignConstants.SPACING.XXL,
-              top: DesignConstants.SPACING.XL,
-              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, 0) })
+            .alignItems(HorizontalAlign.Center)
+            .padding({
+              left: DesignConstants.SPACING.LG2,
+              right: DesignConstants.SPACING.LG2,
+              top: DesignConstants.SPACING.MD,
+              bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XL, DesignConstants.SPACING.LG)
+            })
           }
-          .align(Alignment.Top)
-          .layoutWeight(1)
-          .scrollBar(BarState.Off)
-          }
-          // 登录卡片样式：400vp 居中卡片 + 描边 + 圆角 + 表面色（对齐前端 /login max-w-100 卡片契约）
           .width('100%')
-          .constraintSize({ maxWidth: DesignConstants.LAYOUT.LOGIN_CARD_MAX_WIDTH })
-          .alignItems(HorizontalAlign.Center)
-          .padding(DesignConstants.SPACING.LG)
-          .backgroundColor(this.getSurfaceBackground())
-          .borderRadius(DesignConstants.RADIUS.LG)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-          .shadow(this.getCurrentThemePalette().surfaceShadow)
+          .layoutWeight(1)
+          .align(Alignment.Top)
+          .scrollBar(BarState.Off)
         }
           .width('100%')
           .height('100%')
@@ -470,6 +442,102 @@ export struct LoginPage {
         }
       }
     })
+  }
+
+  /** 切换登录/注册/访客（分段器与次要链接共用；切模式时清空另一模式输入，避免脏值串用） */
+  private switchLoginMode(mode: 'login' | 'register' | 'guest'): void {
+    if (mode === this.loginMode) {
+      return;
+    }
+    if (mode === 'login') {
+      this.loginMode = 'login';
+      this.registerNickname = '';
+      this.registerLoginId = '';
+      this.registerPassword = '';
+      this.registerPasswordConfirm = '';
+      this.resetRegisterCodeState();
+    } else if (mode === 'register') {
+      this.loginMode = 'register';
+      this.loginId = '';
+      this.password = '';
+    } else {
+      this.loginMode = 'guest';
+      this.loginId = '';
+      this.password = '';
+      this.registerNickname = '';
+      this.registerLoginId = '';
+      this.registerPassword = '';
+      this.registerPasswordConfirm = '';
+      this.resetRegisterCodeState();
+    }
+  }
+
+  private getModeEyebrow(): string {
+    if (this.loginMode === 'register') {
+      return '加入 HotSpot';
+    }
+    if (this.loginMode === 'guest') {
+      return '访客模式';
+    }
+    return '欢迎回来';
+  }
+
+  private getModeTitle(): string {
+    if (this.loginMode === 'register') {
+      return '创建账号，探索附近。';
+    }
+    if (this.loginMode === 'guest') {
+      return '以访客身份逛逛附近的故事。';
+    }
+    return '回来看看附近的故事。';
+  }
+
+  private getModeSubtitle(): string {
+    if (this.loginMode === 'register') {
+      return '一个账号即可发现周边的人、群组与故事。';
+    }
+    if (this.loginMode === 'guest') {
+      return '免注册进入，随时可以绑定账号。';
+    }
+    return '使用手机号、邮箱或账号登录。';
+  }
+
+  /** 次要链接（web 登录页链接行；无找回密码流程，只保留可用的模式切换入口） */
+  @Builder
+  private buildModeLinks() {
+    Row({ space: DesignConstants.SPACING.MD3 }) {
+      if (this.loginMode !== 'login') {
+        Text('返回登录')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .onClick(() => { this.switchLoginMode('login'); })
+      }
+      if (this.loginMode === 'login') {
+        Text('注册新账号')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .onClick(() => { this.switchLoginMode('register'); })
+      }
+      if (this.loginMode !== 'guest') {
+        Text('访客模式')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().accentBackground)
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .onClick(() => { this.switchLoginMode('guest'); })
+      }
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .margin({ top: DesignConstants.SPACING.MD2 })
   }
 
   @Builder
@@ -724,7 +792,7 @@ export struct LoginPage {
       }
 
       SystemButton({
-        label: '注册',
+        label: '注册并登录',
         variant: 'primary',
         buttonSize: 'large',
         fullWidth: true,
@@ -754,9 +822,8 @@ export struct LoginPage {
         .fontColor(this.getCurrentThemePalette().textSecondary)
         .width('100%')
         .padding(DesignConstants.SPACING.MD)
-        .backgroundColor(this.getSurfaceBackground())
+        .backgroundColor(this.getSurfaceSubtle())
         .borderRadius(DesignConstants.RADIUS.LG)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
 
       SystemInput({
         value: this.guestNickname,
@@ -785,7 +852,7 @@ export struct LoginPage {
       }
 
       SystemButton({
-        label: '访客登录',
+        label: '以访客身份继续',
         variant: 'primary',
         buttonSize: 'large',
         fullWidth: true,

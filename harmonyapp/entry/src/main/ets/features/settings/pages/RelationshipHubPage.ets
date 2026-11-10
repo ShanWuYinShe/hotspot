@@ -129,12 +129,12 @@ export struct RelationshipHubPage {
     NavDestination() {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
-        // 头部 —— 标题 24pt + 计数 trailing（对齐前端 RelationshipsPage：
-        // titleSize 2xl + trailing「N 人」当前区计数）
+        // 头部 —— 标题 18/600 + 计数 trailing（对齐前端 RelationshipsPage 移动端
+        // integrated 页头 18/600 + trailing「N 人」当前区计数）
         SystemPageHeader({
           title: '关系',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         }) {

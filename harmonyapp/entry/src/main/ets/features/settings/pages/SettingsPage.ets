@@ -2,7 +2,7 @@ import { GlobalStateManager, KEY_CLIENT_CONFIG, KEY_CURRENT_USER, KEY_IS_LOGGED_
 import { curves } from '@kit.ArkUI';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
-import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
 import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
@@ -13,7 +13,6 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemAvatar } from '../../../components/SystemAvatar';
-import { SystemButton } from '../../../components/SystemButton';
 import { SystemDialog } from '../../../components/SystemDialog';
 import { RefreshIndicator } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -26,10 +25,11 @@ import { HttpUtil } from '../../../core/network/HttpUtil';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import {
   AnnouncementSummaryCard,
+  SettingsAppearanceOptionTile,
+  SettingsControlRow,
   SettingsEntryItem,
   SettingsEntryRow,
   SettingsGroupLabel,
-  SettingsMetaCard,
   SettingsRowDivider,
   SettingsSectionCard,
   SettingsThemeSegmentCard,
@@ -37,7 +37,6 @@ import {
   SupportConfigCard
 } from './SettingsSupport';
 import { AppIcon } from '../../../components/SystemIcon';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { common, bundleManager } from '@kit.AbilityKit';
@@ -243,27 +242,6 @@ export struct SettingsPage {
   private async togglePushNotify(next: boolean): Promise<void> {
     this.pushNotifyEnabled = next;
     await PreferencesUtil.set(SettingsPage.KEY_PUSH_NOTIFY, next);
-  }
-
-  /** 明暗三档单通道：偏好经 AppThemeManager 持久化 + 重解主题，再按档位 setColorMode */
-  private getDarkModeIndex(): number {
-    if (this.darkModePreference === 'light') {
-      return 1;
-    }
-    if (this.darkModePreference === 'dark') {
-      return 2;
-    }
-    return 0;
-  }
-
-  private darkModeFromIndex(index: number): DarkModePreference {
-    if (index === 1) {
-      return 'light';
-    }
-    if (index === 2) {
-      return 'dark';
-    }
-    return 'auto';
   }
 
   private async handleDarkModeChange(pref: DarkModePreference): Promise<void> {
@@ -510,82 +488,6 @@ export struct SettingsPage {
     };
   }
 
-  // ==================== 用户卡（对齐前端 settings 顶部 hero 用户卡） ====================
-  // currentUser 判空走可选链：登出等场景下 currentUser 先于 isLoggedIn 置空，
-  // 脏更新窗口内 if 守卫尚未重算，直接属性访问会崩（faultlogger jscrash 实录）
-  @Builder
-  private buildUserCard() {
-    if (this.isLoggedIn && this.currentUser) {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          decorative: true,
-          avatarUrl: this.currentUser?.avatar_url ?? '',
-          name: this.currentUser?.nickname ?? '',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS
-        })
-
-        Column({ space: DesignConstants.SPACING.THREE }) {
-          Text(this.currentUser?.nickname ?? '未命名用户')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-          Text(this.currentUser?.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-        }
-        .layoutWeight(1)
-        .alignItems(HorizontalAlign.Start)
-
-        LucideIcon({
-            icon: AppIcon.ARROW_RIGHT,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-            color: this.getCurrentThemePalette().textSecondary
-          })
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.LG)
-      // r3 软岛：无描边 + 85% surface 底 + 圆角 20（顶部用户卡）
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
-      .shadow(this.getCurrentThemePalette().surfaceShadow)
-      .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-      .onClick(() => this.openProfile())
-    } else {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        Text('登录后同步你的设置与资料')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-          .fontColor(this.getCurrentThemePalette().textSecondary)
-          .layoutWeight(1)
-
-        SystemButton({
-          label: '登录',
-          variant: 'primary',
-          buttonSize: 'small',
-          onPress: () => {
-            const loginParams = new LoginRouteParam();
-            loginParams.reason = 'action_required';
-            loginParams.action = '登录';
-            AppRouter.push(PageNames.LOGIN, loginParams);
-          }
-        })
-      }
-      .width('100%')
-      .padding(DesignConstants.SPACING.LG)
-      // r3 软岛：登录提示卡同语言
-      .borderRadius(DesignConstants.SHAPE.CARD)
-      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
-      .shadow(this.getCurrentThemePalette().surfaceShadow)
-      .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
-    }
-  }
-
   // ==================== 主题分段卡（对齐前端主题三选一：星际 / 清野 / 水墨） ====================
   // 独立组件 SettingsThemeSegmentCard（@Builder 经 @BuilderParam 跨组件渲染时
   // onClick 丢失，见 SettingsSupport 内组件注释）；三卡各 layoutWeight(1) 横向均分
@@ -594,14 +496,288 @@ export struct SettingsPage {
     return this.themeMode === 'follow_system' ? ['vibrant'] : [this.themeMode];
   }
 
+  /** 应用主题行说明：web「选择全局视觉色彩风格 · <主题 note>」 */
+  private getThemeNote(): string {
+    const match = AppThemeManager.getThemeOptions().find((item: ThemeOptionItem) => item.mode === this.themeMode);
+    return '选择全局视觉色彩风格' + (match && match.description.length > 0 ? ' · ' + match.description : '');
+  }
+
+  /** 外观模式行说明（对齐 web colorSchemeDesc） */
+  private getDarkModeDescription(): string {
+    if (this.darkModePreference === 'auto') {
+      return '跟随系统外观';
+    }
+    return this.darkModePreference === 'dark' ? '当前使用深色外观' : '当前使用浅色外观';
+  }
+
+  /** 外观模式行图标：深色用月亮，其余用同步/亮色语义 */
+  private getDarkModeIcon(): AppIcon {
+    return this.darkModePreference === 'dark' ? AppIcon.MOON : AppIcon.SYNC;
+  }
+
+  // ==================== 账号信息行（对齐 web settings 账号卡） ====================
+  @Builder
+  private buildAccountRow() {
+    Row({ space: DesignConstants.SPACING.MD3 }) {
+      SystemAvatar({
+        decorative: true,
+        avatarUrl: this.currentUser?.avatar_url ?? '',
+        name: this.currentUser?.nickname ?? '',
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL
+      })
+
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          Text(this.currentUser?.nickname ?? '未命名用户')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          // 「已登录」accent 实底 pill（web Badge tone=solid）
+          Text('已登录')
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getCurrentThemePalette().accentText)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .padding({
+              left: DesignConstants.SPACING.SM,
+              right: DesignConstants.SPACING.SM,
+              top: DesignConstants.SPACING.HALF,
+              bottom: DesignConstants.SPACING.HALF
+            })
+        }
+        .alignItems(VerticalAlign.Center)
+
+        Text(this.currentUser?.email || (this.userType === 'temp' ? '游客身份 · 未绑定邮箱' : '未绑定邮箱'))
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+      }
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
+
+      Text('编辑资料')
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .maxLines(1)
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
+    .onClick(() => this.openProfile())
+  }
+
+  // ==================== 外观与显示：主题三选卡 + 明暗三档（web AppearanceSection） ====================
+  @Builder
+  private buildThemeCards() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      SettingsThemeSegmentCard({
+        mode: 'vibrant',
+        label: '星际',
+        swatch: ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground,
+        selected: this.getActiveSegmentModes().indexOf('vibrant') >= 0,
+        onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+      })
+      SettingsThemeSegmentCard({
+        mode: 'default_clean',
+        label: '清野',
+        swatch: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground,
+        selected: this.getActiveSegmentModes().indexOf('default_clean') >= 0,
+        onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+      })
+      SettingsThemeSegmentCard({
+        mode: 'inkwash',
+        label: '水墨',
+        swatch: ThemeConstants.INKWASH_LIGHT_COLORS.accentBackground,
+        selected: this.getActiveSegmentModes().indexOf('inkwash') >= 0,
+        onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
+      })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+  }
+
+  @Builder
+  private buildAppearanceTiles() {
+    Row({ space: DesignConstants.SPACING.SM }) {
+      SettingsAppearanceOptionTile({
+        icon: AppIcon.SYNC,
+        label: '跟随系统',
+        selected: this.darkModePreference === 'auto',
+        onSelect: () => { this.handleDarkModeChange('auto').catch(() => {
+          SystemToast.showError('切换明暗模式失败', this.getUIContext());
+        }); }
+      })
+      SettingsAppearanceOptionTile({
+        icon: AppIcon.SPARKLES,
+        label: '浅色',
+        selected: this.darkModePreference === 'light',
+        onSelect: () => { this.handleDarkModeChange('light').catch(() => {
+          SystemToast.showError('切换明暗模式失败', this.getUIContext());
+        }); }
+      })
+      SettingsAppearanceOptionTile({
+        icon: AppIcon.MOON,
+        label: '深色',
+        selected: this.darkModePreference === 'dark',
+        onSelect: () => { this.handleDarkModeChange('dark').catch(() => {
+          SystemToast.showError('切换明暗模式失败', this.getUIContext());
+        }); }
+      })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Top)
+  }
+
+  // ==================== 系统与关于卡（对齐 web AboutSection） ====================
+  @Builder
+  private buildSystemAboutCard() {
+    Column() {
+      // 关于卡头
+      Row({ space: DesignConstants.SPACING.MD }) {
+        Row() {
+          LucideIcon({
+            icon: AppIcon.INFO,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            paletteRole: 'accent'
+          })
+        }
+        .width(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
+        .height(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
+        .justifyContent(FlexAlign.Center)
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text('关于 HotSpot')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
+          Text('基于地理位置的实时社交与社区发现应用')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .maxLines(2)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .layoutWeight(1)
+
+        Text(this.appVersionName || '…')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
+          .borderRadius(DesignConstants.SHAPE.CHIP)
+          .padding({
+            left: DesignConstants.SPACING.SM,
+            right: DesignConstants.SPACING.SM,
+            top: DesignConstants.SPACING.HALF,
+            bottom: DesignConstants.SPACING.HALF
+          })
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      .padding(DesignConstants.SPACING.LG)
+
+      SettingsRowDivider()
+
+      // 服务端状态行（原 SettingsMetaCard 的大标题卡降为行）
+      SettingsEntryRow({ item: {
+        icon: AppIcon.REFRESH,
+        title: '服务端状态',
+        subtitle: this.systemMeta === null
+          ? (this.systemMetaLoading ? '检查中…' : '未获取')
+          : (this.getServerStatusText() + ' · ' + (this.appVersionName ? 'v' + this.appVersionName : '')),
+        action: () => {
+          this.loadSystemMeta(true);
+          this.loadAnnouncements(true);
+        }
+      } })
+      SettingsRowDivider()
+      // 系统公告（复用公告页卡片，保留「全部查看」入口）
+      AnnouncementSummaryCard({
+        items: this.announcements,
+        embedded: true,
+        openAll: () => {
+          const params = new AnnouncementsRouteParam();
+          params.items = this.announcements as Object[];
+          AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+        }
+      })
+      SettingsRowDivider()
+      SupportConfigCard({ config: this.clientConfig, embedded: true })
+    }
+  }
+
+  /** 退出登录行（对齐 web AboutSection 的静默 danger-soft 行） */
+  @Builder
+  private buildLogoutRow() {
+    Row() {
+      Button() {
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          LucideIcon({
+            icon: AppIcon.BACK,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getCurrentThemePalette().error
+          })
+          Text('退出登录当前账号')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontColor(this.getCurrentThemePalette().error)
+        }
+        .alignItems(VerticalAlign.Center)
+      }
+      .type(ButtonType.Normal)
+      .height('auto')
+      // r3 danger zone 安静化：danger 软填底、无描边
+      .backgroundColor(this.getCurrentThemePalette().dangerSoft)
+      .borderRadius(DesignConstants.SHAPE.BUTTON)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
+      })
+      .onClick(() => { this.showLogoutConfirm = true; })
+    }
+    .width('100%')
+    .justifyContent(FlexAlign.End)
+    .padding({
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
+  }
+
   build() {
     NavDestination() {
       Stack() {
       Column() {
         SystemPageHeader({
           title: '设置',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 对齐 web /settings（integrated 移动端页头 18/600）+ 页内副标题说明
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
+          subtitle: '管理你的账号偏好、主题外观与系统选项',
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })
@@ -610,10 +786,21 @@ export struct SettingsPage {
           Scroll() {
             PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
               Column() {
-                // === 用户卡 ===
-                this.buildUserCard()
+                // === 账号信息（web settings：仅登录态显示，标题+说明在卡外） ===
+                if (this.isLoggedIn && this.currentUser) {
+                  SettingsGroupLabel({
+                    label: '账号信息',
+                    description: '当前登录的账号信息与个人主页入口'
+                  })
+                  Column() {
+                    SettingsSectionCard() {
+                      this.buildAccountRow()
+                    }
+                  }
+                  .padding(this.getSectionMargin(0))
+                }
 
-                // === 外观 ===
+                // === 外观与显示（web AppearanceSection：主题三选卡 + 明暗三档） ===
                 SettingsGroupLabel({
                   label: '外观与显示',
                   description: '自定义界面的视觉色彩与深浅模式，全局即时生效'
@@ -621,97 +808,24 @@ export struct SettingsPage {
                 Column() {
                   SettingsSectionCard() {
                     Column() {
-                      Row({ space: DesignConstants.SPACING.SM }) {
-                        SettingsThemeSegmentCard({
-                          mode: 'vibrant',
-                          label: '星际',
-                          swatch: ThemeConstants.VIBRANT_LIGHT_COLORS.accentBackground,
-                          selected: this.getActiveSegmentModes().indexOf('vibrant') >= 0,
-                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
-                        })
-                        SettingsThemeSegmentCard({
-                          mode: 'default_clean',
-                          label: '清野',
-                          swatch: ThemeConstants.DEFAULT_CLEAN_LIGHT_COLORS.accentBackground,
-                          selected: this.getActiveSegmentModes().indexOf('default_clean') >= 0,
-                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
-                        })
-                        SettingsThemeSegmentCard({
-                          mode: 'inkwash',
-                          label: '水墨',
-                          swatch: ThemeConstants.INKWASH_LIGHT_COLORS.accentBackground,
-                          selected: this.getActiveSegmentModes().indexOf('inkwash') >= 0,
-                          onSelect: (mode: string) => { this.handleThemeChange(mode as ThemeMode); }
-                        })
+                      SettingsControlRow({
+                        icon: AppIcon.PALETTE,
+                        title: '应用主题',
+                        description: this.getThemeNote()
+                      }) {
+                        this.buildThemeCards()
                       }
-                      .width('100%')
-                      .padding({
-                        left: DesignConstants.SPACING.LG,
-                        right: DesignConstants.SPACING.LG,
-                        top: DesignConstants.SPACING.MD,
-                        bottom: DesignConstants.SPACING.SM
-                      })
-                      SettingsRowDivider()
-                      // 明暗三档（跟随系统/浅色/深色 → setColorMode NOT_SET/LIGHT/DARK，走 TabsPillGroup 原语）
-                      Column({ space: DesignConstants.SPACING.SM }) {
-                        Row({ space: DesignConstants.SPACING.MD }) {
-                          Row() {
-                            LucideIcon({
-                              icon: AppIcon.MOON,
-                              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                              color: this.getCurrentThemePalette().textAccentOnSoft
-                            })
-                          }
-                          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-                          .borderRadius(DesignConstants.RADIUS.FULL)
-                          .backgroundColor(this.getCurrentThemePalette().accentMuted)
-                          .justifyContent(FlexAlign.Center)
-                          .alignItems(VerticalAlign.Center)
-
-                          Column({ space: DesignConstants.SPACING.XS }) {
-                            Text('明暗模式')
-                              .fontSize(DesignConstants.FONT.SIZE.MD)
-                              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-                              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                              .fontColor(this.getCurrentThemePalette().textPrimary)
-                            Text('浅色/深色手动锁定，或跟随系统')
-                              .fontSize(DesignConstants.FONT.SIZE.XS)
-                              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                              .fontColor(this.getCurrentThemePalette().textSecondary)
-                              .maxLines(2)
-                              .textOverflow({ overflow: TextOverflow.Ellipsis })
-                          }
-                          .layoutWeight(1)
-                          .alignItems(HorizontalAlign.Start)
-                        }
-                        .width('100%')
-
-                        TabsPillGroup({
-                          variant: 'segmented',
-                          tabs: [{ label: '跟随系统' }, { label: '浅色' }, { label: '深色' }],
-                          activeIndex: this.getDarkModeIndex(),
-                          actions: {
-                            onChange: (index: number) => {
-                              this.handleDarkModeChange(this.darkModeFromIndex(index)).catch(() => {
-                                SystemToast.showError('切换明暗模式失败', this.getUIContext());
-                              });
-                            }
-                          }
-                        })
+                      SettingsControlRow({
+                        icon: this.getDarkModeIcon(),
+                        title: '外观模式',
+                        description: this.getDarkModeDescription()
+                      }) {
+                        this.buildAppearanceTiles()
                       }
-                      .width('100%')
-                      .padding({
-                        left: DesignConstants.SPACING.LG,
-                        right: DesignConstants.SPACING.LG,
-                        top: DesignConstants.SPACING.MD,
-                        bottom: DesignConstants.SPACING.MD
-                      })
                       SettingsRowDivider()
+                      // 大图预览面板作为补充入口保留（web 无对应；主题三选卡已直接露出）
                       SettingsEntryRow({ item: {
                         icon: AppIcon.STAR_FILL,
-                        // 该入口打开的是**大图预览**选主题的面板，而不是"还有更多主题"（主题共 3 套 + 跟随系统）；
-                        // 「更多外观模式」会让人以为有未展示的主题，改成如实的「主题预览」。
                         title: '主题预览',
                         subtitle: '大图预览后选择 · 跟随系统 / 星际 / 清野 / 水墨',
                         action: () => { this.showThemeSheet = true; }
@@ -721,7 +835,19 @@ export struct SettingsPage {
                 }
                 .padding(this.getSectionMargin(0))
 
-                // === 通知 ===
+                // === 系统与关于（web AboutSection；移动端顺序在外观之后） ===
+                SettingsGroupLabel({
+                  label: '系统与关于',
+                  description: '客户端版本及当前设备会话状态。'
+                })
+                Column() {
+                  SettingsSectionCard() {
+                    this.buildSystemAboutCard()
+                  }
+                }
+                .padding(this.getSectionMargin(0))
+
+                // === 通知偏好 ===
                 SettingsGroupLabel({
                   label: '通知偏好',
                   description: '管理新消息、互动提及与关注动态的系统提醒方式'
@@ -791,25 +917,22 @@ export struct SettingsPage {
                         }
                         SettingsEntryRow({ item })
                       }, (item: SettingsEntryItem) => item.title)
-                      SettingsRowDivider()
-                      SettingsEntryRow({ item: this.buildSecurityEntry() })
                     }
                   }
                 }
                 .padding(this.getSectionMargin(0))
 
-                // === 通用 ===
+                // === 账号与安全（web：改密/设备；合并端侧账号管理/高级设置入口） ===
                 SettingsGroupLabel({
-                  label: '通用',
-                  description: '应用语言、缓存与设备级偏好设置'
+                  label: '账号与安全',
+                  description: '修改登录密码、管理活跃设备登录态，以及端侧账号与开发者选项。'
                 })
                 Column() {
                   SettingsSectionCard() {
                     Column() {
-                      ForEach(this.buildAccountEntries(), (item: SettingsEntryItem, index: number) => {
-                        if (index > 0) {
-                          SettingsRowDivider()
-                        }
+                      SettingsEntryRow({ item: this.buildSecurityEntry() })
+                      SettingsRowDivider()
+                      ForEach(this.buildAccountEntries(), (item: SettingsEntryItem) => {
                         SettingsEntryRow({ item })
                       }, (item: SettingsEntryItem) => item.title)
                       SettingsRowDivider()
@@ -819,107 +942,6 @@ export struct SettingsPage {
                         subtitle: '开发者选项、诊断与缓存工具',
                         action: () => AppRouter.push(PageNames.ADVANCED_SETTINGS)
                       } })
-                      SettingsRowDivider()
-                      SettingsEntryRow({ item: {
-                        icon: AppIcon.INFO,
-                        title: '关于',
-                        subtitle: this.appVersionName ? `版本 ${this.appVersionName}` : '版本信息加载中…',
-                        action: () => { this.loadSystemMeta(true); }
-                      } })
-                    }
-                  }
-                }
-                .padding(this.getSectionMargin(0))
-
-                // === 平台信息（本端补充运维卡，前端无对应分组） ===
-                SettingsGroupLabel({
-                  label: '系统与关于',
-                  description: '客户端版本及当前设备会话状态。'
-                })
-                // 对齐前端 Section 7「系统与关于」：一张关于卡（图标 + 名称/描述 + 版本徽标）
-                // + 卡内状态行，而不是「三张各自带 LG 大标题的子卡」——后者同页出现
-                // 两套区块标题（GroupLabel 是 text-sm semibold，子卡是 16/medium），
-                // 且卡中卡边界模糊。
-                Column() {
-                  SettingsSectionCard() {
-                    Column() {
-                      // 关于卡头
-                      Row({ space: DesignConstants.SPACING.MD }) {
-                        Row() {
-                          LucideIcon({
-                            icon: AppIcon.INFO,
-                            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                            paletteRole: 'accent'
-                          })
-                        }
-                        .width(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
-                        .height(DesignConstants.COMPONENT.ICON_SIZE_MD + DesignConstants.SPACING.MD)
-                        .borderRadius(DesignConstants.RADIUS.FULL)
-                        .backgroundColor(this.getCurrentThemePalette().surfaceSubtle)
-                        .justifyContent(FlexAlign.Center)
-
-                        Column({ space: DesignConstants.SPACING.XS }) {
-                          Text('关于 HotSpot')
-                            .fontSize(DesignConstants.FONT.SIZE.SM)
-                            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                            .fontColor(this.getCurrentThemePalette().textPrimary)
-                          Text('基于地理位置的实时社交与社区发现应用')
-                            .fontSize(DesignConstants.FONT.SIZE.XS)
-                            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                            .fontColor(this.getCurrentThemePalette().textSecondary)
-                            .maxLines(2)
-                            .textOverflow({ overflow: TextOverflow.Ellipsis })
-                        }
-                        .alignItems(HorizontalAlign.Start)
-                        .layoutWeight(1)
-
-                        Text(this.appVersionName || '…')
-                          .fontSize(DesignConstants.FONT.SIZE.XS)
-                          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                          .fontColor(this.getCurrentThemePalette().textSecondary)
-                          .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
-                          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-                          .borderRadius(DesignConstants.SHAPE.CHIP)
-                          .padding({
-                            left: DesignConstants.SPACING.SM,
-                            right: DesignConstants.SPACING.SM,
-                            top: DesignConstants.SPACING.HALF,
-                            bottom: DesignConstants.SPACING.HALF
-                          })
-                      }
-                      .width('100%')
-                      .alignItems(VerticalAlign.Center)
-                      .padding(DesignConstants.SPACING.LG)
-
-                      SettingsRowDivider()
-
-                      // 服务端状态行（原 SettingsMetaCard 的大标题卡降为行）
-                      SettingsEntryRow({ item: {
-                        icon: AppIcon.REFRESH,
-                        title: '服务端状态',
-                        subtitle: this.systemMeta === null
-                          ? (this.systemMetaLoading ? '检查中…' : '未获取')
-                          : `${this.getServerStatusText()} · ${this.appVersionName ? 'v' + this.appVersionName : ''}`,
-                        action: () => {
-                          this.loadSystemMeta(true);
-                          this.loadAnnouncements(true);
-                        }
-                      } })
-                      SettingsRowDivider()
-                      // 系统公告（复用公告页卡片，保留「全部查看」入口）
-                      AnnouncementSummaryCard({
-                        items: this.announcements,
-                        embedded: true,
-                        openAll: () => {
-                          const params = new AnnouncementsRouteParam();
-                          params.items = this.announcements as Object[];
-                          AppRouter.push(PageNames.ANNOUNCEMENTS, params);
-                        }
-                      })
-                      SettingsRowDivider()
-                      SupportConfigCard({ config: this.clientConfig, embedded: true })
                     }
                   }
                 }
@@ -965,6 +987,8 @@ export struct SettingsPage {
                 }
               }
               .width('100%')
+              // 页头与首个分区标题 12（web：header 底 64 → 账号信息标题 76）
+              .padding({ top: DesignConstants.SPACING.MD })
             }
           }
           .edgeEffect(EdgeEffect.None)

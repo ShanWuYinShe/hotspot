@@ -27,7 +27,6 @@ import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
-import { LoginPromptView } from '../../../components/LoginPromptView';
 import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
@@ -50,6 +49,8 @@ import { ListGroup } from '../../../components/ListGroup';
 import { ProfileMenuItem } from '../components/ProfileContentAtoms';
 import { ProfileDataSection } from '../components/ProfileDataSection';
 import { ProfileIdentityCard } from '../components/ProfileIdentityCard';
+import { ProfileGuestView } from '../components/ProfileGuestView';
+import { ProfileCompletenessCard, ProfileCompletenessItem } from '../components/ProfileCompletenessCard';
 import { ProfileAvatarBlock, ProfileStatsRow } from '../components/ProfileHeaderAtoms';
 import { ProfileRemarkSheet } from '../components/ProfileRemarkSheet';
 import { ExternalProfileView } from '../components/ExternalProfileView';
@@ -731,16 +732,22 @@ export struct ProfilePage {
         Stack({ alignContent: Alignment.Top }) {
           Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {
-            // 未登录：全页面展示 LoginPromptView（与前端 protected route 对齐）
-            this.buildGuestView()
+            // 未登录：web ProfileMobile 游客分支（页头 + 身份式游客卡 + 探索推荐）
+            Column() {
+              this.buildSelfPageHeader()
+              this.buildGuestView()
+            }
+            .width('100%')
+            .height('100%')
           } else {
             // 编辑态与常态用 if 分支重建 SystemPageHeader：其 onBack/rightAction
             // 是普通成员（非 @Prop），组件复用时不会被父级刷新，必须整颗重建
             if (this.isEditing) {
               SystemPageHeader({
                 title: '编辑资料',
-                titleSize: DesignConstants.FONT.SIZE.XXL,
-                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+                // 对齐 web /me/edit（integrated 移动端页头 18/600）
+                titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+                titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
                 showBackButton: true,
                 onBack: () => { this.cancelEdit(); }
               })
@@ -757,32 +764,17 @@ export struct ProfilePage {
               // 否则此聚焦任务页没有返回钮、且顶部空洞
               SystemPageHeader({
                 title: '升级为完整账号',
-                titleSize: DesignConstants.FONT.SIZE.XXL,
-                titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+                titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+                titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
                 showBackButton: true,
                 onBack: () => { this.cancelUpgrade(); }
               })
             } else {
-              // 对齐前端 ProfileMobile 页头条：eyebrow 小标 + 底部发丝分隔线（bg-surface-page）。
-              // 横向留白由 PageShellContainer gutter 提供，页头不再额外缩进 —— 原 left/right SM2(6)
-              // 会让「个人中心」比正文多缩进 6，违反页头与内容对齐；下内边距对齐前端 py-3(12)。
-              // 设置入口上移身份卡操作行（Web 同款契约：同页仅一处设置入口）。
-              Row() {
-                Text('个人中心')
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
-              }
-              .width('100%')
-              .alignItems(VerticalAlign.Center)
-              .padding({
-                // 与 SystemPageHeader 同口径：贴状态栏下缘（extra 0）
-                top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0),
-                bottom: DesignConstants.SPACING.MD
-              })
-              // r3：页头无硬线（BRIEF B），仅靠留白与 eyebrow 分组
+              // 页头对齐 web ProfileMobile PageHeader（sticky, titleSize=2xl）：
+              // 「个人中心」24/600 leading-none，pt-2.5(10) / pb-2(8)，无返回、无 trailing。
+              // 横向留白由 PageShellContainer gutter 提供；设置入口只在身份卡操作行
+              //（Web 同款契约：同页仅一处设置入口）。
+              this.buildSelfPageHeader()
             }
 
             if (this.isExternalProfileMode()) {
@@ -907,15 +899,80 @@ export struct ProfilePage {
   }
 
   // ==================== 匿名用户 - 游客界面 ====================
+  /**
+   * 游客「我的」= web ProfileMobile 未登录分支（21-guest-me）：
+   * 身份式游客卡（封面 + 字母头像 + 三统计 + 登录/注册开启 + 随便逛逛）+ 探索推荐 3 行，
+   * 不使用通用 spotlight 空态（游客可以继续浏览附近内容，是导流页而非死胡同）。
+   */
+  /** 个人中心页头（web ProfileMobile PageHeader sticky 2xl）：24/600、无返回、无 trailing */
+  @Builder
+  private buildSelfPageHeader() {
+    Row() {
+      Text('个人中心')
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .lineHeight(DesignConstants.FONT.SIZE.XXL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+    .padding({
+      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.MD2),
+      bottom: DesignConstants.SPACING.SM
+    })
+  }
+
   @Builder
   private buildGuestView() {
-    LoginPromptView({
-      spotlight: true,
-      title: '个人中心需要登录',
-      subtitle: '登录后可管理资料、查看互动数据与收藏内容',
-      icon: AppIcon.PERSON,
-      loginAction: '查看个人中心'
-    })
+    Scroll() {
+      Column() {
+        ProfileGuestView({
+          resolvedThemeId: this.resolvedThemeId,
+          onLogin: () => {
+            const loginParams = new LoginRouteParam();
+            loginParams.reason = 'action_required';
+            loginParams.action = '查看个人中心';
+            loginParams.redirectUrl = PageNames.PROFILE;
+            AppRouter.push(PageNames.LOGIN, loginParams);
+          },
+          onBrowseMoments: () => { AppRouter.push(PageNames.NEARBY_MOMENTS); },
+          onBrowseGroups: () => { AppRouter.push(PageNames.NEARBY_GROUPS); },
+          onBrowsePeople: () => { AppRouter.push(PageNames.NEARBY_USERS); }
+        })
+      }
+      .width('100%')
+      .padding({
+        top: DesignConstants.PAGE_SHELL.PAGE_TOP_GAP,
+        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XL, DesignConstants.SPACING.LG)
+      })
+      .alignItems(HorizontalAlign.Start)
+    }
+    .layoutWeight(1)
+    .width('100%')
+    .scrollBar(BarState.Off)
+    .align(Alignment.Top)
+  }
+
+  /** 资料完整度条目（与 web ProfileCompleteness 同口径：头像/昵称/简介/位置/群组） */
+  private getCompletenessItems(): ProfileCompletenessItem[] {
+    return [
+      { id: 'avatar', label: '上传一张头像', done: (this.currentUser?.avatar_url ?? '') !== '' },
+      { id: 'nickname', label: '设置昵称', done: (this.currentUser?.nickname ?? '').trim() !== '' },
+      { id: 'bio', label: '写一句个人简介', done: (this.currentUser?.bio ?? '').trim() !== '' },
+      { id: 'location', label: '选择所在位置', done: (this.currentUser?.location?.location_name ?? '') !== '' },
+      { id: 'group', label: '加入一个群组', done: this.myGroupsCount > 0 }
+    ];
+  }
+
+  private handleCompletenessTap(id: string): void {
+    if (id === 'group') {
+      AppRouter.push(PageNames.NEARBY_GROUPS);
+      return;
+    }
+    // 资料字段补全统一进入本页内联编辑（页内单入口，与身份卡「编辑资料」一致）
+    this.startEdit();
   }
 
   private showCreateSheet(): void {
@@ -1026,23 +1083,33 @@ export struct ProfilePage {
                 myFollowingCount: this.myFollowingCount,
                 myFollowersCount: this.myFollowersCount
               })
+              // 资料状态（web ProfileCompleteness：完整度分段点 + 建议补全入口）
+              Column() {
+                ProfileCompletenessCard({
+                  resolvedThemeId: this.resolvedThemeId,
+                  items: this.getCompletenessItems(),
+                  onItemTap: (id: string) => { this.handleCompletenessTap(id); }
+                })
+              }
+              .width('100%')
+              .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
               // 端侧补充分组：见 buildAppOnlyActionRows 注释（前端无对应区块）
               Column() {
-                Text('账号与位置')
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
-                  .textCase(TextCase.UpperCase)
-                  .width('100%')
-                  .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
-                Text('端侧独有：同步当前位置、账号升级与管理入口')
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .width('100%')
-                  .padding({ left: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.SM })
+                // 分区头与 web SectionHead 同语言（14/600 + 11 次色说明），卡外
+                Column({ space: DesignConstants.SPACING.HALF }) {
+                  Text('账号与位置')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                    .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                  Text('端侧独有：同步当前位置、账号升级与管理入口')
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
+                }
+                .width('100%')
+                .alignItems(HorizontalAlign.Start)
+                .margin({ bottom: DesignConstants.SPACING.MD })
                 this.buildAppOnlyActionRows()
               }
               .width('100%')

@@ -89,8 +89,8 @@ export struct AdvancedSettingsPage {
       // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({
         title: '高级设置',
-        titleSize: DesignConstants.FONT.SIZE.XXL,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+        titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+        titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
         backgroundVariant: 'transparent'

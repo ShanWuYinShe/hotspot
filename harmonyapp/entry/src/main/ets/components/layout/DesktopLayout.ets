@@ -588,9 +588,13 @@ export struct DesktopLayout {
           .height('100%')
         } else {
           LoginPromptView({
-            spotlight: true,
-            title: '消息功能需要登录',
-            subtitle: '登录后可与好友实时聊天、加入群组讨论'
+            title: '登录后查看消息',
+            subtitle: '登录后即可查看和发起会话',
+            highlights: [
+              { icon: AppIcon.MESSAGE, text: '私聊与群聊会话' },
+              { icon: AppIcon.GROUP, text: '在线好友与群组' },
+              { icon: AppIcon.SYNC, text: '消息实时同步' }
+            ]
           })
         }
       } else if (this.currentRoute === 'profile') {

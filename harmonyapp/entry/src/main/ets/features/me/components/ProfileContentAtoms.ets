@@ -7,7 +7,7 @@
  */
 
 import { curves } from '@kit.ArkUI';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -168,32 +168,35 @@ export struct ProfileMenuItem {
   onTap: () => void = () => {};
 
   build() {
-    Row({ space: DesignConstants.SPACING.MD }) {
+    Row({ space: DesignConstants.SPACING.MD3 }) {
+      // 图标砖对齐 web ListItem：40 圆角 12 + accent-soft 底 + 18 accent-on-soft 图标
       Row() {
         LucideIcon({
           icon: this.icon,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-          color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_MEDIA_ACTION,
+          color: AppThemeManager.getPaletteById(this.resolvedThemeId).textAccentOnSoft,
           overrideThemeId: this.resolvedThemeId
         })
       }
-      .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle)
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL)
+      .borderRadius(DesignConstants.RADIUS.SM)
+      .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).accentMuted)
       .justifyContent(FlexAlign.Center)
       .alignItems(VerticalAlign.Center)
 
-      Column({ space: DesignConstants.SPACING.XS }) {
+      Column({ space: DesignConstants.SPACING.HALF }) {
         Text(this.title)
           .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
         if (this.detail.length > 0) {
           Text(this.detail)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -204,12 +207,14 @@ export struct ProfileMenuItem {
 
       if (this.value.length > 0) {
         Text(this.value)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
       }
 
       LucideIcon({
-        icon: AppIcon.FORWARD,
+        icon: AppIcon.ARROW_RIGHT,
         iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
         color: AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary,
         overrideThemeId: this.resolvedThemeId
@@ -217,13 +222,11 @@ export struct ProfileMenuItem {
     }
     .width('100%')
     .padding({
-      left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+      left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD,
       top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
     })
-    .border(this.divider ? {
-      width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
-      color: { bottom: AppThemeManager.getPaletteById(this.resolvedThemeId).borderColor }
-    } : { width: 0 })
+    // 分组语言：软岛卡内行间用 gap（ListGroup），行本身不再画底线（divider 参数保留兼容）
+    .border({ width: 0 })
     .scale(this.pressed ? { x: 0.985, y: 0.985 } : { x: 1, y: 1 })
     .animation({ curve: curves.springMotion(
       DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,

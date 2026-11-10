@@ -1,35 +1,35 @@
 /**
- * ProfileIdentityCard —— 个人中心身份卡（头像 + 昵称/handle/位置 + 简介 + 操作行 + 三列统计）。
- * 结构对齐前端 frontend/src/components/profile/mobile/ProfileMobile.svelte（移动端唯一形态）：
- *   头像 xl(80) 圆环 / 昵称 text-xl(20) / handle text-xs / 位置行 icon 14 + text-xs /
- *   简介 text-xs(条件渲染) / 「编辑资料(flex-1) + 设置」卡内操作行 / 三列统计（数值 text-2xl，标签 text-xs）。
- * 2026-10-17 移动端对齐修正（P0-4 + token 漂移）：
- *   1. 移除头像相机角钮：前端同屏只保留一处「编辑资料」入口（镜像入口重复且 affordance 误导），
- *      头像更换统一走「编辑资料」；
- *   2. 「编辑资料」从顶部小钮下移为卡内底部操作行（flex-1），并补「设置」入口——前端
- *      「移动端单手黄金操作区」，设置入口同页只留这一处；
- *   3. 昵称 LG(16)→XL(20)、统计数值 XL(20)→XXL(24)、统计标签 SM(12)→XS(11)、
- *      定位图标 FONT.SIZE.XS(11)→COMPONENT.ICON_SIZE_2XS(14)（图标尺寸禁用字号 token）、
- *      简介 SM(12)→XS(11)、头像 PROFILE(68)→LARGE(80)、卡补发丝描边（前端 border-border-default）；
- *   4. 简介改为条件渲染（前端 {#if bio}）：无简介不再显示占位行。
- * 资料字段以扁平 props 注入（避免跨文件传递可空复合对象），主题按 resolvedThemeId 自解析，
- * 动作回调上抛；无本地状态。
+ * ProfileIdentityCard —— 个人中心身份封面卡（对齐 web components/profile/IdentityHero.svelte 移动端）
+ *
+ * 结构（R13「叙事封面」母题 B）：
+ *   封面带 92（主题 accent-soft 渐变，无图时不铺图）
+ *   → 头像 68 + 4 ring（压封面 -40）+ 昵称 20/600 + handle 11
+ *   → 简介 12 + 位置行（MapPin 14 + 11）
+ *   → 发丝线 + 三列统计（数字 24/600 leading-none + 标签 11/500，列间发丝竖线）
+ *   → 动作整行（编辑资料 primary + 设置 soft，等宽 42 高，落在大拇指区）
+ *
+ * 说明：web 身份卡封面高度 92 在 DesignConstants 中无同档 token，按 4 基准间距组合表达；
+ * 头像取 AVATAR_SIZE.PROFILE(68)，与 web ProfileMobile 68 同档（IdentityHero 移动端 72 的
+ * 平台适配差异，圆环 +4 后整体视觉尺寸一致）。
  */
 
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
+import { SystemButton } from '../../../components/SystemButton';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
+
+interface ProfileMetricItem {
+  label: string;
+  value: number;
+}
 
 @Component
 export struct ProfileIdentityCard {
   @Prop resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
-  /** hover 的按钮 label（r3：surfaceSubtle/60 → hover 加深到 surfaceSubtle 全量） */
-  @State private hoveredAction: string = '';
   @Prop avatarUrl: string = '';
   @Prop nickname: string = '';
   @Prop locationName: string = '';
@@ -40,159 +40,195 @@ export struct ProfileIdentityCard {
   onEditProfile: () => void = () => {};
   onOpenSettings: () => void = () => {};
 
-  @Builder
-  private statItem(label: string, value: number) {
-    // r3 对齐 web MetricRow capsule：Bento 微岛胶囊（surface-subtle/40 底、rounded-xl、py-2.5）
-    Column() {
-      Text(formatCount(value))
-        // 前端 dd text-xl(20) font-semibold leading-none
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .lineHeight(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
-      Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-        .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
-        .margin({ top: DesignConstants.SPACING.XS })
-    }
-    .layoutWeight(1)
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-    .padding({
-      top: DesignConstants.SPACING.MD2,
-      bottom: DesignConstants.SPACING.MD2,
-      left: DesignConstants.SPACING.SM,
-      right: DesignConstants.SPACING.SM
-    })
-    .backgroundColor(AppThemeVisuals.withAlpha(
-      AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle, 0.40))
-    .borderRadius(DesignConstants.RADIUS.XL)
+  private getPalette() {
+    return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  /** 卡内操作行按钮：前端 border + bg-surface-primary + rounded-md + shadow-raised-sm + text-xs(11) + icon 14 */
+  /** web IdentityHero 移动端封面 h-23 = 92px（DesignConstants 无同档，按 token 组合表达） */
+  private getCoverHeight(): number {
+    return DesignConstants.SPACING.XXL * 3 - DesignConstants.SPACING.XS;
+  }
+
+  /** 头像环压封面 -40（web -mt-9 36 + ring-4） */
+  private getAvatarOverlap(): number {
+    return -(DesignConstants.SPACING.XXL + DesignConstants.SPACING.SM);
+  }
+
   @Builder
-  private cardAction(icon: AppIcon, label: string, accessibilityLabel: string, onTap: () => void, grow: boolean) {
-    Button() {
-      Row({ space: DesignConstants.SPACING.SM2 }) {
-        LucideIcon({
-          icon: icon,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary
-        })
-        Text(label)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-          .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
-      }
-      .alignItems(VerticalAlign.Center)
+  private metricColumn(metric: ProfileMetricItem, showDivider: boolean) {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Text(formatCount(metric.value))
+        // web text-2xl(24) font-semibold leading-none tabular-nums
+        .fontSize(DesignConstants.FONT.SIZE.XXL)
+        .lineHeight(DesignConstants.FONT.SIZE.XXL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+      Text(metric.label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getPalette().textSecondary)
     }
-    .type(ButtonType.Normal)
-    .layoutWeight(grow ? 1 : 0)
-    // r3 按钮安静化（镜像 web bg-surface-subtle/60 + hover:surface-subtle）：无描边无阴影
-    .backgroundColor(this.hoveredAction === accessibilityLabel
-      ? AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle
-      : AppThemeVisuals.withAlpha(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceSubtle, 0.60))
-    .borderRadius(DesignConstants.SHAPE.BUTTON)
+    .layoutWeight(1)
+    .alignItems(HorizontalAlign.Center)
+    .justifyContent(FlexAlign.Center)
     .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.SM,
-      bottom: DesignConstants.SPACING.SM
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG
     })
-    .onClick(() => { onTap(); })
-    .onHover((isHover: boolean) => {
-      this.hoveredAction = isHover ? accessibilityLabel : '';
-    })
-    .accessibilityText(accessibilityLabel)
+    // web divide-x divide-border-subtle：列间发丝竖线（首列不画）
+    .border(showDivider ? {
+      width: { left: DesignConstants.BORDER_WIDTH.HAIRLINE },
+      color: { left: this.getPalette().borderColor }
+    } : { width: 0 })
   }
 
   build() {
     Column() {
-      Row({ space: DesignConstants.SPACING.MD }) {
-        SystemAvatar({
-          avatarUrl: this.avatarUrl,
-          name: this.nickname,
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.LARGE,
-          shape: 'circle',
-          showBorder: true
+      // ===== 封面带（web h-23；主题 accent-soft → 表面色 柔和渐变） =====
+      Column()
+        .width('100%')
+        .height(this.getCoverHeight())
+        .linearGradient({
+          direction: GradientDirection.Bottom,
+          colors: [
+            [this.getPalette().accentMuted, 0.0],
+            [this.getPalette().surfaceIsland, 1.0]
+          ]
         })
 
-        Column({ space: DesignConstants.SPACING.THREE }) {
-          Text(this.nickname || '未设置昵称')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            // 前端 text-xl(20) 行高 28（Tailwind 20×1.4）；ArkUI 默认只有 ≈23.5
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textPrimary)
+      Column() {
+        // ===== 身份行：头像压封面 + 昵称/handle（底对齐） =====
+        Row({ space: DesignConstants.SPACING.LG }) {
+          Stack() {
+            SystemAvatar({
+              avatarUrl: this.avatarUrl,
+              name: this.nickname,
+              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.PROFILE,
+              shape: 'circle',
+              decorative: true
+            })
+          }
+          .padding(DesignConstants.SPACING.XS)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .backgroundColor(this.getPalette().pageBackground)
+          .shadow(this.getPalette().surfaceShadow)
+
+          Column({ space: DesignConstants.SPACING.HALF }) {
+            Text(this.nickname || '未设置昵称')
+              .fontSize(DesignConstants.FONT.SIZE.XL)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(this.getPalette().textPrimary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+            if (this.nickname) {
+              Text(`@${this.nickname}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getPalette().textSecondary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+            }
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          .padding({ bottom: DesignConstants.SPACING.XS })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Bottom)
+        .margin({ top: this.getAvatarOverlap() })
+
+        // ===== 简介（12 / leading-relaxed） =====
+        if (this.bio) {
+          Text(this.bio)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, 1.625))
+            .fontColor(this.getPalette().textSecondary)
+            .width('100%')
+            .margin({ top: DesignConstants.SPACING.MD })
+        }
+
+        // ===== 位置 =====
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          LucideIcon({
+            icon: AppIcon.LOCATION,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getPalette().accentBackground
+          })
+          Text(this.locationName || '未设置位置')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontColor(this.getPalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.nickname) {
-            // 对齐前端：handle 显示 @昵称（前端 ProfileMobile 用 nickname，非 user_id）
-            Text(`@${this.nickname}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
-          }
-          Row({ space: DesignConstants.SPACING.SM2 }) {
-            LucideIcon({
-              icon: AppIcon.LOCATION,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-              color: AppThemeManager.getPaletteById(this.resolvedThemeId).accentBackground
-            })
-            Text(this.locationName || '未设置位置')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-          }
-          .alignItems(VerticalAlign.Center)
-          .margin({ top: DesignConstants.SPACING.SM })
         }
-        .alignItems(HorizontalAlign.Start)
-        .layoutWeight(1)
-      }
-      .width('100%')
-      .alignItems(VerticalAlign.Top)
+        .alignItems(VerticalAlign.Center)
+        .margin({ top: DesignConstants.SPACING.MD2 })
 
-      if (this.bio) {
-        Text(this.bio)
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(AppThemeManager.getPaletteById(this.resolvedThemeId).textSecondary)
-          // 简介属长文：原 MD(22)/12→SM(12) 后按 --leading-copy(1.75) 收敛；字号对齐前端 text-xs(11)
-          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, DesignConstants.FONT.LINE_RATIO.COPY))
+        // ===== 发丝线 + 三列统计（web border-t mt-4 pt-4） =====
+        Column() {
+          Row() {
+            this.metricColumn({ label: '瞬间', value: this.momentsCount }, false)
+            this.metricColumn({ label: '粉丝', value: this.followersCount }, true)
+            this.metricColumn({ label: '群组', value: this.groupsCount }, true)
+          }
           .width('100%')
-          .margin({ top: DesignConstants.SPACING.LG })
-      }
+          .alignItems(VerticalAlign.Center)
+        }
+        .width('100%')
+        .padding({ top: DesignConstants.SPACING.LG })
+        .margin({ top: DesignConstants.SPACING.LG })
+        .border({
+          width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE },
+          color: { top: this.getPalette().borderColor }
+        })
 
-      // 移动端单手操作区：编辑资料（撑满）+ 设置（自适应），前端 mt-4 pt-1 flex gap-2
-      Row({ space: DesignConstants.SPACING.SM }) {
-        this.cardAction(AppIcon.EDIT, '编辑资料', '编辑资料', this.onEditProfile, true)
-        this.cardAction(AppIcon.SETTINGS, '设置', '系统设置', this.onOpenSettings, false)
+        // ===== 动作行：编辑资料 primary + 设置 soft（web 卡内底部整行） =====
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Column() {
+            SystemButton({
+              label: '编辑资料',
+              icon: AppIcon.EDIT,
+              showIcon: true,
+              variant: 'primary',
+              buttonSize: 'default',
+              fullWidth: true,
+              onPress: () => { this.onEditProfile(); }
+            })
+          }
+          .layoutWeight(1)
+
+          Column() {
+            SystemButton({
+              label: '设置',
+              icon: AppIcon.SETTINGS,
+              showIcon: true,
+              variant: 'surface',
+              buttonSize: 'default',
+              fullWidth: true,
+              onPress: () => { this.onOpenSettings(); }
+            })
+          }
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .margin({ top: DesignConstants.SPACING.LG })
       }
       .width('100%')
-      .alignItems(VerticalAlign.Center)
-      .margin({ top: DesignConstants.SPACING.LG })
-
-      // 卡底三列统计：web MetricRow capsule（gap-2.5=10，无顶部分隔线）
-      Row({ space: DesignConstants.SPACING.MD2 }) {
-        this.statItem('瞬间', this.momentsCount)
-        this.statItem('关注者', this.followersCount)
-        this.statItem('群组', this.groupsCount)
-      }
-      .width('100%')
-      .margin({ top: DesignConstants.SPACING.LG })
+      .alignItems(HorizontalAlign.Start)
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        bottom: DesignConstants.SPACING.LG2
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .padding(DesignConstants.SPACING.LG2)
-    // r3 软岛：无全框、圆角 20、85% surface 底 + 轻投影（BRIEF A）
     .borderRadius(DesignConstants.SHAPE.CARD)
-    .backgroundColor(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceIsland)
-    .shadow(AppThemeManager.getPaletteById(this.resolvedThemeId).surfaceShadow)
+    .backgroundColor(this.getPalette().surfaceIsland)
+    .shadow(this.getPalette().surfaceShadow)
+    .clip(true)
   }
 }

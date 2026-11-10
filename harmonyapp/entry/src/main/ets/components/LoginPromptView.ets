@@ -1,311 +1,111 @@
 /**
- * LoginPromptView - 可复用的登录提示组件
- * 用于需要登录才能访问的页面/标签，提供统一的未登录状态展示
- * - "快速体验"：底部弹窗内完成临时用户创建（无需跳转页面）
- * - "登录 / 注册"：跳转到 LoginPage
+ * LoginPromptView - 可复用的未登录内联引导（对齐 web components/auth/NeedsAuthNotice.svelte）
+ *
+ * 形态（R13 访客引导面板）：图标圆 64（accent-soft 底 + accent 图标）
+ *   → 标题 14/600 → 说明 12 次色
+ *   → 可选 3 条能力行（圆形小图标 32 + 11/500 文本）
+ *   → 主 CTA「登录 / 注册」+ 次 CTA「先随便逛逛」（ghost，去首页公共内容）。
+ *
+ * 约定：
+ * - 本组件只负责「整页/整块只读内容」的未登录占位；写操作拦截仍走 LoginGate 弹层。
+ * - 「先随便逛逛」全站唯一语义：跳过登录、去可浏览的公共内容继续逛，不创建任何账号
+ *   （登录页里的「访客模式」是另一个动作：创建临时账号）。
+ * - 不做 spotlight 装饰层：web NeedAuthNotice 的 spotlight 层实际只渲染 glow 且 display:none，
+ *   观感是干净的页内引导，不是带双环的空态插画。
+ * - 旧调用兼容：title/subtitle/icon/redirectUrl/loginAction/surfaceColor/spotlight 保留；
+ *   spotlight 已无视觉（调用方无需改动，后续可移除）。
  */
 
-import { DesignConstants } from '../constants/DesignConstants';
-import { PageNames } from '../constants/AppConstants';
+import { DesignConstants, lineHeightFor } from '../constants/DesignConstants';
+import { PageNames, StorageKeys } from '../constants/AppConstants';
 import { AppRouter, LoginRouteParam } from '../core/router/AppRouter';
 import { AppIcon } from './SystemIcon';
 import { SystemButton } from './SystemButton';
-import { EmptySpotlight } from './states/EmptySpotlight';
-import { SystemInput } from './SystemInput';
-import { SystemToast } from './SystemToast';
-import { ApiClient } from '../core/api/ApiClient';
-import { AuthAccountManager } from '../core/state/AuthAccountManager';
-import { HttpUtil } from '../core/network/HttpUtil';
-import { WebSocketService } from '../core/network/WebSocketService';
-import { GlobalStateManager } from '../core/state/GlobalStateManager';
-import { DeviceIdUtil } from '../core/util/DeviceIdUtil';
-import { AuthData, GuestRequest, AccountInfo } from '../core/types/api';
-import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
-import { AppThemeManager } from '../core/theme/AppThemeManager';
-import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
-import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from './LucideIcon';
+import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 
-const DOMAIN_NUMBER: number = 0xFF20;
-const TAG: string = 'LoginPromptView';
+/** 能力行（icon + 文案，最多 3 条；对齐 web NeedsAuthNotice highlights） */
+export interface LoginPromptHighlight {
+  icon: AppIcon;
+  text: string;
+}
 
-@Reusable
 @Component
 export struct LoginPromptView {
-  /** 主标题，如 "附近瞬间需要登录" */
+  /** 主标题，如 "登录后查看消息" */
   @Prop title: string = '此功能需要登录';
   /** 副标题说明 */
   @Prop subtitle: string = '登录后即可查看完整内容';
-  /** 底部提示文字 */
+  /** 底部提示文字（可选） */
   @Prop hint: string = '';
-  /** 图标（默认锁图标） */
+  /** 图标（默认人形图标，对齐 web UserRound） */
   @Prop icon: AppIcon = AppIcon.PERSON;
   /** 登录后跳转的页面路由 */
   @Prop redirectUrl: string = '';
   /** 登录原因描述（传给 LoginPage） */
   @Prop loginAction: string = '';
-
-  /** 快速体验弹窗状态 */
-  @State showQuickStart: boolean = false;
-  @State quickNickname: string = '';
-  @State isQuickStarting: boolean = false;
-  @State isQuickInputFocused: boolean = false;
-  @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
-  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  /**
+   * 能力行（登录后能得到什么）：web 消息/通知访客态各 3 条。
+   * 不传则不渲染（通用兜底页面保持精简）。
+   */
+  @Prop highlights: LoginPromptHighlight[] = [];
+  /** 主 CTA 文案（对齐 web primaryLabel，默认「登录 / 注册」） */
+  @Prop primaryLabel: string = '登录 / 注册';
+  /** 次 CTA 文案（ghost；默认「先随便逛逛」，语义 = 跳过登录去浏览公共内容） */
+  @Prop secondaryLabel: string = '先随便逛逛';
+  /** 次 CTA 行为：缺省回首页（可浏览的公共内容） */
+  onSecondary?: () => void = undefined;
   /** 作为独立全屏页时由调用方注入背景；嵌入场景不传则透明（让父容器背景透出）。 */
   @Prop surfaceColor: ResourceColor | null = null;
-  /** 场景化空态装饰（web NeedsAuthNotice spotlight 同构）：整页/整块访客引导开启 */
+  /** 已废弃：web NeedAuthNotice 的 spotlight 装饰层实际不可见，本组件不再绘制装饰层。 */
   @Prop spotlight: boolean = false;
+
+  @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
-  build() {
-    Stack({ alignContent: Alignment.Top }) {
-      Stack({ alignContent: Alignment.Center }) {
-        if (this.spotlight) {
-          EmptySpotlight()
-        }
-      Column({ space: DesignConstants.SPACING.LG }) {
-      // 图标（accent 淡底圆容器 + 主题色 glyph + 光晕，对齐前端 EmptyState 柔和 accent 图标）。
-      // 容器放大到 AVATAR_LARGE(80) + 用 AppThemeVisuals 派生的更明亮 accent-soft 背景（vibrant light
-      // 主题下 #E2EAF8 实色与页面 #F7FAFF 太接近，导致空态图标区"灰暗没层次"；加深到
-      // accent-primary 18% 叠加色以拉开层次，对齐前端柔和 accent 视觉）。
-      Stack() {
-        Column()
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-          .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().accentBackground, 0.18))
-          .shadow(this.getPalette().surfaceShadow)
-
+  /** 能力行图标圆底：web size-8(32) 圆形 surface-island + shadow-xs */
+  @Builder
+  private buildHighlightRow(item: LoginPromptHighlight) {
+    Row({ space: DesignConstants.SPACING.MD2 }) {
+      Row() {
         LucideIcon({
-          icon: this.icon,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
+          icon: item.icon,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
           color: this.getPalette().accentBackground
         })
-        .opacity(DesignConstants.OPACITY.EMPHASIZED)
       }
-      .width(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-      .height(DesignConstants.COMPONENT.AVATAR_SIZE.LARGE)
-      .margin({ bottom: DesignConstants.SPACING.LG })
+      .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getPalette().surfaceIsland)
+      .shadow(this.getPalette().surfaceShadow)
 
-      // 主标题
-      Text(this.title)
-        .fontSize(DesignConstants.FONT.SIZE.XL)
-        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-        .fontColor(this.getPalette().textPrimary)
-        .textAlign(TextAlign.Center)
-
-      // 副标题
-      Text(this.subtitle)
-        .fontSize(DesignConstants.FONT.SIZE.MD)
+      Text(item.text)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, 1.625))
         .fontColor(this.getPalette().textSecondary)
-        .textAlign(TextAlign.Center)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
-
-      // 按钮区（全宽铺满，去掉旧 80% 限制让内容真正占满页面宽度）
-      Column({ space: DesignConstants.SPACING.MD }) {
-        SystemButton({
-          label: '快速体验（无需注册）',
-          variant: 'primary',
-          buttonSize: 'large',
-          fullWidth: true,
-          onPress: () => {
-            this.showQuickStart = true;
-          }
-        })
-
-        SystemButton({
-          label: '登录 / 注册',
-          variant: 'secondary',
-          buttonSize: 'large',
-          fullWidth: true,
-          onPress: () => {
-            this.navigateToLogin();
-          }
-        })
-      }
-      .width('100%')
-      .margin({ top: DesignConstants.SPACING.SM })
-
-      // 底部提示
-      if (this.hint.length > 0) {
-        Text(this.hint)
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-          .textAlign(TextAlign.Center)
-          .margin({ top: DesignConstants.SPACING.XS })
-      }
+        .layoutWeight(1)
+        .maxLines(2)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
     }
     .width('100%')
-    // 内容块高度随内容：spotlight 以内容块为锚点居中（对齐 web：装饰层铺在 EmptyState 块内，
-    // 不做整屏居中；消息/我的访客引导内容在页面上部，整屏居中会让双环与文案错位）。
-    // 原「内容顶部对齐」由外层 Stack alignContent(Top) 承担。
-    .padding(DesignConstants.SPACING.XXL)
-    .bindSheet($$this.showQuickStart, this.buildQuickStartSheet(), {
-      height: SheetSize.FIT_CONTENT,
-      showClose: true,
-      dragBar: true,
-      backgroundColor: this.getPalette().sheetBackground,
-      keyboardAvoidMode: SheetKeyboardAvoidMode.TRANSLATE_AND_SCROLL
-    })
-      }
-      .width('100%')
-    }
-    .width('100%')
-    .height('100%')
-    // 背景放在最外层 Stack：嵌入场景透明（让父容器 pageBackground + ambient 透出），
-    // 独立全屏页由调用方注入 surfaceColor；内层内容透明以透出 spotlight。
-    .backgroundColor(this.surfaceColor ?? DesignConstants.COLOR.TRANSPARENT)
+    .alignItems(VerticalAlign.Center)
   }
 
-  @Builder
-  private buildQuickStartSheet() {
-    Scroll() {
-      Column({ space: DesignConstants.SPACING.LG }) {
-        Text('快速体验')
-          .fontSize(DesignConstants.FONT.SIZE.XL)
-          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-          .fontColor(this.getPalette().textPrimary)
-
-        Text('无需注册，输入昵称即可快速体验；留空将自动生成昵称')
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .fontColor(this.getPalette().textSecondary)
-
-        SystemInput({
-          value: this.quickNickname,
-          placeholder: '昵称（可选）',
-          fontSize: DesignConstants.FONT.SIZE.LG,
-          disabled: this.isQuickStarting,
-          onChange: (value: string) => { this.quickNickname = value; },
-          onFocusChange: (focused: boolean) => {
-            this.isQuickInputFocused = focused;
-            if (!focused) {
-              KeyboardDismissManager.getInstance().dismiss();
-            }
-          }
-        })
-
-        SystemButton({
-          label: '开始体验',
-          variant: 'primary',
-          buttonSize: 'large',
-          fullWidth: true,
-          loading: this.isQuickStarting,
-          disabled: this.isQuickStarting,
-          onPress: () => {
-            this.dismissQuickStartKeyboard();
-            this.startQuickExperience();
-          }
-        })
-
-        Text('临时用户可使用大部分功能，随时可升级为完整账号')
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .fontColor(this.getPalette().textSecondary)
-          .textAlign(TextAlign.Center)
-      }
-      .alignItems(HorizontalAlign.Start)
-      .width('100%')
-      .padding({
-        left: DesignConstants.SPACING.XXL,
-        right: DesignConstants.SPACING.XXL,
-        top: DesignConstants.SPACING.LG,
-        bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG)
-      })
-    }
-    .width('100%')
-    .scrollBar(BarState.Off)
-    .backgroundColor(this.getPalette().surfaceBackground)
-    .shadow(this.getPalette().surfaceShadow)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-  }
-
-  private dismissQuickStartKeyboard(): void {
-    if (!this.isQuickInputFocused) {
+  private goBrowse(): void {
+    if (this.onSecondary) {
+      this.onSecondary();
       return;
     }
-    KeyboardDismissManager.getInstance().dismiss();
-    this.isQuickInputFocused = false;
-  }
-
-  private async startQuickExperience(): Promise<void> {
-    // 昵称可选：留空提交 null，服务端自动生成默认昵称（spec auth.md → guest）
-    const nickname = this.quickNickname.trim();
-    if (nickname.length > 30) {
-      SystemToast.showWarning('昵称最多 30 个字符', this.getUIContext());
-      return;
-    }
-
-    this.isQuickStarting = true;
-    try {
-      const request: GuestRequest = {
-        nickname: nickname.length > 0 ? nickname : null,
-        client_type: 'app',
-        device_id: DeviceIdUtil.getDeviceId()
-      };
-      const response = await ApiClient.createTempUser(request);
-
-      if (response.code === 0 && response.data) {
-        await this.handleQuickStartSuccess(response.data);
-        this.showQuickStart = false;
-        SystemToast.showSuccess('欢迎！', this.getUIContext());
-      } else {
-        SystemToast.showError(response.message || '创建失败', this.getUIContext());
-      }
-    } catch (error) {
-      SystemToast.showError(error instanceof Error ? error.message : '创建失败', this.getUIContext());
-    } finally {
-      this.isQuickStarting = false;
-    }
-  }
-
-  /** 临时用户创建成功后的认证初始化 */
-  private async handleQuickStartSuccess(authData: AuthData): Promise<void> {
-    await AuthAccountManager.upsertAndActivate(authData);
-    await HttpUtil.setToken(authData.access_token);
-
-    const stateManager = GlobalStateManager.getInstance();
-    const basicUserInfo: AccountInfo = {
-      user_id: authData.user_id,
-      nickname: '',
-      avatar_url: '',
-      user_type: 'temp',
-      bio: '',
-      tags: [],
-      email: '',
-      phone: '',
-      location: { point: { latitude: 0, longitude: 0 }, location_name: '' },
-      presence_status: 'online',
-      last_online_at: '',
-      created_at: new Date().toISOString(),
-      stats: {
-        moments_count: 0,
-        friends_count: 0,
-        followers_count: 0,
-        following_count: 0,
-        groups_count: 0
-      }
-    };
-    stateManager.updateUser(basicUserInfo);
-
-    try {
-      const profileResp = await ApiClient.getAccountInfo();
-      if (profileResp.code === 0 && profileResp.data) {
-        stateManager.updateUser(profileResp.data);
-      }
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `获取用户资料失败: ${JSON.stringify(error)}`);
-    }
-
-    try {
-      await WebSocketService.getInstance().connect(authData.access_token);
-    } catch (error) {
-      hilog.warn(DOMAIN_NUMBER, TAG, `WebSocket连接失败: ${JSON.stringify(error)}`);
-    }
+    // 默认回首页 Tab（公共可浏览内容）：
+    // 先清空导航栈回到 Tabs 根视图（独立推入的页面如「我的分享」需要先退出），
+    // 再发出切 tab 信号由 PhoneLayout 消费；无 Tab 壳的桌面壳里切 tab 信号无副作用。
+    AppRouter.clear();
+    AppStorage.setOrCreate<number>(StorageKeys.SWITCH_TAB_REQUEST, 0);
   }
 
   private navigateToLogin(): void {
@@ -314,5 +114,94 @@ export struct LoginPromptView {
     loginParams.action = this.loginAction || this.title;
     loginParams.redirectUrl = this.redirectUrl;
     AppRouter.push(PageNames.LOGIN, loginParams);
+  }
+
+  build() {
+    Column() {
+      // 图标圆 64（web EmptyState 非 bare：accent-soft 底 + accent 图标）
+      Row() {
+        LucideIcon({
+          icon: this.icon,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
+          color: this.getPalette().textAccentOnSoft
+        })
+      }
+      .width(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+      .height(DesignConstants.COMPONENT.EMPTY_ICON_SIZE)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(this.getPalette().accentMuted)
+      .justifyContent(FlexAlign.Center)
+      .alignItems(VerticalAlign.Center)
+
+      Text(this.title)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.MD)
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+        .textAlign(TextAlign.Center)
+        .margin({ top: DesignConstants.SPACING.MD })
+
+      Text(this.subtitle)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, 1.625))
+        .fontColor(this.getPalette().textSecondary)
+        .textAlign(TextAlign.Center)
+        .margin({ top: DesignConstants.SPACING.MD })
+
+      // 能力行（web extra slot：mt-1 + gap-2 + 左对齐 + max-w-90）
+      if (this.highlights.length > 0) {
+        Column({ space: DesignConstants.SPACING.SM }) {
+          ForEach(this.highlights, (item: LoginPromptHighlight) => {
+            this.buildHighlightRow(item)
+          }, (item: LoginPromptHighlight, index: number) => `${item.text}-${index}`)
+        }
+        .width('100%')
+        .padding({ left: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
+        .margin({ top: DesignConstants.SPACING.XS })
+      }
+
+      // CTA 行：主「登录 / 注册」+ ghost「先随便逛逛」（web mt-2 + gap-2.5 居中）
+      Row({ space: DesignConstants.SPACING.MD2 }) {
+        SystemButton({
+          label: this.primaryLabel,
+          variant: 'primary',
+          buttonSize: 'default',
+          onPress: () => {
+            this.navigateToLogin();
+          }
+        })
+        SystemButton({
+          label: this.secondaryLabel,
+          variant: 'ghost',
+          buttonSize: 'default',
+          onPress: () => {
+            this.goBrowse();
+          }
+        })
+      }
+      .alignItems(VerticalAlign.Center)
+      .justifyContent(FlexAlign.Center)
+      .margin({ top: DesignConstants.SPACING.SM })
+
+      if (this.hint.length > 0) {
+        Text(this.hint)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.SM)
+          .fontColor(this.getPalette().textSecondary)
+          .textAlign(TextAlign.Center)
+          .margin({ top: DesignConstants.SPACING.XS })
+      }
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding({
+      left: DesignConstants.PAGE_SHELL.GUTTER_MOBILE,
+      right: DesignConstants.PAGE_SHELL.GUTTER_MOBILE,
+      // 对齐 web EmptyState py-20(80)：内容在页头下方留出页级呼吸再开始（32×2+16 = 80）
+      top: DesignConstants.SPACING.XXL * 2 + DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL * 2 + DesignConstants.SPACING.LG
+    })
+    // 嵌入场景透明（父容器 pageBackground/AmbientBackdrop 透出）；独立全屏页由调用方注入 surfaceColor
+    .backgroundColor(this.surfaceColor ?? DesignConstants.COLOR.TRANSPARENT)
   }
 }

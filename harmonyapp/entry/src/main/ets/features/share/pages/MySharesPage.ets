@@ -235,12 +235,16 @@ export struct MySharesPage {
 
       if (!this.isLoggedIn) {
         LoginPromptView({
-          spotlight: true,
           title: '登录后查看我的分享',
           subtitle: '统一管理已生成的分享链接并随时撤销',
           icon: AppIcon.SHARE,
           redirectUrl: PageNames.MY_SHARES,
-          loginAction: '查看我的分享'
+          loginAction: '查看我的分享',
+          highlights: [
+            { icon: AppIcon.SHARE, text: '统一管理已生成的分享链接' },
+            { icon: AppIcon.LOCK, text: '随时撤销不再需要的分享' },
+            { icon: AppIcon.TIME, text: '查看分享有效期与访问状态' }
+          ]
         })
           .layoutWeight(1)
       } else if (this.isLoading) {
