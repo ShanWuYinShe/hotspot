@@ -26,7 +26,8 @@
 		children,
 		class: className = '',
 		horizontal = false,
-		virtualize = true
+		virtualize = true,
+		topScrim = false
 	}: {
 		imageSrc: string;
 		imageAlt?: string;
@@ -48,6 +49,8 @@
 		horizontal?: boolean;
 		/** 是否启用浏览器原生 content-visibility 离屏渲染跳过（默认 true，极大减少长列表渲染负担） */
 		virtualize?: boolean;
+		/** 顶部局部遮罩（h-14）：仅顶部压图作者行（头像+白字昵称）需要；其余卡片不铺。 */
+		topScrim?: boolean;
 	} = $props();
 
 	const imageBox = $derived(
@@ -112,9 +115,13 @@
 		/>
 		{#if imageLoaded}
 			{#if !horizontal}
-				<!-- 顶部不再铺全宽遮罩：角标/徽章（media-badge）自带深色强底，顶部大遮罩
-				     会压掉图片上半区。底部只保留承载标题/作者/操作的局部遮罩（36%），
-				     压图白字对比度仍由主题 scrim-bottom token 保证。 -->
+				<!-- 顶部默认不铺全宽遮罩：角标/徽章（media-badge）自带深色强底；只有
+				     HomeFeedItem 这类顶部压图作者行需要 h-14 局部遮罩（topScrim）。
+				     底部只保留承载标题/作者/操作的局部遮罩（36%），压图白字对比度仍由
+				     主题 scrim-bottom token 保证。 -->
+				{#if topScrim}
+					<div class="pointer-events-none absolute inset-x-0 top-0 h-14" style="background:var(--cst-surface-card-scrim-top);"></div>
+				{/if}
 				<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[36%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
 			{:else}
 				<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>

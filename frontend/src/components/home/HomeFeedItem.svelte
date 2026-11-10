@@ -216,6 +216,7 @@
 		sizes="(min-width: 1024px) 25rem, (min-width: 640px) 50vw, 100vw"
 		{onClick}
 		onImageError={() => (coverError = true)}
+		topScrim
 		class="aspect-[3/4] rounded-lg shadow-xs sm:aspect-[4/5]"
 	>
 		<!-- 顶部：极简作者行（左侧头像 + 昵称，右侧多图角标；彻底移除时间与地点，移至底部，杜绝重叠） -->
