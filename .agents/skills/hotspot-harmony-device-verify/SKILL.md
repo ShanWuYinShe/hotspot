@@ -18,7 +18,7 @@ description: hotspot 鸿蒙端模拟器实测流程：项目事实与测试账�
 | 后端 dev 网关 | 宿主 `http://127.0.0.1:8888`（nginx） |
 | 测试库 | postgres 容器 `hotspot-postgres-1`，库 `hotspot`，用户 `postgres` |
 
-**调试后端地址**：`AppConstants.ets` 现行代码统一 `http://127.0.0.1:8888 + hdc 反向转发`（模拟器 `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`，真机 USB `fport`）。模拟器重启后转发条目不会自动恢复，装机前先设好，并以 `hdc fport ls` 出现 `[Reverse]` 条目为准；app 内请求实测 HTTP 200 / code=0（63ms）。`http://10.0.2.2:8888` 保留为 rport 失效时的备选直连（SLIRP 用户态 NAT，见下「环境准备」）。
+**调试后端地址**：debug 构建按设备类型选：模拟器 `http://10.0.2.2:8888`，真机 `http://192.168.0.100:8888`（见 `AppConstants.ets` 的 `DEV_SERVER`）。模拟器还需额外设置 `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`：动态封面是后端**持久化 S3 预签名 URL**（本地签发 host 为 `127.0.0.1:8888`，签名含 host），不能改写成 `10.0.2.2`，所以图片走 rport 回宿主；否则 nginx 对封面返回 **403 SignatureDoesNotMatch**、页面显示占位（头像走请求时动态签名，不受影响）。判据：`docker logs hotspot-nginx-1 | grep '/s3/'` 封面响应 200；页面封面不再长期占位。模拟器重启后转发条目不自动恢复，装机前先设好并以 `hdc fport ls` 出现 `[Reverse]` 为准。
 
 ## 测试账号与造数（本地 dev 库）
 
