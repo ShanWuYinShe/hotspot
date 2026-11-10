@@ -493,6 +493,8 @@ export interface LayoutSystem {
   FILTER_PANEL_WIDTH: number;
   /** 登录卡片最大宽度（对齐前端 /login max-w-100=400px） */
   LOGIN_CARD_MAX_WIDTH: number;
+  /** 手机悬浮 Dock 最大宽度（对齐前端 nav max-w-md=448px） */
+  MOBILE_DOCK_MAX_WIDTH: number;
 }
 
 // ==================== 页面内容栏档位接口（对齐前端 .page-shell / .feed-density-shell）====================
@@ -845,6 +847,7 @@ const LAYOUT: LayoutSystem = {
   HOME_COLUMN_WIDTH: 420,
   FILTER_PANEL_WIDTH: 180,
   LOGIN_CARD_MAX_WIDTH: 400,
+  MOBILE_DOCK_MAX_WIDTH: 448,
 };
 
 // ==================== 页面内容栏档位（对齐前端 .page-shell / .feed-density-shell）====================

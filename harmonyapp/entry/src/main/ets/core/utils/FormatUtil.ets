@@ -155,6 +155,28 @@ function formatHhMm(date: Date): string {
 }
 
 /**
+ * 信息流卡片相对时间，逐字对齐 web HomeFeedItem.relativeTime：
+ * <1min 刚刚 / <1h N分钟前 / <24h N小时前 / 今天 / N天前 / N周前。
+ * 与 formatCardTime（完整日期）区分：网格卡片信息密度低，用相对时间。
+ */
+export function formatFeedRelativeTime(dateTime: string | undefined): string {
+  if (!dateTime) return '';
+  const createdAt = new Date(dateTime).getTime();
+  if (Number.isNaN(createdAt)) return '';
+  const diffMs = Date.now() - createdAt;
+  if (diffMs < 0) return '刚刚';
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}小时前`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays <= 1) return '今天';
+  if (diffDays <= 7) return `${diffDays}天前`;
+  return `${Math.floor(diffDays / 7)}周前`;
+}
+
+/**
  * 清洗纯文本内容（用于瞬间描述、评论等展示）：
  * 剥除 HTML 标签、转义常见 HTML 实体、规整首尾多余空白，
  * 防止未脱敏内容或抓取文本在端上直接暴露 <b>、<div> 等裸标签。

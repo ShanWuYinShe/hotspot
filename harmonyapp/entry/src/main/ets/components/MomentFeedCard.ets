@@ -19,7 +19,7 @@ import { IntelligentLocationCard } from './IntelligentLocationCard';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
-import { formatCardTime, formatRelativeTime, cleanPlainText } from '../core/utils/FormatUtil';
+import { formatCardTime, formatFeedRelativeTime, cleanPlainText } from '../core/utils/FormatUtil';
 import { CardScrimTop, CardScrimBottom, MediaOverlayBadge, MediaActionButton } from './media/MediaOverlay';
 
 @Reusable
@@ -364,13 +364,13 @@ export struct MomentFeedCard {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
         }
-        if (formatRelativeTime(this.moment.created_at).length > 0) {
+        if (formatFeedRelativeTime(this.moment.created_at).length > 0) {
           if ((this.moment.tags && this.moment.tags.length > 0) || this.getOverlayLocationText().length > 0) {
             Text('·')
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getOverlayMetaColor())
           }
-          Text(formatRelativeTime(this.moment.created_at))
+          Text(formatFeedRelativeTime(this.moment.created_at))
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getOverlayMetaColor())
             .flexShrink(0)
@@ -516,6 +516,7 @@ export struct MomentFeedCard {
     .borderRadius(DesignConstants.SHAPE.CARD)
     .clip(true)
     .backgroundColor(this.getPalette().surfaceSubtle)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .shadow(this.getPalette().surfaceShadow)
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
@@ -603,6 +604,7 @@ export struct MomentFeedCard {
     .borderRadius(DesignConstants.SHAPE.CARD)
     .clip(true)
     .backgroundColor(this.getPalette().surfaceSubtle)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .shadow(this.getPalette().surfaceShadow)
     .scale(this.isPressed
       ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }

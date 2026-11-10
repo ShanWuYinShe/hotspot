@@ -180,7 +180,8 @@ export struct PhoneLayout {
           }.tabBar(this.TabBarBuilder(3))
           TabContent() { ProfilePage() }.tabBar(this.TabBarBuilder(4))
         }
-        .barHeight(this.isTablet || this.hideMainTabBar ? 0 : DesignConstants.LAYOUT.MOBILE_BOTTOM_NAV_HEIGHT)
+        // 手机/平板统一隐藏系统 Tabs bar，改用悬浮 Dock（对齐 web 移动端悬浮胶囊导航）
+        .barHeight(0)
         .scrollable(false)
         .barMode(BarMode.Fixed)
         .divider({ strokeWidth: 0, color: DesignConstants.COLOR.TRANSPARENT, startMargin: 0, endMargin: 0 })
@@ -191,20 +192,8 @@ export struct PhoneLayout {
           }
           this.currentTabIndex = index;
         })
-        .barBackgroundColor(DesignConstants.COLOR.TRANSPARENT)
-        // 底部导航毛玻璃：Medium 档（对齐前端 --cst-blur-lg 底部导航档，见 AGENTS 映射表）
-        // 背景改半透明（对齐前端 nav-glass 90%），否则实色会盖住 backgroundBlurStyle 使模糊失效
-        .backgroundBlurStyle(BlurStyle.Thick, {
-          // 材质明暗必须跟随应用主题而非系统：系统浅色 + 应用深色时，
-          // 默认 SYSTEM 材质会在深色主题下渲染出浅灰底栏
-          colorMode: this.getPalette().isDarkTheme ? ThemeColorMode.DARK : ThemeColorMode.LIGHT
-        })
-        .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.94))
-        // 对齐前端 nav-glass--bottom：顶部发丝描边（--cst-border-nav-glass accent 14% 混色，
-        // 本端以 floatingBorderColor 承载同语义）
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+        // 系统 bar 已隐藏，玻璃/描边/投影由自定义浮动 Dock 承载；Tabs 自身不再铺底
         .layoutWeight(1)
-        .padding({ bottom: this.safeAreaBottom })
         // 不在 Tabs 容器再加 maxWidth 约束：各页面通过 PageShellContainer / ResponsiveContainer
         // 按断点自管宽度。原先 isTablet ? 720 会把 ≥960vp 开启的 master-detail 双栏
         // （HomePage / MomentsFeedPage 右栏 420/220）挤在 720vp 内、左侧被压到 300/500vp，
@@ -213,6 +202,8 @@ export struct PhoneLayout {
         // 平板浮动药丸底栏（Tabs 系统 bar 已隐藏，用自定义浮动药丸替代，对齐前端 TabletBottomNav）
         if (this.isTablet) {
           this.buildFloatingTabletNav()
+        } else if (!this.hideMainTabBar) {
+          this.buildFloatingMobileNav()
         }
       }
       .width('100%')
@@ -380,6 +371,92 @@ export struct PhoneLayout {
         this.tabsController.changeIndex(index);
         this.currentTabIndex = index;
       }
+    })
+  }
+
+  // 手机悬浮 Dock（对齐前端 MobilePortrait nav：max-w-md + rounded-[28px] + p-1.5 + 玻璃 + 投影）
+  @Builder buildFloatingMobileNav() {
+    Column() {
+      Row() {
+        this.MobileDockItem(0)
+        this.MobileDockItem(1)
+        this.FloatingFab()
+        this.MobileDockItem(3)
+        this.MobileDockItem(4)
+      }
+      .width('100%')
+      .height(60)
+      .constraintSize({ maxWidth: DesignConstants.LAYOUT.MOBILE_DOCK_MAX_WIDTH })
+      .justifyContent(FlexAlign.SpaceAround)
+      .alignItems(VerticalAlign.Center)
+      .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2 })
+      .borderRadius(DesignConstants.SHAPE.SHEET_TOP_RADIUS)
+      .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().tabBarBackground, 0.95))
+      .backgroundBlurStyle(BlurStyle.Thick, {
+        colorMode: this.getPalette().isDarkTheme ? ThemeColorMode.DARK : ThemeColorMode.LIGHT
+      })
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().floatingBorderColor })
+      .shadow(this.getPalette().elevatedShadow)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Center)
+    .padding({
+      left: DesignConstants.SPACING.MD3,
+      right: DesignConstants.SPACING.MD3,
+      top: DesignConstants.SPACING.XS,
+      bottom: Math.max(this.safeAreaBottom, DesignConstants.SPACING.MD)
+    })
+  }
+
+  @Builder MobileDockItem(index: number) {
+    Column() {
+      Stack({ alignContent: Alignment.TopEnd }) {
+        LucideIcon({
+          icon: TAB_ITEMS[index].icon,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+          paletteRole: this.currentTabIndex === index ? 'tabActive' : 'tabInactive'
+        })
+        if (index === 3 && this.unreadCount > 0) {
+          SystemBadge({ count: this.unreadCount })
+        }
+      }
+      .scale(this.currentTabIndex === index ? { x: 1.1, y: 1.1 } : { x: 1, y: 1 })
+      .animation({
+        duration: DesignConstants.ANIMATION.DURATION_FAST,
+        curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+      })
+
+      Text(TAB_ITEMS[index].label)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(
+          this.currentTabIndex === index
+            ? this.getPalette().accentBackground
+            : this.getPalette().tabBarInactive
+        )
+        .fontWeight(
+          this.currentTabIndex === index ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.MEDIUM
+        )
+        .margin({ top: DesignConstants.SPACING.HALF })
+
+      Column()
+        .width(DesignConstants.SPACING.MD3)
+        .height(DesignConstants.SPACING.THREE)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.getPalette().accentBackground)
+        .opacity(this.currentTabIndex === index ? 1 : 0)
+        .scale(this.currentTabIndex === index ? { x: 1, y: 1 } : { x: 0.5, y: 0.5 })
+        .animation({
+          duration: DesignConstants.ANIMATION.DURATION_FAST,
+          curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+        })
+    }
+    .layoutWeight(1)
+    .height(48)
+    .justifyContent(FlexAlign.Center)
+    .accessibilityText(TAB_ITEMS[index].label)
+    .onClick(() => {
+      this.tabsController.changeIndex(index);
+      this.currentTabIndex = index;
     })
   }
 
