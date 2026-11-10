@@ -97,6 +97,12 @@ export class MediaUrlUtil {
 
     let pathAndQuery = parsed.pathAndQuery;
     if (pathAndQuery.startsWith('/s3/')) {
+      // S3 预签名 URL 的签名包含 Host（X-Amz-SignedHeaders=host），重写 origin 会导致
+      // 403 SignatureDoesNotMatch。本地绝对预签名 URL 必须保留原 host（模拟器下配合
+      // hdc rport 访问宿主 127.0.0.1），只有无签名 / 非预签名路径才跟随 API origin。
+      if (url.indexOf('X-Amz-Signature=') >= 0) {
+        return url;
+      }
       return `${origin}${pathAndQuery}`;
     }
     if (pathAndQuery.startsWith('/hotspot/')) {
