@@ -452,6 +452,11 @@ export function useMomentDetailData(getMomentId: () => string) {
 		const result = await copyShareLink({ type: 'moment', id: momentId });
 		shareStatus = result === 'failed' ? 'failed' : 'copied';
 		moreOpen = false;
+		// 剪贴板操作没有系统反馈：必须给用户明确结果（成功/失败），否则会误以为没点上。
+		showToast(
+			result === 'failed' ? '分享链接复制失败，请重试' : result === 'shared' ? '分享链接已复制' : '链接已复制',
+			result === 'failed' ? 'danger' : 'success'
+		);
 		window.setTimeout(() => (shareStatus = 'idle'), 1800);
 	};
 
