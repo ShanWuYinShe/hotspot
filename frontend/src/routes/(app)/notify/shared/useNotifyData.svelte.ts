@@ -193,7 +193,6 @@ export function useNotifyData() {
 		try {
 			const res = await follow({ user_id: n.user.id, active: true });
 			if (res.code !== 0) throw new Error(res.message || '操作失败');
-			showToast(`已关注 ${n.user.name}`, 'success');
 		} catch (err) {
 			followedBack = new Set([...followedBack].filter((id) => id !== n.user.id));
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');

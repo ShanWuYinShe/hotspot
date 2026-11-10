@@ -81,7 +81,7 @@
 		followOverride = next;
 		try {
 			await follow({ user_id: item.userId, active: next });
-			showToast(next ? '已关注 ' + item.user : '已取消关注 ' + item.user, 'success');
+			// 关注/取关结果已由 chip 状态表达，成功不再额外 toast；失败仍提示。
 		} catch {
 			followOverride = !next;
 			showToast(next ? '关注失败，请重试' : '取消关注失败，请重试', 'danger');

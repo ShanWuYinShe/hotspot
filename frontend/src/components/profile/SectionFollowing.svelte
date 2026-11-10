@@ -8,7 +8,6 @@
 import EntityRow from '@/components/list/EntityRow.svelte';
 	import { useRelationships } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
-	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 关注分区：ProfileUserSection 骨架 + EntityRow 行。
@@ -31,9 +30,9 @@ import EntityRow from '@/components/list/EntityRow.svelte';
 	const visibleFollowing = $derived(following.filter((f) => isFollowed(f.id)));
 	const visibleCount = $derived(visibleFollowing.length);
 
-	const toggleUnfollow = async (id: string, name: string) => {
-		const r = await followState.toggle(id, true);
-		if (r.ok && !r.followed) showToast(`已取消关注 ${name}`, 'success');
+	const toggleUnfollow = async (id: string) => {
+		// 取关结果由行移除/按钮状态表达，成功不额外 toast。
+		await followState.toggle(id, true);
 	};
 
 	// 搜索词过滤（r12-r18 头部统一：四段一致支持搜索）
@@ -88,7 +87,7 @@ import EntityRow from '@/components/list/EntityRow.svelte';
 				<FollowButton
 					active={isFollowed(f.id)}
 					pending={followState.isPending(f.id)}
-					onToggle={() => void toggleUnfollow(f.id, f.name)}
+					onToggle={() => void toggleUnfollow(f.id)}
 				/>
 			{/snippet}
 		</EntityRow>

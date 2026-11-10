@@ -138,10 +138,9 @@
 		if (!followTargetId || followPending) return;
 		followPending = true;
 		followOverride = next;
-		const name = moment.user?.nickname ?? '';
 		try {
 			await follow({ user_id: followTargetId, active: next });
-			showToast(next ? '已关注 ' + name : '已取消关注 ' + name, 'success');
+			// 关注是可见的状态切换（chip 即时翻转），成功不再额外 toast；失败仍提示。
 		} catch {
 			followOverride = !next;
 			showToast(next ? '关注失败，请重试' : '取消关注失败，请重试', 'danger');

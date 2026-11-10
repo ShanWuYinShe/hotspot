@@ -167,7 +167,15 @@ export function useGroupPageData(options: UseGroupPageDataOptions) {
 			else if (action === 'remove') res = await removeGroupMember({ group_id: gid, user_id: m.userId });
 
 			if (res.code === 0) {
-				showToast('操作成功', 'success');
+				const ACTION_TOAST: Record<MemberAction, string> = {
+					set_admin: '已设为管理员',
+					unset_admin: '已取消管理员',
+					mute: '已禁言成员',
+					unmute: '已解除禁言',
+					ban: '已封禁成员',
+					remove: '已移出成员'
+				};
+				showToast(ACTION_TOAST[action], 'success');
 				void gd.loadMembers(gid);
 				if (action === 'ban') void gd.loadBannedMembers(gid);
 				actionMember = null;

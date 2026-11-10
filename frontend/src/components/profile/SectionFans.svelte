@@ -9,7 +9,6 @@ import { formatRelativeDays } from '@/lib/utils';
 	import EntityRow from '@/components/list/EntityRow.svelte';
 	import { useRelationships, type MappedFollower } from '@/lib/profile-data.svelte';
 	import { createOptimisticFollow, type OptimisticFollow } from '@/lib/relationships.svelte';
-	import { showToast } from '@/stores/toast.svelte';
 	import { ROUTES } from '@/lib/routes';
 
 	// 粉丝分区：ProfileUserSection 骨架 + EntityRow 行（含统计行与待回关徽章）。
@@ -30,8 +29,8 @@ import { formatRelativeDays } from '@/lib/utils';
 	const isMutualWith = (f: MappedFollower) => followState.isFollowed(f.id, f.isMutual);
 
 	const toggleFollow = async (f: MappedFollower) => {
-		const r = await followState.toggle(f.id, f.isMutual);
-		if (r.ok && r.followed) showToast(`已关注 ${f.name}`, 'success');
+		// 关注结果由按钮状态表达，成功不额外 toast；失败由共享模块回滚。
+		await followState.toggle(f.id, f.isMutual);
 	};
 
 	const filtered = $derived(
