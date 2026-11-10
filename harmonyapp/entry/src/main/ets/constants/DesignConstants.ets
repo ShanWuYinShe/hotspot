@@ -370,6 +370,8 @@ export interface ComponentConstants {
   ICON_SIZE_EMPTY: number;
   /** 圆形图标钮的图标占比（对齐前端 ActionIconButton：round(buttonSize × 0.42)） */
   ICON_GLYPH_RATIO: number;
+  /** 首页品牌 logo 尺寸（26；对齐 web HomeMobile 的 size-6.5） */
+  BRAND_LOGO_SIZE: number;
   /** 状态指示点（6，在线/分组小圆点） */
   INDICATOR_DOT_SIZE: number;
   /** 骨架屏卡片高度（100） */
@@ -781,6 +783,7 @@ const COMPONENT: ComponentConstants = {
   ICON_SIZE_EMPTY: 48,
   /** 圆形图标钮的图标占比：42vp 钮 → 18、36vp 钮 → 15（前端 ActionIconButton 同口径） */
   ICON_GLYPH_RATIO: 0.42,
+  BRAND_LOGO_SIZE: 26,
   /** 状态指示点（6，在线/分组小圆点） */
   INDICATOR_DOT_SIZE: 6,
   SKELETON_CARD_HEIGHT: 100,
@@ -833,7 +836,8 @@ const LAYOUT: LayoutSystem = {
   TABLET_NAV_MAX_WIDTH: 680,
   FAB_SIZE: 48,
   ICON_BUTTON_SIZE: 36,
-  BACK_BUTTON_SIZE: 42,
+  // 视觉 36（对齐 web 页面级返回钮 36），热区由 SurfaceIconButton 抬到 MIN_HIT_TARGET 44
+  BACK_BUTTON_SIZE: 36,
   MIN_HIT_TARGET: 44,
   LABEL_WIDTH: 60,
   // ===== R2 整卡图片卡遮罩几何（对齐 web：顶 128px、底 58%/62% 卡高）=====

@@ -550,8 +550,8 @@ export struct HomePage {
         // 对齐 web 移动端首页：真实品牌 Logo（同源 hotspot-logo.png）+ 14px 粗体字标，
         // 不再用「附近」Lucide 图标充当品牌。
         Image($r('app.media.hotspot_logo'))
-          .width(DesignConstants.COMPONENT.ICON_SIZE_LG)
-          .height(DesignConstants.COMPONENT.ICON_SIZE_LG)
+          .width(DesignConstants.COMPONENT.BRAND_LOGO_SIZE)
+          .height(DesignConstants.COMPONENT.BRAND_LOGO_SIZE)
           .borderRadius(DesignConstants.RADIUS.FULL)
           .objectFit(ImageFit.Cover)
         Text('HotSpot')
@@ -594,6 +594,7 @@ export struct HomePage {
       top: this.safeAreaTop + DesignConstants.SPACING.SM,
       bottom: DesignConstants.SPACING.XS
     })
+
   }
 
   // ==================== 地图卡片 ====================
