@@ -327,7 +327,6 @@ export struct NearbyPage {
         .opacity(this.enterOpacity)
         .translate({ y: this.enterOffset })
       }
-      .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
       .width('100%')
       .height('100%')
     }

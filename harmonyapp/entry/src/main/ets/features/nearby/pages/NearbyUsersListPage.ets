@@ -153,14 +153,33 @@ export struct NearbyUsersListPage {
     this.usersDataSource.setData(filtered);
   }
 
+  /** 当前筛选后的用户（分类 + 在线开关，均为客户端过滤） */
+  private getVisibleUsers(): UserItem[] {
+    let filtered = this.users;
+    if (this.activeTag !== '全部') {
+      filtered = filtered.filter((u: UserItem) => (u.tags ?? []).includes(this.activeTag));
+    }
+    if (this.onlineOnly) {
+      filtered = filtered.filter((u: UserItem) => u.presence_status === 'online');
+    }
+    return filtered;
+  }
+
+  /** 双列名片卡按行切分：WaterFlow 在姓名卡上出现列宽/重叠异常，改为 List 行承载 */
+  private getUserRows(): UserItem[][] {
+    const list = this.getVisibleUsers();
+    const rows: UserItem[][] = [];
+    for (let i = 0; i < list.length; i += this.getGridColumnCount()) {
+      rows.push(list.slice(i, i + this.getGridColumnCount()));
+    }
+    return rows;
+  }
+
   private async loadUsers(refresh: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
-    if (!ref) {
-      this.isLoading = false;
-      this.isRefreshing = false;
-      this.errorMessage = '位置信息不可用，请在首页选择浏览位置';
-      return;
-    }
+    // 未拿到位置时不直接报错：与附近枢纽一致回退到服务端默认地理口径，
+    // 否则从枢纽「查看全部」进入会立刻显示「位置信息不可用」，与上一页已有内容矛盾。
+    const referencePoint = ref ?? undefined;
     // 请求版本号：每次进入递增，避免较慢的旧请求解析后覆盖较新的结果
     const capturedVersion = ++this.loadVersion;
     if (!refresh) { this.isLoading = true; }
@@ -169,7 +188,7 @@ export struct NearbyUsersListPage {
       const me = GlobalStateManager.getInstance().getCurrentUser();
       const myId = me?.user_id;
       const request: SearchUsersRequest = {
-        reference_point: ref,
+        reference_point: referencePoint,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: this.activeSort as 'distance' | 'relevance' | 'newest',
         keyword: this.keyword || undefined,
@@ -209,11 +228,10 @@ export struct NearbyUsersListPage {
   private async loadMoreUsers(): Promise<void> {
     if (this.isLoadingMore || !this.hasMore) return;
     const ref = this.getReferencePoint();
-    if (!ref) return;
     this.isLoadingMore = true;
     try {
       const request: SearchUsersRequest = {
-        reference_point: ref,
+        reference_point: ref ?? undefined,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: this.activeSort as 'distance' | 'relevance' | 'newest',
         keyword: this.keyword || undefined,
@@ -314,6 +332,7 @@ export struct NearbyUsersListPage {
           .scrollBar(BarState.Off)
           .align(Alignment.Start)
           .layoutWeight(1)
+          .clip(true)
 
           Row({ space: DesignConstants.SPACING.XS }) {
             Text('排序')
@@ -383,21 +402,27 @@ export struct NearbyUsersListPage {
             Column() {
               // 名片卡为内容自撑高（非图片比例），用 WaterFlow 承载双列网格：
               // Grid 的行高不会由子项 aspectRatio/内容撑开（实测内容溢出），WaterFlow 按子项实测高排版
-              WaterFlow() {
-                LazyForEach(this.usersDataSource, (user: UserItem) => {
-                  FlowItem() {
-                    UserCard({ user: user })
+              List({ space: DesignConstants.SPACING.MD }) {
+                ForEach(this.getUserRows(), (row: UserItem[], rowIndex: number) => {
+                  ListItem() {
+                    Row({ space: DesignConstants.SPACING.MD }) {
+                      ForEach(row, (user: UserItem) => {
+                        UserCard({ user: user })
+                          .layoutWeight(1)
+                      }, (user: UserItem) => user.user?.user_id ?? '')
+                      if (row.length === 1) {
+                        Blank().layoutWeight(1)
+                      }
+                    }
+                    .width('100%')
+                    .alignItems(VerticalAlign.Top)
                   }
-                }, (user: UserItem) => user.user?.user_id ?? '')
+                }, (row: UserItem[], rowIndex: number) => 'users-row-' + rowIndex)
               }
               .width('100%')
               .layoutWeight(1)
-              .columnsTemplate(this.getGridColumnCount() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
-              .columnsGap(DesignConstants.SPACING.MD)
-              .rowsGap(DesignConstants.SPACING.MD)
-              .cachedCount(4)
-              .edgeEffect(EdgeEffect.None)
               .scrollBar(BarState.Off)
+              .edgeEffect(EdgeEffect.None)
               .onReachEnd(() => { this.loadMoreUsers(); })
 
               // 分页状态条（Grid 外常驻，规避 GridItem 跨列占位）
