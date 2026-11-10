@@ -160,15 +160,12 @@ describe('HomeFeedItem', () => {
 		expect(root.className).toContain('[&_a]:pointer-events-auto');
 	});
 
-	// 回归（审计 shell-home F3 / 纯文字卡审计）：无图瞬间卡不再只靠淡渐变+小图标，
-	// 改为「文字优先海报」——主题渐变底 + 大引号水印 + 居中放大正文；有图卡不渲染水印。
-	it('无图瞬间卡渲染文字优先海报水印（大引号），有图卡不渲染', () => {
+	// 回归（纯文字卡审计）：无图瞬间卡走「文字优先海报」——纯色底 + 小引号 + 居中放大正文；
+	// 不再叠加低透明度大引号水印（用户反馈大面积灰影压字、费眼）。
+	it('无图瞬间卡渲染文字优先海报且无大面积水印，有图卡不渲染', () => {
 		const noImage = { ...mockMoment, images: [] };
 		const { container, unmount } = render(HomeFeedItem, { props: { moment: noImage, onClick: () => {} } });
-		const layer = container.querySelector('.opacity-watermark');
-		expect(layer).not.toBeNull();
-		expect(layer?.getAttribute('aria-hidden')).toBe('true');
-		expect(layer?.querySelector('svg')?.getAttribute('class') ?? '').toContain('size-20');
+		expect(container.querySelector('.opacity-watermark')).toBeNull();
 		// 纯文字正文以海报式大字号居中渲染（不再是“空白图位”）
 		expect(container.querySelector('p.line-clamp-5')?.textContent).toContain(mockMoment.description ?? '');
 		unmount();

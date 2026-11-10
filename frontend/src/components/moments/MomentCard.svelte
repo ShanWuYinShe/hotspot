@@ -132,11 +132,6 @@
 		</div>
 	{/if}
 
-	<!-- 无图水印：大引号主题水印，替代默认的小图标，让海报感更完整 -->
-	{#snippet watermark()}
-		<Quote class="size-16 sm:size-20" strokeWidth={1} aria-hidden="true" />
-	{/snippet}
-
 	<!-- 底部信息托盘：紧凑排布在卡片底部 25% 区域，彻底腾出上方图片空间 -->
 	{#snippet footer({ onImage, horizontal }: { onImage: boolean; horizontal: boolean })}
 		{@const onCover = onImage && !horizontal}

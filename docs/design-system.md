@@ -481,7 +481,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 | `--cst-opacity-full` | 1 | 不透明 |
 | `--cst-opacity-active` | 0.13 | 选中叠加（mix 档） |
 | `--cst-opacity-glow` | 按主题 / 明暗覆写 | 光晕与主题强调档（见 `themes/*.css`） |
-| `--cst-opacity-watermark` | 0.08 | 无图卡片水印（跨端一致） |
+| `--cst-opacity-watermark` | 0.08 | 可选装饰水印透明度（`MediaCard` watermark 槽位；内容卡不使用） |
 
 - 组件只消费 `opacity-*` 语义类，禁止内联 opacity 字面量（AGENTS.md UI 原则 #4）。
 - 鸿蒙 `OPACITY`：`DISABLED 0.38` / `PRESSED 0.72` / `LOADING 0.58` / `SUBTLE 0.85` / `MUTED 0.5` / `EMPHASIZED 0.8`；
@@ -797,8 +797,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
   （正文 `text-sm`=12 / 作者 `text-md`=14，避免 16px 两行挤压操作行）；元信息 `text-xs`=11（非 12，
   以 `theme-registry.css` 实际刻度为准）。
 - 多图：封面取首图 + 右上「1/N」计数徽章（详情页仍可看全部）。
-- 无图/加载失败 fallback：`--cst-surface-card-fallback` 主题渐变 + 大引号主题水印（`--cst-opacity-watermark`）；**纯文字瞬间**走「文字优先海报」——大引号 + 放大的正文居中排版（`MomentCard` / `HomeFeedItem` 同源），保持 3:4/4:5 卡位不变，不再读成缺图骨架
-  （`--cst-opacity-watermark` = 0.08，aria-hidden）+ **主题色文字**（不得压白字）。
+- 无图/加载失败 fallback：`--cst-surface-card-fallback` 纯色底 + **主题色文字**（不得压白字），不叠加低透明度大面积水印/装饰层（与正文混读、费眼）；**纯文字瞬间**走「文字优先海报」——小引号 + 放大的正文居中排版（`MomentCard` / `HomeFeedItem` 同源），保持 3:4/4:5 卡位不变，不再读成缺图骨架。
 - 骨架屏：整卡图片占位 + 顶部作者行/底部文本条占位，与真实卡同比例、同文字位置（零位移）。
 - 覆盖态按钮（`onMedia` 变体）：关注/加入/已加入/审核中等压图按钮 = 深色强遮罩胶囊 + 白字 + 白描边
   （未加入主按钮可用 accent 实底 + `text-on-accent`）；亮图/暗图都稳。
