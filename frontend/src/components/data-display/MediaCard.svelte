@@ -128,7 +128,8 @@
 			{/if}
 		{/if}
 	{:else}
-		<div class="surface-accent-gradient pointer-events-none {imageBox} flex flex-col items-center justify-center bg-surface-primary border border-border-default/60">
+		<!-- 无图卡：边缘用 border-strong 明确轮廓，避免白卡与浅画布糊在一起 -->
+		<div class="surface-accent-gradient pointer-events-none {imageBox} flex flex-col items-center justify-center bg-surface-primary border border-border-strong">
 			{#if watermark}
 				<div
 					class="absolute inset-0 flex items-center justify-center text-text-secondary/30 opacity-watermark"
