@@ -19,6 +19,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
+import { LucideIcon } from '../../../components/LucideIcon';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { EmptyState, RefreshIndicator, LoadingMoreIndicator } from '../../../components/EmptyState';
@@ -116,6 +117,27 @@ export struct NearbyUsersListPage {
   }
 
   /** 刷新列表数据源：onlineOnly 时按 presence_status 客户端过滤在线用户 */
+  /** 排序菜单选择：0=距离 1=在线（客户端过滤） 2=共同好友（relevance） */
+  private onSortSelected(index: number): void {
+    if (index === 1) {
+      if (!this.onlineOnly) {
+        this.onlineOnly = true;
+        this.refreshUsersDataSource();
+      }
+      return;
+    }
+    const sortMap: string[] = ['distance', 'distance', 'relevance'];
+    const newSort = sortMap[index] || 'distance';
+    const needReload = newSort !== this.activeSort;
+    this.onlineOnly = false;
+    if (needReload) {
+      this.activeSort = newSort;
+      this.loadUsers(true);
+    } else {
+      this.refreshUsersDataSource();
+    }
+  }
+
   private refreshUsersDataSource(): void {
     let filtered = this.users;
     // 兴趣分类（对齐前端 tagFilter 全量匹配）：「全部」不过滤；其余按 tags 全量匹配，首标签之外同样可命中
@@ -270,81 +292,62 @@ export struct NearbyUsersListPage {
           }
         }
 
-        // 排序胶囊行 = 页头 below（前端 header 内 mt-3 pb-2 的 TabBar，属于 header 高度的一部分）
-        Scroll() {
-        TabsPillGroup({
-          variant: 'pills',
-          tabs: [{ label: '距离' }, { label: '在线' }, { label: '共同好友' }],
-          freeWidth: true,
-          // 对齐前端 nearby/people：紧凑 pill 行（自然宽度左对齐、无灰底槽）
-          activeIndex: this.onlineOnly ? 1 : (this.activeSort === 'relevance' ? 2 : 0),
-          actions: {
-            onChange: (index: number) => {
-              // 「在线」非服务端排序（接口无在线参数），仅切换客户端过滤，无需重新请求
-              if (index === 1) {
-                if (!this.onlineOnly) {
-                  this.onlineOnly = true;
+        // 筛选行（对齐 web nearby/people）：左侧兴趣分类 + 右侧「排序 距离 ⌄」同一行
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Scroll() {
+            TabsPillGroup({
+              variant: 'pills',
+              tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
+              freeWidth: true,
+              activeIndex: NearbyUsersListPage.FILTER_TAGS.indexOf(this.activeTag),
+              actions: {
+                onChange: (index: number) => {
+                  const tag = NearbyUsersListPage.FILTER_TAGS[index] || '全部';
+                  if (tag === this.activeTag) return;
+                  this.activeTag = tag;
                   this.refreshUsersDataSource();
                 }
-                return;
               }
-              const sortMap: string[] = ['distance', 'distance', 'relevance'];
-              const newSort = sortMap[index] || 'distance';
-              const needReload = newSort !== this.activeSort;
-              this.onlineOnly = false;
-              if (needReload) {
-                this.activeSort = newSort;
-                this.loadUsers(true);
-              } else {
-                // 排序未变，仅退出在线过滤，直接恢复完整列表
-                this.refreshUsersDataSource();
-              }
-            }
+            })
           }
-        })
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .align(Alignment.Start)
+          .layoutWeight(1)
+
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Text('排序')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.getCurrentThemePalette().textTertiary)
+            Text(this.onlineOnly ? '在线' : (this.activeSort === 'relevance' ? '共同好友' : '距离'))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+            LucideIcon({
+              icon: AppIcon.ARROW_DOWN,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+              paletteRole: 'textSecondary'
+            })
+          }
+          .flexShrink(0)
+          .alignItems(VerticalAlign.Center)
+          .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .accessibilityText('排序方式')
+          .bindMenu([
+            { value: '距离', action: () => this.onSortSelected(0) },
+            { value: '在线', action: () => this.onSortSelected(1) },
+            { value: '共同好友', action: () => this.onSortSelected(2) }
+          ])
         }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .align(Alignment.Start)
         .width('100%')
-        // below 行内距：上 12(mt-3)、下 8(pb-2)；区块再补 14(pb-3.5)
+        .alignItems(VerticalAlign.Center)
         .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
         }
-        .width('100%')
-        .padding({ bottom: DesignConstants.SPACING.LG })
-        // 页头区块底部发丝线（对齐前端 header border-bottom：线在 below 之下）
         .border({
           width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE },
           color: this.getSurfaceBorder()
         })
 
         // ── 正文（对齐前端内容列 pt-4 pb-6）──
-        // 兴趣分类胶囊行（前端：正文首行 mb-4 的 TabBar，随内容滚动，不在 header 内）
-        Scroll() {
-        TabsPillGroup({
-          variant: 'pills',
-          tabs: NearbyUsersListPage.FILTER_TAGS.map((label: string): TabItem => ({ label })),
-          freeWidth: true,
-          // 对齐前端：紧凑 pill 行（自然宽度左对齐、无灰底槽）
-          activeIndex: NearbyUsersListPage.FILTER_TAGS.indexOf(this.activeTag),
-          actions: {
-            onChange: (index: number) => {
-              const tag = NearbyUsersListPage.FILTER_TAGS[index] || '全部';
-              if (tag === this.activeTag) return;
-              this.activeTag = tag;
-              // 客户端过滤（不重新请求服务端）—— 对齐前端全量标签匹配语义
-              this.refreshUsersDataSource();
-            }
-          }
-        })
-        }
-        .scrollable(ScrollDirection.Horizontal)
-        .scrollBar(BarState.Off)
-        .align(Alignment.Start)
-        .width('100%')
-        // 前端内容列 pt-4(16) → 筛选行；筛选行 mb-4(16) → 网格
-        .padding({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-
         // 内容区
         if (this.isLoading) {
           SystemLoadingView({ message: '正在加载附近的人…' })
