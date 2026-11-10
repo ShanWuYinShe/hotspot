@@ -436,7 +436,7 @@
 		<!-- Sidebar (224px expanded / 72px collapsed, fixed width) -->
 		<aside
 			class="relative flex flex-col shrink-0 overflow-hidden box-border bg-transparent transition-[width] duration-standard ease-standard"
-			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:0.75rem;"
+			style="width:{isSidebarCollapsed ? 'var(--cst-desktop-sidebar-collapsed)' : 'var(--cst-desktop-sidebar-width)'};padding:{isSidebarCollapsed ? '0.5rem' : '0.75rem'};"
 		>
 			<!-- Scrollable nav region — takes all available space -->
 			<div class="flex-1 flex flex-col overflow-y-auto no-scrollbar min-h-0">
@@ -453,8 +453,8 @@
 					{/each}
 				</div>
 
-				<!-- 分组留白（Round 2：去掉硬分隔线，改用纯留白分组） -->
-				<div class="my-3 self-center" aria-hidden="true"></div>
+				<!-- 分组留白（Round 2：展开态纯留白；折叠态补短分隔线保持结构） -->
+				<div class="my-3 self-center {isSidebarCollapsed ? 'h-px w-6 rounded-full bg-border-default/70' : ''}" aria-hidden="true"></div>
 
 				<!-- Section 2 label — 与「发现」共用同一标签实现（折叠时同步收起） -->
 				{@render navSectionLabel('个人中心')}
@@ -474,7 +474,7 @@
 
 				<!-- Section 3: 管理后台（仅平台管理员；权限随登录态拉取，非管理员不渲染） -->
 				{#if auth.status === 'authenticated' && admin.isAdmin}
-					<div class="my-3 self-center" aria-hidden="true"></div>
+					<div class="my-3 self-center {isSidebarCollapsed ? 'h-px w-6 rounded-full bg-border-default/70' : ''}" aria-hidden="true"></div>
 					<div class="flex flex-col gap-1">
 						<SidebarNavItem
 							item={{ icon: Shield, label: '管理后台' }}

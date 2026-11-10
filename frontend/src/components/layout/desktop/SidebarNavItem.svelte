@@ -69,9 +69,9 @@
 
 <button
 	type="button"
-	class="tap-97 relative flex h-10 w-full shrink-0 items-center rounded-sm focus-ring text-left {collapsed
-		? 'justify-center'
-		: ''}"
+	class="tap-97 relative flex shrink-0 items-center focus-ring text-left {collapsed
+		? 'mx-auto size-11 justify-center rounded-full'
+		: 'h-10 w-full rounded-sm'}"
 	style="background:{fill};box-shadow:{borderRing};color:{labelColor};transition:background var(--cst-motion-rapid) var(--cst-ease-standard), box-shadow var(--cst-motion-rapid) var(--cst-ease-standard), color var(--cst-motion-rapid) var(--cst-ease-standard), transform var(--cst-motion-instant) var(--cst-ease-standard);"
 	aria-current={isActive ? 'page' : undefined}
 	data-active={isActive ? 'true' : undefined}
@@ -81,14 +81,17 @@
 	onmouseenter={() => (hovered = true)}
 	onmouseleave={() => (hovered = false)}
 >
-	<!-- 左侧指示条 — 只属于选中态：accent 色、3×20px 圆头（灰度下最直观的形状信号） -->
-	<span
-		aria-hidden="true"
-		class="rounded-full {isActive ? 'opacity-hover' : 'opacity-none'}"
-		style="position:absolute;left:4px;top:50%;width:3px;height:{indicatorH}px;margin-top:{indicatorH
-			? -10
-			: 0}px;background:var(--cst-navigation-active-indicator);transition:height var(--cst-motion-snappy) var(--cst-ease-standard), opacity var(--cst-motion-snappy) var(--cst-ease-standard), margin-top var(--cst-motion-snappy) var(--cst-ease-standard);pointer-events:none;"
-	></span>
+	<!-- 左侧指示条 — 只属于展开态选中行：accent 色、3×20px 圆头（灰度下最直观的形状信号）；
+	     折叠态是圆形按钮，由底色 + 内缘描边表达选中，不再画左侧条。 -->
+	{#if !collapsed}
+		<span
+			aria-hidden="true"
+			class="rounded-full {isActive ? 'opacity-hover' : 'opacity-none'}"
+			style="position:absolute;left:4px;top:50%;width:3px;height:{indicatorH}px;margin-top:{indicatorH
+				? -10
+				: 0}px;background:var(--cst-navigation-active-indicator);transition:height var(--cst-motion-snappy) var(--cst-ease-standard), opacity var(--cst-motion-snappy) var(--cst-ease-standard), margin-top var(--cst-motion-snappy) var(--cst-ease-standard);pointer-events:none;"
+		></span>
+	{/if}
 	<span
 		class="relative flex size-10 shrink-0 items-center justify-center"
 		style="transform:scale({iconScale});transition:transform var(--cst-motion-rapid) var(--cst-ease-standard);"
@@ -102,7 +105,7 @@
 		{#if collapsed && badge > 0}
 			<span
 				aria-hidden="true"
-				class="absolute right-1.5 top-1.5 size-2 rounded-full bg-accent-default"
+				class="absolute right-2 top-2 size-2 rounded-full bg-accent-default ring-2 ring-surface-page"
 			></span>
 		{/if}
 	</span>

@@ -40,26 +40,38 @@
 	});
 </script>
 
-<button
-	type="button"
-	class="group relative flex w-full items-center rounded-xl border border-border-default/50 bg-surface-primary/70 backdrop-blur-md p-2 text-left transition-colors duration-rapid focus-ring hover:bg-surface-primary hover:border-border-default {collapsed ? 'justify-center p-1.5' : ''}"
-	title={collapsed ? '位置选择' : undefined}
-	aria-label="位置选择"
-	onclick={onClick}
->
-	<span
-		class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-default transition-colors group-hover:bg-accent-default group-hover:text-text-on-accent"
+{#if collapsed}
+	<!-- 折叠态：44px 圆形锚点，和折叠导航同为圆形 icon 节奏 -->
+	<button
+		type="button"
+		class="group mx-auto flex size-11 items-center justify-center rounded-full border border-border-default/50 bg-surface-primary/60 text-accent-default backdrop-blur-md transition-colors duration-rapid focus-ring hover:border-accent-border hover:bg-accent-soft"
+		title="位置选择"
+		aria-label="位置选择"
+		onclick={onClick}
 	>
-		<MapPin class="size-3.5" strokeWidth={1.75} />
-	</span>
-
-	<span
-		class="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-standard ease-standard {collapsed ? 'ml-0 max-w-0 opacity-none' : 'ml-2.5 max-w-full opacity-full'}"
+		<MapPin class="size-4.5" strokeWidth={1.75} />
+	</button>
+{:else}
+	<button
+		type="button"
+		class="group relative flex w-full items-center rounded-xl border border-border-default/50 bg-surface-primary/70 backdrop-blur-md p-2 text-left transition-colors duration-rapid focus-ring hover:bg-surface-primary hover:border-border-default"
+		aria-label="位置选择"
+		onclick={onClick}
 	>
-		<span class="min-w-0 flex-1">
-			<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">位置选择</span>
-			<span class="block truncate text-xxs leading-card text-text-secondary">{locationName || (hasAnchor ? '自定义位置' : '自动定位')}</span>
+		<span
+			class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent-default transition-colors group-hover:bg-accent-default group-hover:text-text-on-accent"
+		>
+			<MapPin class="size-3.5" strokeWidth={1.75} />
 		</span>
-		<ChevronRight class="ml-0.5 size-3.5 shrink-0 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5" strokeWidth={1.5} />
-	</span>
-</button>
+
+		<span
+			class="flex min-w-0 flex-1 items-center overflow-hidden whitespace-nowrap transition-[max-width,opacity,margin] duration-standard ease-standard ml-2.5 max-w-full opacity-full"
+		>
+			<span class="min-w-0 flex-1">
+				<span class="block text-xs font-semibold text-text-primary group-hover:text-accent-default transition-colors">位置选择</span>
+				<span class="block truncate text-xxs leading-card text-text-secondary">{locationName || (hasAnchor ? '自定义位置' : '自动定位')}</span>
+			</span>
+			<ChevronRight class="ml-0.5 size-3.5 shrink-0 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5" strokeWidth={1.5} />
+		</span>
+	</button>
+{/if}
