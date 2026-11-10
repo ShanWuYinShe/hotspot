@@ -38,7 +38,8 @@ import { formatCount } from '../../../core/utils/FormatUtil';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
-import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
+import { SystemInput } from '../../../components/SystemInput';
+import { Skeleton } from '../../../components/states/Skeleton';
 
 @Preview
 @Component
@@ -52,6 +53,7 @@ export struct GroupPage {
 
   private stateManager = GlobalStateManager.getInstance();
   @State groups: GroupItem[] = [];
+  @State searchKeyword: string = '';
   private groupsDataSource: BasicDataSource<GroupItem> = new BasicDataSource<GroupItem>([]);
   @State isLoading: boolean = true;
   @State isRefreshing: boolean = false;
@@ -103,6 +105,26 @@ export struct GroupPage {
 
   private getSurfaceBorder(): string {
     return this.getCurrentThemePalette().borderColor;
+  }
+
+  private filteredGroups(): GroupItem[] {
+    const keyword = this.searchKeyword.trim().toLowerCase();
+    if (keyword.length === 0) {
+      return this.groups;
+    }
+    return this.groups.filter((item: GroupItem) =>
+      (item.group?.name ?? '').toLowerCase().indexOf(keyword) >= 0);
+  }
+
+  private totalOnlineCount(): number {
+    let total = 0;
+    this.groups.forEach((item: GroupItem) => {
+      const online = item.online_members_count;
+      if (online !== undefined && online !== null) {
+        total += online;
+      }
+    });
+    return total;
   }
 
   aboutToDisappear() {
@@ -220,7 +242,7 @@ export struct GroupPage {
 
       if (response.code === 0) {
         this.groups = response.data?.items ?? [];
-        this.groupsDataSource.setData(this.groups);
+        this.groupsDataSource.setData(this.filteredGroups());
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       } else {
@@ -248,7 +270,7 @@ export struct GroupPage {
       if (response.code === 0) {
         const items = response.data?.items ?? [];
         this.groups = this.groups.concat(items);
-        this.groupsDataSource.appendData(items);
+        this.groupsDataSource.setData(this.filteredGroups());
         this.hasMore = !!(response.data?.next_cursor);
         this.nextCursor = response.data?.next_cursor ?? '';
       }
@@ -480,12 +502,11 @@ export struct GroupPage {
     NavDestination() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
         Column() {
-          // 标题栏 —— 对齐前端 /me/groups：页头只留标题 + 返回 + 主操作；
-          // 邀请/申请下移到内容区入口行。三枚按钮挤在 trailing 会把标题压成「我…」
+          // 标题栏 —— 对齐 web 个人分区页 integrated 移动端页头 18/600。
           SystemPageHeader({
             title: '我的群组',
-            titleSize: DesignConstants.FONT.SIZE.XXL,
-            titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+            titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+            titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
             showBackButton: true,
             onBack: () => { AppRouter.pop(); },
             backgroundVariant: 'transparent'
@@ -499,47 +520,66 @@ export struct GroupPage {
             })
           }
 
-          // 邀请/申请入口行（页头放不下，收进内容区；作用与原页头按钮一致）
-          Row({ space: DesignConstants.SPACING.SM }) {
-            SystemButton({
-              label: '收到的邀请',
-              variant: 'surface',
-              buttonSize: 'small',
-              onPress: () => { this.loadMyInvites(); }
-            })
-
-            SystemButton({
-              label: '我的申请',
-              variant: 'surface',
-              buttonSize: 'small',
-              onPress: () => { this.loadMyApplications(); }
-            })
-
-            Blank()
+          if (!this.isLoading) {
+            this.buildGroupsTools()
           }
-          .width('100%')
-          // 横向留白由 PageShellContainer gutter 统一提供（页头已改为不自带横向 padding）
-          .padding({ bottom: DesignConstants.SPACING.SM })
+
+          // 邀请/申请入口（web 无对应入口，保留端内能力；降为安静 surface 行）
+          if (!this.isLoading) {
+            Row({ space: DesignConstants.SPACING.SM }) {
+              SystemButton({
+                label: '收到的邀请',
+                variant: 'surface',
+                buttonSize: 'small',
+                onPress: () => { this.loadMyInvites(); }
+              })
+
+              SystemButton({
+                label: '我的申请',
+                variant: 'surface',
+                buttonSize: 'small',
+                onPress: () => { this.loadMyApplications(); }
+              })
+
+              Blank()
+            }
+            .width('100%')
+            .padding({ bottom: DesignConstants.SPACING.MD })
+          }
 
           // 内容区域
           if (this.isLoading) {
-            SystemLoadingView({ message: '正在加载我的群组…' })
-              .transition(
-                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-              )
+            this.buildGroupsSkeleton()
           } else if (this.errorMessage && this.groups.length === 0) {
             EmptyState({
-          bare: true, icon: AppIcon.WARNING, message: this.errorMessage, actionLabel: '重试', onAction: () => { this.loadMyGroups(); } })
+              bare: true,
+              icon: AppIcon.WARNING,
+              message: this.errorMessage,
+              actionLabel: '重试',
+              onAction: () => { this.loadMyGroups(); }
+            })
               .layoutWeight(1)
               .transition(
                 TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
                   .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
               )
+          } else if (this.filteredGroups().length === 0 && this.searchKeyword.trim().length > 0) {
+            EmptyState({
+              icon: AppIcon.GROUP,
+              title: '没有找到匹配的群组',
+              message: '换个关键词试试，或者去附近群组发现新的小圈子。'
+            })
+              .layoutWeight(1)
           } else if (this.groups.length === 0) {
             Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
               EmptyState({
-          spotlight: true, bare: true, icon: AppIcon.GROUP, message: '还没有加入任何群组\n去附近发现感兴趣的小组吧！' })
+                spotlight: true,
+                icon: AppIcon.GROUP,
+                title: '还没有加入群组',
+                message: '去附近群组发现感兴趣的小组，加入后就能在这里快速进入。',
+                actionLabel: '去附近发现',
+                onAction: () => { AppRouter.push(PageNames.NEARBY_GROUPS); }
+              })
             }
             .layoutWeight(1)
             .pullToRefresh(false)
@@ -580,6 +620,103 @@ export struct GroupPage {
       }
     }
     .hideTitleBar(true)
+  }
+
+  /** 工具行（群数 + 在线数 + 搜索），对齐 web SectionGroups 的统计/搜索行 */
+  @Builder
+  private buildGroupsTools() {
+    Column({ space: DesignConstants.SPACING.MD }) {
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(`共 ${this.groups.length} 个群组`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+
+        Text('·')
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .opacity(DesignConstants.OPACITY.SUBTLE)
+
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          if (this.totalOnlineCount() > 0) {
+            Row()
+              .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+              .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getCurrentThemePalette().online)
+          }
+          Text(`${this.totalOnlineCount()} 人在线`)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontColor(this.totalOnlineCount() > 0 ? this.getCurrentThemePalette().online : this.getCurrentThemePalette().textSecondary)
+        }
+        .alignItems(VerticalAlign.Center)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+
+      SystemInput({
+        value: this.searchKeyword,
+        placeholder: '搜索我的群组…',
+        prefixIcon: AppIcon.SEARCH,
+        showPrefixIcon: true,
+        showClearButton: true,
+        inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+        onChange: (value: string) => {
+          this.searchKeyword = value;
+          this.groupsDataSource.setData(this.filteredGroups());
+        }
+      })
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+    .padding({ bottom: DesignConstants.SPACING.MD })
+  }
+
+  @Builder
+  private buildGroupsSkeleton() {
+    List() {
+      ListItemGroup() {
+        ForEach([0, 1, 2, 3], (index: number) => {
+          ListItem() {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              Skeleton({
+                blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
+                blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
+                cornerRadius: DesignConstants.RADIUS.MD
+              })
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Skeleton({
+                  blockWidth: '52%',
+                  blockHeight: DesignConstants.FONT.SIZE.MD,
+                  cornerRadius: DesignConstants.RADIUS.SM
+                })
+                Skeleton({
+                  blockWidth: '34%',
+                  blockHeight: DesignConstants.FONT.SIZE.SM,
+                  cornerRadius: DesignConstants.RADIUS.SM
+                })
+              }
+              .layoutWeight(1)
+              .alignItems(HorizontalAlign.Start)
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.MD)
+          }
+        }, (index: number) => `group-skeleton-${index}`)
+      }
+      .padding(DesignConstants.SPACING.SM)
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+      .clip(true)
+    }
+    .width('100%')
+    .layoutWeight(1)
+    .scrollBar(BarState.Off)
+    .padding({ top: DesignConstants.SPACING.SM })
+    .accessibilityText('正在加载我的群组')
   }
 
   @Builder
@@ -842,6 +979,8 @@ export struct GroupPage {
   @Builder
   private buildGroupList() {
     List() {
+      // 内容软岛（对齐 web ListContainer bordered）：群组列表收进一张 20 圆角软岛卡，
+      // 组外框/投影归 ListItemGroup，行本身只保留内距与分隔线（LazyForEach 虚拟化保留）。
       ListItemGroup() {
         LazyForEach(this.groupsDataSource, (group: GroupItem) => {
           ListItem() {
@@ -852,9 +991,15 @@ export struct GroupPage {
       .divider({
         strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
         color: this.getCurrentThemePalette().borderColor,
-        startMargin: DesignConstants.SPACING.LG,
-        endMargin: DesignConstants.SPACING.LG
+        startMargin: DesignConstants.SPACING.MD,
+        endMargin: DesignConstants.SPACING.MD
       })
+      .padding(DesignConstants.SPACING.SM)
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+      .clip(true)
+
       if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
@@ -955,10 +1100,10 @@ export struct GroupPage {
     }
     .width('100%')
     .padding({
-      left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
-      top: DesignConstants.SPACING.LG,
-      bottom: DesignConstants.SPACING.LG
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
     })
     // 行级卡片样式（圆角 + elevatedShadow + 白底 + 行间距）已移除：
     // 外框与投影归分组容器，行间靠 ListItemGroup.divider

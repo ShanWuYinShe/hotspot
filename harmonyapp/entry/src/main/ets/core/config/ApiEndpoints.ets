@@ -226,8 +226,18 @@ class AdminRbacEndpoints {
   readonly GET_ME: string = '/admin/api/v1/rbac/me';
 }
 
+class AdminStatsEndpoints {
+  readonly GEO: string = '/admin/api/v1/stats/geo';
+}
+
+class AdminReportEndpoints {
+  readonly FETCH: string = '/admin/api/v1/reports/fetch';
+}
+
 class AdminEndpoints {
   readonly RBAC: AdminRbacEndpoints = new AdminRbacEndpoints();
+  readonly STATS: AdminStatsEndpoints = new AdminStatsEndpoints();
+  readonly REPORTS: AdminReportEndpoints = new AdminReportEndpoints();
 }
 
 // Main entry

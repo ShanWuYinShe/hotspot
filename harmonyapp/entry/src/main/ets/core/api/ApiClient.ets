@@ -183,6 +183,10 @@ import {
   AnnouncementListRequest,
   ApiVersionMeta,
   AdminPermissions,
+  AdminGeoStatsRequest,
+  AdminGeoStatsResponse,
+  FetchAdminReportsRequest,
+  AdminReportsPage,
 
   // 分享
   CreateShareRequest,
@@ -373,6 +377,16 @@ export class ApiClient {
 
   static async getMyAdminPermissions(): Promise<ApiResponse<AdminPermissions>> {
     return HttpUtil.post<ApiResponse<AdminPermissions>, EmptyRequest>(ApiEndpoints.ADMIN.RBAC.GET_ME, new EmptyRequest());
+  }
+
+  /** 管理后台概览 KPI（spec api_spec_admin.md → stats/geo；level 8 = 城市尺度） */
+  static async getAdminGeoStats(params: AdminGeoStatsRequest): Promise<ApiResponse<AdminGeoStatsResponse>> {
+    return HttpUtil.post<ApiResponse<AdminGeoStatsResponse>, AdminGeoStatsRequest>(ApiEndpoints.ADMIN.STATS.GEO, params);
+  }
+
+  /** 管理后台举报列表（概览只取 total/pending 计数；用 limit=1 压低响应体积） */
+  static async listAdminReports(params: FetchAdminReportsRequest): Promise<ApiResponse<AdminReportsPage>> {
+    return HttpUtil.post<ApiResponse<AdminReportsPage>, FetchAdminReportsRequest>(ApiEndpoints.ADMIN.REPORTS.FETCH, params);
   }
 
   static async getSystemAnnouncements(params: AnnouncementListRequest): Promise<ApiResponse<SystemAnnouncementListData>> {

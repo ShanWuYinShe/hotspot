@@ -51,6 +51,8 @@ const GROUP_DESC_RULES: FieldRule[] = [
   { maxLength: GROUP_DESCRIPTION_MAX, maxLengthMessage: `群组描述最多 ${GROUP_DESCRIPTION_MAX} 字符` }
 ];
 const LOCATION_NAME_MAX: number = 100;
+/** 群组分类（对齐 web CreateGroupSheet CATEGORIES，单选） */
+const GROUP_CATEGORIES: string[] = ['摄影', '音乐', '户外', '阅读', '美食', '健身', '游戏', '其他'];
 
 @Preview
 @Component
@@ -76,6 +78,8 @@ export struct CreateGroupPage {
   @State groupAvatarLocalUri: string = '';
   @State groupAvatarFileId: string = '';
   @State isGroupAvatarUploading: boolean = false;
+  @State category: string = '摄影';
+  @State requiresApproval: boolean = false;
   @State groupNameFocused: boolean = false;
   @State groupDescriptionFocused: boolean = false;
   @State groupPasswordFocused: boolean = false;
@@ -122,10 +126,6 @@ export struct CreateGroupPage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getSurfaceBackground(): string {
-    return this.getCurrentThemePalette().surfaceBackground;
   }
 
   private getSurfaceSubtle(): string {
@@ -248,7 +248,9 @@ export struct CreateGroupPage {
           },
           password: this.isPasswordRequired ? trimmedPassword : undefined,
           max_members: this.maxMembers,
-          // 有密码 → password 准入；否则 direct 直接加入（requires_approval 默认 false）
+          tags: [this.category],
+          requires_approval: this.requiresApproval,
+          // 有密码 → password 准入；否则 direct 直接加入（requires_approval 控制是否审核）
           join_method: this.isPasswordRequired ? 'password' : 'direct'
         };
 
@@ -355,11 +357,12 @@ export struct CreateGroupPage {
         // 标题栏 —— 统一走 SystemPageHeader（居中标题 + 返回）
         SystemPageHeader({
           title: '创建群组',
-          titleSize: DesignConstants.FONT.SIZE.XXL,
-          titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+          // 对齐 web 表单页移动端页头 18/600
+          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); },
-            backgroundVariant: 'transparent'
+          backgroundVariant: 'transparent'
         })
 
         // 表单内容
@@ -451,11 +454,51 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
               })
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.LG })
+
+            // 群组分类（对齐 web CreateGroupSheet 分类 chips）
+            this.SectionHeader('群组分类')
+            Column() {
+              Flex({ wrap: FlexWrap.Wrap }) {
+                ForEach(GROUP_CATEGORIES, (category: string) => {
+                  Text(category)
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+                    .fontWeight(this.category === category ?
+                      DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.REGULAR)
+                    .fontColor(this.category === category ?
+                      this.getCurrentThemePalette().textAccentOnSoft : this.getCurrentThemePalette().textSecondary)
+                    .backgroundColor(this.category === category ?
+                      this.getCurrentThemePalette().accentMuted : this.getSurfaceSubtle())
+                    .border({
+                      width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+                      color: this.category === category ?
+                        this.getCurrentThemePalette().accentBackground : this.getSurfaceBorder()
+                    })
+                    .borderRadius(DesignConstants.RADIUS.FULL)
+                    .padding({
+                      left: DesignConstants.SPACING.MD,
+                      right: DesignConstants.SPACING.MD,
+                      top: DesignConstants.SPACING.SM2,
+                      bottom: DesignConstants.SPACING.SM2
+                    })
+                    .margin({
+                      right: DesignConstants.SPACING.SM,
+                      bottom: DesignConstants.SPACING.SM
+                    })
+                    .accessibilityText(this.category === category ? `分类 ${category}，已选中` : `分类 ${category}`)
+                    .onClick(() => { this.category = category; })
+                }, (category: string) => category)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .padding(DesignConstants.SPACING.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
+            .shadow(this.getCurrentThemePalette().surfaceShadow)
 
             // 群组头像
             this.SectionHeader('群组头像')
@@ -511,11 +554,9 @@ export struct CreateGroupPage {
                 bottom: DesignConstants.SPACING.MD
               })
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.LG })
 
             // 位置信息
             this.SectionHeader('位置信息')
@@ -561,11 +602,9 @@ export struct CreateGroupPage {
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD
               })
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.LG })
 
             // 隐私与限制
             this.SectionHeader('隐私与限制')
@@ -649,6 +688,36 @@ export struct CreateGroupPage {
                 .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
               Row() {
+                Column({ space: DesignConstants.SPACING.XS }) {
+                  Text('新人需审核')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                  Text(this.requiresApproval ? '申请需管理员审核通过后加入' : '申请后直接加入')
+                    .fontSize(DesignConstants.FONT.SIZE.SM)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+
+                SystemToggle({
+                  label: '新人需审核',
+                  isOn: this.requiresApproval,
+                  onToggle: (isOn: boolean) => { this.requiresApproval = isOn; }
+                })
+              }
+              .width('100%')
+              .padding({
+                left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM
+              })
+              .alignItems(VerticalAlign.Center)
+
+              SoftDivider({ color: this.getSurfaceBorder() })
+                .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+
+              Row() {
                 Text('密码保护')
                   .fontSize(DesignConstants.FONT.SIZE.MD)
                   .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
@@ -716,17 +785,14 @@ export struct CreateGroupPage {
                 })
               }
             }
-            .backgroundColor(this.getSurfaceBackground())
-            .borderRadius(DesignConstants.RADIUS.LG)
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+            .borderRadius(DesignConstants.SHAPE.CARD)
             .shadow(this.getCurrentThemePalette().surfaceShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getSurfaceBorder() })
-            .margin({ bottom: DesignConstants.SPACING.LG })
           }
+          // 横向留白只由 PageShellContainer gutter 提供，页面不再叠加 16vp（否则双重留白）
           .padding({
-            left: DesignConstants.SPACING.LG,
-            right: DesignConstants.SPACING.LG,
             top: DesignConstants.SPACING.SM,
-            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, 16, 0)
+            bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
           })
         }
         .layoutWeight(1)
@@ -781,8 +847,9 @@ export struct CreateGroupPage {
     Text(title)
       .fontSize(DesignConstants.FONT.SIZE.SM)
       .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+      .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
       .fontColor(this.getCurrentThemePalette().textSecondary)
-      .margin({ bottom: -DesignConstants.SPACING.XS })
+      .letterSpacing(DesignConstants.FONT.LETTER_SPACING.LABEL)
   }
 }
 

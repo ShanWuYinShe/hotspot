@@ -1,6 +1,7 @@
 // ==================== Admin Types ====================
-import { AnnounceSeverity, GroupJoinMethod, PaginationParams, RelativeLocation, ReportAction, ReportStatus, ReportTargetType, UserAccountStatus, UserPresenceStatus, UserType } from './common';
+import { AnnounceSeverity, GroupJoinMethod, PaginatedData, PaginationParams, RelativeLocation, ReportAction, ReportStatus, ReportTargetType, UserAccountStatus, UserPresenceStatus, UserType } from './common';
 import { GroupInfo, UserInfo, UserStats } from './entities';
+import { ReportItem } from './misc';
 
 
 export interface AdminUserItem {
@@ -72,6 +73,43 @@ export interface AdminDismissalRecord {
   dismissed_at: string;
   dismissed_by: UserInfo;
   reason?: string;
+}
+
+// Admin 概览统计（spec api_spec_admin.md → stats/geo）。
+// 概览只消费 totals/generated_at；regions/places/trends 由后续地理统计页按需补充。
+export interface AdminGeoStatsRequest {
+  level?: number;
+  limit?: number;
+  trend_days?: number;
+}
+
+export interface AdminGeoStatsTotals {
+  user: number;
+  group: number;
+  moment: number;
+  total: number;
+}
+
+export interface AdminGeoStatsResponse {
+  generated_at: string;
+  totals: AdminGeoStatsTotals;
+}
+
+// 平台举报列表（概览只取 pending total 作为待办角标）
+export interface FetchAdminReportsRequest {
+  status?: ReportStatus;
+  target_type?: ReportTargetType;
+  pagination?: PaginationParams;
+}
+
+export interface AdminReportItem extends ReportItem {
+  reporter: UserInfo;
+  handled_by: UserInfo | null;
+  handle_note: string | null;
+}
+
+export interface AdminReportsPage extends PaginatedData<AdminReportItem> {
+  total: number | null;
 }
 
 // Admin RBAC Types

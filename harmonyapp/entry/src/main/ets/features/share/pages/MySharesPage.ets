@@ -227,8 +227,9 @@ export struct MySharesPage {
       // 头部 —— 统一走 SystemPageHeader（居中标题 + 返回）
       SystemPageHeader({
         title: '我的分享',
-        titleSize: DesignConstants.FONT.SIZE.XXL,
-        titleWeight: DesignConstants.FONT.WEIGHT.MEDIUM,
+        // 对齐 web 个人分区页 integrated 移动端页头 18/600
+        titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+        titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
         showBackButton: true,
         onBack: () => { AppRouter.pop(); },
       })
@@ -262,7 +263,11 @@ export struct MySharesPage {
       } else if (this.shares.length === 0) {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           EmptyState({
-          bare: true, icon: AppIcon.SHARE, message: '暂无分享记录\n创建分享后即可在这里管理' })
+            spotlight: true,
+            icon: AppIcon.SHARE,
+            title: '暂无分享记录',
+            message: '创建分享后即可在这里管理链接、查看有效期与访问状态。'
+          })
         }
         .layoutWeight(1)
         .pullToRefresh(false)
@@ -317,11 +322,16 @@ export struct MySharesPage {
           }
         }, (share: ShareListItem) => share.share_id)
       }
+      .padding(DesignConstants.SPACING.SM)
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+      .clip(true)
       .divider({
         strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
         color: this.getSurfaceBorder(),
-        startMargin: DesignConstants.SPACING.LG,
-        endMargin: DesignConstants.SPACING.LG
+        startMargin: DesignConstants.SPACING.MD,
+        endMargin: DesignConstants.SPACING.MD
       })
 
       if (this.isLoadingMore) {
@@ -368,15 +378,15 @@ export struct MySharesPage {
         .layoutWeight(1)
 
         Text(this.shareStatusText(share))
-          .fontSize(DesignConstants.FONT.SIZE.SM)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(DesignConstants.FONT.SIZE.XS2)
           .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
           .fontColor(this.shareStatusColor(share))
           .backgroundColor(this.shareStatusBackground(share))
-          .borderRadius(DesignConstants.RADIUS.MD)
+          .borderRadius(DesignConstants.RADIUS.FULL)
           .padding({
-            left: DesignConstants.SPACING.SM,
-            right: DesignConstants.SPACING.SM,
+            left: DesignConstants.SPACING.SM2,
+            right: DesignConstants.SPACING.SM2,
             top: DesignConstants.SPACING.XS,
             bottom: DesignConstants.SPACING.XS
           })
@@ -496,7 +506,12 @@ export struct MySharesPage {
       }
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.LG)
+    .padding({
+      left: DesignConstants.SPACING.MD,
+      right: DesignConstants.SPACING.MD,
+      top: DesignConstants.SPACING.MD,
+      bottom: DesignConstants.SPACING.MD
+    })
     // 行级卡片（圆角 + elevatedShadow + 白底 + 行间距）移除：分组外框与分隔线由
     // ListItemGroup 承担（对齐前端 ListContainer 分组列表）
   }

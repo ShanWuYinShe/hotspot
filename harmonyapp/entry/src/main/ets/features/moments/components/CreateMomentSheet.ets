@@ -4,7 +4,7 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { AccountInfo, CreateMomentRequest, GeoPoint, MomentItem, PrivacyLevel } from '../../../core/types/api';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -14,8 +14,9 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { common } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { curves } from '@kit.ArkUI';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
+import { SystemButton } from '../../../components/SystemButton';
 import { MomentDraftStore } from '../state/MomentDraftStore';
 
 const DOMAIN_NUMBER: number = 0xFF28;
@@ -50,8 +51,6 @@ export struct CreateMomentSheet {
   // 可见范围 UI 三选（对齐前端 CreateSheet AUDIENCES）；契约 PrivacyLevel 仅
   // 'public' | 'private'（spec/api_spec_types.md），提交时 nearby→public、其余→private
   @State private audience: string = 'nearby';
-  /** 隐私选项按压态（选中按压=底色加深；未选中按压=缩放预览） */
-  @State private privacyPressed: string = '';
   @State private isPublishing: boolean = false;
   @State private publishingMessage: string = '';
   @State private localLocation: LocationInfo | null = null;
@@ -207,7 +206,7 @@ export struct CreateMomentSheet {
             .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
           Text('记录此刻')
             .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
             .fontColor(this.getPalette().textPrimary)
         }
         .alignItems(HorizontalAlign.Start)
@@ -352,9 +351,10 @@ export struct CreateMomentSheet {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.LG)
+    // ArkUI 陷阱：.border() 写在 .borderRadius() 之后会把圆角重置为 0，故边框在前
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     .borderRadius(DesignConstants.SHAPE.INPUT)
     .backgroundColor(this.getPalette().inputBackgroundColor)
-    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
     // 裁剪子组件（TextArea），防止系统默认视觉溢出圆角
     .clip(true)
   }
@@ -390,9 +390,10 @@ export struct CreateMomentSheet {
               .backgroundColor(DesignConstants.COLOR.IMAGE_BADGE_BG)
               .justifyContent(FlexAlign.Center)
               .margin(DesignConstants.SPACING.HALF)
+              .accessibilityText('移除图片')
               .onClick(() => this.removeImage(index))
             }
-          }, (url: string) => url)
+          }, (url: string, index: number) => `${index}_${url}`)
 
           if (this.imageUrls.length < 9) {
             Column({ space: DesignConstants.SPACING.THREE }) {
@@ -407,11 +408,11 @@ export struct CreateMomentSheet {
             }
             .width(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
             .height(DesignConstants.COMPONENT.IMAGE_THUMBNAIL_SIZE)
-            .borderRadius(DesignConstants.RADIUS.SM)
             .border({
               width: DesignConstants.BORDER_WIDTH.HAIRLINE,
               color: this.getPalette().borderColor
             })
+            .borderRadius(DesignConstants.RADIUS.SM)
             .justifyContent(FlexAlign.Center)
             .onClick(() => this.selectImages())
           }
@@ -496,13 +497,22 @@ export struct CreateMomentSheet {
       }
       .width('100%')
 
-      Row({ space: DesignConstants.SPACING.SM }) {
-        this.buildPrivacyOption('nearby', AppIcon.NEARBY, '附近可见')
-        // spec PrivacyLevel 仅 public/private 两档：附近可见(public) / 仅自己(private)，
-        // 原「friends」档提交的同样是 private，与「仅自己」重复，已收敛为两档
-        this.buildPrivacyOption('private', AppIcon.LOCK, '仅自己')
-      }
-      .width('100%')
+      // 可见范围统一走注册原语 TabsPillGroup segmented（对齐 web CreateSheet TabBar segmented：
+      // accent 实底 + ✓ + semibold，不只靠颜色区分）
+      TabsPillGroup({
+        variant: 'segmented',
+        tabs: [
+          { label: '附近可见', icon: AppIcon.NEARBY },
+          { label: '仅自己', icon: AppIcon.LOCK }
+        ] as TabItem[],
+        activeIndex: this.audience === 'nearby' ? 0 : 1,
+        actions: {
+          onChange: (index: number) => {
+            this.audience = index === 0 ? 'nearby' : 'private';
+            this.persistDraft();
+          }
+        }
+      })
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -513,100 +523,33 @@ export struct CreateMomentSheet {
 
   /** 可见范围当前 hint（对齐前端 activeAudience.hint 文案） */
   private resolveAudienceHint(): string {
-    if (this.audience === 'nearby') {
-      return '进入附近瞬间';
-    }
-    if (this.audience === 'friends') {
-      return '仅自己可见';
-    }
-    return '仅自己可见';
+    return this.audience === 'nearby' ? '进入附近瞬间' : '仅自己可见';
   }
 
-  @Builder
-  private buildPrivacyOption(level: string, icon: AppIcon, title: string) {
-    Column({ space: DesignConstants.SPACING.HALF }) {
-      LucideIcon({
-          icon: icon,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-          color: this.audience === level ? this.getPalette().accentBackground : this.getPalette().textSecondary
-        })
-      Text(title)
-        .fontSize(DesignConstants.FONT.SIZE.XS2)
-        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .maxLines(1)
-        .fontColor(this.audience === level ?
-          this.getPalette().accentBackground :
-          this.getPalette().textSecondary)
-    }
-    .layoutWeight(1)
-    .alignItems(HorizontalAlign.Center)
-    .padding({ top: DesignConstants.SPACING.SM2, bottom: DesignConstants.SPACING.SM2 })
-    .borderRadius(DesignConstants.RADIUS.SM)
-    .backgroundColor(this.privacyPressed === level ?
-      this.getPalette().buttonSecondaryBackground :
-      (this.audience === level ?
-      this.getPalette().accentMuted :
-      DesignConstants.COLOR.TRANSPARENT))
-    .scale(this.privacyPressed === level && this.audience !== level ?
-      { x: DesignConstants.INTERACTION.SCALE_PRESSED_PILL, y: DesignConstants.INTERACTION.SCALE_PRESSED_PILL } :
-      { x: 1, y: 1 })
-    .animation({ curve: curves.springMotion(
-      DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-      DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-    ) })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.privacyPressed = level;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.privacyPressed = '';
-      }
-    })
-    .onClick(() => {
-      this.audience = level;
-      this.persistDraft();
-    })
-  }
 
-  // ==================== Footer ====================
+  // ==================== Footer（对齐 web 发布条：左侧氛围提示 + 右侧主按钮） ====================
   @Builder
   private buildFooter() {
-    Row() {
+    Row({ space: DesignConstants.SPACING.MD }) {
       Text(this.isPublishing ? this.publishingMessage :
         (this.selectedMoods.length > 0 ?
           `将以 ${this.selectedMoods.join(' · ')} 的氛围出现` :
           '选择氛围，让附近的人更容易找到你'))
         .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
         .fontColor(this.getPalette().textSecondary)
         .layoutWeight(1)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-      Text(this.isPublishing ? '发布中…' : '发布瞬间')
-        .fontSize(DesignConstants.FONT.SIZE.MD)
-        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-        .fontColor(this.canPublish() ?
-          this.getPalette().accentText :
-          this.getPalette().textSecondary)
-        .backgroundColor(this.canPublish() ?
-          this.getPalette().accentBackground :
-          DesignConstants.COLOR.TRANSPARENT)
-        .border({
-          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
-          color: this.canPublish() ? this.getPalette().accentBackground : this.getPalette().borderColor
-        })
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .padding({
-          left: DesignConstants.SPACING.LG,
-          right: DesignConstants.SPACING.LG,
-          top: DesignConstants.SPACING.SM2,
-          bottom: DesignConstants.SPACING.SM2
-        })
-        .shadow(this.canPublish() ? this.getPalette().surfaceShadow : undefined)
-        .onClick(() => {
-          if (this.canPublish()) {
-            this.publish();
-          }
-        })
+      SystemButton({
+        label: this.isPublishing ? '发布中…' : '发布瞬间',
+        variant: 'primary',
+        buttonSize: 'default',
+        loading: this.isPublishing,
+        disabled: !this.canPublish(),
+        onPress: () => { this.publish(); }
+      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -621,6 +564,7 @@ export struct CreateMomentSheet {
       color: { top: this.getPalette().borderColor }
     })
   }
+
 
   build() {
     Column() {

@@ -55,6 +55,29 @@ export struct MyReportsPage {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  /** 状态胶囊底色（对齐 web Badge tone：待处理 warning / 已处理 online / 已驳回 neutral） */
+  private statusChipBackground(status: string): ResourceColor {
+    const palette = this.getCurrentThemePalette();
+    if (status === 'pending') {
+      return palette.warningSoft;
+    }
+    if (status === 'resolved') {
+      return AppThemeManager.getSoftStatusBackground('success');
+    }
+    return palette.surfaceSubtle;
+  }
+
+  private statusChipTextColor(status: string): ResourceColor {
+    const palette = this.getCurrentThemePalette();
+    if (status === 'pending') {
+      return palette.textStatusWarningOnSoft;
+    }
+    if (status === 'resolved') {
+      return palette.textStatusOnlineOnSoft;
+    }
+    return palette.textSecondary;
+  }
+
   private statusParam(): ReportStatus | undefined {
     const key = TAB_KEYS[this.activeTabIndex] ?? 'all';
     return key === 'all' ? undefined : (key as ReportStatus);
@@ -190,7 +213,7 @@ export struct MyReportsPage {
         .scrollBar(BarState.Off)
         .align(Alignment.Start)
         .width('100%')
-        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+        .padding({ top: DesignConstants.SPACING.MD, bottom: 0 })
         }
         .width('100%')
         .padding({ bottom: DesignConstants.SPACING.LG })
@@ -210,11 +233,10 @@ export struct MyReportsPage {
             .layoutWeight(1)
         } else if (this.reports.length === 0) {
           EmptyState({
-            bare: true,
-            icon: AppIcon.EMPTY,
+            spotlight: true,
+            icon: AppIcon.SHIELD,
             title: '暂无举报记录',
-            message: '在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。',
-            fillMode: true
+            message: '在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。'
           })
             .layoutWeight(1)
         } else {
@@ -244,8 +266,7 @@ export struct MyReportsPage {
                 }
               }
               .width('100%')
-              // 内容列顶距 16（对齐前端 StandardPageLayout pt-4）
-              .padding({ top: DesignConstants.SPACING.LG })
+              // 内容列顶距由页头区块底距承担（避免 tabs 底距 + 内容顶距叠成 32）
               .constraintSize({ minHeight: '100%' })
             }
             .scrollable(ScrollDirection.Vertical)
@@ -280,12 +301,11 @@ export struct MyReportsPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
 
-        // 状态胶囊（对齐前端：pending = accent-soft 底 + accent 字，其余 subtle 底 + 次要字）
+        // 状态胶囊（对齐 web Badge tone：待处理 warning / 已处理 online / 已驳回 neutral）
         Text(this.statusLabel(item.status))
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .lineHeight(1)
-          .fontColor(item.status === 'pending' ?
-            this.getCurrentThemePalette().textAccentOnSoft : this.getCurrentThemePalette().textSecondary)
+          .lineHeight(DesignConstants.FONT.SIZE.XS2)
+          .fontColor(this.statusChipTextColor(item.status))
           .padding({
             left: DesignConstants.SPACING.SM2,
             right: DesignConstants.SPACING.SM2,
@@ -293,8 +313,7 @@ export struct MyReportsPage {
             bottom: DesignConstants.SPACING.XS
           })
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(item.status === 'pending' ?
-            this.getCurrentThemePalette().accentMuted : this.getCurrentThemePalette().surfaceSubtle)
+          .backgroundColor(this.statusChipBackground(item.status))
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
