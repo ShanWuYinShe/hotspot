@@ -28,6 +28,7 @@ import { ProfilePage } from '../../features/me/pages/ProfilePage';
 // ② 枢纽表现形态：web 用分区平铺（人/瞬间/群组三段同屏），本端用 TabsPillGroup 段位。
 import { NearbyPage } from '../../features/nearby/pages/NearbyPage';
 import { LoginPromptView } from '../LoginPromptView';
+import { SystemPageHeader } from '../SystemPageHeader';
 import { type BreakpointType, isWideForm } from '../../core/responsive/Breakpoint';
 import { NotificationCenter } from '../NotificationCenter';
 import { NotificationBanner } from '../NotificationBanner';
@@ -162,6 +163,17 @@ export struct PhoneLayout {
                 AmbientBackdrop()
 
                 Column() {
+                  // 对齐 web /messages 访客态：标题仍保留在页内引导上方
+                  SystemPageHeader({
+                    title: '消息',
+                    titleSize: DesignConstants.FONT.SIZE.XXL,
+                    titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
+                    backgroundVariant: 'transparent'
+                  })
+                    .padding({
+                      left: DesignConstants.PAGE_SHELL.GUTTER_MOBILE,
+                      right: DesignConstants.PAGE_SHELL.GUTTER_MOBILE
+                    })
                   // 内嵌场景不注入 surfaceColor：底色由本分支底层 Column 的 pageBackground 提供，
                   // LoginPromptView 保持透明才能让中间的 AmbientBackdrop 透出
                   // （此前传 pageBackground 会让其根 Stack 不透明底把氛围层盖住）。
@@ -174,6 +186,7 @@ export struct PhoneLayout {
                       { icon: AppIcon.SYNC, text: '消息实时同步' }
                     ]
                   })
+                    .layoutWeight(1)
                 }
                 .width('100%')
                 .height('100%')
