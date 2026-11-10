@@ -69,7 +69,7 @@
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<article
 		class={cn(
-			'card-hover isolate group relative flex h-full w-full flex-col justify-between overflow-hidden rounded-lg bg-surface-island p-3.5 sm:p-4.5 shadow-xs',
+			'card-hover isolate group relative flex h-full w-full flex-col justify-between overflow-hidden rounded-lg bg-surface-island p-3.5 sm:p-4.5 shadow-xs ring-1 ring-border-strong',
 			className
 		)}
 		use:cardPress
