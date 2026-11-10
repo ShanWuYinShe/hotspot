@@ -146,7 +146,7 @@
 			{#snippet trailing()}
 				<!-- 页面级工具只在移动/平板出现：桌面顶栏已有搜索、左侧栏 LocationCard 常驻地图入口，
 				     再放一份就是同一目的地的第二份入口（重复 UI）。 -->
-				<div class="flex shrink-0 items-center gap-1 sm:gap-2">
+				<div class="flex shrink-0 items-center gap-3">
 					{#if device !== 'desktop'}
 						<ActionIconButton variant="ghost" icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} size={36} />
 						<ActionIconButton variant="ghost" icon={MapIcon} label="地图浏览" onClick={() => void goto(ROUTES.map)} size={36} />

@@ -410,7 +410,8 @@ import {
 				</div>
 				<!-- 桌面端页头隐藏，行动区由岛 trailing 承担；移动/平板仍渲染本 trailing（岛不出现） -->
 				{#if trailing}
-					<div class="flex shrink-0 items-center gap-2">
+					<!-- gap-3：ActionIconButton 自带 hit-slop 横向 -6px，8px 间距会让相邻热区重叠 -->
+					<div class="flex shrink-0 items-center gap-3">
 						{@render trailing()}
 					</div>
 				{/if}

@@ -36,7 +36,7 @@
 </svelte:head>
 
 {#snippet userHeaderActions()}
-	<div class="flex items-center gap-1">
+	<div class="flex items-center gap-3">
 		<ActionIconButton
 			icon={Share2}
 			label={page.shareCopied ? '链接已复制' : '分享资料'}

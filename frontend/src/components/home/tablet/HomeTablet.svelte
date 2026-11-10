@@ -30,7 +30,7 @@
 					<span class="text-lg font-bold tracking-tight text-text-primary">HotSpot</span>
 				</div>
 				<h1 class="sr-only">首页</h1>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
 					<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
 					<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 				</div>

@@ -236,7 +236,7 @@
 					{#if trailing}
 						<div
 							data-detail-header-right
-							class="pointer-events-auto flex items-center gap-1 transition-[opacity,transform] duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
+							class="pointer-events-auto flex items-center gap-3 transition-[opacity,transform] duration-snappy rounded-full border border-border-default/60 bg-surface-primary/85 text-text-primary p-0.5 shadow-raised-sm backdrop-blur-md"
 						>
 							{@render trailing()}
 						</div>
