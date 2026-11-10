@@ -183,7 +183,8 @@
          elevation-card 都是 ~10% 淡影，肉眼不可辨（等效无 hover）；
          elevation-button（accent 18%）才有可感知的浮起。不画外环：
          卡片已有边框时避免“高亮外再叠一圈”（forest 由边框加深承载）。 */
-      box-shadow: var(--cst-elevation-button) !important;
+      /* 保留卡片统一 ring，再做 hover 抬升（原覆盖会吞掉描边） */
+      box-shadow: var(--cst-elevation-button), var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000) !important;
       transform: translateY(calc(var(--cst-hover-lift, 0px) * -1));
     }
   }
@@ -270,9 +271,9 @@
     }
   }
 
-  /* 无图卡片占位：纯净实底（MomentCard/GroupCard/UserCard 统一，告别发光渐变漏光感） */
+  /* 卡片统一卡面：内容卡（MediaCard/UserCard/AdminModuleCard）共用 surface-island */
   .surface-accent-gradient {
-    background-color: var(--cst-surface-subtle);
+    background-color: var(--cst-surface-island);
   }
 
   /* 浮层内嵌面板：surface-primary 微混 surface-page 提亮（CreateSheet/AppearanceMenu 等） */

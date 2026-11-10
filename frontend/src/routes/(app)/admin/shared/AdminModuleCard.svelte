@@ -33,7 +33,7 @@
 	title={allowed ? label : '无对应权限'}
 	onclick={onOpen}
 	use:cardPress
-	class="group card-hover flex w-full items-center gap-3 rounded-lg bg-surface-island p-4 text-left shadow-xs focus-ring disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-faint"
+	class="group card-hover flex w-full items-center gap-3 rounded-lg bg-surface-island p-4 text-left shadow-xs ring-1 ring-border-strong focus-ring disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-faint"
 >
 	<span
 		class="flex size-10 shrink-0 items-center justify-center rounded-md bg-accent-soft text-text-accent-on-soft"

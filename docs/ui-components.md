@@ -27,7 +27,7 @@
 ### 卡片（CSS 卡语言 + 一个内容卡原语）
 | 原语 | 职责 |
 |---|---|
-| `data-display/MediaCard` | **通用图片/封面优先卡底座**（`GroupCard` / `MomentCard` / `HomeFeedItem` / `ProfileGroupTile` / `GroupCarousel`）：整卡 `object-cover` + 遮罩覆盖层，`horizontal` 变体为左侧 40% 图 + 右侧信息面板；根节点 `isolate` + `use:cardPress`。**唯一来源 `components/data-display/MediaCard.svelte`**，禁止再建第二份。**无图 moment 契约**：业务卡（`MomentCard` / `HomeFeedItem`）改走「文字优先海报」——大引号主题水印 + 放大的正文居中排版，保持 3:4/4:5 卡位，读作文字卡而非缺图骨架；图片加载失败仍以渐变+水印兜底 |
+| `data-display/MediaCard` | **通用图片/封面优先卡底座**（`GroupCard` / `MomentCard` / `HomeFeedItem` / `ProfileGroupTile` / `GroupCarousel`）：整卡 `object-cover` + 遮罩覆盖层，`horizontal` 变体为左侧 40% 图 + 右侧信息面板；根节点 `isolate` + `use:cardPress`；**卡面契约**：`rounded-lg bg-surface-island shadow-xs ring-1 ring-border-strong`。**唯一来源 `components/data-display/MediaCard.svelte`**，禁止再建第二份。**无图 moment 契约**：业务卡（`MomentCard` / `HomeFeedItem`）改走「文字优先海报」——小引号 + 放大的正文居中排版，保持 3:4/4:5 卡位，读作文字卡而非缺图骨架；不叠加大面积半透明水印 |
 | `data-display/NearbyImageCard` | 邻近场景图片优先内容卡（附近瞬间/附近的人/附近群组/首页轮播/群组详情）；根节点必须 `isolate` + `use:cardPress` |
 | `data-display/ImageCardActions` | **图片卡覆盖操作行唯一实现**：点赞/评论/分享/收藏四类操作、计数弹跳、状态语义与 hover/press/focus 全站一致；`size="md"\|"sm"`（sm 用于手机 2 列窄卡） |
 | `.media-badge` / `.media-badge--icon`（utilities） | **压图徽章唯一类**：深色遮罩底 + 反色字 + h-5 紧凑档（**禁止 backdrop-filter**，见 design-system §21.11）；分类/位置/距离/1-N/已关注/身份角标一律用本类，禁止手写组合 |
@@ -147,7 +147,7 @@
 
 | 层 | 强制契约 |
 |---|---|
-| 卡片根 | `card-hover isolate group relative overflow-hidden` + `use:cardPress`；`isolate` **不可省**——否则内部 `z-20` 按钮会逃出卡片堆叠上下文，滚动到页内 sticky header 下方时压住标题栏（真实 bug） |
+| 卡片根 | `card-hover isolate group relative overflow-hidden rounded-lg bg-surface-island shadow-xs ring-1 ring-border-strong` + `use:cardPress`；`isolate` **不可省**——否则内部 `z-20` 按钮会逃出卡片堆叠上下文，滚动到页内 sticky header 下方时压住标题栏（真实 bug）；hover 升投影时必须保留 ring（否则悬停描边消失） |
 | 覆盖点击层 | 最后绘制 `absolute inset-0 z-10` 的真 `<button data-cover>`；行内控件经根上 `[&_button:not([data-cover])]:relative ...:z-20 [&_a]:relative [&_a]:z-20` 抬升；卡片根不持 button/aria-label |
 | 操作行 | 一律 `ImageCardActions`：图标 size-4.5（sm 档 4）、间距 24（sm 12）、计数 text-sm tabular；点赞 = 危险红填充（压图白描边）、收藏 = accent 填充、评论/分享 = 中性；只在激活方向 pop；`aria-label/aria-pressed` 完备；点击 stopPropagation |
 | 按压 | 只由 `use:cardPress` + `.card-hover[data-pressed="true"]` 驱动，缩放值走 `--cst-card-tap-scale`（vibrant 0.94 / forest·inkwash 0.97）；不允许再在组件内手写 transform/pointer 监听 |

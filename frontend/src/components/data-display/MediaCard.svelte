@@ -78,7 +78,7 @@
 <article
 	class={cn(
 		// 统一卡片轮廓：图片卡/无图卡共用 1px 强调描边，周边相邻卡片视觉边界一致
-		'card-hover isolate group relative h-full w-full overflow-hidden ring-1 ring-border-strong',
+		'card-hover isolate group relative h-full w-full overflow-hidden rounded-lg bg-surface-island shadow-xs ring-1 ring-border-strong',
 		'[&_button:not([data-cover])]:pointer-events-auto [&_a]:pointer-events-auto',
 		onClick &&
 			'[&_button:not([data-cover])]:relative [&_button:not([data-cover])]:z-20 [&_a]:relative [&_a]:z-20',
@@ -130,7 +130,7 @@
 		{/if}
 	{:else}
 		<!-- 无图卡：轮廓由 MediaCard 根的 ring 统一承担，内层不再重复描边 -->
-		<div class="surface-accent-gradient pointer-events-none {imageBox} flex flex-col items-center justify-center bg-surface-primary">
+		<div class="surface-accent-gradient pointer-events-none {imageBox} flex flex-col items-center justify-center">
 			{#if watermark}
 				<div
 					class="absolute inset-0 flex items-center justify-center text-text-secondary/30 opacity-watermark"
