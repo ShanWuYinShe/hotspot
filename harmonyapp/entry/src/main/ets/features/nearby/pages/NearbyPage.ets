@@ -194,11 +194,13 @@ export struct NearbyPage {
 
   @Builder
   private buildBackToTopOverlay() {
-    BackToTopButton({
-      visible: this.showBackToTop,
-      onTap: () => { this.scrollToTop(); }
-    })
-      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    if (this.showBackToTop) {
+      BackToTopButton({
+        visible: true,
+        onTap: () => { this.scrollToTop(); }
+      })
+        .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    }
   }
 
   build() {

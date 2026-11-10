@@ -270,11 +270,13 @@ export struct HomePage {
 
   @Builder
   private buildBackToTopOverlay() {
-    BackToTopButton({
-      visible: this.showBackToTop,
-      onTap: () => { this.scrollToTop(); }
-    })
-      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    if (this.showBackToTop) {
+      BackToTopButton({
+        visible: true,
+        onTap: () => { this.scrollToTop(); }
+      })
+        .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    }
   }
 
   build() {
@@ -371,7 +373,7 @@ export struct HomePage {
         .refreshOffset(64)
         .onRefreshing(() => { this.refreshHome(); })
       }
-      .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
+
       .width('100%')
       .height('100%')
     }
