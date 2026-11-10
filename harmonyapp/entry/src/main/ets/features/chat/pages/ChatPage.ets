@@ -1243,6 +1243,15 @@ export struct ChatPage {
         showTrailing: this.chatType !== 'group_chat',
         onBack: () => this.handleBackNavigation(),
         onTrailingAction: () => this.openConversationActions(),
+        // 私聊头像 + 标题 = 对方资料入口（对齐前端 ChatView avatar-entry）
+        onOpenProfile: () => {
+          if (!this.targetId) {
+            return;
+          }
+          const profileParam = new ProfileRouteParam();
+          profileParam.userId = this.targetId;
+          AppRouter.push(PageNames.PROFILE, profileParam);
+        },
         onOpenGroupDetail: () => {
           const groupParam = new GroupDetailRouteParam();
           groupParam.groupId = this.chatId;
@@ -1427,13 +1436,22 @@ export struct ChatPage {
         TextInput({ text: this.inputText, placeholder: '发送消息…' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)
-          .height(this.getChatVisualStyle().input.height)
-          .backgroundColor(this.getChatTheme().inputFieldBg)
+          // web 输入器 h-11(44) + rounded-md(16)：44 = 触控基准高度，圆角取 chat 输入档 16
+          .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          // web input-surface：surface-primary 底 + hairline 常规描边、无静态投影；
+          // 聚焦 2vp accent 边（web focus 2px），软发光阴影只在聚焦时保留
+          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
           .placeholderColor(this.getCurrentThemePalette().textTertiary)
           .borderRadius(this.getChatVisualStyle().input.borderRadius)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).borderColor })
-          .shadow(AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).shadow)
-          .padding({ left: this.getChatVisualStyle().input.horizontalPadding, right: this.getChatVisualStyle().input.horizontalPadding })
+          .border({
+            width: this.isInputFocused ? DesignConstants.BORDER_WIDTH.STRONG : DesignConstants.BORDER_WIDTH.HAIRLINE,
+            color: AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, this.isInputFocused, false, this.resolvedThemeId).borderColor
+          })
+          .shadow(this.isInputFocused ?
+            AppThemeVisuals.resolveInputBorder(this.getChatVisualStyle().input, true, false, this.resolvedThemeId).shadow :
+            DesignConstants.SHADOW.SMALL)
+          .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
           .onChange((value) => {
             this.inputText = value;
             this.syncMention(value);
@@ -1472,20 +1490,23 @@ export struct ChatPage {
         // 动态状态文案随之变化，而不是固定一句）
         .accessibilityText(this.isSending ? '发送中' : '发送消息')
         .stateEffect(false)
-        .width(this.getChatVisualStyle().sendButton.height)
-        .height(this.getChatVisualStyle().sendButton.height)
-        // 发送钮热区扩到 44（视觉 36 不变，对齐同排「+」钮 MIN_HIT_TARGET 契约）
+        // web 发送钮 size-10(40)：可发 = accent 实底白图标；不可发 = surface 底 + 描边 + 次色图标
+        .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        // 发送钮热区扩到 44（视觉 40 不变，对齐 MIN_HIT_TARGET 契约）
         .responseRegion({
-          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - this.getChatVisualStyle().sendButton.height) / 2,
-          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - this.getChatVisualStyle().sendButton.height) / 2,
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD) / 2,
           width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
           height: DesignConstants.LAYOUT.MIN_HIT_TARGET
         })
-        .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getChatTheme().sendButtonDisabled)
+        .backgroundColor(this.isSendInteractive() ? this.getChatTheme().sendButtonActive : this.getCurrentThemePalette().surfaceBackground)
         .shadow(this.getChatVisualStyle().sendButton.shadow)
-        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
-        .margin({ left: DesignConstants.SPACING.MD })
-          .opacity(this.isSendInteractive() ? 1 : DesignConstants.OPACITY.DISABLED)
+        .border({
+          width: DesignConstants.BORDER_WIDTH.HAIRLINE,
+          color: this.isSendInteractive() ? DesignConstants.COLOR.TRANSPARENT : this.getChatTheme().inputBorder
+        })
+        .margin({ left: DesignConstants.SPACING.MD2 })
           .scale(this.isSendPressed && this.isSendInteractive() ?
             { x: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON, y: DesignConstants.INTERACTION.SCALE_PRESSED_BUTTON } :
             { x: 1, y: 1 })
@@ -1513,16 +1534,13 @@ export struct ChatPage {
       .padding({
         left: DesignConstants.SPACING.LG,
         right: DesignConstants.SPACING.LG,
-        top: DesignConstants.SPACING.SM,
+        top: DesignConstants.SPACING.MD2,
         bottom: this.getComposerBottomPadding()
       })
-      .backgroundColor(this.getChatTheme().inputBarBg)
-      .shadow(this.getCurrentThemePalette().elevatedShadow)
+      // web 输入条：背景透明，只留顶部一条发丝线（功能线例外），无投影、无圆角外壳，
+      // 输入器本体才是唯一的「控件表面」
+      .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
       .border({ width: { top: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getChatTheme().inputBorder })
-      .borderRadius({
-        topLeft: this.getChatVisualStyle().composerRadius,
-        topRight: this.getChatVisualStyle().composerRadius
-      })
 
       // 焦点落点：用于将 TextInput 失焦，从而收起软键盘
       Button('')
@@ -1596,8 +1614,7 @@ export struct ChatPage {
   buildDatePill(label: string) {
     DatePill({
       label: label,
-      palette: this.getCurrentThemePalette(),
-      surfaceBorder: this.getSurfaceBorder()
+      palette: this.getCurrentThemePalette()
     })
   }
 

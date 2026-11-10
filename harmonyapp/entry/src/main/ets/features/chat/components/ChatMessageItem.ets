@@ -2,6 +2,13 @@
  * ChatMessageItem —— 聊天页单条消息气泡（系统消息 / 文本 / 图片 + 时间与已读勾选）。
  * 从 ChatPage.buildMessageItem 抽取；主题对象与群/私聊上下文经 props 注入，
  * 无本地状态，保持纯展示。
+ *
+ * 视觉对齐前端 MessageBubble：
+ * - 圆角统一 16（不再做「缺角」气泡，web 已收敛成 rounded-md 单档）
+ * - 正文 14 + 行高 1.7（leading-card）、内距 16/8（web px-4 py-2）
+ * - 时间戳 11、与正文留 4（mt-1）；自己气泡上的正文/时间一律 full on-accent
+ *   （web 明确去掉 opacity——实底上叠透明度会跌破 4.5:1）
+ * - 撤回 = 中性底 + 次色斜体（不留在 accent 底上）
  */
 
 import { DesignConstants, lineHeightFor } from '../../../constants/DesignConstants';
@@ -51,19 +58,28 @@ export struct ChatMessageItem {
     AppRouter.push(PageNames.PHOTO_PREVIEW, previewParams);
   }
 
-  private getBubbleRadius(isSelf: boolean): BorderRadiuses {
-    const big: number = DesignConstants.CHAT.BUBBLE_RADIUS;
-    const notch: number = DesignConstants.SPACING.XS;
-    if (this.isGroupChat) {
-      // 群聊：缺角在底部
-      return isSelf
-        ? { topLeft: big, topRight: big, bottomLeft: big, bottomRight: notch }
-        : { topLeft: big, topRight: big, bottomLeft: notch, bottomRight: big };
+  /** 气泡外皮：撤回 = 中性底（两个方向统一）；自己 = accent 实底；对方 = 白气泡 */
+  private getBubbleBackground(): string {
+    if (this.msg.recalled) {
+      return this.palette.surfaceSubtle;
     }
-    // 私聊：缺角在顶部
-    return isSelf
-      ? { topLeft: big, topRight: notch, bottomLeft: big, bottomRight: big }
-      : { topLeft: notch, topRight: big, bottomLeft: big, bottomRight: big };
+    return this.msg.isSelf ? this.chatTheme.bubbleSelf : this.chatTheme.bubblePeer;
+  }
+
+  /** 气泡正文色：撤回/对方 = 主文字或次色；自己 = on-accent（不叠透明度） */
+  private getBubbleTextColor(): string {
+    if (this.msg.recalled) {
+      return this.palette.textSecondary;
+    }
+    return this.msg.isSelf ? this.chatTheme.bubbleSelfText : this.palette.textPrimary;
+  }
+
+  /** 气泡内元信息（时间/已编辑/已读勾）颜色：跟随气泡底色，一律不叠 opacity */
+  private getMetaColor(): string {
+    if (this.msg.recalled) {
+      return this.palette.textSecondary;
+    }
+    return this.msg.isSelf ? this.chatTheme.bubbleSelfText : this.palette.textSecondary;
   }
 
   build() {
@@ -72,7 +88,7 @@ export struct ChatMessageItem {
         Text(this.msg.content)
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .fontColor(this.palette.textSecondary)
-          .backgroundColor(this.chatTheme?.bubbleSystem)
+          .backgroundColor(this.chatTheme.bubbleSystem)
           .padding({
             left: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
             right: DesignConstants.CHAT.IMAGE_BUBBLE_PADDING_H,
@@ -91,8 +107,10 @@ export struct ChatMessageItem {
       Row() {
         Column() {
           if (!this.msg.isSelf && this.isGroupChat) {
+            // 群聊收到：气泡上方发送者昵称（web mb-1 px-1 text-sm font-medium）
             Text(this.msg.senderName)
               .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontColor(this.palette.textSecondary)
@@ -118,15 +136,15 @@ export struct ChatMessageItem {
                   .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
                   .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
                   .justifyContent(FlexAlign.Center)
-                  .backgroundColor(this.chatTheme?.listBackground)
-                  .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+                  .backgroundColor(this.chatTheme.listBackground)
+                  .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
                   } else {
                   Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.msg.content), 720))
                     .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
                     .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
                     .objectFit(ImageFit.Contain)
-                    .backgroundColor(this.chatTheme?.listBackground)
-                    .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+                    .backgroundColor(this.chatTheme.listBackground)
+                    .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
                     .margin(DesignConstants.SPACING.XS)
                     .onError(() => { this.imageFailed = true; })
                     .accessibilityText('[图片消息]')
@@ -146,77 +164,72 @@ export struct ChatMessageItem {
               // 图片气泡也带时间/已读底行（与文本气泡一致，Telegram 规范）
               Row({ space: DesignConstants.SPACING.XS }) {
                 Text(this.timeText)
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getMetaColor())
                 if (this.msg.isSelf && this.isLastSent) {
                   LucideIcon({
                     icon: AppIcon.CHECK_ALL,
-                    iconSize: DesignConstants.FONT.SIZE.XS2,
-                    color: this.chatTheme?.bubbleSelfText
+                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                    color: this.getMetaColor()
                   })
                     .opacity(DesignConstants.OPACITY.EMPHASIZED)
                 }
               }
               .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
               .width('100%')
-              .margin({ top: DesignConstants.SPACING.HALF })
+              .margin({ top: DesignConstants.SPACING.XS })
             } else {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
               Text(this.msg.recalled ? '消息已撤回' : this.msg.content)
-                .fontSize(DesignConstants.CHAT.BUBBLE_FONT_SIZE)
-                // 气泡正文行高对齐前端 MessageBubble 的 leading-card(1.7)：
-                // 此前完全没设行高，长消息多行挤在一起（前端专门做过「阅读疲劳修复」）
-                .lineHeight(lineHeightFor(DesignConstants.CHAT.BUBBLE_FONT_SIZE, DesignConstants.FONT.LINE_RATIO.CARD))
-                .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText :
-                  (this.msg.recalled ? this.palette.textSecondary : this.palette.textPrimary))
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                // 气泡正文行高对齐前端 MessageBubble 的 leading-card(1.7)
+                .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
+                .fontColor(this.getBubbleTextColor())
                 .fontStyle(this.msg.recalled === true ? FontStyle.Italic : FontStyle.Normal)
                 .maxLines(200)
 
-              // 气泡内底行：时间（自己=on-accent 70%；对方=textSecondary）+ 已编辑 + 已读勾
+              // 气泡内底行：时间（11，mt-1）+ 已编辑 + 已读勾，颜色不叠 opacity
               Row({ space: DesignConstants.SPACING.XS }) {
                 Text(this.timeText)
-                  .fontSize(DesignConstants.FONT.SIZE.XS2)
-                  .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
-                  .opacity(this.msg.isSelf ? DesignConstants.OPACITY.EMPHASIZED : 1)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(this.getMetaColor())
                 if (this.msg.edited && !this.msg.recalled) {
                   Text('· 已编辑')
-                    .fontSize(DesignConstants.FONT.SIZE.XS2)
-                    .fontColor(this.msg.isSelf ? this.chatTheme?.bubbleSelfText : this.palette.textSecondary)
-                    .opacity(this.msg.isSelf ? DesignConstants.OPACITY.EMPHASIZED : 1)
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .fontColor(this.getMetaColor())
                 }
-                if (this.msg.isSelf && this.isLastSent) {
+                if (this.msg.isSelf && this.isLastSent && !this.msg.recalled) {
                   LucideIcon({
                       icon: AppIcon.CHECK_ALL,
-                      iconSize: DesignConstants.FONT.SIZE.XS2,
-                      color: this.chatTheme?.bubbleSelfText
+                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                      color: this.getMetaColor()
                     })
                     .opacity(DesignConstants.OPACITY.EMPHASIZED)
                 }
               }
               .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
               .width('100%')
-              .margin({ top: DesignConstants.SPACING.HALF })
+              .margin({ top: DesignConstants.SPACING.XS })
             }
           }
           .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
           .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+          // 内距对齐 web px-4 py-2（16/8）
           .padding({
             left: DesignConstants.CHAT.BUBBLE_PADDING_H,
             right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-            top: DesignConstants.CHAT.BUBBLE_PADDING_V,
-            bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
+            top: DesignConstants.SPACING.SM,
+            bottom: DesignConstants.SPACING.SM
           })
-          .backgroundColor(this.msg.isSelf ? this.chatTheme?.bubbleSelf : this.chatTheme?.bubblePeer)
-          .borderRadius(this.getBubbleRadius(this.msg.isSelf))
+          .backgroundColor(this.getBubbleBackground())
+          .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
           // 气泡纯色底无边框无阴影（对齐前端 MessageBubble 与主流 IM；
           // 描边+阴影会让气泡呈现「浮肿的框」）
           .margin({ top: DesignConstants.SPACING.HALF })
           .onClick(() => {
-            // 图片消息点击由内部 Stack 消费（预览/操作面板二选一），此处跳过避免双触发
             if (this.msg.type === 'image') {
               return;
             }
-            // 文本气泡点击唤起消息操作面板（编辑/撤回，对齐前端 ⋮ 菜单入口）
             if (this.hasActions && this.onMessageClick) {
               this.onMessageClick(this.msg);
             }
@@ -228,7 +241,8 @@ export struct ChatMessageItem {
       .width('100%')
       .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
       .alignItems(VerticalAlign.Top)
-      .margin({ bottom: DesignConstants.CHAT.MESSAGE_GAP })
+      // 消息间距对齐 web gap-2(8)；原 MESSAGE_GAP(16) 会让一轮对话散开、读不出「一问一答」
+      .margin({ bottom: DesignConstants.SPACING.SM })
     }
   }
 }

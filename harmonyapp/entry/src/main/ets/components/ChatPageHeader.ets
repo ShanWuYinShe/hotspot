@@ -1,23 +1,28 @@
 /**
  * ChatPageHeader
- * - 浮动圆角卡片头部（替代 ChatPage 手搓头部）
- * - 结构：返回按钮 + 可选 leading 头像 + 标题 + 尾随 INFO 操作
- * - 卡片样式：elevatedShadow + titleBarBorder + RADIUS.XL + zIndex
+ * 聊天页浮动页头（对齐前端 ChatView / GroupChatView 移动端头部）
+ * - 浮动返回胶囊：返回钮 36 + hairline 描边 + surface 85% 底 + 轻投影（web：
+ *   rounded-full border border-default/60 bg-surface-primary/85 shadow-raised-sm）
+ * - 头像 40 + 标题 20/600 + 状态 11（私聊 = 在线/离线，群聊 = 正在输入…/N 位成员）；
+ *   头像+标题整体可点：私聊进对方主页，群聊进群详情（web avatar-entry button）
+ * - 群聊头像右下角类型角标（对齐前端 GroupChatBadge），私聊右下角在线点
+ * - 无底部分隔线：头部浮在聊天画布上（web 头部 h-16 透明、仅移动端有返回胶囊）
  * - onTouch 下沉键盘（点头部空白处收起输入法）
  *
- * 与 SystemPageHeader 的差异：浮动卡片而非全宽底栏，且需要 leading 头像 + 键盘下沉，
- * 故独立组件，仍复用同套主题/DesignConstants 原语。
+ * 与 SystemPageHeader 的差异：不占满整条底栏、无分隔线，且需要浮动返回 + 头像 + 键盘
+ * 下沉，故独立组件，仍复用同套主题/DesignConstants 原语。
  */
 
 import { DesignConstants } from '../constants/DesignConstants';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
-import { ChatThemeManager } from '../core/theme/ChatTheme';
 import { AppIcon } from './SystemIcon';
 import { SystemAvatar } from './SystemAvatar';
 import { KeyboardDismissManager } from '../core/utils/KeyboardDismissManager';
 import { SafeAreaUtils } from '../core/utils/SafeAreaUtils';
 import { SurfaceIconButton } from './SurfaceIconButton';
+import { LucideIcon } from './LucideIcon';
 
 @Component
 export struct ChatPageHeader {
@@ -31,11 +36,11 @@ export struct ChatPageHeader {
   @Prop showAvatar: boolean = false;
   /** 在线状态副文本（在线/离线；空串不显示）。 */
   @Prop presenceText: string = '';
-  /** 对端是否在线（决定副文本颜色）。 */
+  /** 对端是否在线（决定副文本颜色与头像在线点）。 */
   @Prop presenceOnline: boolean = false;
   /**
    * 群聊模式（对齐前端 GroupChatView 头部）：
-   * - 头像用群头像（圆角方 shape=squircle，对应 web shape="rounded"）
+   * - 头像用群头像（圆角方 shape=squircle，对应 web shape="rounded"）+ 类型角标
    * - 副文本 = 「正在输入…」提示（accent 色）/「N 位成员」/「群聊」
    * - 头像 + 标题整体可点进群详情（web avatar-entry button）
    */
@@ -44,6 +49,9 @@ export struct ChatPageHeader {
   @Prop membersCount: number = 0;
   /** 群聊「正在输入」提示文本；非空时副文本切 accent 色。 */
   @Prop typingHint: string = '';
+  /** 私聊：头像 + 标题可点进对方主页（web ROUTES.user）。 */
+  onOpenProfile: () => void = () => {};
+  /** 群聊：头像 + 标题可点进群详情。 */
   onOpenGroupDetail: () => void = () => {};
   /** 是否显示尾随操作钮（web GroupChatView 无尾随按钮，群聊入口收敛到头部）。 */
   @Prop showTrailing: boolean = true;
@@ -57,50 +65,95 @@ export struct ChatPageHeader {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  /** 头像 + 标题整体是否可点（群聊恒可点；私聊需提供回调） */
+  private isEntryClickable(): boolean {
+    return this.isGroup ? true : this.showAvatar;
+  }
+
+  private getEntryAccessibilityText(): string {
+    if (this.isGroup) {
+      return `查看群「${this.title}」详情`;
+    }
+    return this.showAvatar ? `查看${this.title}的资料` : '';
+  }
+
+  /** 群聊副文本：正在输入（accent）/ N 位成员 / 群聊 */
+  private getGroupSubText(): string {
+    if (this.typingHint.length > 0) {
+      return this.typingHint;
+    }
+    return this.membersCount > 0 ? `${this.membersCount} 位成员` : '群聊';
+  }
+
   build() {
-    Row() {
-      // 左侧：返回按钮 + 可选 leading 头像 + 标题
+    Row({ space: DesignConstants.SPACING.SM }) {
+      // 浮动返回胶囊（web：p-0.5 圆形容器 + 85% 表面 + 发丝描边 + 轻投影）
       Row() {
-        // 返回钮统一走 SurfaceIconButton（与 SystemPageHeader / SearchPageHeader
-        // 同款凸起中性 40vp：a11y + spring 按压 + 44 命中区由组件内聚，审查 中-1/低-4）
         SurfaceIconButton({
           icon: AppIcon.BACK,
-          kind: 'surface',
-          buttonSize: DesignConstants.LAYOUT.BACK_BUTTON_SIZE,
-          glyphSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          // ghost 底：容器本身已承载「浮动卡」语义，钮内不再叠第二层表面
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
           accessibilityLabel: '返回',
           onPress: () => {
             this.onBack();
           }
         })
+      }
+      .padding(DesignConstants.SPACING.HALF)
+      .borderRadius(DesignConstants.RADIUS.FULL)
+      .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceBackground, 0.85))
+      .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+      .shadow(this.getPalette().controlShadow)
 
-        if (this.isGroup || this.showAvatar) {
-          SystemAvatar({
-            avatarUrl: this.isGroup ? this.groupAvatar : this.targetAvatar,
-            name: this.title,
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            // 群聊头像圆角方（web shape="rounded"）；私聊保持圆形
-            shape: this.isGroup ? 'squircle' : 'circle'
-          })
-            .margin({ left: DesignConstants.SPACING.XS })
+      // 头像 + 标题/状态（唯一资料入口，可点进主页/群详情）
+      Row({ space: DesignConstants.SPACING.MD2 }) {
+        Stack({ alignContent: Alignment.BottomEnd }) {
+          if (this.isGroup || this.showAvatar) {
+            SystemAvatar({
+              avatarUrl: this.isGroup ? this.groupAvatar : this.targetAvatar,
+              name: this.title,
+              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+              // 群聊头像圆角方（web shape="rounded"）；私聊保持圆形
+              shape: this.isGroup ? 'squircle' : 'circle',
+              // 私聊头像右下角在线点（web OnlineDot sm）；群聊该位置让给类型角标
+              isOnline: !this.isGroup && this.presenceOnline,
+              onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD
+            })
+          }
+          if (this.isGroup) {
+            // 群聊类型角标（对齐前端 GroupChatBadge：accent 圆 + 成员图标 + 表面色描边）
+            Row() {
+              LucideIcon({
+                icon: AppIcon.GROUP,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                color: this.getPalette().accentText
+              })
+            }
+            .width(DesignConstants.SPACING.LG2)
+            .height(DesignConstants.SPACING.LG2)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getPalette().accentBackground)
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().surfaceBackground })
+            .justifyContent(FlexAlign.Center)
+          }
         }
 
-        // 标题 + 状态副文本（对齐前端：私聊 = 名字 medium + presence xs；
-        // 群聊 = GroupChatView：头像+标题整体可点进群详情，副文本「N 位成员」/输入中提示）
-        Column() {
+        // 标题 20/600 + 状态 11（web：text-xl font-semibold + mt-0.5 text-xs）
+        Column({ space: DesignConstants.SPACING.HALF }) {
           Text(this.title)
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontWeight(this.isGroup ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
           if (this.isGroup) {
-            Text(this.typingHint.length > 0 ? this.typingHint :
-              (this.membersCount > 0 ? `${this.membersCount} 位成员` : '群聊'))
+            Text(this.getGroupSubText())
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.typingHint.length > 0 ?
                 this.getPalette().accentBackground : this.getPalette().textSecondary)
               .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
           } else if (this.presenceText.length > 0) {
             Text(this.presenceText)
               // 前端 presence 为 text-xs(11)；原 XS2(10) 为近邻档漂移
@@ -111,24 +164,27 @@ export struct ChatPageHeader {
         }
         .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
-        .margin({ left: DesignConstants.SPACING.SM })
-        // 群聊：头像+标题整体进群详情（web avatar-entry）
-        .onClick(() => {
-          if (this.isGroup) {
-            this.onOpenGroupDetail();
-          }
-        })
-        .accessibilityText(this.isGroup ? `查看群「${this.title}」详情` : '')
       }
       .layoutWeight(1)
+      .onClick(() => {
+        if (!this.isEntryClickable()) {
+          return;
+        }
+        if (this.isGroup) {
+          this.onOpenGroupDetail();
+        } else {
+          this.onOpenProfile();
+        }
+      })
+      .accessibilityGroup(true)
+      .accessibilityText(this.getEntryAccessibilityText())
 
       // 尾随：会话操作 ghost 圆钮（私聊保留；群聊 web 无尾随按钮——入口已收敛到头部）
       if (this.showTrailing) {
         SurfaceIconButton({
           icon: AppIcon.MORE,
-          kind: 'surface',
-          buttonSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-          glyphSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          kind: 'neutral',
+          buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
           accessibilityLabel: '会话操作',
           onPress: () => {
             this.onTrailingAction();
@@ -138,13 +194,11 @@ export struct ChatPageHeader {
     }
     .width('100%')
     .padding({
-      left: DesignConstants.SPACING.MD,
-      right: DesignConstants.SPACING.MD,
-      top: DesignConstants.SPACING.SM2,
-      bottom: DesignConstants.SPACING.SM2
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, DesignConstants.SPACING.SM, DesignConstants.SPACING.MD),
+      bottom: DesignConstants.SPACING.SM
     })
-    .margin({ top: SafeAreaUtils.resolveTopPadding(this.safeAreaTop, 0), bottom: DesignConstants.SPACING.XS })
-    .border({ width: { bottom: DesignConstants.BORDER_WIDTH.HAIRLINE }, color: this.getPalette().borderColor })
     .zIndex(1)
     .onTouch((event: TouchEvent) => {
       // 点头部空白处收起输入法（与原 ChatPage 行为一致）

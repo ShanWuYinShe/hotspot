@@ -47,6 +47,8 @@ import pasteboard from '@ohos.pasteboard';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
+import { FocusRing } from '../../../core/accessibility/FocusRing';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 
 const DOMAIN_NUMBER: number = 0xFF08;
@@ -88,8 +90,6 @@ export struct MessagePage {
 
   @State isRefreshing: boolean = false;
   @State errorMessage: string = '';
-  // 桌面宽屏（≥960）master-detail：当前选中的会话 key，用于高亮列表项
-  @State selectedChatKey: string = '';
   @State hasData: boolean = false;
   // 分页状态：私聊
   private privateHasMore: boolean = false;
@@ -162,10 +162,6 @@ export struct MessagePage {
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
-  }
-
-  private getSurfaceBorder(): string {
-    return this.getCurrentThemePalette().borderColor;
   }
 
   private async loadData(forceRefresh: boolean = false, refresh: boolean = false) {
@@ -449,8 +445,6 @@ export struct MessagePage {
   }
 
   private enterChat(item: ChatItem) {
-    // 桌面宽屏（≥960）时记录选中项用于高亮，但依然 push 独立 ChatPage 保持聊天功能完整
-    this.selectedChatKey = this.getChatKey(item);
     // 对齐前端：点击未读会话后徽章立即清零（列表按时间排序，位置不跳动）
     if (item.unreadCount > 0) {
       const updated: ChatItem[] = [];
@@ -494,27 +488,6 @@ export struct MessagePage {
 
   private isChatDeleting(item: ChatItem): boolean {
     return this.deletingChatKeys.indexOf(this.getChatKey(item)) >= 0;
-  }
-
-  private isChatSelected(item: ChatItem): boolean {
-    return useMasterDetail(this.currentBreakpoint, this.currentWidthVp) && this.selectedChatKey === this.getChatKey(item);
-  }
-
-  private getChatItemBackground(item: ChatItem): ResourceColor {
-    // 选中/未选中按压反馈不同（四态契约）：选中按压 = accent 底再加深一档；
-    // 未选中按压 = surfaceSubtle（原实现两态按压同色，选中按压与常态无差）
-    if (this.isChatSelected(item)) {
-      return this.pressedChatKey === this.getChatKey(item) ?
-        this.getCurrentThemePalette().buttonSecondaryBackground :
-        this.getCurrentThemePalette().accentMuted;
-    }
-    if (this.pressedChatKey === this.getChatKey(item)) {
-      return this.getCurrentThemePalette().surfaceSubtle;
-    }
-    if (item.isPinned) {
-      return this.getCurrentThemePalette().surfaceSubtle;
-    }
-    return DesignConstants.COLOR.TRANSPARENT;
   }
 
   private setChatDeleting(item: ChatItem, pending: boolean): void {
@@ -668,31 +641,39 @@ export struct MessagePage {
             }
           }
 
-          Row() {
-            // 对齐前端「发起新会话」圆钮：Plus 16 + 次色（前端消息页 header 与底栏发布
-            // FAB 同样都用 Plus，不再用撰写笔区分）
+          // 对齐前端 trailing「+ 新会话」pill：surface-subtle 软底 + 图标 16 + 12vp 文字 +
+          // 高 36 + 胶囊。原实现是纯图标圆钮，功能全藏在菜单里，可发现性弱于 web。
+          // 交互仍走 bindMenu（SystemButton 没有菜单 API，菜单必须挂在可触发节点上），
+          // 视觉档位与 SystemButton surface/small 一致。
+          Row({ space: DesignConstants.SPACING.XS }) {
             LucideIcon({
               icon: AppIcon.ADD,
               iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
               paletteRole: 'textSecondary'
             })
+            Text('新会话')
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .maxLines(1)
           }
-          .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-          .justifyContent(FlexAlign.Center)
+          .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_SM)
+          .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
           .borderRadius(DesignConstants.RADIUS.FULL)
-          // 对齐前端 surface 圆钮：size-9 + hairline 描边 + surface-primary 底 + raised 投影
-          // （鸿蒙阴影 token 归零为扁平风，凸起语义由描边承担）
-          .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
-          .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getCurrentThemePalette().borderColor })
-          .shadow(this.getCurrentThemePalette().surfaceShadow)
+          .backgroundColor(AppThemeVisuals.withAlpha(this.getCurrentThemePalette().surfaceSubtle, 0.60))
+          .justifyContent(FlexAlign.Center)
+          .alignItems(VerticalAlign.Center)
           .responseRegion({
-            x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-            y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.LAYOUT.ICON_BUTTON_SIZE) / 2,
-            width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+            x: 0,
+            y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.BUTTON_HEIGHT_SM) / 2,
+            width: '100%',
             height: DesignConstants.LAYOUT.MIN_HIT_TARGET
           })
           .accessibilityText('发起新会话')
+          // 键盘焦点环（web ring-accent 2px offset 2）：悬浮页头动作同样需要可见焦点
+          .focusable(true)
+          .focusOnTouch(false)
+          .focusBox(FocusRing.box(this.getCurrentThemePalette().accentBackground))
           .bindMenu([
             {
               value: '发起群聊',
@@ -906,14 +887,14 @@ export struct MessagePage {
                 }, (item: ChatItem) => item.id + item.type)
               }
               .width('100%')
-              // 扁平会话列表（无卡片外框）：不留自身横向外边距/行内横向内边距，
-              // 否则行内容会比页头多缩进（留白只由 PageShellContainer 提供）
-              .divider({
-                strokeWidth: DesignConstants.BORDER_WIDTH.SUBPIXEL,
-                color: this.getSurfaceBorder(),
-                startMargin: 0,
-                endMargin: 0
-              })
+              // 内容软岛（对齐前端 ListContainer bordered）：最近会话收进一张 20 圆角软岛卡，
+              // 行间不再画发丝分隔线——层级只由「surfaceIsland 表面 + 轻投影 + 岛内留白」表达。
+              // 岛内 padding 8（web p-2）让行的按压填充离岛边 8；行本身不再带边框/圆角/投影。
+              .padding(DesignConstants.SPACING.SM)
+              .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+              .borderRadius(DesignConstants.SHAPE.CARD)
+              .shadow(this.getCurrentThemePalette().surfaceShadow)
+              .clip(true)
             }
 
             if (this.isLoadingMore) {
@@ -1045,10 +1026,10 @@ export struct MessagePage {
 
   @Builder
   buildChatItem(item: ChatItem) {
-    // 对齐前端 ChatListItem（移动端）：gap-3.5(14) + px-4 py-3 行
-    Row({ space: DesignConstants.SPACING.LG }) {
-      // 头像 44（对齐前端 ChatListItem：Avatar size=44 无描边、私聊/群聊同为圆形；
-      // 选中态的描边由 ListItem 负责，这里不额外画环）+ 在线角标 10（OnlineDot md）
+    // 对齐前端 ChatListItem（移动端）：头像 44 + gap-3(12) + 行内 px-4 py-3(16/12)；
+    // 首行昵称 14（未读 semibold）+ 时间 11，次行预览 12 + 未读徽章 20/11。
+    Row({ space: DesignConstants.SPACING.MD }) {
+      // 头像 44（无描边）+ 在线角标 10（OnlineDot md）；群聊无 presence 语义不画点
       SystemAvatar({
         decorative: true,
         avatarUrl: item.avatarUrl,
@@ -1059,74 +1040,85 @@ export struct MessagePage {
         onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD
       })
 
-      Column({ space: DesignConstants.SPACING.HALF }) {
+      Column({ space: DesignConstants.SPACING.XS }) {
         Row() {
-          Text(item.name)
-            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM) // 对齐前端 font-medium
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-            .layoutWeight(1)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          Row({ space: DesignConstants.SPACING.XS }) {
+            Text(item.name)
+              .fontSize(DesignConstants.FONT.SIZE.MD) // 14 对齐前端 text-md
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+              // 未读 semibold / 已读 medium（对齐前端 font-semibold 与 font-medium）
+              .fontWeight(item.unreadCount > 0 ? DesignConstants.FONT.WEIGHT.SEMIBOLD : DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              // 昵称收缩、Pin 紧跟其后（web：昵称 + 静态身份标识同一簇，不被推到行尾）
+              .flexShrink(1)
+            if (item.isPinned) {
+              LucideIcon({
+                icon: AppIcon.PIN_FILL,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS, // 14 对齐前端 size-3.5
+                paletteRole: 'accent'
+              })
+            }
+          }
+          .layoutWeight(1)
 
           Text(this.formatTime(item.lastTime))
             .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-caption
             .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getCurrentThemePalette().textSecondary)
+            .margin({ left: DesignConstants.SPACING.SM })
         }
         .width('100%')
 
         Row() {
           Text(item.lastMessage || '暂无消息')
-            .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs 预览
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
+            .fontSize(DesignConstants.FONT.SIZE.SM) // 12 对齐前端 text-sm 预览
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            // 未读预览升主文字色（对齐前端预览在未读/已读两档的对比度差异）
+            .fontColor(item.unreadCount > 0 ? this.getCurrentThemePalette().textPrimary : this.getCurrentThemePalette().textSecondary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .layoutWeight(1)
 
-          if (item.isPinned) {
-            LucideIcon({
-              icon: AppIcon.PIN_FILL,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS, // 14 对齐前端 size-3.5
-              paletteRole: 'accent'
-            })
-              .margin({ left: DesignConstants.SPACING.XS })
+          // 未读徽章回到次行右端（对齐前端 ChatListItem：日期在首行右端、徽章在次行右端）
+          if (item.unreadCount > 0) {
+            Row() {
+              Text(item.unreadCount > 99 ? '99+' : `${item.unreadCount}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
+                .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                .fontColor(this.getCurrentThemePalette().accentText)
+                .maxLines(1)
+                .lineHeight(DesignConstants.FONT.SIZE.XS) // leading-none：行高锁字号防下沉
+            }
+            .constraintSize({ minWidth: DesignConstants.LAYOUT.UNREAD_BADGE_SIZE })
+            .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
+            // 徽章内距对齐 web UnreadBadge（h-5 px-2：20 高、左右 8）
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getCurrentThemePalette().accentBackground)
+            .justifyContent(FlexAlign.Center)
+            .margin({ left: DesignConstants.SPACING.SM })
           }
         }
         .width('100%')
       }
       .layoutWeight(1)
-
-      // 行尾未读徽章（对齐前端 ChatListItem 22cbd552 契约：inline-flex + h-5 + leading-none
-      // + tabular-nums，双轴居中，无光晕——前端徽标无 accent glow）
-      Stack({ alignContent: Alignment.Center }) {
-        if (item.unreadCount > 0) {
-          Text(item.unreadCount > 99 ? '99+' : `${item.unreadCount}`)
-            .fontSize(DesignConstants.FONT.SIZE.XS) // 11 对齐前端 text-xs
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getCurrentThemePalette().accentText)
-            .minFontScale(0.5)
-            .maxLines(1)
-            .lineHeight(DesignConstants.FONT.SIZE.XS) // leading-none：行高锁字号防下沉
-        }
-      }
-      .width(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
-      .height(DesignConstants.LAYOUT.UNREAD_BADGE_SIZE)
-      .borderRadius(DesignConstants.RADIUS.FULL)
-      .backgroundColor(item.unreadCount > 0 ? this.getCurrentThemePalette().accentBackground : DesignConstants.COLOR.TRANSPARENT)
+      .alignItems(HorizontalAlign.Start)
     }
     .width('100%')
-    // 行内 padding（对齐前端 chat-list 10px/16px）；圆角只在按压/选中态出现，
-    // 常态背景由 getChatItemBackground 返回透明（对齐前端 ChatListBody 的
-    // 「无外框 + divide-y 平铺列表」），不再每行自带一块圆角底色
+    // 行只承担按压反馈：常态透明（岛表面透出）、按压 surfaceSubtle、高亮圆角 16
+    // （对齐前端 ListItem 岛内行 rounded-md）。置顶行不再常驻底色——否则列表会读成
+    // 「一行一张卡」，置顶语义只留在昵称旁的 Pin 图标。
     .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })
-    .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
-    .backgroundColor(this.getChatItemBackground(item))
+    .borderRadius(DesignConstants.RADIUS.MD)
+    .backgroundColor(this.pressedChatKey === this.getChatKey(item) ?
+      this.getCurrentThemePalette().surfaceSubtle : DesignConstants.COLOR.TRANSPARENT)
     .opacity(this.isChatDeleting(item) ? DesignConstants.OPACITY.LOADING : 1)
     .onTouch((event: TouchEvent) => {
       if (event.type === TouchType.Down) {
@@ -1141,6 +1133,9 @@ export struct MessagePage {
       }
       this.enterChat(item);
     })
+    // 复合行无障碍语义：昵称 + 未读数 + 最后一条消息（读屏一次读完，不逐个节点播报）
+    .accessibilityGroup(true)
+    .accessibilityText(`${item.name}${item.unreadCount > 0 ? `，${item.unreadCount} 条未读` : ''}，最后消息：${item.lastMessage || '暂无消息'}`)
     // 长按弹上下文菜单（原 bindMenu 点击即弹，与行 onClick「点一下同时进聊天+弹菜单」冲突）
     .bindContextMenu(this.buildChatRowMenu(item), ResponseType.LongPress)
   }

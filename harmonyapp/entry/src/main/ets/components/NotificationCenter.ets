@@ -12,10 +12,12 @@ import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
 import { SystemAvatar } from './SystemAvatar';
 import { BackToTopButton } from './BackToTopButton';
+import { SurfaceIconButton } from './SurfaceIconButton';
 import { SystemDialog } from './SystemDialog';
 import { AccessibilityManager } from '../core/accessibility/AccessibilityManager';
 import { MotionUtil } from '../core/accessibility/MotionUtil';
-import { DesignConstants } from '../constants/DesignConstants';
+import { DesignConstants, lineHeightFor } from '../constants/DesignConstants';
+import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
 import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
@@ -30,8 +32,17 @@ import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
 // 移动端 TabBar 只给 5 项，两端信息架构必须一致。
 type NotificationFilterKey = 'all' | 'reaction' | 'follow' | 'comment' | 'nearby';
 
-interface GroupedNotification {
+/**
+ * 列表条目：kind='header' 是卡外的分区标题（页面画布上），kind='group' 是收在
+ * 软岛卡里的通知行集合。List 里用一条扁平条目流承载，标题与卡片才能交替出现
+ * （对齐 web /notify：SectionHead 在卡外，ListContainer 是卡）。
+ */
+interface NotificationListEntry {
+  key: string;
+  kind: 'header' | 'group';
   label: string;
+  count: number;
+  showBell: boolean;
   items: NotifyItem[];
 }
 
@@ -66,7 +77,6 @@ export struct NotificationCenter {
   // 全部已读确认弹窗（对齐全站 SystemDialog 范式，替代系统 showAlertDialog）
   @State private markAllDialogVisible: boolean = false;
   @State private pressedNotificationId: string = '';
-  @State private pressedClose: boolean = false;
 
   private syncService = NotificationSyncService.getInstance();
   private accessibilityManager = AccessibilityManager.getInstance();
@@ -83,32 +93,48 @@ export struct NotificationCenter {
   private syncListener: (() => void) | null = null;
   private notificationCreatedListener: ((event: NotificationEvent, notification: SmartNotification, extra?: Object) => void) | null = null;
 
-  private getTimeGroupLabel(isoDate: string): string {
-    const date = new Date(isoDate);
-    if (Number.isNaN(date.getTime())) return '更早';
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const yesterdayStart = todayStart - 86400000;
-    const itemTime = date.getTime();
-    if (itemTime >= todayStart) return '今天';
-    if (itemTime >= yesterdayStart) return '昨天';
-    return '更早';
+  /**
+   * 入群邀请 / 入群申请：行尾带接受·拒绝双按钮，单独成组（对齐 web InvitesPendingCard
+   * 把「待处理邀请」从通知流里提出来，避免邀请被已读通知淹没）。
+   */
+  private isInviteNotification(notification: NotifyItem): boolean {
+    return this.canHandleGroupInvite(notification) || this.canHandleGroupApplication(notification);
   }
 
-  private getGroupedNotifications(): GroupedNotification[] {
-    const groups: GroupedNotification[] = [];
-    const order = ['今天', '昨天', '更早'];
+  /**
+   * 分组对齐前端 /notify：入群邀请 → 新消息（未读）→ 已读。
+   * 原实现按「今天 / 昨天 / 更早」时间分组，信息架构与 web 不同：同一屏既读不出
+   * 「哪条还没处理」，也读不出「哪些是新消息」。
+   * 每个分区输出两条：卡外标题 + 收行的软岛卡。
+   */
+  private buildNotificationListEntries(): NotificationListEntry[] {
+    const invites: NotifyItem[] = [];
+    const unread: NotifyItem[] = [];
+    const read: NotifyItem[] = [];
     for (const notification of this.visibleNotifications) {
-      const label = this.getTimeGroupLabel(notification.created_at);
-      let group = groups.find(g => g.label === label);
-      if (!group) {
-        group = { label: label, items: [] as NotifyItem[] } as GroupedNotification;
-        groups.push(group);
+      if (this.isInviteNotification(notification)) {
+        invites.push(notification);
+      } else if (!notification.is_read) {
+        unread.push(notification);
+      } else {
+        read.push(notification);
       }
-      group.items.push(notification);
     }
-    groups.sort((a, b) => order.indexOf(a.label) - order.indexOf(b.label));
-    return groups;
+    const entries: NotificationListEntry[] = [];
+    const pushSection = (key: string, label: string, items: NotifyItem[], showBell: boolean): void => {
+      entries.push({ key: `${key}-header`, kind: 'header', label: label, count: items.length, showBell: showBell, items: [] });
+      entries.push({ key: key, kind: 'group', label: label, count: items.length, showBell: showBell, items: items });
+    };
+    if (invites.length > 0) {
+      pushSection('invites', '入群邀请', invites, false);
+    }
+    if (unread.length > 0) {
+      pushSection('unread', '新消息', unread, true);
+    }
+    if (read.length > 0) {
+      pushSection('read', '已读', read, false);
+    }
+    return entries;
   }
 
   private getPalette() {
@@ -455,59 +481,44 @@ export struct NotificationCenter {
 
   build() {
     Column({ space: DesignConstants.SPACING.LG }) {
-      // 标题栏
-      Row() {
-        Row({ space: DesignConstants.SPACING.MD }) {
-          if (this.onClose) {
-            Row() {
-              LucideIcon({
-                  icon: AppIcon.BACK,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                  color: this.getPalette().textSecondary
-                })
-            }
-            .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-            .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
-            .justifyContent(FlexAlign.Center)
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(this.getPalette().surfaceBackground)
-            .shadow(this.getPalette().controlShadow)
-            .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
-            // 按压反馈（对齐 SurfaceIconButton 的 spring 缩放语义）
-            .scale(this.pressedClose ?
-              { x: DesignConstants.INTERACTION.SCALE_PRESSED_ICON, y: DesignConstants.INTERACTION.SCALE_PRESSED_ICON } :
-              { x: 1, y: 1 })
-            .animation({ curve: curves.springMotion(
-              DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-              DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-            ) })
-            .onTouch((event: TouchEvent) => {
-              if (event.type === TouchType.Down) {
-                this.pressedClose = true;
-              } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-                this.pressedClose = false;
-              }
-            })
-            .onClick(() => {
+      // 标题栏（对齐 web /notify PageHeader）：36 圆返回钮 + 标题 20/600 +
+      // 未读胶囊（web subtitle pill）+ 右侧「全部已读」安静动作
+      Row({ space: DesignConstants.SPACING.MD }) {
+        if (this.onClose) {
+          // 返回钮统一走 SurfaceIconButton（36 圆钮 + 发丝描边 + 轻投影 + 44 热区 + 无障碍名）
+          SurfaceIconButton({
+            icon: AppIcon.BACK,
+            kind: 'surface',
+            buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
+            accessibilityLabel: '返回',
+            onPress: () => {
               if (this.onClose) {
                 this.onClose();
               }
-            })
-          }
-
-          Row({ space: DesignConstants.SPACING.MD }) {
-            Text('通知')
-              .fontSize(DesignConstants.FONT.SIZE.XXL)
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getPalette().textPrimary)
-            if (this.getUnreadCount() > 0) {
-              Text(`${this.getUnreadCount()} 条未读`)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.getPalette().textSecondary)
             }
-          }
-          .alignItems(VerticalAlign.Center)
+          })
         }
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text('通知')
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().textPrimary)
+          // web：副标题是 soft 底胶囊「N 条未读消息」，不是跟在标题后的裸文本
+          Text(this.getUnreadCount() > 0 ? `${this.getUnreadCount()} 条未读消息` : '暂无新通知')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+            .padding({
+              left: DesignConstants.SPACING.SM,
+              right: DesignConstants.SPACING.SM,
+              top: DesignConstants.SPACING.HALF,
+              bottom: DesignConstants.SPACING.HALF
+            })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.60))
+            .maxLines(1)
+        }
+        .alignItems(HorizontalAlign.Start)
         .layoutWeight(1)
 
         if (this.getUnreadCount() > 0) {
@@ -515,7 +526,8 @@ export struct NotificationCenter {
             label: '全部已读',
             icon: AppIcon.CHECK_ALL,
             showIcon: true,
-            variant: 'primary',
+            // web 是安静的文字 + 图标动作（trailing soft/ghost），不是页头主操作
+            variant: 'ghost',
             buttonSize: 'small',
             // 批量标记不可撤销：二次确认防误触
             onPress: () => {
@@ -525,6 +537,7 @@ export struct NotificationCenter {
         }
       }
       .width('100%')
+      .alignItems(VerticalAlign.Center)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
       // 过滤器标签
@@ -609,28 +622,37 @@ export struct NotificationCenter {
       } else {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List({ space: DesignConstants.SPACING.MD, scroller: this.backToTopScroller }) {
-            ForEach(this.getGroupedNotifications(), (group: GroupedNotification) => {
-              ListItemGroup({
-                header: this.buildGroupHeader(group.label),
-                space: DesignConstants.SPACING.SM
-              }) {
-                ForEach(group.items, (notification: NotifyItem) => {
-                  ListItem() {
-                    this.buildNotifyItem(notification)
-                  }
-                }, (notification: NotifyItem) =>
-                  notification.notify_id + '_p' + (this.actionLoadingIds.indexOf(notification.notify_id) >= 0))
+            ForEach(this.buildNotificationListEntries(), (entry: NotificationListEntry) => {
+              if (entry.kind === 'header') {
+                // 分区标题在卡外（页面画布上），与 web SectionHead 位置一致：
+                // 卡外标题 + 卡内行，标题读起来是「分组」而不是「卡片标题」
+                ListItem() {
+                  this.buildGroupHeader(entry.label, entry.count, entry.showBell)
+                }
+              } else {
+                ListItemGroup({
+                  // web 软岛内行间距 gap-y-0.5(2)：行本身已有 14 上下内距
+                  space: DesignConstants.SPACING.HALF
+                }) {
+                  ForEach(entry.items, (notification: NotifyItem) => {
+                    ListItem() {
+                      this.buildNotifyItem(notification)
+                    }
+                  }, (notification: NotifyItem) =>
+                    notification.notify_id + '_p' + (this.actionLoadingIds.indexOf(notification.notify_id) >= 0))
+                }
+                .width('100%')
+                // r3 容器式软岛：每组通知一张软岛卡（surfaceIsland + 20 圆角 + 轻投影），
+                // 水平留白由 List 的 gutter 承担（卡与外层内容同宽，不再自加 margin）
+                .backgroundColor(this.getPalette().surfaceIsland)
+                .borderRadius(DesignConstants.SHAPE.CARD)
+                .shadow(this.getPalette().surfaceShadow)
+                // 岛内上下留 8（web ListContainer p-2）；横向由行自身 margin 8 承担，
+                // 未读竖条因此离岛边 8，与 web 行内状态条位置一致
+                .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+                .clip(true)
               }
-              // r3 容器式软岛：每组通知一张无描边圆角卡，行内缩、行间靠底色/留白区分
-              .backgroundColor(this.getPalette().surfaceIsland)
-              .borderRadius(DesignConstants.SHAPE.CARD)
-              .shadow(this.getPalette().surfaceShadow)
-              .clip(true)
-              .margin({
-                left: DesignConstants.SPACING.LG,
-                right: DesignConstants.SPACING.LG
-              })
-            }, (group: GroupedNotification) => group.label)
+            }, (entry: NotificationListEntry) => entry.key)
 
             if (this.isLoadingMore) {
               ListItem() {
@@ -682,99 +704,130 @@ export struct NotificationCenter {
   }
 
   @Builder
-  private buildGroupHeader(label: string) {
+  private buildGroupHeader(label: string, count: number, showBell: boolean) {
+    // 分组标题对齐 web SectionHead variant=eyebrow：10vp 次色小标 + 右侧计数（11vp），
+    // 「新消息」组带铃铛图标。旧实现是「accent 圆点 + 12vp 主文字」，比正文还抢眼。
     Row({ space: DesignConstants.SPACING.SM }) {
-      Row()
-        .width(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
-        .height(DesignConstants.COMPONENT.INDICATOR_DOT_SIZE)
-        .borderRadius(DesignConstants.RADIUS.FULL)
-        .backgroundColor(this.getPalette().accentBackground)
+      if (showBell) {
+        LucideIcon({
+          icon: AppIcon.NOTIFICATION,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          paletteRole: 'textSecondary'
+        })
+      }
       Text(label)
-        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
         .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-        .fontColor(this.getPalette().textPrimary)
+        .fontColor(this.getPalette().textSecondary)
+        .textCase(TextCase.UpperCase)
+        .letterSpacing(DesignConstants.FONT.LETTER_SPACING.EYEBROW)
+        .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS2, DesignConstants.FONT.LINE_RATIO.DEFAULT))
+      Text(`${count}`)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getPalette().textSecondary)
     }
     .alignItems(VerticalAlign.Center)
-    .padding({ left: DesignConstants.SPACING.XS, top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.XS })
+    // 与下方软岛卡左缘对齐（横向留白由 List 的 gutter 承担，分区标题不再自加 left）
+    .padding({
+      top: DesignConstants.SPACING.SM,
+      bottom: DesignConstants.SPACING.SM2
+    })
   }
 
   @Builder
   private buildNotifyItem(notification: NotifyItem) {
-    Row({ space: DesignConstants.SPACING.LG }) {
-      // 头像 + 类型图标徽章
-      Stack({ alignContent: Alignment.Center }) {
-        if (notification.payload?.actor?.avatar_url) {
-          // R8：统一 Avatar 原语（底层首字母/人形图标占位 + 渐显 + 失败保留占位）
-          // 相邻正文已含 actor 姓名 → decorative 移出无障碍树
-          SystemAvatar({
-            avatarUrl: notification.payload.actor.avatar_url,
-            name: notification.payload.actor.nickname ?? '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
-            shape: 'circle',
-            decorative: true
-          })
-        } else {
-          Row() {
-            LucideIcon({
-              icon: this.getNotificationIcon(notification.type),
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
-              color: this.getTypeOnSoftColor(notification.type)
-            })
-          }
-          .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+    Stack({ alignContent: Alignment.Start }) {
+      // 未读条：左侧 3vp accent 竖条（对齐 web NotifyRow；静态、不抢注意力，
+      // 与列表的扫读方向一致）。替代旧的「整行底色 + 右侧类型色圆点」双信号。
+      if (!notification.is_read) {
+        Row()
+          .width(DesignConstants.SPACING.THREE)
           .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
           .borderRadius(DesignConstants.RADIUS.FULL)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.getSoftStatusColor(notification.type))
-        }
-
-        // 类型图标徽章：贴头像右下角（用 alignContent 取代硬编码坐标）
-        Stack({ alignContent: Alignment.BottomEnd }) {
-          Row() {
-            LucideIcon({
-              icon: this.getNotificationIcon(notification.type),
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-              color: this.getPalette().accentText
-            })
-          }
-          .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-          .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .justifyContent(FlexAlign.Center)
-          .backgroundColor(this.getTypeColor(notification.type))
-          .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().pageBackground })
-        }
-        .width('100%')
-        .height('100%')
+          .backgroundColor(this.getPalette().accentBackground)
       }
 
-      // 文本内容
-      Column({ space: DesignConstants.SPACING.HALF }) {
-        Text() {
-          Span(this.buildNotificationTitle(notification))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textPrimary)
-            .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.REGULAR : DesignConstants.FONT.WEIGHT.MEDIUM)
-          Span(' ' + this.buildNotificationMessage(notification))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .fontColor(this.getPalette().textPrimary)
+      Row({ space: DesignConstants.SPACING.MD3 }) {
+        // 头像 + 类型图标徽章
+        Stack({ alignContent: Alignment.Center }) {
+          if (notification.payload?.actor?.avatar_url) {
+            // R8：统一 Avatar 原语（底层首字母/人形图标占位 + 渐显 + 失败保留占位）
+            // 相邻正文已含 actor 姓名 → decorative 移出无障碍树
+            SystemAvatar({
+              avatarUrl: notification.payload.actor.avatar_url,
+              name: notification.payload.actor.nickname ?? '',
+              avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+              shape: 'circle',
+              decorative: true
+            })
+          } else {
+            Row() {
+              LucideIcon({
+                icon: this.getNotificationIcon(notification.type),
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_SM,
+                color: this.getTypeOnSoftColor(notification.type)
+              })
+            }
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.getSoftStatusColor(notification.type))
+          }
+
+          // 类型图标徽章：贴头像右下角（用 alignContent 取代硬编码坐标）
+          Stack({ alignContent: Alignment.BottomEnd }) {
+            Row() {
+              LucideIcon({
+                icon: this.getNotificationIcon(notification.type),
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+                color: this.getPalette().accentText
+              })
+            }
+            .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+            .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .justifyContent(FlexAlign.Center)
+            .backgroundColor(this.getTypeColor(notification.type))
+            .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().pageBackground })
+          }
+          .width('100%')
+          .height('100%')
         }
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
 
-        Text(this.formatTimestamp(notification.created_at))
-          .fontSize(DesignConstants.FONT.SIZE.XS)
-          .fontColor(this.getPalette().textSecondary)
-          .margin({ top: DesignConstants.SPACING.HALF })
+        // 文本内容：未读 = 标题 semibold 主色；已读 = 标题 medium 次色（对齐 web）
+        Column({ space: DesignConstants.SPACING.HALF }) {
+          Text() {
+            Span(this.buildNotificationTitle(notification))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(notification.is_read ? this.getPalette().textSecondary : this.getPalette().textPrimary)
+              .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            Span(' ' + this.buildNotificationMessage(notification))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .fontColor(this.getPalette().textPrimary)
+          }
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
 
-        // 群组操作按钮
+          Text(this.formatTimestamp(notification.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getPalette().textSecondary)
+            .margin({ top: DesignConstants.SPACING.HALF })
+        }
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+
+        // 入群邀请 / 入群申请双按钮：行尾竖排（对齐 web 移动端 flex-col gap-1.5），
+        // 主 = accent 实底 pill、次 = soft 软填 pill，两枚同档视觉重量。
         if (this.canHandleGroupInvite(notification)) {
-          Row({ space: DesignConstants.SPACING.SM }) {
+          Column({ space: DesignConstants.SPACING.SM2 }) {
             SystemButton({
               label: '接受',
               variant: 'primary',
-              buttonSize: 'compact',
+              buttonSize: 'small',
+              pill: true,
               loading: this.isActionLoading(notification.notify_id),
               disabled: this.isActionLoading(notification.notify_id),
               onPress: () => this.handleGroupInviteAction(notification, 'accept')
@@ -783,18 +836,20 @@ export struct NotificationCenter {
             SystemButton({
               label: '拒绝',
               variant: 'surface',
-              buttonSize: 'compact',
+              buttonSize: 'small',
+              pill: true,
               disabled: this.isActionLoading(notification.notify_id),
               onPress: () => this.handleGroupInviteAction(notification, 'reject')
             })
           }
-          .margin({ top: DesignConstants.SPACING.SM2 })
+          .justifyContent(FlexAlign.Center)
         } else if (this.canHandleGroupApplication(notification)) {
-          Row({ space: DesignConstants.SPACING.SM }) {
+          Column({ space: DesignConstants.SPACING.SM2 }) {
             SystemButton({
               label: '批准',
               variant: 'primary',
-              buttonSize: 'compact',
+              buttonSize: 'small',
+              pill: true,
               loading: this.isActionLoading(notification.notify_id),
               disabled: this.isActionLoading(notification.notify_id),
               onPress: () => this.handleGroupApplicationAction(notification, 'approve')
@@ -803,29 +858,28 @@ export struct NotificationCenter {
             SystemButton({
               label: '拒绝',
               variant: 'surface',
-              buttonSize: 'compact',
+              buttonSize: 'small',
+              pill: true,
               disabled: this.isActionLoading(notification.notify_id),
               onPress: () => this.handleGroupApplicationAction(notification, 'reject')
             })
           }
-          .margin({ top: DesignConstants.SPACING.SM2 })
+          .justifyContent(FlexAlign.Center)
         }
       }
-      .layoutWeight(1)
-
-      // 未读圆点
-      if (!notification.is_read) {
-        Row()
-          .width(DesignConstants.SPACING.SM)
-          .height(DesignConstants.SPACING.SM)
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.getTypeColor(notification.type))
-      }
+      .width('100%')
+      .alignItems(VerticalAlign.Center)
+      // web NotifyRow：px-4 py-3.5（16/14）
+      .padding({
+        left: DesignConstants.SPACING.LG,
+        right: DesignConstants.SPACING.LG,
+        top: DesignConstants.SPACING.MD3,
+        bottom: DesignConstants.SPACING.MD3
+      })
     }
     .width('100%')
-    .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
-    // r3 软岛行：未读态=行底色 + 圆点，不再画边框；行内缩 8 使填充离岛边
-    .backgroundColor(notification.is_read ? DesignConstants.COLOR.TRANSPARENT : this.getSoftStatusColor(notification.type))
+    // 行底色不再随未读变化（未读语义只由左侧竖条 + 标题字重承担）；行内缩 8 离岛边
+    .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
     .borderRadius(DesignConstants.RADIUS.SM)
     .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
     // 整行按压反馈（对齐 DesktopLayout 导航项 tap-97 语义）
