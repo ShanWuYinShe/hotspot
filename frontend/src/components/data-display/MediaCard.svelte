@@ -112,8 +112,10 @@
 		/>
 		{#if imageLoaded}
 			{#if !horizontal}
-				<div class="pointer-events-none absolute inset-x-0 top-0 h-24" style="background:var(--cst-surface-card-scrim-top);"></div>
-				<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[45%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
+				<!-- 顶部不再铺全宽遮罩：角标/徽章（media-badge）自带深色强底，顶部大遮罩
+				     会压掉图片上半区。底部只保留承载标题/作者/操作的局部遮罩（36%），
+				     压图白字对比度仍由主题 scrim-bottom token 保证。 -->
+				<div class="pointer-events-none absolute inset-x-0 bottom-0 h-[36%]" style="background:var(--cst-surface-card-scrim-bottom);"></div>
 			{:else}
 				<div class="pointer-events-none {imageBox}" style="background:var(--cst-surface-media-scrim-card);"></div>
 			{/if}

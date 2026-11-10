@@ -73,15 +73,15 @@
 					{/if}
 				</div>
 
-				{#snippet footer()}
+				{#snippet footer({ onImage }: { onImage: boolean; horizontal: boolean })}
 					<div class="px-2.5 pb-2.5 pt-2">
-						<p class="truncate text-sm font-semibold text-text-primary">{g.name}</p>
+						<p class="truncate text-sm font-semibold {onImage ? 'text-content-inverse drop-shadow-xs' : 'text-text-primary'}">{g.name}</p>
 						<div class="mt-1 flex items-center justify-between gap-1">
-							<span class="flex min-w-0 items-center gap-1 text-xs tabular-nums text-text-secondary">
+							<span class="flex min-w-0 items-center gap-1 text-xs tabular-nums {onImage ? 'text-content-inverse/80' : 'text-text-secondary'}">
 								<Users class="size-2.5 shrink-0" strokeWidth={2} />
 								{g.members} 成员
 							</span>
-							<span class="flex shrink-0 items-center gap-0.5 text-xs tabular-nums text-accent-default">
+							<span class="flex shrink-0 items-center gap-0.5 text-xs tabular-nums {onImage ? 'text-content-inverse' : 'text-accent-default'}">
 								<MapPin class="size-2.5 shrink-0" strokeWidth={2} />
 								{g.distance}
 							</span>
