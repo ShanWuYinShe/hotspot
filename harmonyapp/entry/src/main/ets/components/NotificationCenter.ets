@@ -10,6 +10,7 @@ import { TabsPillGroup, TabItem } from './TabsPillGroup';
 import { AppRouter, AnnouncementsRouteParam, GroupDetailRouteParam, MomentDetailRouteParam, ProfileRouteParam } from '../core/router/AppRouter';
 import { PageNames } from '../constants/AppConstants';
 import { SystemToast } from './SystemToast';
+import { LoginPromptView } from './LoginPromptView';
 import { SystemAvatar } from './SystemAvatar';
 import { BackToTopButton } from './BackToTopButton';
 import { SurfaceIconButton } from './SurfaceIconButton';
@@ -57,6 +58,7 @@ class NotificationFilterOption {
 
 @Component
 export struct NotificationCenter {
+  @StorageLink('isLoggedIn') private isLoggedIn: boolean = false;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   onClose?: () => void;
   @State private visibleNotifications: NotifyItem[] = [];
@@ -540,24 +542,40 @@ export struct NotificationCenter {
       .alignItems(VerticalAlign.Center)
       .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
 
-      // 过滤器标签
-      TabsPillGroup({
-        variant: 'pills',
-        tabs: this.filterOptions.map((filter: NotificationFilterOption) => ({ label: filter.label } as TabItem)),
-        activeIndex: this.filterOptions.findIndex((filter: NotificationFilterOption) => filter.key === this.selectedFilter),
-        actions: {
-          onChange: (index: number) => {
-            const option = this.filterOptions[index];
-            if (option) {
-              this.onFilterSelected(option.key as NotificationFilterKey);
+      // 过滤器标签（游客态隐藏，对齐 web 通知访客引导无筛选行）
+      if (this.isLoggedIn) {
+        TabsPillGroup({
+          variant: 'pills',
+          tabs: this.filterOptions.map((filter: NotificationFilterOption) => ({ label: filter.label } as TabItem)),
+          activeIndex: this.filterOptions.findIndex((filter: NotificationFilterOption) => filter.key === this.selectedFilter),
+          actions: {
+            onChange: (index: number) => {
+              const option = this.filterOptions[index];
+              if (option) {
+                this.onFilterSelected(option.key as NotificationFilterKey);
+              }
             }
           }
-        }
-      })
-        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+        })
+          .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
+      }
 
       // 内容区域
-      if (this.isLoading) {
+      if (!this.isLoggedIn) {
+        // 游客态：对齐 web /notify 的 NeedsAuthNotice 内联引导，而不是把 10100 当普通错误
+        LoginPromptView({
+          title: '登录后查看通知',
+          subtitle: '收到的点赞、评论与关注会出现在这里',
+          icon: AppIcon.PERSON,
+          loginAction: '查看通知',
+          highlights: [
+            { icon: AppIcon.HEART, text: '谁点赞了你的瞬间' },
+            { icon: AppIcon.PERSON_ADD, text: '新的关注与互相关注' },
+            { icon: AppIcon.GROUP, text: '入群邀请与群申请结果' }
+          ]
+        })
+          .layoutWeight(1)
+      } else if (this.isLoading) {
         Column({ space: DesignConstants.SPACING.MD }) {
           LoadingProgress()
             .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
