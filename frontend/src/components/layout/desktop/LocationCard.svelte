@@ -44,7 +44,7 @@
 	<!-- 折叠态：44px 圆形锚点，和折叠导航同为圆形 icon 节奏 -->
 	<button
 		type="button"
-		class="group mx-auto flex size-11 items-center justify-center rounded-full border border-border-default/50 bg-surface-primary/60 text-accent-default backdrop-blur-md transition-colors duration-rapid focus-ring hover:border-accent-border hover:bg-accent-soft"
+		class="group mx-auto flex size-11 items-center justify-center rounded-full border border-border-default/60 bg-surface-primary/70 text-accent-default shadow-xs backdrop-blur-md transition-colors duration-rapid focus-ring hover:border-accent-border hover:bg-accent-soft"
 		title="位置选择"
 		aria-label="位置选择"
 		onclick={onClick}

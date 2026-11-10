@@ -247,7 +247,7 @@
 		<!-- Left Brand Capsule (品牌与工作台微岛) -->
 		{#if isSidebarCollapsed}
 			<div
-				class="flex shrink-0 items-center rounded-full border border-border-default/30 bg-surface-primary/60 p-1 shadow-xs backdrop-blur-2xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/50 hover:bg-surface-primary/80"
+				class="ml-2.5 flex shrink-0 items-center rounded-full border border-border-default/30 bg-surface-primary/60 p-1 shadow-xs backdrop-blur-2xl transition-[border-color,background-color,box-shadow] duration-standard hover:border-border-default/50 hover:bg-surface-primary/80"
 			>
 				<button
 					type="button"
