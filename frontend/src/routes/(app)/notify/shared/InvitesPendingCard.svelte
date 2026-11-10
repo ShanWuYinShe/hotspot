@@ -35,7 +35,7 @@
 						size="sm"
 						variant="primary"
 						shape="pill"
-						class="hit-slop-44 px-3.5"
+						class="min-h-11 px-3.5 sm:min-h-8"
 						disabled={invitePending.has(inv.invite_id)}
 						onclick={() => onAccept(inv.invite_id)}
 					>接受</Button>
@@ -44,7 +44,7 @@
 						size="sm"
 						variant="soft"
 						shape="pill"
-						class="hit-slop-44 px-3.5"
+						class="min-h-11 px-3.5 sm:min-h-8"
 						disabled={invitePending.has(inv.invite_id)}
 						onclick={() => onReject(inv.invite_id)}
 					>拒绝</Button>

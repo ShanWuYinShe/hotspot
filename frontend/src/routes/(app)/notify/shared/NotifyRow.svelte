@@ -89,7 +89,7 @@
 					size="sm"
 					variant="primary"
 					shape="pill"
-					class="hit-slop-44 px-3.5"
+					class="min-h-11 px-3.5 sm:min-h-8"
 					disabled={actionPending}
 					onclick={(e) => { e.stopPropagation(); onAccept?.(notif.inviteId!); }}
 				>接受</Button>
@@ -98,7 +98,7 @@
 					size="sm"
 					variant="soft"
 					shape="pill"
-					class="hit-slop-44 px-3.5"
+					class="min-h-11 px-3.5 sm:min-h-8"
 					disabled={actionPending}
 					onclick={(e) => { e.stopPropagation(); onReject?.(notif.inviteId!); }}
 				>拒绝</Button>
