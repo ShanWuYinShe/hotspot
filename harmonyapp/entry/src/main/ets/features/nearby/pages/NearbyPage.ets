@@ -204,6 +204,9 @@ export struct NearbyPage {
   }
 
   build() {
+    // 不用 .overlay 挂回顶钮：不可见时 overlay 仍会占满命中区并吞掉整页点击。
+    // 改为 Stack 的尾部条件子节点，只在可见时才参与布局/触摸。
+    Stack({ alignContent: Alignment.BottomEnd }) {
     PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
       Column() {
         SystemPageHeader({
@@ -330,6 +333,17 @@ export struct NearbyPage {
       .width('100%')
       .height('100%')
     }
+
+    if (this.showBackToTop) {
+      BackToTopButton({
+        visible: true,
+        onTap: () => { this.scrollToTop(); }
+      })
+        .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    }
+  }
+  .width('100%')
+  .height('100%')
   }
 
   /** 附近瞬间双列预览（按 2 条切行，行内 layoutWeight 均分；最后一行单卡补 Blank） */
