@@ -17,6 +17,7 @@ import { RelationshipListSection } from './SettingsSupport';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
+import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 
 @Preview
 @Component
@@ -80,10 +81,12 @@ export struct RelationshipHubPage {
     if (this.isDestroyed) return;
     this.isLoading = true;
     try {
+      // spec：fetch_friends/following/followers 的 user_id 必传（拉自己也要显式传）
+      const myUserId: string = GlobalStateManager.getInstance().getCurrentUser()?.user_id ?? '';
       const results = await Promise.all([
-        ApiClient.getFriendsList({ pagination: { limit: 20 } }).catch(() => null),
-        ApiClient.getFollowingList({ pagination: { limit: 20 } }).catch(() => null),
-        ApiClient.getFollowersList({ pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getFriendsList({ user_id: myUserId, pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getFollowingList({ user_id: myUserId, pagination: { limit: 20 } }).catch(() => null),
+        ApiClient.getFollowersList({ user_id: myUserId, pagination: { limit: 20 } }).catch(() => null),
         ApiClient.getBlockedList({ pagination: { limit: 20 } }).catch(() => null)
       ]);
       if (this.isDestroyed) return;

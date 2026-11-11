@@ -18,7 +18,7 @@ import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemToggle } from '../../../components/SystemToggle';
-import { AppRouter, ProfileRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, ProfileRouteParam, ChatRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { ListGroup, ListRowDivider } from '../../../components/ListGroup';
@@ -959,6 +959,19 @@ export struct RelationshipListSection {
     AppRouter.push(PageNames.PROFILE, params);
   }
 
+  /** 关系行「发消息」：对齐 web 关系列表行尾按钮 */
+  private openChat(userId: string, nickname: string): void {
+    if (userId.length === 0) {
+      return;
+    }
+    const params = new ChatRouteParam();
+    params.chatId = userId;
+    params.chatType = 'private_chat';
+    params.targetId = userId;
+    params.title = nickname.length > 0 ? nickname : '私聊';
+    AppRouter.push(PageNames.CHAT, params);
+  }
+
   @Builder
   private buildUserLine(userId: string, nickname: string, meta: string, online: boolean, actionLabel?: string, action?: () => void) {
     Row({ space: DesignConstants.SPACING.MD }) {
@@ -1086,19 +1099,19 @@ export struct RelationshipListSection {
       ListGroup({ groupPadding: DesignConstants.SPACING.XS }) {
         if (this.friends.length > 0) {
           ForEach(this.friends, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online')
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.following.length > 0) {
           ForEach(this.following, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.followers.length > 0) {
           ForEach(this.followers, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online')
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
