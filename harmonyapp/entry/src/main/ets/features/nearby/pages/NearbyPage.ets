@@ -103,7 +103,13 @@ export struct NearbyPage {
       const momentsRes = results[2];
 
       if (usersRes && usersRes.code === 0 && usersRes.data?.items) {
-        this.nearbyUsers = usersRes.data.items;
+        // 附近的人需排除自己：后端 search_users 会包含当前用户（距离 0m），
+        // 端上若不过滤，点自己会走「他人主页」路由但参数等于 self，ProfilePage
+        // 判为非 external 分支、不创建 NavDestination，推入后整页白屏。
+        const selfId = GlobalStateManager.getInstance().getCurrentUser()?.user_id ?? '';
+        this.nearbyUsers = selfId.length > 0
+          ? usersRes.data.items.filter((u: UserItem) => (u.user?.user_id ?? '') !== selfId)
+          : usersRes.data.items;
       }
       if (groupsRes && groupsRes.code === 0 && groupsRes.data?.items) {
         this.nearbyGroups = groupsRes.data.items;
