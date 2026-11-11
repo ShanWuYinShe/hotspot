@@ -642,6 +642,11 @@ export struct SearchPage {
           .onFocus(() => { this.isSearchFocused = true; })
           .onBlur(() => { this.isSearchFocused = false; })
           .onChange((value: string) => {
+            // doSearch 会把 keyword 回写成同一值，ArkUI 可能触发 onChange；
+            // 若此处无条件 hasSearched=false，会立刻退回建议词态、结果永远出不来。
+            if (value === this.keyword) {
+              return;
+            }
             this.keyword = value;
             this.hasSearched = false;
             this.scheduleSuggest();
@@ -816,7 +821,8 @@ export struct SearchPage {
 
 
   private tabLabel(base: string, count: number): string {
-    return (this.hasSearched && count > 0) ? `${base} (${count})` : base;
+    // web 结果 Tab 为「动态 3 / 话题 3」空格分隔，无括号
+    return (this.hasSearched && count > 0) ? `${base} ${count}` : base;
   }
 
   @Builder
