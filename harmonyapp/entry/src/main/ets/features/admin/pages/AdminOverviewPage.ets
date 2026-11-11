@@ -291,11 +291,16 @@ struct AdminOverviewPage {
 
   @Builder
   private buildModuleNav() {
-    Scroll() {
-      TabsPillGroup({
+    TabsPillGroup({
         variant: 'pills',
         freeWidth: true,
-        tabs: MODULE_TABS.map((label: string): TabItem => ({ label })),
+        wrap: true,
+        tabs: MODULE_TABS.map((label: string): TabItem => ({
+          label,
+          count: label === '举报' && this.pendingReports !== null && this.pendingReports > 0
+            ? this.pendingReports
+            : undefined
+        })),
         activeIndex: 0,
         actions: {
           onChange: (index: number) => {
@@ -306,10 +311,6 @@ struct AdminOverviewPage {
           }
         }
       })
-    }
-    .scrollable(ScrollDirection.Horizontal)
-    .scrollBar(BarState.Off)
-    .align(Alignment.Start)
     .width('100%')
     .padding({
       top: DesignConstants.SPACING.SM,

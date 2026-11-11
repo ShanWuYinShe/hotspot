@@ -47,6 +47,8 @@ export struct TabsPillGroup {
   @Prop variant: string = '';
   /** 自由宽度模式：透明容器 + 自适应内容宽（对齐前端 TabBar；缺省等宽布局） */
   @Prop freeWidth: boolean = false;
+  /** 自动换行（管理后台 10 个模块 tab 需两行铺满，对齐 web flex-wrap） */
+  @Prop wrap: boolean = false;
   /**
    * pillFill：让**视觉胶囊**填满分段槽高度（默认胶囊按文字内容高，在 44vp 外壳里显得又小又飘）。
    * 用于登录模式切换这类"轨道明显比胶囊高"的场景；默认关闭以免影响其它使用处的既有间距。
@@ -254,6 +256,8 @@ export struct TabsPillGroup {
     // - 自由宽度模式（紧凑胶囊行）：**布局高度保持胶囊视觉高 30**，命中区改用 responseRegion
     //   纵向外扩到 44。否则外壳高 44 会把页面里所有 `padding: 12/8` 的间距顶出 7vp，
     //   实测附近页「排序行→分隔线」比前端多出约 14vp，页头整体偏高。
+    // Flex 无 space，换行模式用外边距补胶囊间距
+    .margin(this.wrap ? { right: this.gap, bottom: this.gap } : {})
     .constraintSize({ minHeight: this.freeWidth ? undefined : DesignConstants.LAYOUT.MIN_HIT_TARGET })
     .responseRegion(this.freeWidth ? {
       x: 0,
@@ -270,14 +274,19 @@ export struct TabsPillGroup {
   }
 
   build() {
-    Row({ space: this.gap }) {
+    Flex({
+      wrap: this.wrap ? FlexWrap.Wrap : FlexWrap.NoWrap,
+      direction: FlexDirection.Row,
+      justifyContent: FlexAlign.Start,
+      alignItems: ItemAlign.Center
+    }) {
       ForEach(this.tabs, (tab: TabItem, index: number) => {
         this.buildTab(tab, index)
       }, (tab: TabItem, index: number) => `${tab.label}-${index}`)
     }
     // 自由宽度不设 width：由内容撑开（外层可套 Scroll 横向滚动，对齐前端 overflow-x-auto 胶囊行）；
-    // 等宽分段占满容器
-    .width(this.freeWidth ? undefined : '100%')
+    // 换行模式铺满容器；等宽分段占满容器
+    .width(this.wrap || !this.freeWidth ? '100%' : undefined)
     // 容器：segmented = surfaceSubtle 轨道 + hairline ring（对齐 web 分段控制器）；
     // pills/underline = 透明容器；legacy 按 freeWidth 保持旧视觉。
     // 注意 ArkUI 属性顺序：.border() 写在 .borderRadius() 之后会把圆角覆盖为 0，
@@ -291,6 +300,5 @@ export struct TabsPillGroup {
       (this.isNewStyle() || this.freeWidth ? 0 : DesignConstants.RADIUS.FULL))
     .backgroundColor(this.isSegmented() ? this.getPalette().surfaceSubtle :
       (this.isNewStyle() || this.freeWidth ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().surfaceSubtle))
-    .alignItems(VerticalAlign.Center)
   }
 }
