@@ -2100,6 +2100,57 @@ export struct GroupDetailPage {
         )
 
         this.buildBottomActionTray()
+
+        // 每个 sheet 独立挂一个 0 尺寸宿主节点：同一节点上多个 bindSheet 时
+        // ArkUI 只认一个，实测第二个绑定会让两个都不弹（群详情 8 个 sheet 曾全部失效）
+        Column().width(0).height(0).bindSheet($$this.showMemberList, this.buildMemberListSheet(), {
+          height: '70%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showApplicationList, this.buildApplicationListSheet(), {
+          height: '70%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
+          height: '78%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showAnnouncementSheet, this.buildAnnouncementSheet(), {
+          height: SheetSize.FIT_CONTENT,
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showInviteSheet, this.buildInviteSheet(), {
+          height: '70%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showBannedListSheet, this.buildBannedListSheet(), {
+          height: '70%',
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showBanConfirm, this.buildBanConfirmSheet(), {
+          height: SheetSize.FIT_CONTENT,
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
+        Column().width(0).height(0).bindSheet($$this.showGroupMoreSheet, this.buildGroupMoreSheet(), {
+          height: SheetSize.FIT_CONTENT,
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
       }
     }
     .width('100%')
@@ -2119,54 +2170,7 @@ export struct GroupDetailPage {
         this.errorMessage = '缺少群组ID参数';
       }
     })
-    .bindSheet($$this.showMemberList, this.buildMemberListSheet(), {
-      height: '70%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showApplicationList, this.buildApplicationListSheet(), {
-      height: '70%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showEditGroupSheet, this.buildEditGroupSheet(), {
-      height: '78%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showAnnouncementSheet, this.buildAnnouncementSheet(), {
-      height: SheetSize.FIT_CONTENT,
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showInviteSheet, this.buildInviteSheet(), {
-      height: '70%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showBannedListSheet, this.buildBannedListSheet(), {
-      height: '70%',
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showBanConfirm, this.buildBanConfirmSheet(), {
-      height: SheetSize.FIT_CONTENT,
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
-    .bindSheet($$this.showGroupMoreSheet, this.buildGroupMoreSheet(), {
-      height: SheetSize.FIT_CONTENT,
-      showClose: false,
-      dragBar: true,
-      backgroundColor: this.getCurrentThemePalette().sheetBackground
-    })
+
   }
 
   /**
