@@ -134,7 +134,6 @@ export struct SystemAvatar {
     .width(this.avatarSize)
     .height(this.avatarSize)
     .borderRadius(this.getBorderRadius())
-    .shadow(this.getAvatarShadow())
   }
 
   build() {
