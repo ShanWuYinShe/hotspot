@@ -225,7 +225,10 @@ struct Index {
       await this.stateManager.initialize();
       await this.initializeSmartServices();
 
-      const persistedToken = await PreferencesUtil.get<string>('access_token', '');
+      // 令牌在 Asset Store（Preferences 只留非敏感索引）：冷启动必须走 HttpUtil.getToken，
+      // 否则 persistedToken 恒为空、validateSessionOnColdStart 被跳过，UI 会显示未登录而
+      // WebSocket 仍带旧 token（实测：访客登录后重启，WS 是新用户、个人中心仍是访客态）。
+      const persistedToken = await this.getAccessToken() ?? '';
       const persistedLocation = await PreferencesUtil.getObject<LocationInfo>('current_location');
       if (persistedLocation) {
         this.stateManager.updateLocation(persistedLocation);
