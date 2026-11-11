@@ -96,6 +96,15 @@ export class AppRouter {
     hilog.info(DOMAIN_NUMBER, TAG, 'AppRouter 初始化完成');
   }
 
+  /**
+   * 推入页均为全屏叶子页（web 移动端叶子页不展示底部导航），隐藏悬浮 Dock，
+   * 避免 Dock 被叶子页透明底透出后仍显示但点击被页面拦截。
+   */
+  private static syncDockVisibility(): void {
+    const pushed: boolean = (AppRouter.pathStack?.size() ?? 0) > 0;
+    AppStorage.setOrCreate('hideMainTabBar', pushed);
+  }
+
   /** 压入新页面 */
   static push(name: string, param?: Object): void {
     if (!AppRouter.pathStack) {
@@ -103,6 +112,7 @@ export class AppRouter {
       return;
     }
     AppRouter.pathStack.pushPathByName(name, param);
+    AppRouter.syncDockVisibility();
   }
 
   /** 返回上一页，可附带返回结果 */
@@ -112,6 +122,7 @@ export class AppRouter {
       return;
     }
     AppRouter.pathStack.pop(result);
+    AppRouter.syncDockVisibility();
   }
 
   /** 返回到指定页面 */
@@ -121,6 +132,7 @@ export class AppRouter {
       return;
     }
     AppRouter.pathStack.popToName(name);
+    AppRouter.syncDockVisibility();
   }
 
   /** 替换当前页面 */
@@ -130,6 +142,7 @@ export class AppRouter {
       return;
     }
     AppRouter.pathStack.replacePath({ name: name, param: param });
+    AppRouter.syncDockVisibility();
   }
 
   /** 清空导航栈（回到根视图，即 Tabs） */
