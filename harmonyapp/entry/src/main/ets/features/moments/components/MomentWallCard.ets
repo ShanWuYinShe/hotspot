@@ -8,12 +8,13 @@ import {
 } from '../../../core/state/InteractionStateStore';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
-import { DesignConstants } from '../../../constants/DesignConstants';
+import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { NearbyImageCard } from '../../../components/NearbyImageCard';
 import { formatCardTime, cleanPlainText } from '../../../core/utils/FormatUtil';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
+import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { curves } from '@kit.ArkUI';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
@@ -54,6 +55,8 @@ export struct MomentWallCard {
   }
 
   aboutToAppear(): void {
+    // 无封面走白色文字卡：作者行/操作行按深色文字渲染
+    this.mediaActive = this.getCoverUrl().length > 0;
     this.socialState = interactionEventHub.getMomentState(this.moment.moment_id);
     interactionEventHub.on('moment_updated', this.handleMomentStateUpdate);
   }
@@ -247,47 +250,122 @@ export struct MomentWallCard {
     .alignItems(VerticalAlign.Center)
   }
 
-  build() {
-    NearbyImageCard({
-      imageUrl: this.getCoverUrl(),
-      priority: this.priority,
-      imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
-      cardAspectRatio: this.cardAspectRatio,
-      cardRadius: DesignConstants.SHAPE.CARD,
-      // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面
-      mediaOverlay: true,
-      fallbackIcon: AppIcon.LOCATION,
-      placeholderText: this.moment.user?.nickname ?? '',
-      badgeText: this.getPrimaryTag(),
-      badgeShape: 'pill',
-      badgeVariant: 'accent',
-      badgeAlign: 'topLeft',
-      onMediaStateChange: (active: boolean) => {
-        this.mediaActive = active;
-      },
-      onPress: () => this.openDetail()
-    }) {
-      Column({ space: DesignConstants.SPACING.THREE }) {
-        this.buildAuthorRow()
-
-        if (this.moment.description) {
-          Text(cleanPlainText(this.moment.description))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
+  /** 无封面文字卡（对齐 web nearby/moments 白卡：日期角标 + 引号 + 正文 + 作者/操作） */
+  @Builder
+  private buildTextCard() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
+        Row() {
+          if (this.getPrimaryTag().length > 0) {
+            Text(`#${this.getPrimaryTag()}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+              .fontColor(this.getPalette().textAccentOnSoft)
+              .backgroundColor(this.getPalette().accentMuted)
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
+              .maxLines(1)
+          }
+          Blank()
+          Text(formatCardTime(this.moment.created_at))
+            .fontSize(DesignConstants.FONT.SIZE.XS2)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+            .fontColor(this.getPalette().textSecondary)
+            .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.80))
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
         }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
 
-        this.buildActions()
+        Column({ space: DesignConstants.SPACING.SM2 }) {
+          Text('“')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.getPalette().accentBackground)
+            .opacity(DesignConstants.OPACITY.WATERMARK)
+          Text(cleanPlainText(this.moment.description))
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.CARD))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(5)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+            .width('100%')
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+        .alignItems(HorizontalAlign.Start)
+        .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+
+        Column({ space: DesignConstants.SPACING.SM }) {
+          this.buildAuthorRow()
+          this.buildActions()
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
-      .padding({
-        left: DesignConstants.SPACING.MD3,
-        right: DesignConstants.SPACING.MD3,
-        top: DesignConstants.SPACING.MD,
-        bottom: DesignConstants.SPACING.MD3
-      })
+      .height('100%')
+      .padding(DesignConstants.SPACING.MD3)
+    }
+    .width('100%')
+    .aspectRatio(this.cardAspectRatio)
+    .borderRadius(DesignConstants.SHAPE.CARD)
+    .backgroundColor(this.getPalette().surfaceBackground)
+    .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
+    .shadow(this.getPalette().surfaceShadow)
+    .clip(true)
+    .accessibilityGroup(true)
+    .accessibilityText(this.moment.user?.nickname ? '查看' + this.moment.user.nickname + '的瞬间详情' : '查看瞬间详情')
+    .onClick(() => this.openDetail())
+  }
+
+  build() {
+    if (this.getCoverUrl().length === 0) {
+      this.buildTextCard()
+    } else {
+      NearbyImageCard({
+        imageUrl: this.getCoverUrl(),
+        priority: this.priority,
+        imageAlt: this.getPrimaryTag() || this.moment.description || this.moment.user?.nickname || '',
+        cardAspectRatio: this.cardAspectRatio,
+        cardRadius: DesignConstants.SHAPE.CARD,
+        // R2 整卡图片卡：图片铺满 3:4，信息覆盖图面
+        mediaOverlay: true,
+        fallbackIcon: AppIcon.LOCATION,
+        placeholderText: this.moment.user?.nickname ?? '',
+        badgeText: this.getPrimaryTag(),
+        badgeShape: 'pill',
+        badgeVariant: 'accent',
+        badgeAlign: 'topLeft',
+        onMediaStateChange: (active: boolean) => {
+          this.mediaActive = active;
+        },
+        onPress: () => this.openDetail()
+      }) {
+        Column({ space: DesignConstants.SPACING.THREE }) {
+          this.buildAuthorRow()
+
+          if (this.moment.description) {
+            Text(cleanPlainText(this.moment.description))
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
+              .maxLines(1)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+          }
+
+          this.buildActions()
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Start)
+        .padding({
+          left: DesignConstants.SPACING.MD3,
+          right: DesignConstants.SPACING.MD3,
+          top: DesignConstants.SPACING.MD,
+          bottom: DesignConstants.SPACING.MD3
+        })
+      }
     }
   }
 }
