@@ -228,10 +228,19 @@ export struct NotificationCenter {
 
   private applyFilter(): void {
     const items = this.syncService.getNotifications();
-    let filtered = items;
+    // 同 notification_id 去重：分页/WS 合并边界可能重复推送同一通知
+    const seen: Set<string> = new Set<string>();
+    const deduped = items.filter((item: NotifyItem) => {
+      if (seen.has(item.notify_id)) {
+        return false;
+      }
+      seen.add(item.notify_id);
+      return true;
+    });
+    let filtered = deduped;
 
     if (this.selectedFilter !== 'all') {
-      filtered = items.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
+      filtered = deduped.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
     }
 
     this.visibleNotifications = filtered;
@@ -1001,7 +1010,7 @@ export struct NotificationCenter {
       case 'reaction_added':
         return '收到表情反应';
       case 'group_invite_received':
-        return '群组邀请';
+        return notification.payload?.group_name ?? '群组邀请';
       case 'group_mentioned':
         return '群聊提及';
       case 'group_application_received':
@@ -1046,7 +1055,7 @@ export struct NotificationCenter {
           ? `${actor} 对你的内容送出了 ${payload.emoji}`
           : `${actor} 对你的内容添加了表情反应`;
       case 'group_invite_received':
-        return `${payload?.group_name ?? '某群组'} 邀请你加入`;
+        return actor.length > 0 ? `${actor} 邀请你` : '邀请你加入群组';
       case 'group_mentioned':
         return payload?.content_preview
           ? `${actor} 在「${payload?.group_name ?? '群组'}」中 @ 了你：${payload.content_preview}`
