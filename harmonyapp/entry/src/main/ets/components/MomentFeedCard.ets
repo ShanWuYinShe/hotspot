@@ -334,8 +334,9 @@ export struct MomentFeedCard {
       // 无图卡正文已在中央文字海报里渲染，底部不再重复标题
       if (!this.isOverlayFallback() && this.moment.description) {
         Text(cleanPlainText(this.moment.description))
-          .fontSize(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG)
-          .lineHeight(lineHeightFor(this.dense ? DesignConstants.FONT.SIZE.MD : DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.CARD))
+          // web 移动端图片卡标题 text-xs 12（sm 起 14）；dense 双列卡按 12 对齐
+          .fontSize(this.dense ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.LG)
+          .lineHeight(lineHeightFor(this.dense ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.LG, DesignConstants.FONT.LINE_RATIO.CARD))
           .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
           .fontColor(this.getOverlayTitleColor())
           .maxLines(2)
