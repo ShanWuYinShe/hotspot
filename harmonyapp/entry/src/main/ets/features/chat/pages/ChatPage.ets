@@ -1246,8 +1246,8 @@ export struct ChatPage {
         groupAvatar: this.groupAvatarUrl,
         membersCount: this.groupMembersCount,
         typingHint: this.groupTypingHintText(),
-        // web 私聊头部无右侧动作钮（群聊才保留群操作入口）
-        showTrailing: this.chatType === 'group_chat',
+        // web 私聊/群聊头部均无右侧动作钮（群操作走头像入口）
+        showTrailing: false,
         onBack: () => this.handleBackNavigation(),
         onTrailingAction: () => this.openConversationActions(),
         // 私聊头像 + 标题 = 对方资料入口（对齐前端 ChatView avatar-entry）
