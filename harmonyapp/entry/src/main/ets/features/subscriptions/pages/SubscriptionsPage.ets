@@ -310,7 +310,8 @@ export struct SubscriptionsPage {
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
           .fontColor(this.getCurrentThemePalette().textSecondary)
-          .maxLines(1)
+          // 320vp 下「你的入群申请有结果时通知」单行会被截断成「…」，允许两行
+          .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
       .layoutWeight(1)
