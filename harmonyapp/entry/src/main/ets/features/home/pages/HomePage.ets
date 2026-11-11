@@ -358,8 +358,10 @@ export struct HomePage {
             .height('100%')
             .align(Alignment.Top)
             .scrollBar(BarState.Off)
+          } else if (this.activeTab === 1) {
+            this.buildFeedFor(this.followingMoments)
           } else {
-            this.buildFeed()
+            this.buildFeedFor(this.moments)
           }
           }
           .width('100%')
@@ -506,14 +508,23 @@ export struct HomePage {
     return rows;
   }
 
-  /** 动态流：双列图片卡（对齐 web 移动端首页 grid-cols-2 + 3:4 卡） */
+  /** 动态流双列瀑布流：奇偶分列各自堆叠（图片卡 3:4、文字卡按内容高度） */
+  private feedColumns(moments: MomentItem[]): MomentItem[][] {
+    const columns: MomentItem[][] = [[], []];
+    for (let i = 0; i < moments.length; i++) {
+      columns[i % 2].push(moments[i]);
+    }
+    return columns;
+  }
+
+  /** 动态流：双列瀑布流（对齐 web masonry）；按 tab 分支调用保证切换时重建 */
   @Builder
-  private buildFeed() {
-    List({ space: DesignConstants.SPACING.MD2, scroller: this.backToTopScroller }) {
-      ForEach(this.feedRows(), (row: MomentItem[], rowIndex: number) => {
-        ListItem() {
-          Row({ space: DesignConstants.SPACING.MD2 }) {
-            ForEach(row, (moment: MomentItem, columnIndex: number) => {
+  private buildFeedFor(moments: MomentItem[]) {
+    Scroll(this.backToTopScroller) {
+      Row({ space: DesignConstants.SPACING.MD2 }) {
+        ForEach(this.feedColumns(moments), (columnMoments: MomentItem[], columnIndex: number) => {
+          Column({ space: DesignConstants.SPACING.MD2 }) {
+            ForEach(columnMoments, (moment: MomentItem) => {
               MomentFeedCard({
                 moment: moment,
                 // R2 整卡图片卡：双列 3:4、信息覆盖图面（对齐 web HomeFeedItem mobile）
@@ -521,25 +532,23 @@ export struct HomePage {
                 overlayAspectRatio: 0.75,
                 dense: true,
                 // R6 首屏优先：首 2 张卡封面高清档 + 立即创建（ArkUI 无 fetchpriority，登记平台差异）
-                priority: rowIndex === 0 && columnIndex < 2,
+                priority: columnIndex === 0 && columnMoments.indexOf(moment) < 2,
                 onOpenDetail: (m: MomentItem) => this.openMomentDetail(m)
               })
-                .layoutWeight(1)
+                .width('100%')
             }, (moment: MomentItem) => moment.moment_id)
-            if (row.length === 1) {
-              Blank()
-                .layoutWeight(1)
-            }
           }
-          .width('100%')
-          .alignItems(VerticalAlign.Top)
-        }
-      }, (row: MomentItem[], rowIndex: number) => row.length > 0 ? row[0].moment_id : 'row-' + rowIndex)
+          .layoutWeight(1)
+          .alignItems(HorizontalAlign.Start)
+        }, (columnMoments: MomentItem[], columnIndex: number) => `home-feed-col-${columnIndex}`)
+      }
+      .width('100%')
+      .alignItems(VerticalAlign.Top)
+      .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
     }
     .width('100%')
     .height('100%')
     .edgeEffect(EdgeEffect.None)
-    .padding({ top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XL })
     .scrollBar(BarState.Off)
     .onDidScroll(() => { this.updateBackToTop(); })
   }
