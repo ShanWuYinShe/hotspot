@@ -123,7 +123,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 ## 长尾/后台页面软岛映射
 
-- 对应 web 长尾软岛化的鸿蒙落点：`MomentDetailPage` 单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow，反馈容器/粘底操作条按功能线例外保留，加载态用骨架（媒体块+作者行+正文两行）；他人 `ProfilePage` 身份区软岛（20/p16/shadow），私信/已关注/备注按钮 surface 软填、关注 primary；`GroupDetailPage` hero 圆角 24+shadow+clip、Tab 内容一张软岛、行线保留（内容分隔例外）；`AdminOverviewPage` 权限卡/模块行软岛，其余后台页 web-only（N/A 登记）；首页 onboarding/HeroStats/轮播/附近人列表鸿蒙无对应组件（N/A，不强行造页面）。
+- 对应 web 长尾软岛化的鸿蒙落点：`MomentDetailPage` 单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow，反馈容器/粘底操作条按功能线例外保留，加载态用骨架（媒体块+作者行+正文两行）；他人 `ProfilePage` 身份区软岛（20/p16/shadow），私信/已关注/备注按钮 surface 软填、关注 primary；`GroupDetailPage` hero 圆角 24+shadow+clip（无 banner 时 surface-island 浅底 + 深色标题）、三 Tab 用下划线样式、简介区直接铺页面背景（不再包软岛）、行线保留；`AdminOverviewPage` 权限卡/模块行软岛，其余后台页 web-only（N/A 登记）；首页 onboarding/HeroStats/轮播/附近人列表鸿蒙无对应组件（N/A，不强行造页面）。
 - 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。
 
 ## 地图 marker 契约
