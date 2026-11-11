@@ -245,12 +245,12 @@ export struct MomentWallCard {
 
         Column({ space: DesignConstants.SPACING.SM2 }) {
           Text('“')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontColor(this.getPalette().accentBackground)
             .opacity(DesignConstants.OPACITY.WATERMARK)
           Text(cleanPlainText(this.moment.description))
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.CARD))
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
             .maxLines(5)
