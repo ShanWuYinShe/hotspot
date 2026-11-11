@@ -1590,11 +1590,11 @@ export struct SearchPage {
         .layoutWeight(1)
 
         Row() {
-          LucideIcon({
-              icon: AppIcon.MORE,
-              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-              color: this.getCurrentThemePalette().textSecondary
-            })
+          // 系统符号 more 在端上渲染成四宫格，改文本省略号
+          Text('…')
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
         }
         .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
         .height(DesignConstants.COMPONENT.ICON_SIZE_MD)

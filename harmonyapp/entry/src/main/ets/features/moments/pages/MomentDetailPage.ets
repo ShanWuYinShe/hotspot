@@ -739,11 +739,11 @@ export struct MomentDetailPage {
   @Builder
   private buildMoreButton() {
     Row() {
-      LucideIcon({
-        icon: AppIcon.MORE,
-        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-        color: this.getCurrentThemePalette().textPrimary
-      })
+      // 系统符号 more 在端上渲染成四宫格，与 web 横向省略号不一致；用文本点阵兜底
+      Text('…')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
     }
     .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)

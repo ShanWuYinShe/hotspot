@@ -66,11 +66,11 @@ export struct GroupMemberRow {
       .margin({ left: DesignConstants.SPACING.MD })
 
       if (this.showMenu) {
-        LucideIcon({
-            icon: AppIcon.MORE,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.palette?.textSecondary
-          })
+        // 系统符号 more 在端上渲染成四宫格，改文本省略号
+        Text('…')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.palette?.textSecondary)
         .padding(DesignConstants.SPACING.SM)
         .borderRadius(DesignConstants.RADIUS.SM)
         .bindMenu(this.menuItems)
