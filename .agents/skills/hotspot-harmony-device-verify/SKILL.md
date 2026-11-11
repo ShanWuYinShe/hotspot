@@ -56,6 +56,8 @@ curl -s -X POST "$API/admin/api/v1/rbac/me" -H "Authorization: Bearer $TOKEN" \
 # 非管理员 → {"code":10200,"message":"非平台管理员"}
 ```
 
+端上聊天页造数（无需 QA 登录）：从 app 偏好读当前访客 `current_user_id`（`/data/app/el2/100/base/com.lsyb.social/haps/entry/preferences/geotalk`），用 QA API token 调 `POST /api/v1/private_messages/send` 发给该 user_id（必带 UUID 格式 `Idempotency-Key`）；app 消息列表经 WS 实时出现会话，点开即可验收 ChatPage。**空时间字段坑**：后端 null 时间可能下发空串，客户端判断 `recalled_at`/`edited_at` 必须按「非空字符串」而不是「!== null/undefined」，否则所有历史消息会显示「消息已撤回 / 已编辑」。
+
 造新账号：正式用户走 `POST /public/v1/auth/register`（用户名型，`verification_code: null`，必带 `Idempotency-Key`）；授予管理员需 SQL 直插（`ADMIN_BOOTSTRAP_USER_ID` 只在库中无管理员时生效）：
 
 ```sql
