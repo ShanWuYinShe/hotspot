@@ -506,18 +506,10 @@ export struct NotificationCenter {
             .fontSize(DesignConstants.FONT.SIZE.XL)
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
-          // web：副标题是 soft 底胶囊「N 条未读消息」，不是跟在标题后的裸文本
+          // 对齐 web /notify PageHeader：副标题为标题下方裸文本（非胶囊）
           Text(this.getUnreadCount() > 0 ? `${this.getUnreadCount()} 条未读消息` : '暂无新通知')
             .fontSize(DesignConstants.FONT.SIZE.XS)
             .fontColor(this.getPalette().textSecondary)
-            .padding({
-              left: DesignConstants.SPACING.SM,
-              right: DesignConstants.SPACING.SM,
-              top: DesignConstants.SPACING.HALF,
-              bottom: DesignConstants.SPACING.HALF
-            })
-            .borderRadius(DesignConstants.RADIUS.FULL)
-            .backgroundColor(AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.60))
             .maxLines(1)
         }
         .alignItems(HorizontalAlign.Start)
