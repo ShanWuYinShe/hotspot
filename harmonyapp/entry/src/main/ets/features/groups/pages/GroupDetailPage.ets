@@ -1920,6 +1920,23 @@ export struct GroupDetailPage {
           // owner/admin 可发布/编辑/删除，对齐前端 canManageAnnouncements 门控）
           ListItemGroup() {
           if (this.activeTab === 2) {
+            ListItem() {
+              Row() {
+                Text('群公告')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                Text(`${this.announcements.length}`)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .margin({ left: DesignConstants.SPACING.XS })
+              }
+              .width('100%')
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+            }
             if (this.canManageAnnouncements()) {
               ListItem() {
                 SystemButton({
@@ -1938,7 +1955,8 @@ export struct GroupDetailPage {
               ListItem() {
                 EmptyState({
                   icon: AppIcon.NOTIFICATION,
-                  message: '暂无公告',
+                  title: '暂无公告',
+                  message: '群主发布公告后会出现在这里。',
                   bare: true
                 })
                   .width('100%')
