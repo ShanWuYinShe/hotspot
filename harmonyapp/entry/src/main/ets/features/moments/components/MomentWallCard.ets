@@ -253,7 +253,8 @@ export struct MomentWallCard {
             .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
             .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
             .fontColor(this.getPalette().textPrimary)
-            .maxLines(5)
+            // web 移动端文字卡 line-clamp-3；5 行会在固定 8:9 卡高里被裁切
+            .maxLines(3)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
             .width('100%')
         }
