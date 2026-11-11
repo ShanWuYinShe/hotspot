@@ -205,6 +205,7 @@ hdc shell "cat /data/local/tmp/y.jpeg" > shot.jpeg
 - **首启会弹定位权限框**：文本「允许"GeoTalk"访问你的位置？」，「仅使用期间允许」中心 ≈ `(628,1964)`（bounds `[432,1931][824,1997]`）。不处理会挡住所有页面断言（dump 只有弹窗节点）；授权后不影响后续 Tab 走查（模拟器定位本身仍不可用）。
 - **偶发「整页空白」= 应用瞬时坏状态，不是模拟器限制**：恢复手段 `aa force-stop` → `aa start` 冷启。**反模式**：只用 `dumpLayout`（无障碍树）判空、不截图——页面可能「页头渲染正常、内容区全空」，dump 里同样有文本，只看节点数会把坏页面误判成正常页。**判断页面是否正常一律用 `snapshot_display` 截图复核**。
 - **页面只渲染页头、内容区全空 → 先查 ArkUI 裸 `{ }` 块**：块内 `.layoutWeight(1)` 不生效 → 容器高度塌陷 → 内部 WaterFlow/List 高度为 0。修法/判定见 skill `hotspot-harmony-ui`「审计基线与布局陷阱（指针）」列出的 ArkUI 陷阱明细（dump 节点数：本例页头 10 → 正常时 52）。
+- **系统分享面板在模拟器上必然失败（不是 bug）**：分享按钮走 SystemShareService.shareText → context.startAbility（action=ohos.want.action.sendData, type=text/plain），模拟器未安装任何可处理 share 的应用，返回 code:16000019（No matching ability is found），系统弹出「暂无可用打开方式」对话框。验证：点分享后执行 hdc shell hilog -x 并 grep SystemShareService/ShareActionHelper，应见「分享失败: {code:16000019}」；真机有微信/备忘录等目标时正常出系统面板。走查分享时不要据此判页面 bug，记录为环境限制即可。
 - **常见无害日志**：`智能服务初始化失败 … 15100003` 每 10s 重试、定位恒失败 `3301100 The location switch is off`——属模拟器环境常态，与页面渲染无因果关系。
 - **纪律**：**只有 dump 确认当前是推入页（有返回入口）时才按 `keyEvent Back`**——在「点了没反应」的页面（如游客态通知）按 Back 等于退到上一页/退出应用，实测直接退回桌面（随后所有点击都落在桌面上）。
 
