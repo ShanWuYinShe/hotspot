@@ -65,7 +65,6 @@ import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { ListRowDivider } from '../../../components/ListGroup';
 import { ErrorCode } from '../../../core/constants/ErrorCodes';
 import { LucideIcon } from '../../../components/LucideIcon';
-import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { AppThemeVisuals } from '../../../core/theme/AppThemeVisuals';
 
 
@@ -260,6 +259,10 @@ export struct GroupDetailPage {
           await this.accessibilityManager.announceText(`已加载群组：${this.groupInfo.group?.name ?? ''}`);
           // 公告 Tab 数据（对齐前端 AnnouncementsList）
           this.loadGroupAnnouncements();
+          // 简介 Tab 的活跃成员头像需要成员数据（静默加载，不打开成员弹层）
+          if (this.members.length === 0) {
+            void this.fetchGroupMembersSilently();
+          }
         } else {
           this.errorMessage = getErrorMessage(response, '加载群组详情失败');
         }
@@ -442,6 +445,25 @@ export struct GroupDetailPage {
       }
     } finally {
       this.isLoadingMembers = false;
+    }
+  }
+
+  /** 静默拉取成员（简介 Tab 活跃成员头像用，不打开成员弹层） */
+  private async fetchGroupMembersSilently(): Promise<void> {
+    if (!this.groupInfo) return;
+    try {
+      const response = await ApiClient.getGroupMembers({
+        group_id: this.groupId,
+        pagination: { limit: 100 }
+      });
+      if (response.code === 0) {
+        this.members = response.data?.items ?? [];
+        this.membersDataSource.setData(this.members);
+        this.membersHasMore = !!(response.data?.next_cursor);
+        this.membersNextCursor = response.data?.next_cursor ?? '';
+      }
+    } catch {
+      // 简介页活跃成员为增强信息，失败不打扰用户
     }
   }
 
@@ -1479,36 +1501,27 @@ export struct GroupDetailPage {
           Column()
             .width('100%')
             .height(DesignConstants.LAYOUT.COVER_HEIGHT)
-            // 封面底部加深 scrim：文字区（群名白字）落在深色终止段，
-            // 浅色主题下纯 accent 淡渐变近似白底白字（对比度不足）
-            .linearGradient({
-              direction: GradientDirection.Bottom,
-              colors: [
-                [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.38), 0.0],
-                [AppThemeVisuals.withAlpha(this.getCurrentThemePalette().accentBackground, 0.28), 0.55],
-                [AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.42), 1.0]
-              ]
-            })
+            // 对齐 web GroupHero 无 banner 分支：surface-island 浅色卡 + 深色标题
+            .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
 
           // 左下：分类胶囊 + 群名（对齐前端封面底部：玻璃徽章 + h1 白字）
           Column({ space: DesignConstants.SPACING.SM }) {
             if (this.groupInfo?.tags && this.groupInfo.tags.length > 0) {
               // 玻璃分类徽章（对齐前端 bg-surface-glass-badge + backdrop-blur-sm）
-              Text(`#${this.groupInfo.tags[0]}`)
+              Text(this.groupInfo.tags[0])
                 .fontSize(DesignConstants.FONT.SIZE.XS2)
                 .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-                .fontColor(DesignConstants.COLOR.WHITE)
-                .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+                .fontColor(this.getCurrentThemePalette().textAccentOnSoft)
+                .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.THREE, bottom: DesignConstants.SPACING.THREE })
                 .borderRadius(DesignConstants.RADIUS.FULL)
-                .backgroundBlurStyle(BlurStyle.Thin)
-                .backgroundColor(AppThemeVisuals.withAlpha(DesignConstants.COLOR.BLACK, 0.25))
+                .backgroundColor(this.getCurrentThemePalette().accentMuted)
             }
             if (this.groupInfo?.group?.name) {
               Text(this.groupInfo.group.name)
                 .fontSize(DesignConstants.FONT.SIZE.XXL)
                 .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XXL))
                 .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-                .fontColor(DesignConstants.COLOR.WHITE)
+                .fontColor(this.getCurrentThemePalette().textPrimary)
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis })
             }
@@ -1593,27 +1606,40 @@ export struct GroupDetailPage {
         // 元信息（成员/在线/距你）不再在此重复展示：简介 tab 四宫格数据卡承载
         // 同一份数据（大版优先），切 tab 时由「群组成员」入口行延续上下文。
 
-        // 三 Tab（对齐前端 TabBar 胶囊：简介/成员/公告）
-        TabsPillGroup({
-          variant: 'pills',
-          freeWidth: true,
-          tabs: [
-            { label: '简介' },
-            { label: '成员' },
-            { label: '公告' }
-          ],
-          activeIndex: this.activeTab,
-          actions: {
-            onChange: (index: number) => {
+        // 三 Tab（对齐 web TabBar 默认下划线样式：文字 14、active accent + 2px 底线）
+        Row() {
+          ForEach(['简介', '成员', '公告'], (label: string, index: number) => {
+            Column({ space: DesignConstants.SPACING.SM2 }) {
+              Text(label)
+                .fontSize(DesignConstants.FONT.SIZE.MD)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                .fontWeight(index === this.activeTab
+                  ? DesignConstants.FONT.WEIGHT.SEMIBOLD
+                  : DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(index === this.activeTab
+                  ? this.getCurrentThemePalette().accentBackground
+                  : this.getCurrentThemePalette().textSecondary)
+              Column()
+                .width(28)
+                .height(2)
+                .borderRadius(DesignConstants.RADIUS.FULL)
+                .backgroundColor(index === this.activeTab
+                  ? this.getCurrentThemePalette().accentBackground
+                  : DesignConstants.COLOR.TRANSPARENT)
+            }
+            .layoutWeight(1)
+            .alignItems(HorizontalAlign.Center)
+            .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+            .onClick(() => {
               this.activeTab = index;
-              // 公告 Tab 首次进入时懒加载
               if (index === 2 && this.announcements.length === 0) {
                 this.loadGroupAnnouncements();
               }
-            }
-          }
-        })
-          .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+            })
+          }, (label: string) => label)
+        }
+        .width('100%')
+        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
 
         // 使用 List 布局（扁平风格）
         List() {
@@ -1624,58 +1650,16 @@ export struct GroupDetailPage {
           //    位置名以 MapPin 行展示，对齐前端 users/[userId] 位置行模式）
           if (this.activeTab === 0) {
           ListItem() {
-            Column({ space: DesignConstants.SPACING.MD }) {
-              if (this.groupInfo?.description) {
-                Text(this.groupInfo?.description)
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .textAlign(TextAlign.Start)
-                  .width('100%')
-                  // 群简介是卡片内多行正文：1.57 → 1.7（对齐前端 --leading-card）
-                  .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
-              }
-              Row({ space: DesignConstants.SPACING.XS }) {
-                LucideIcon({
-                  icon: AppIcon.LOCATION,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                  color: this.getCurrentThemePalette().accentBackground
-                })
-                Text(this.groupInfo?.location?.location_name || '未知位置')
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .maxLines(1)
-                  .textOverflow({ overflow: TextOverflow.Ellipsis })
-                  .layoutWeight(1)
-                // 交互暗示（用户重设计：位置行需可交互 affordance）：
-                // 鸿蒙端暂无地图详情路由，先提供「复制位置名」真实功能 + 尾随箭头
-                LucideIcon({
-                  icon: AppIcon.FORWARD,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                  color: this.getCurrentThemePalette().textSecondary
-                })
-              }
-              .alignItems(VerticalAlign.Center)
-              .onClick(() => {
-                const name = this.groupInfo?.location?.location_name;
-                if (!name) return;
-                const data = pasteboard.createData('text/plain', name);
-                pasteboard.getSystemPasteboard().setData(data);
-                SystemToast.showSuccess(`位置已复制：${name}`, this.getUIContext());
-              })
-              .responseRegion({
-                x: 0,
-                y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT) / 2,
-                width: '100%',
-                height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-              })
-            }
-            .width('100%')
-            .alignItems(HorizontalAlign.Start)
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+            // 对齐 web GroupOverviewTab：简介正文（无简介时给默认文案），不再是位置行
+            Text(this.groupInfo?.description || '这个群还没有填写简介。')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .textAlign(TextAlign.Start)
+              .width('100%')
+              .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          // 行级卡片样式移除：外框/分隔线由 ListItemGroup 承担
-          }
+          }  // 简介正文 if 结束
 
           // 四宫格数据卡（对齐前端 groups/[groupId] 简介区 2×2 stats：成员/在线/距你/分类）
           if (this.activeTab === 0) {
@@ -1685,51 +1669,66 @@ export struct GroupDetailPage {
             .margin({ bottom: DesignConstants.SPACING.MD })
           }
 
-          // 成员列表入口（Tab 1 成员 或 Tab 0 简介均显示）
-          ListItem() {
-            Row() {
-              Column() {
-                 Text('群组成员')
-                  .fontSize(DesignConstants.FONT.SIZE.MD)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-                  .fontColor(this.getCurrentThemePalette().textPrimary)
-                 Text(`${formatCount(this.groupInfo?.group?.members_count)} 名成员`)
-                  .fontSize(DesignConstants.FONT.SIZE.SM)
-                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                  .fontColor(this.getCurrentThemePalette().textSecondary)
-                  .margin({ top: DesignConstants.SPACING.HALF })
-              }
-              .layoutWeight(1)
-              .alignItems(HorizontalAlign.Start)
+          // 活跃成员（对齐 web GroupOverviewTab：SectionHead + 头像堆叠 +「N 位成员在群中」）
+          if (this.activeTab === 0) {
+            ListItem() {
+              Column({ space: DesignConstants.SPACING.SM }) {
+                Row() {
+                  Text('活跃成员')
+                    .fontSize(DesignConstants.FONT.SIZE.MD)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                    .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                    .fontColor(this.getCurrentThemePalette().textPrimary)
+                  Text(formatCount(this.groupInfo?.group?.members_count ?? 0))
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                    .fontColor(this.getCurrentThemePalette().textSecondary)
+                    .margin({ left: DesignConstants.SPACING.XS })
+                  Blank()
+                  Text('查看全部')
+                    .fontSize(DesignConstants.FONT.SIZE.XS)
+                    .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                    .fontColor(this.getCurrentThemePalette().accentBackground)
+                    .onClick(() => this.loadGroupMembers())
+                }
+                .width('100%')
+                .alignItems(VerticalAlign.Center)
 
-              LucideIcon({
-                  icon: AppIcon.FORWARD,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                  color: this.getCurrentThemePalette().textSecondary
-                })
+                if (this.members.length > 0) {
+                  Row() {
+                    ForEach(this.members.slice(0, 6), (member: GroupMemberItem, index: number) => {
+                      SystemAvatar({
+                        decorative: true,
+                        src: member.user?.avatar_url ?? '',
+                        name: member.user?.nickname ?? '',
+                        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL
+                      })
+                        .margin({ left: index === 0 ? 0 : -DesignConstants.SPACING.SM })
+                        .border({
+                          width: 2,
+                          color: this.getCurrentThemePalette().pageBackground
+                        })
+                        .borderRadius(DesignConstants.RADIUS.FULL)
+                    }, (member: GroupMemberItem, index: number) => `${member.user?.user_id ?? index}`)
+                    Text(`${formatCount(this.groupInfo?.group?.members_count ?? 0)} 位成员在群中`)
+                      .fontSize(DesignConstants.FONT.SIZE.XS)
+                      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                      .fontColor(this.getCurrentThemePalette().textSecondary)
+                      .margin({ left: DesignConstants.SPACING.SM })
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .layoutWeight(1)
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                }
+              }
+              .width('100%')
+              .alignItems(HorizontalAlign.Start)
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
             }
-            .width('100%')
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
-              top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
           }
-          // 行级卡片样式移除：外框/分隔线由 ListItemGroup 承担
-          // 整卡可点（扩大热区，chevron 仅作视觉指示）+ 按压反馈（对齐 tap-97 语义）
-          .scale(this.pressedEntryKey === 'members' ?
-            { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD } :
-            { x: 1, y: 1 })
-          .animation({ curve: curves.springMotion(
-            DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-            DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-          ) })
-          .onTouch((event: TouchEvent) => {
-            if (event.type === TouchType.Down) {
-              this.pressedEntryKey = 'members';
-            } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-              this.pressedEntryKey = '';
-            }
-          })
-          .onClick(() => this.loadGroupMembers())
 
           if (this.canManageApplications()) {
             // 3.5 入群申请入口（仅群主/管理员可见）
@@ -1989,11 +1988,6 @@ export struct GroupDetailPage {
         .scrollBar(BarState.Off)
         .divider({ strokeWidth: 0, color: this.getSurfaceBorder() })
         .padding({ bottom: DesignConstants.SPACING.LG })
-        // r4 软岛：Tab 内容分组卡（去描边、surfaceIsland、圆角 20、轻投影；行间发丝线保留）
-        .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
-        .borderRadius(DesignConstants.SHAPE.CARD)
-        .shadow(this.getCurrentThemePalette().surfaceShadow)
-        .clip(true)
         .opacity(this.enterOpacity)
         .translate({ y: this.enterOffset })
         .shadow(this.getCurrentThemePalette().surfaceShadow)
