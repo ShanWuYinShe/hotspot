@@ -4,7 +4,7 @@
  */
 
 import { PageNames } from '../../../constants/AppConstants';
-import { AppRouter, LoginRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, ShareResolutionRouteParam } from '../../../core/router/AppRouter';
 import { common } from '@kit.AbilityKit';
 import { UIContext } from '@kit.ArkUI';
 import { GlobalStateManager, UnreadCount, KEY_CURRENT_USER, KEY_IS_LOGGED_IN, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
@@ -81,6 +81,8 @@ type NotificationPriority = 'low' | 'medium' | 'high' | 'critical';
 // Define storage key locally since it's not exported from NotificationRenderer
 const STORAGE_KEY_VISIBLE_NOTIFICATIONS = 'visibleNotifications';
 const STORAGE_KEY_OPEN_NOTIFICATION_CENTER = 'openNotificationCenter';
+/** 冷启动/热启动深链暂存的分享码，Index 就绪后消费 */
+const STORAGE_KEY_PENDING_SHARE_CODE = 'pendingShareCode';
 const STORAGE_KEY_OPEN_CREATE_SHEET = 'openCreateSheet';
 
 @Entry
@@ -99,6 +101,7 @@ struct Index {
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(STORAGE_KEY_VISIBLE_NOTIFICATIONS) visibleNotifications: SmartNotification[] = [];
   @StorageLink(STORAGE_KEY_OPEN_NOTIFICATION_CENTER) @Watch('onNotificationCenterRequested') openNotificationCenter: boolean = false;
+  @StorageLink(STORAGE_KEY_PENDING_SHARE_CODE) @Watch('onPendingShareCodeChanged') pendingShareCode: string = '';
   @StorageLink(STORAGE_KEY_OPEN_CREATE_SHEET) @Watch('onCreateSheetRequested') openCreateSheet: boolean = false;
   @StorageLink(KEY_RESOLVED_THEME_ID) @Watch('onThemeChanged') resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   /** 主题切换淡入过渡用（ArkUI 无法对颜色插值，以整体 opacity 淡入缓和硬切，对齐前端 transition-colors 观感） */
@@ -325,6 +328,27 @@ struct Index {
       this.notificationSyncService.reset();
       this.stateManager.updateUnreadCount({ total_unread_count: 0 });
     }
+  }
+
+  onPageShow(): void {
+    this.consumePendingShareCode();
+  }
+
+  private onPendingShareCodeChanged(): void {
+    this.consumePendingShareCode();
+  }
+
+  /** 深链分享码 → 分享解析页；消费后清空，避免返回后重复推入。 */
+  private consumePendingShareCode(): void {
+    const shareCode = this.pendingShareCode;
+    if (shareCode.length === 0) {
+      return;
+    }
+    this.pendingShareCode = '';
+    AppStorage.setOrCreate<string>(STORAGE_KEY_PENDING_SHARE_CODE, '');
+    const param = new ShareResolutionRouteParam();
+    param.share_code = shareCode;
+    AppRouter.push(PageNames.SHARE_RESOLUTION, param);
   }
 
   private onNotificationCenterRequested(): void {

@@ -55,6 +55,10 @@ export default class EntryAbility extends UIAbility {
     hilog.info(DOMAIN_NUMBER, TAG, 'GeoTalk应用启动 - 启动原因: %{public}s',
       JSON.stringify(launchParam.launchReason));
 
+    // 冷启动经由分享深链（https://chaoset.com/share/{code} 或 hotspot://share/{code}）拉起时，
+    // 此时 AppRouter 尚未初始化，先暂存 code，由 Index 页面就绪后消费并推入分享解析页。
+    this.captureShareCodeFromWant(want);
+
     // 初始化应用级配置
     this.initializeAppConfiguration();
 
@@ -629,19 +633,21 @@ export default class EntryAbility extends UIAbility {
       return;
     }
 
-    // 处理深链接：解析 /share/{code} 路径
+    // 处理深链接：解析 /share/{code} 路径（热启动时 Index 已在，由 StorageLink 监听消费）
+    this.captureShareCodeFromWant(want);
+  }
+
+  /** 从 Want.uri 解析分享码并暂存到 AppStorage，统一由 Index 就绪后消费。 */
+  private captureShareCodeFromWant(want: Want): void {
     const uri = want.uri;
-    if (uri) {
-      const shareMatch = uri.match(/\/share\/([A-HJ-NP-Z2-9]{12})$/i);
-      if (shareMatch && shareMatch[1]) {
-        const shareCode = shareMatch[1].toUpperCase();
-        hilog.info(DOMAIN_NUMBER, TAG, `Deep link share code: ${shareCode}`);
-        const param = new ShareResolutionRouteParam();
-        param.share_code = shareCode;
-        // 走 PageNames 常量：项目规范禁止硬编码路径/路由名（全仓仅此一处曾硬编码）
-        AppRouter.push(PageNames.SHARE_RESOLUTION, param);
-        return;
-      }
+    if (!uri) {
+      return;
+    }
+    const shareMatch = uri.match(/\/share\/([A-HJ-NP-Z2-9]{12})$/i);
+    if (shareMatch && shareMatch[1]) {
+      const shareCode = shareMatch[1].toUpperCase();
+      hilog.info(DOMAIN_NUMBER, TAG, `Deep link share code: ${shareCode}`);
+      AppStorage.setOrCreate<string>('pendingShareCode', shareCode);
     }
   }
 
