@@ -569,11 +569,6 @@ export struct MomentFeedCard {
   @Builder
   private buildDenseTextCard(): void {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(this.getPalette().surfaceBackground)
-
       Column() {
         this.buildOverlayTop()
         Column({ space: DesignConstants.SPACING.SM2 }) {
@@ -591,8 +586,7 @@ export struct MomentFeedCard {
             .width('100%')
         }
         .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
+        .justifyContent(FlexAlign.Start)
         .alignItems(HorizontalAlign.Start)
         .padding({
           left: DesignConstants.SPACING.SM,
@@ -604,7 +598,6 @@ export struct MomentFeedCard {
         this.buildOverlayBottom()
       }
       .width('100%')
-      .height('100%')
       .accessibilityGroup(true)
       .accessibilityText(this.moment.user?.nickname ? '查看' + this.moment.user.nickname + '的瞬间详情' : '查看瞬间详情')
     }
