@@ -56,7 +56,7 @@ import { AppRouter, LoginRouteParam, ChatRouteParam, ProfileRouteParam } from '.
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
-import { formatCount, formatRelativeTime } from '../../../core/utils/FormatUtil';
+import { formatCount, formatCardTime, formatRelativeTime } from '../../../core/utils/FormatUtil';
 import { LocationUtil } from '../../../core/location/LocationUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -2032,7 +2032,8 @@ export struct GroupDetailPage {
                       .maxLines(3)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
 
-                    Text(formatRelativeTime(item.created_at))
+                    // 对齐 web 群公告 formatCardTime：今天 HH:mm / 昨天 / M月D日
+                    Text(formatCardTime(item.created_at))
                       .fontSize(DesignConstants.FONT.SIZE.XS)
                       .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
                       .fontColor(this.getCurrentThemePalette().textTertiary)
