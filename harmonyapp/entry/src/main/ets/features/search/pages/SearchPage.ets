@@ -1304,10 +1304,8 @@ export struct SearchPage {
               AppRouter.push(PageNames.NEARBY_USERS);
             })
             ListGroup() {
-              ForEach(this.hotUsers, (user: UserItem, index: number) => {
-                if (index > 0) {
-                  ListRowDivider({ startMargin: DesignConstants.SPACING.MD + DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS })
-                }
+              ForEach(this.hotUsers, (user: UserItem) => {
+                // 对齐 web SearchDiscovery：人物推荐卡内行间无分割线
                 this.buildDiscoveryUserRow(user)
               }, (user: UserItem) => `hot-user-${user.user?.user_id ?? ''}`)
             }
