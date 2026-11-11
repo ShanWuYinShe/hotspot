@@ -259,8 +259,6 @@ export struct MomentWallCard {
             .width('100%')
         }
         .width('100%')
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Start)
         .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
@@ -273,11 +271,12 @@ export struct MomentWallCard {
         .alignItems(HorizontalAlign.Start)
       }
       .width('100%')
-      .height('100%')
       .padding(DesignConstants.SPACING.MD3)
     }
     .width('100%')
-    .aspectRatio(this.cardAspectRatio)
+    // 文字卡按内容自适应高度：web nearby/moments 是瀑布流，文字卡高于图片卡；
+    // 固定 8/9 会让标题/作者行溢出并互相叠压（端上实测）。
+    .constraintSize({ minHeight: 150 })
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(this.getPalette().surfaceBackground)
     .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
