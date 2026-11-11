@@ -284,7 +284,6 @@ export struct GroupCard {
         shape: 'circle',
         decorative: true
       })
-        .shadow(this.getPalette().surfaceShadow)
 
       Text(this.getGroupName())
         .fontSize(DesignConstants.FONT.SIZE.MD)
