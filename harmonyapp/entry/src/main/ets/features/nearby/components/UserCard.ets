@@ -164,7 +164,7 @@ export struct UserCard {
           .fontColor(this.getFollowForeground())
           .maxLines(1)
       }
-      .height(DesignConstants.COMPONENT.BUTTON_HEIGHT_SM)
+      .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT)
       .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
       .borderRadius(DesignConstants.RADIUS.FULL)
       // 未关注 = accent-soft 淡底（引导点击）；已关注 = 中性软填（回到信息态），对齐 web FollowButton
@@ -306,7 +306,7 @@ export struct UserCard {
         SystemAvatar({
           avatarUrl: this.user.user?.avatar_url ?? '',
           name: this.getNickname(),
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
           isOnline: this.isOnline(),
           onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD,
           shape: 'circle',
@@ -357,10 +357,10 @@ export struct UserCard {
       .width('100%')
       .alignItems(VerticalAlign.Center)
       .padding({
-        left: DesignConstants.SPACING.MD,
-        right: DesignConstants.SPACING.MD,
-        top: DesignConstants.SPACING.SM,
-        bottom: DesignConstants.SPACING.SM
+        left: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
+        right: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
+        top: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
+        bottom: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF
       })
     }
   }

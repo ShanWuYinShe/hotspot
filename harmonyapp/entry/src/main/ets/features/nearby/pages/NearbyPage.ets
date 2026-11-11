@@ -55,7 +55,6 @@ export struct NearbyPage {
   /** 统计卡（2026-10-19 由首页迁来）：位置与按压态 */
   @StorageLink(KEY_CURRENT_LOCATION) currentLocation: LocationInfo | null = null;
   @StorageLink(KEY_BROWSE_ANCHOR) browseAnchor: LocationInfo | null = null;
-  @State private locationCardPressed: boolean = false;
 
   /** 分区预览条数（对齐 web 枢纽：人 4（行式）/ 瞬间 3（双列预览）/ 群组 4（横滑）） */
   private static readonly PREVIEW_USERS: number = 4;
@@ -575,23 +574,6 @@ export struct NearbyPage {
     .borderRadius(DesignConstants.SHAPE.CARD)
     .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
     .shadow(this.getCurrentThemePalette().surfaceShadow)
-    .scale(this.locationCardPressed
-      ? { x: DesignConstants.INTERACTION.SCALE_PRESSED_CARD, y: DesignConstants.INTERACTION.SCALE_PRESSED_CARD }
-      : { x: 1, y: 1 })
-    .animation({
-      curve: curves.springMotion(
-        DesignConstants.INTERACTION.SPRING_RESPONSE_PRESS,
-        DesignConstants.INTERACTION.SPRING_DAMPING_PRESS
-      )
-    })
-    .onTouch((event: TouchEvent) => {
-      if (event.type === TouchType.Down) {
-        this.locationCardPressed = true;
-      } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
-        this.locationCardPressed = false;
-      }
-    })
-    .onClick(() => AppRouter.push(PageNames.NEARBY_USERS))
   }
 
   /** 分区头（对齐 web SectionHead）：icon + 标题 14/600 + count 11 + 右侧「查看全部」+ chevron */
