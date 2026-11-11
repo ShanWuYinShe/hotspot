@@ -307,7 +307,7 @@ export struct UserCard {
         SystemAvatar({
           avatarUrl: this.user.user?.avatar_url ?? '',
           name: this.getNickname(),
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM,
+          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
           isOnline: this.isOnline(),
           onlineDotSize: DesignConstants.COMPONENT.ONLINE_DOT_MD,
           shape: 'circle',
@@ -326,23 +326,23 @@ export struct UserCard {
           Row({ space: DesignConstants.SPACING.SM2 }) {
             if (this.getPrimaryTag().length > 0) {
               Text(`#${this.getPrimaryTag()}`)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getPalette().accentBackground)
                 .maxLines(1)
             }
             if (this.getPrimaryTag().length > 0 && this.showDistance && this.getDistanceText().length > 0) {
               Text('·')
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getPalette().textSecondary)
                 .opacity(DesignConstants.OPACITY.MUTED)
                 .maxLines(1)
             }
             if (this.showDistance && this.getDistanceText().length > 0) {
               Text(this.getDistanceText())
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
                 .fontColor(this.getPalette().textSecondary)
                 .maxLines(1)
             }
@@ -358,10 +358,10 @@ export struct UserCard {
       .width('100%')
       .alignItems(VerticalAlign.Center)
       .padding({
-        left: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
-        right: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
-        top: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF,
-        bottom: DesignConstants.SPACING.MD + DesignConstants.SPACING.HALF
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.MD,
+        bottom: DesignConstants.SPACING.MD
       })
     }
   }
