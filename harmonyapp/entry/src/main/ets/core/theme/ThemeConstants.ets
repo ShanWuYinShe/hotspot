@@ -482,10 +482,10 @@ export class ThemeConstants {
     mapMoment: '#FB923C',
     dangerSoft: '#2A1A1E',
     warningSoft: '#2A2416',
-    accentOnSoft: '#82B7FF',
-    onlineOnSoft: '#5AD1AE',
-    warningOnSoft: '#F7C950',
-    dangerOnSoft: '#F78B9D',
+    accentOnSoft: '#79AEF7',
+    onlineOnSoft: '#5ADAAC',
+    warningOnSoft: '#F9CA4F',
+    dangerOnSoft: '#F78B8C',
     // 整卡图片卡遮罩（镜像 frontend themes：主题色调深色 + 固定 alpha）
     cardScrimTop: '#DB060912',
     // 顶部三段中段（40% 处 0.64）
