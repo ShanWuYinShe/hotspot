@@ -80,7 +80,8 @@ export struct NearbyGroupsListPage {
   /** 位置行副标题（对齐前端 nearby 页 subtitle：{locationName} · 5km 内 / 5km 内） */
   private getLocationSubtitle(): string {
     const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
-    return name.length > 0 ? `${name} · 5km 内` : '5km 内';
+    const base = name.length > 0 ? `${name} · 5km 内` : '5km 内';
+    return (!this.isLoading && this.groups.length > 0) ? `${base} · ${this.groups.length} 个群组` : base;
   }
 
   /**
@@ -113,17 +114,14 @@ export struct NearbyGroupsListPage {
 
   private async loadGroups(refresh: boolean = false): Promise<void> {
     const ref = this.getReferencePoint();
-    if (!ref) {
-      this.isLoading = false;
-      this.isRefreshing = false;
-      this.errorMessage = '位置信息不可用，请在首页选择浏览位置';
-      return;
-    }
+    // 与 NearbyUsersListPage 同口径：未拿到位置时回退服务端默认地理口径，
+    // 否则从枢纽「查看全部」进入会立刻报「位置信息不可用」，与上一页已有内容矛盾。
+    const referencePoint = ref ?? undefined;
     if (!refresh) { this.isLoading = true; }
     this.errorMessage = '';
     try {
       const request: SearchGroupsRequest = {
-        reference_point: ref,
+        reference_point: referencePoint,
         radius: DefaultConfig.NEARBY_RADIUS,
         sort_by: 'distance',
         tag: (this.activeTag !== '全部' ? this.activeTag : undefined) as string | undefined,

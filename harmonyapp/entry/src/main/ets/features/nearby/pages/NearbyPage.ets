@@ -299,8 +299,9 @@ export struct NearbyPage {
               // ═══ 分区三：附近群组（横向滑动方形图卡）═══
               if (this.nearbyGroups.length > 0) {
                 Column() {
+                  // web 附近群组分区始终有「查看全部」入口；不能因预览数量少就隐藏
                   this.buildSectionHeader(AppIcon.GROUP, '附近群组', this.nearbyGroups.length, '查看全部',
-                    this.nearbyGroups.length > NearbyPage.PREVIEW_GROUPS, () => {
+                    true, () => {
                       AppRouter.push(PageNames.NEARBY_GROUPS);
                     })
                   this.buildGroupCarousel()
