@@ -124,8 +124,10 @@ export struct NotificationCenter {
     }
     const entries: NotificationListEntry[] = [];
     const pushSection = (key: string, label: string, items: NotifyItem[], showBell: boolean): void => {
-      entries.push({ key: `${key}-header`, kind: 'header', label: label, count: items.length, showBell: showBell, items: [] });
-      entries.push({ key: key, kind: 'group', label: label, count: items.length, showBell: showBell, items: items });
+      // key 带 selectedFilter：切分类时强制重建 ListItemGroup，否则沿用上一分类的行
+      const scoped = `${this.selectedFilter}-${key}`;
+      entries.push({ key: `${scoped}-header`, kind: 'header', label: label, count: items.length, showBell: showBell, items: [] });
+      entries.push({ key: scoped, kind: 'group', label: label, count: items.length, showBell: showBell, items: items });
     };
     if (invites.length > 0) {
       pushSection('invites', '入群邀请', invites, false);
@@ -819,12 +821,14 @@ export struct NotificationCenter {
         // 文本内容：未读 = 标题 semibold 主色；已读 = 标题 medium 次色（对齐 web）
         Column({ space: DesignConstants.SPACING.HALF }) {
           Text() {
-            Span(this.buildNotificationTitle(notification))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(notification.is_read ? this.getPalette().textSecondary : this.getPalette().textPrimary)
-              .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            if (this.buildNotificationTitle(notification).length > 0) {
+              Span(this.buildNotificationTitle(notification))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(notification.is_read ? this.getPalette().textSecondary : this.getPalette().textPrimary)
+                .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            }
             if (this.buildNotificationMessage(notification).length > 0) {
-              Span(' ' + this.buildNotificationMessage(notification))
+              Span((this.buildNotificationTitle(notification).length > 0 ? ' ' : '') + this.buildNotificationMessage(notification))
                 .fontSize(DesignConstants.FONT.SIZE.SM)
                 .fontColor(this.getPalette().textPrimary)
             }
@@ -994,89 +998,59 @@ export struct NotificationCenter {
     return value < 10 ? `0${value}` : `${value}`;
   }
 
+  /** 对齐 web NotifyRow：标题只放 actor 名，动作/内容在 message 里拼接 */
   private buildNotificationTitle(notification: NotifyItem): string {
-    switch (notification.type) {
-      // web 关注类通知标题就是「actor 关注了你 / actor 和你互相关注了」
-      case 'new_follower':
-        return `${this.getActorName(notification.payload)} 关注了你`;
-      case 'mutual_follow':
-        return `${this.getActorName(notification.payload)} 和你互相关注了`;
-      case 'moment_commented':
-        return '新的评论';
-      case 'comment_reply':
-        return '评论被回复';
-      case 'mentioned':
-        return '被提及';
-      case 'reaction_added':
-        return '收到表情反应';
-      case 'group_invite_received':
-        return notification.payload?.group_name ?? '群组邀请';
-      case 'group_mentioned':
-        return '群聊提及';
-      case 'group_application_received':
-        return '新的入群申请';
-      case 'group_application_accepted':
-        return '申请已通过';
-      case 'group_application_rejected':
-        return '申请被拒绝';
-      case 'report_resolved':
-        return '举报已处理';
-      case 'report_dismissed':
-        return '举报被驳回';
-      case 'nearby_new_moment':
-        return '附近新动态';
-      case 'system_announcement':
-        return '系统通知';
-      default:
-        return '通知';
+    if (notification.type === 'system_announcement') {
+      return '';
     }
+    return this.getActorName(notification.payload);
   }
 
+  /** 文案逐条对齐 frontend notify/shared/useNotifyData.svelte.ts 的 toViewItems */
   private buildNotificationMessage(notification: NotifyItem): string {
     const payload = notification.payload;
-    const actor = this.getActorName(payload);
+    const groupName = payload?.group_name ?? '群组';
     switch (notification.type) {
-      case 'new_follower':
-        return '';
-      case 'mutual_follow':
-        return '';
       case 'moment_commented':
-        return `${actor}: ${payload?.comment_preview ?? '发表了评论'}`;
+        return payload?.comment_preview ?? '评论了你的动态';
       case 'comment_reply':
-        return payload?.replied_comment_preview
-          ? `${actor} 回复了你的评论：${payload.replied_comment_preview}`
-          : `${actor}: ${payload?.reply_content_preview ?? '回复了你的评论'}`;
-      case 'mentioned':
-        return payload?.target_type === 'comment'
-          ? `${actor} 在评论中提到了你`
-          : `${actor} 在动态中提到了你`;
-      case 'reaction_added':
-        return payload?.emoji
-          ? `${actor} 对你的内容送出了 ${payload.emoji}`
-          : `${actor} 对你的内容添加了表情反应`;
+        return `回复了你的评论：${payload?.reply_content_preview ?? ''}`;
+      case 'new_follower':
+        return '关注了你';
+      case 'mutual_follow':
+        return '和你互相关注了';
       case 'group_invite_received':
-        return actor.length > 0 ? `${actor} 邀请你` : '邀请你加入群组';
-      case 'group_mentioned':
-        return payload?.content_preview
-          ? `${actor} 在「${payload?.group_name ?? '群组'}」中 @ 了你：${payload.content_preview}`
-          : `${actor} 在「${payload?.group_name ?? '群组'}」中 @ 了你`;
+        return `邀请你加入 ${groupName}`;
       case 'group_application_received':
-        return `${actor} 申请加入 ${payload?.group_name ?? '群组'}`;
+        return `申请加入「${groupName}」，去群管理处理`;
       case 'group_application_accepted':
-        return `你加入了 ${payload?.group_name ?? '群组'}`;
+        return `你加入「${groupName}」的申请已通过`;
       case 'group_application_rejected':
-        return `你加入 ${payload?.group_name ?? '群组'} 的申请被拒绝`;
+        return `${payload?.rejected_by?.nickname ?? '管理员'} 拒绝了你的「${groupName}」入群申请`;
+      case 'reaction_added':
+        return `做出了反应 ${payload?.emoji ?? ''}`;
+      case 'group_mentioned':
+        return `在「${groupName}」群聊中 @ 了你${payload?.content_preview ? '：' + payload.content_preview : ''}`;
       case 'report_resolved':
-        return payload?.note ?? '你的举报已处理完成';
+        return `你举报的内容已处理${payload?.note ? '：' + payload.note : ''}`;
       case 'report_dismissed':
-        return payload?.note ?? '你的举报未通过审核';
+        return `你的举报未通过审核${payload?.note ? '：' + payload.note : ''}`;
       case 'nearby_new_moment':
-        return `${actor} 在附近发布了新瞬间`;
+        return `在附近发布了新瞬间${this.formatDistanceSuffix(payload?.distance)}`;
       case 'system_announcement':
-        return payload?.message ?? '请查看系统公告';
+        return payload?.title ?? '系统公告';
+      case 'mentioned':
+        return payload?.target_type === 'comment' ? '在评论中提到了你' : '在动态中提到了你';
       default:
         return payload?.message ?? '';
     }
+  }
+
+  private formatDistanceSuffix(distance?: number): string {
+    if (typeof distance !== 'number') {
+      return '';
+    }
+    return distance <= 1000 ? `（${distance}m）` : `（${(distance / 1000).toFixed(1)}km）`;
   }
 
   /** 语义分类 → 图标（对齐前端 TYPE_CONFIG：Heart / UserPlus / MessageCircle / MapPin） */
