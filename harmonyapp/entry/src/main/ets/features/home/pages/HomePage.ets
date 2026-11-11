@@ -434,8 +434,8 @@ export struct HomePage {
   /** 首屏加载骨架：与整卡图片卡同几何，避免加载完成时的布局跳动 */
   @Builder
   private buildFeedSkeleton() {
-    // 与 web SkeletonFeed 同构：4:5 整卡图片位 + 顶部作者行（圆头像/两行条）+ 底部两行文本条，
-    // 与真实 feed 卡同外壳尺寸（零位移）
+    // 与 web SkeletonFeed 同构：移动端 3:4 整卡图片位 + 顶部作者行（圆头像/两行条）+ 底部两行文本条，
+    // 与真实 feed 卡同外壳尺寸（零位移；web 移动端 aspect-[3/4]，sm 以上才 4/5）
     List({ space: DesignConstants.PAGE_SHELL.SECTION_INNER_GAP }) {
       ForEach([0, 1, 2, 3], (item: number, index: number) => {
         ListItem() {
@@ -443,7 +443,7 @@ export struct HomePage {
             Stack({ alignContent: Alignment.TopStart }) {
               Column()
                 .width('100%')
-                .aspectRatio(4 / 5)
+                .aspectRatio(3 / 4)
                 .borderRadius(DesignConstants.SHAPE.CARD)
                 .backgroundColor(this.getPalette().surfaceSubtle)
 
