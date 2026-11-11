@@ -330,6 +330,10 @@ export struct ProfilePage {
     // appear 即存活：常驻 Tab 被全屏页覆盖会触发 aboutToDisappear，
     // 返回时 aboutToAppear 重跑，若不复位，后续刷新（含事件触发）将永久早退。
     this.isDestroyed = false;
+    // 全屏编辑/被推入页覆盖后回到个人中心：非编辑态必须恢复底部 Dock
+    if (!this.isEditing) {
+      AppStorage.setOrCreate('hideMainTabBar', false);
+    }
     SystemUiController.syncWithCurrentTheme();
     interactionEventHub.on('user_relation_updated', this.handleViewedUserStateUpdate);
     interactionEventHub.on('auth_user_changed', this.authUserChangedListener);
