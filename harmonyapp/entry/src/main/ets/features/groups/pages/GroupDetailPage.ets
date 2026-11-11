@@ -181,6 +181,9 @@ export struct GroupDetailPage {
   /** 封禁二次确认目标（危险操作防误触，对齐前端 MemberActionSheet ban 语义） */
   @State showBanConfirm: boolean = false;
   @State banTargetMember: GroupMemberItem | null = null;
+  /** 移出成员二次确认（web MemberActionSheet：危险操作二次确认） */
+  @State showRemoveConfirm: boolean = false;
+  @State removeTargetMember: GroupMemberItem | null = null;
   /** 转让群主确认目标（仅群主；对齐前端危险区 ConfirmDialog 语义） */
   @State showTransferConfirm: boolean = false;
   @State transferTargetMember: GroupMemberItem | null = null;
@@ -1357,6 +1360,21 @@ export struct GroupDetailPage {
     }
   }
 
+  /** 成员菜单「移出群组」入口：二次确认（对齐 web MemberActionSheet） */
+  private requestRemoveMember(member: GroupMemberItem): void {
+    if (!this.canManageMember(member)) {
+      SystemToast.showWarning('无权限移除该成员', this.getUIContext());
+      return;
+    }
+    this.removeTargetMember = member;
+    this.showRemoveConfirm = true;
+  }
+
+  private cancelRemoveMember(): void {
+    this.showRemoveConfirm = false;
+    this.removeTargetMember = null;
+  }
+
   private async removeMember(member: GroupMemberItem): Promise<void> {
     if (!this.ensureLoggedIn('移除成员')) return;
     if (!this.canManageMember(member)) {
@@ -1378,6 +1396,8 @@ export struct GroupDetailPage {
           this.groupInfo.group.members_count = nextMembersCount;
         }
         SystemToast.showSuccess('已移除成员', this.getUIContext());
+        this.showRemoveConfirm = false;
+        this.removeTargetMember = null;
       } else {
         SystemToast.showError(getErrorMessage(response, '移除成员失败'), this.getUIContext());
       }
@@ -1423,7 +1443,7 @@ export struct GroupDetailPage {
     }
     menus.push({
       value: '移出群组',
-      action: () => { this.removeMember(member); }
+      action: () => { this.requestRemoveMember(member); }
     });
     // 封禁并移出（对齐前端 MemberActionSheet ban 项；二次确认在 requestBanMember 内）
     menus.push({
@@ -2139,6 +2159,12 @@ export struct GroupDetailPage {
           dragBar: true,
           backgroundColor: this.getCurrentThemePalette().sheetBackground
         })
+        Column().width(0).height(0).bindSheet($$this.showRemoveConfirm, this.buildRemoveConfirmSheet(), {
+          height: SheetSize.FIT_CONTENT,
+          showClose: false,
+          dragBar: true,
+          backgroundColor: this.getCurrentThemePalette().sheetBackground
+        })
         Column().width(0).height(0).bindSheet($$this.showBanConfirm, this.buildBanConfirmSheet(), {
           height: SheetSize.FIT_CONTENT,
           showClose: false,
@@ -2790,20 +2816,26 @@ export struct GroupDetailPage {
         .width('100%')
 
       Row({ space: DesignConstants.SPACING.SM }) {
-        SystemButton({
-          label: '取消',
-          variant: 'surface',
-          buttonSize: 'sheet',
-          fullWidth: true,
-          onPress: () => { this.cancelBanMember(); }
-        })
-        SystemButton({
-          label: '封禁并移出',
-          variant: 'danger',
-          buttonSize: 'sheet',
-          fullWidth: true,
-          onPress: () => { this.confirmBanMember(); }
-        })
+        Column() {
+          SystemButton({
+            label: '取消',
+            variant: 'surface',
+            buttonSize: 'sheet',
+            fullWidth: true,
+            onPress: () => { this.cancelBanMember(); }
+          })
+        }
+        .layoutWeight(1)
+        Column() {
+          SystemButton({
+            label: '封禁并移出',
+            variant: 'danger',
+            buttonSize: 'sheet',
+            fullWidth: true,
+            onPress: () => { this.confirmBanMember(); }
+          })
+        }
+        .layoutWeight(1)
       }
       .width('100%')
     }
@@ -2817,6 +2849,60 @@ export struct GroupDetailPage {
   }
 
   // ==================== 邀请成员面板（搜索 + 多选 + 批量邀请，对齐前端 InviteMembersSheet） ====================
+  @Builder
+  private buildRemoveConfirmSheet() {
+    Column({ space: DesignConstants.SPACING.LG }) {
+      Text('移出成员')
+        .fontSize(DesignConstants.FONT.SIZE.XL)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XL))
+        .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+        .width('100%')
+
+      Text(`确定将「${this.removeTargetMember?.user?.nickname ?? '该成员'}」移出群组？移出后对方需要重新申请加入。`)
+        .fontSize(DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .width('100%')
+
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Column() {
+          SystemButton({
+            label: '取消',
+            variant: 'surface',
+            buttonSize: 'sheet',
+            fullWidth: true,
+            onPress: () => { this.cancelRemoveMember(); }
+          })
+        }
+        .layoutWeight(1)
+        Column() {
+          SystemButton({
+            label: '移出群组',
+            variant: 'danger',
+            buttonSize: 'sheet',
+            fullWidth: true,
+            onPress: () => {
+              const target = this.removeTargetMember;
+              if (target) {
+                this.removeMember(target);
+              }
+            }
+          })
+        }
+        .layoutWeight(1)
+      }
+      .width('100%')
+    }
+    .width('100%')
+    .padding({
+      left: DesignConstants.SPACING.XXL,
+      right: DesignConstants.SPACING.XXL,
+      top: DesignConstants.SPACING.LG,
+      bottom: DesignConstants.SPACING.XXL
+    })
+  }
+
   @Builder
   private buildInviteSheet() {
     Column() {
