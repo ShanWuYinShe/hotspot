@@ -128,6 +128,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 7. **设置浏览锚点**：首页空态点「设置浏览位置」进地图选择器后——
    - 放锚点用 `uitest uiInput longClick <x> <y>`（长按放置；单击无效，双击是地图缩放），长按即写 `anchor_history` 偏好并触发逆地理解析；再点「设为浏览锚点」确认。**锚点模式确认后不关页**（toast「浏览锚点已设置」），需自己返回首页——切 Tab 前注意先返回，否则 Tab 点击落空；
    - 模拟器**系统地理编码无数据**：地点搜索（geocodeMultiple 走系统 geocoder）对任何关键词都返回「未找到该地点」，且锚点名只会是「未知位置」——这是模拟器环境限制，真机不受影响；历史锚点持久化在偏好文件 `anchor_history`；
+   - **地图画布在模拟器空白是服务权限问题，不是渲染/模拟器问题**：地图页（附近 → 右上地图）只有顶栏/缩放/底部选点面板，画布灰白。取证命令：`hdc shell hilog -x | grep OHMapSDK`，命中 `The app does not have map permission` / `checkMapPermission:false` 即 Map Kit 未开通（AGC 侧需按调试证书指纹开通 Map Kit 服务）；与模拟器无关，真机同样会空白。此时不要继续按「marker 偏移」排查——marker 用 `iconKey` + 经纬度投影，画布不渲染就看不到任何 marker。
    - 快速体验游客的**会话 token 持久化在 Asset Store**，冷启动由 `Index.validateSessionOnColdStart` 校验并恢复 profile；判断是否有会话必须用 `HttpUtil.getToken()`（Asset）；Preferences 的 `access_token` 不参与会话判断（恒为空，会让 UI 显示未登录而 WebSocket 仍带旧 token）。**重置登录态**：`bm clean` 不清 Asset Store 里的 token，需 `hdc uninstall com.lsyb.social` 后重装；登录页邮箱/密码为自定义安全输入，`uitest uiInput inputText` 不写入，QA/管理员登录需人工输入。锚点与 AppStorage 瞬态仍可能冷启动清空，重装(-r)保留偏好但锚点需重设；暗色等偏好（`dark_mode_preference`）在 `geotalk` 偏好文件中持久化。
 8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），dump bounds 换算 vp 用 3.917，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
 
