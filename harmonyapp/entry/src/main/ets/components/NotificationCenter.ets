@@ -802,8 +802,9 @@ export struct NotificationCenter {
             .backgroundColor(this.getTypeColor(notification.type))
             .border({ width: DesignConstants.BORDER_WIDTH.STRONG, color: this.getPalette().pageBackground })
           }
-          .width('100%')
-          .height('100%')
+          // 徽章层必须与头像同尺寸：用 100% 会撑满整行/整卡，导致通知行高度塌陷成空白大卡
+          .width(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
+          .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
         }
 
         // 文本内容：未读 = 标题 semibold 主色；已读 = 标题 medium 次色（对齐 web）
