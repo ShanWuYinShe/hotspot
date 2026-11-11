@@ -123,6 +123,18 @@ export class AppRouter {
   }
 
   /** 压入新页面 */
+  /** 读取当前栈顶路由参数（推入页在 build 前同步判定自身模式用） */
+  static getTopParam(): Object | undefined {
+    if (!AppRouter.pathStack) {
+      return undefined;
+    }
+    const names = AppRouter.pathStack.getAllPathName();
+    if (names.length === 0) {
+      return undefined;
+    }
+    return AppRouter.pathStack.getParamByIndex(names.length - 1) as Object | undefined;
+  }
+
   static push(name: string, param?: Object): void {
     if (!AppRouter.pathStack) {
       hilog.error(DOMAIN_NUMBER, TAG, `push 失败：NavPathStack 未初始化（目标: ${name}）`);

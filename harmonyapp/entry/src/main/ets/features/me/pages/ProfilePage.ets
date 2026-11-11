@@ -327,6 +327,16 @@ export struct ProfilePage {
   };
 
   async aboutToAppear() {
+    // 推入的他人主页必须在首帧 build 前判定为 external，否则先走 Tab 分支、不创建
+    // NavDestination，onReady 永不触发，页面白屏。此处同步读栈顶参数兜底。
+    if (this.viewedUserId.length === 0) {
+      const topParam = AppRouter.getTopParam() as ProfilePageParams | undefined;
+      const routeUserId = topParam?.userId ?? topParam?.user_id ?? '';
+      const selfId = this.currentUser?.user_id ?? '';
+      if (routeUserId.length > 0 && routeUserId !== selfId) {
+        this.viewedUserId = routeUserId;
+      }
+    }
     // appear 即存活：常驻 Tab 被全屏页覆盖会触发 aboutToDisappear，
     // 返回时 aboutToAppear 重跑，若不复位，后续刷新（含事件触发）将永久早退。
     this.isDestroyed = false;
