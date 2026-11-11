@@ -264,12 +264,12 @@ export struct SettingsThemeSegmentCard {
       ? this.getPalette().surfaceIsland
       : AppThemeVisuals.withAlpha(this.getPalette().surfaceSubtle, 0.70))
     .shadow(this.selected ? this.getPalette().surfaceShadow : DesignConstants.SHADOW.SMALL)
-    // 触控热区：卡片视觉高度 ~61，外扩 responseRegion 不占布局
+    // 触控热区：整卡可点（height 用 '100%'；固定 48 只覆盖上半部分，点文字区域会失效）
     .responseRegion({
       x: 0,
       y: 0,
       width: '100%',
-      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      height: '100%'
     })
     .onClick(() => { this.onSelect(this.mode); })
   }
@@ -1299,7 +1299,7 @@ export struct SettingsAppearanceOptionTile {
       x: 0,
       y: 0,
       width: '100%',
-      height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+      height: '100%'
     })
     .onClick(() => { this.onSelect(); })
   }
