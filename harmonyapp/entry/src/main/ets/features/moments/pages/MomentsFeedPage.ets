@@ -373,6 +373,7 @@ export struct MomentsFeedPage {
               }
             }
           })
+            .alignSelf(ItemAlign.Start)
             .margin({ top: DesignConstants.SPACING.SM })
         }
       }
