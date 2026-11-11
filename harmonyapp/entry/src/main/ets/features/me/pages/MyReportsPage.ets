@@ -24,7 +24,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
-import { formatDateTime } from '../../../core/utils/FormatUtil';
+import { formatDetailTime } from '../../../core/utils/FormatUtil';
 
 const PAGE_SIZE: number = 20;
 
@@ -336,7 +336,7 @@ export struct MyReportsPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
 
-      Text(formatDateTime(item.created_at))
+      Text(formatDetailTime(item.created_at))
         .fontSize(DesignConstants.FONT.SIZE.XS2)
         .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
         .fontColor(this.getCurrentThemePalette().textTertiary)
