@@ -1102,6 +1102,13 @@ export struct LoginPage {
     }
 
     const redirectTarget = this.redirectUrl.trim();
+    if (redirectTarget === PageNames.PROFILE || redirectTarget === PageNames.INDEX) {
+      // Tab 根页不能作为 NavDestination replacePath（会留下空白 NavDestination，实测登录后白屏）：
+      // 清栈回 Tabs，并通过 AppStorage 指定要落到的 Tab（0 首页 / 4 我的）。
+      AppStorage.setOrCreate<number>('mainTabIndex', redirectTarget === PageNames.PROFILE ? 4 : 0);
+      AppRouter.clear();
+      return;
+    }
     if (redirectTarget.length > 0) {
       AppRouter.replacePath(redirectTarget);
       if (this.restoreAction === 'open_create_sheet' && redirectTarget === PageNames.INDEX) {
@@ -1109,7 +1116,9 @@ export struct LoginPage {
       }
       return;
     }
-    AppRouter.pop();
+    // 登录页由深层页面推入时，单次 pop 在端上会留下空白 NavDestination（访客登录后白屏实测）；
+    // 无 redirect 目标时统一清栈回根 Tabs，保证登录后一定落到主界面。
+    AppRouter.clear();
   }
 
   /** userType 为登录来源的账号类型（createTempUser='temp'，login/register='normal'），

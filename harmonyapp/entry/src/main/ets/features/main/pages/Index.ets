@@ -107,7 +107,8 @@ struct Index {
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'lg';
   @StorageProp('currentWidthVp') currentWidthVp: number = 0;
 
-  @State currentTabIndex: number = 0;
+  // 供登录/外部入口跨页指定落点 Tab（0 首页 / 1 附近 / 3 消息 / 4 我的）
+  @StorageLink('mainTabIndex') currentTabIndex: number = 0;
   @State currentRoute: string = 'home';
   @State isInitialized: boolean = false;
   @State lastError: string = '';
