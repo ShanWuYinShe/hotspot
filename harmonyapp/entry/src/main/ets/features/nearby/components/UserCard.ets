@@ -126,7 +126,7 @@ export struct UserCard {
   /** 名片卡高度：由 token 档位推导（padding + 顶栏 chip + 头像/姓名/副行 + 底部 pill），
    *  ArkUI 的 height 为 border-box（含 padding）；末尾留 XS 余量吸收行高取整，保证不裁切。 */
   private getCardHeight(): number {
-    return DesignConstants.SPACING.MD2 * 2
+    return DesignConstants.SPACING.MD * 2
       + DesignConstants.SPACING.LG2
       + DesignConstants.COMPONENT.AVATAR_SIZE.MEDIUM
       + DesignConstants.SPACING.SM
@@ -251,8 +251,8 @@ export struct UserCard {
         .margin({ top: DesignConstants.SPACING.SM })
 
       Text(this.getSubtitle())
-        .fontSize(DesignConstants.FONT.SIZE.XS)
-        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
         .fontColor(this.getPalette().textSecondary)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -284,7 +284,8 @@ export struct UserCard {
       }
       .width('100%')
       .height(this.getCardHeight())
-      .padding(DesignConstants.SPACING.MD2)
+      // web 默认竖卡 p-3(12) / sm:p-3.5；移动端 12
+      .padding(DesignConstants.SPACING.MD)
       .backgroundColor(this.getPalette().surfaceIsland)
       // web 名片卡：ring-1 border-strong + rounded-lg(20) + shadow-xs
       .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor })
