@@ -20,6 +20,7 @@ import {
   CommentItem,
   FetchCommentsRequest,
   CreateCommentRequest,
+  CreateReportRequest,
   UserInfo,
   Reaction,
 } from '../../../core/types/api';
@@ -88,6 +89,10 @@ export struct MomentDetailPage {
   @State commentsLoading: boolean = false;
   @State commentsError: string = '';
   @State commentSending: boolean = false;
+  /** 举报动态确认弹窗可见性（非作者视角，SystemDialog danger 二次确认） */
+  @State showReportConfirm: boolean = false;
+  @State isReporting: boolean = false;
+
   /** 删除确认弹窗可见性（作者视角，SystemDialog danger 二次确认） */
   @State showDeleteConfirm: boolean = false;
   /** 删除请求 in-flight 守卫（防连点重复提交，对齐发布器 isPublishing 范式） */
@@ -604,21 +609,33 @@ export struct MomentDetailPage {
 
         // web 详情页无标准页头：返回/分享/更多是浮在 hero 上的玻璃圆钮。
         this.buildFloatingTools()
+
+        // 弹层必须放在 Stack 内才会盖在内容之上（NavDestination 多子节点会按顺序排布）
+        // 删除动态二次确认（作者视角，danger 范式对齐 GroupCard 退群确认）
+        SystemDialog({
+          visible: this.showDeleteConfirm,
+          title: '删除动态',
+          description: '删除后不可恢复，评论与点赞将一并清除',
+          confirmText: '删除',
+          confirmVariant: 'danger',
+          onCancel: () => { this.showDeleteConfirm = false; },
+          onConfirm: () => { this.deleteMoment(); }
+        })
+        // 举报动态二次确认（非作者视角，对齐 web MomentActionMenu「举报动态」）
+        SystemDialog({
+          visible: this.showReportConfirm,
+          title: '举报动态',
+          description: '确定举报该动态？举报后平台将进行审核。',
+          confirmText: '举报',
+          confirmVariant: 'danger',
+          onCancel: () => { this.showReportConfirm = false; },
+          onConfirm: () => { this.reportMoment(); }
+        })
       }
       .width('100%')
       .height('100%')
       .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
       }
-      // 删除动态二次确认（作者视角，danger 范式对齐 GroupCard 退群确认）
-      SystemDialog({
-        visible: this.showDeleteConfirm,
-        title: '删除动态',
-        description: '删除后不可恢复，评论与点赞将一并清除',
-        confirmText: '删除',
-        confirmVariant: 'danger',
-        onCancel: () => { this.showDeleteConfirm = false; },
-        onConfirm: () => { this.deleteMoment(); }
-      })
     }
     .hideTitleBar(true)
     .onReady((context: NavDestinationContext) => {
@@ -772,6 +789,10 @@ export struct MomentDetailPage {
       {
         value: '刷新动态',
         action: () => { this.loadMomentDetail(); }
+      },
+      {
+        value: '举报动态',
+        action: () => { this.showReportConfirm = true; }
       }
     ])
     .accessibilityText('更多操作')
@@ -824,6 +845,31 @@ export struct MomentDetailPage {
     } finally {
       this.isDeleting = false;
       this.showDeleteConfirm = false;
+    }
+  }
+
+  /** 举报当前动态（非作者）：对齐 web 举报入口，reason 固定 other（与端内用户/群组举报一致） */
+  private async reportMoment(): Promise<void> {
+    if (!this.moment || this.isReporting) return;
+    this.isReporting = true;
+    try {
+      const req: CreateReportRequest = {
+        target_type: 'moment',
+        target_id: this.moment.moment_id,
+        reason: 'other',
+        description: '来自动态详情页面的举报'
+      };
+      const response = await ApiClient.createReport(req);
+      if (response.code === 0) {
+        SystemToast.showSuccess('举报已提交', this.getUIContext());
+      } else {
+        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('举报失败', this.getUIContext());
+    } finally {
+      this.isReporting = false;
+      this.showReportConfirm = false;
     }
   }
 
