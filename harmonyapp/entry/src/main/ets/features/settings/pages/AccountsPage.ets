@@ -33,6 +33,9 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { LucideIcon } from '../../../components/LucideIcon';
 
+/** 单行账号条目估算高度（行内 padding MD + LG 文本行；仅用于把卡片收口到内容高度） */
+const ACCOUNT_ROW_HEIGHT_VP: number = 76;
+
 @Preview
 @Component
 export struct AccountsPage {
@@ -341,7 +344,8 @@ export struct AccountsPage {
           })
         }
         .width('100%')
-        .layoutWeight(1)
+        // 账号卡按内容高度收口（原 layoutWeight(1) 把单账号卡撑满整屏，留下大片空白）
+        .height(this.accounts.length * ACCOUNT_ROW_HEIGHT_VP + DesignConstants.SPACING.SM * 2)
         .scrollBar(BarState.Off)
         .backgroundColor(this.getSurfaceBackground())
         .borderRadius(DesignConstants.SHAPE.COMPACT_CARD)
