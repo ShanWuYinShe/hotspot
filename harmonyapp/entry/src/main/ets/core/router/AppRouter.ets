@@ -5,6 +5,7 @@
  */
 
 import { hilog } from '@kit.PerformanceAnalysisKit';
+import { PageNames } from '../../constants/AppConstants';
 
 /** 登录页参数 */
 export class LoginRouteParam {
@@ -90,6 +91,16 @@ const TAG: string = 'AppRouter';
 export class AppRouter {
   private static pathStack: NavPathStack | null = null;
 
+  /**
+   * 推入页中仍保留底部 Dock 的页面（对齐 web：附近域叶子页底部导航不变，
+   * 搜索/详情/设置等全屏叶子页隐藏底部导航）。
+   */
+  private static readonly DOCK_VISIBLE_PAGES: string[] = [
+    PageNames.NEARBY_USERS,
+    PageNames.NEARBY_MOMENTS,
+    PageNames.NEARBY_GROUPS
+  ];
+
   /** 初始化路由（在 Index.ets aboutToAppear 中调用） */
   static init(stack: NavPathStack): void {
     AppRouter.pathStack = stack;
@@ -101,8 +112,14 @@ export class AppRouter {
    * 避免 Dock 被叶子页透明底透出后仍显示但点击被页面拦截。
    */
   private static syncDockVisibility(): void {
-    const pushed: boolean = (AppRouter.pathStack?.size() ?? 0) > 0;
-    AppStorage.setOrCreate('hideMainTabBar', pushed);
+    const stack = AppRouter.pathStack;
+    if (!stack) {
+      return;
+    }
+    const names: string[] = stack.getAllPathName();
+    const top: string = names.length > 0 ? names[names.length - 1] : '';
+    const keepDock: boolean = top === '' || AppRouter.DOCK_VISIBLE_PAGES.indexOf(top) >= 0;
+    AppStorage.setOrCreate('hideMainTabBar', !keepDock);
   }
 
   /** 压入新页面 */
