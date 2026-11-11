@@ -1704,11 +1704,6 @@ export struct GroupDetailPage {
                         avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL
                       })
                         .margin({ left: index === 0 ? 0 : -DesignConstants.SPACING.SM })
-                        .border({
-                          width: 2,
-                          color: this.getCurrentThemePalette().pageBackground
-                        })
-                        .borderRadius(DesignConstants.RADIUS.FULL)
                     }, (member: GroupMemberItem, index: number) => `${member.user?.user_id ?? index}`)
                     Text(`${formatCount(this.groupInfo?.group?.members_count ?? 0)} 位成员在群中`)
                       .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -2135,11 +2130,19 @@ export struct GroupDetailPage {
   @Builder
   private buildHeroIconButton(icon: AppIcon, label: string, onPress: () => void) {
     Row() {
-      LucideIcon({
-        icon: icon,
-        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-        color: this.getCurrentThemePalette().textPrimary
-      })
+      // 系统符号 more 在端上渲染成四宫格，与 web 的横向省略号不一致；这里用文本点阵兜底
+      if (icon === AppIcon.MORE) {
+        Text('…')
+          .fontSize(DesignConstants.FONT.SIZE.XL)
+          .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+      } else {
+        LucideIcon({
+          icon: icon,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+          color: this.getCurrentThemePalette().textPrimary
+        })
+      }
     }
     .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
     .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
