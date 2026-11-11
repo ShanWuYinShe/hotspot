@@ -357,11 +357,8 @@ export struct SettingsPage {
 
   private openProfile(): void {
     if (this.currentUser) {
-      // 「我的资料」不 push 全屏 ProfilePage：自己看自己走非外部模式（无返回钮），
-      // NavDestination 全屏覆盖 tab 层后底栏假死、用户被卡死；前端 settings 用户卡
-      // 也不跳转。改为回 tab 根视图并切「我的」，由用户在个人中心点「编辑资料」。
-      AppRouter.clear();
-      AppStorage.setOrCreate<number>(StorageKeys.SWITCH_TAB_REQUEST, 4);
+      // 对齐 web settings 账号卡：点击进入完整资料编辑页 /me/edit
+      AppRouter.push(PageNames.PROFILE_EDIT);
       return;
     }
     SystemToast.showWarning('请先登录', this.getUIContext());

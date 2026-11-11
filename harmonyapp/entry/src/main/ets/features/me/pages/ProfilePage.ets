@@ -1119,8 +1119,8 @@ export struct ProfilePage {
       AppRouter.push(PageNames.NEARBY_GROUPS);
       return;
     }
-    // 资料字段补全统一进入本页内联编辑（页内单入口，与身份卡「编辑资料」一致）
-    this.startEdit();
+    // 资料字段补全进入完整编辑页（对齐 web /me/edit：基本资料 + 更多信息 + sticky 保存）
+    AppRouter.push(PageNames.PROFILE_EDIT);
   }
 
   private showCreateSheet(): void {
@@ -1200,7 +1200,7 @@ export struct ProfilePage {
               .borderRadius(DesignConstants.SHAPE.BUTTON)
               .backgroundColor(AppThemeVisuals.withAlpha(this.getCurrentThemePalette().surfaceSubtle, 0.60))
               .margin({ top: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-              .onClick(() => this.startEdit())
+              .onClick(() => AppRouter.push(PageNames.PROFILE_EDIT))
 
               ProfileStatsRow({
                 resolvedThemeId: this.resolvedThemeId,
@@ -1219,7 +1219,7 @@ export struct ProfilePage {
                 momentsCount: this.myMomentsCount,
                 followersCount: this.myFollowersCount,
                 groupsCount: this.myGroupsCount,
-                onEditProfile: () => { this.startEdit(); },
+                onEditProfile: () => { AppRouter.push(PageNames.PROFILE_EDIT); },
                 onOpenSettings: () => { AppRouter.push(PageNames.SETTINGS); }
               })
               // 个人数据：只保留前端 ProfileMobile 的 5 行（我的瞬间/我的群组/好友/关注/粉丝）
