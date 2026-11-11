@@ -679,7 +679,10 @@ export struct ChatPage {
     }
     
     const messageType: MessageType = item.type as MessageType;
-    const isRecalled = item.recalled_at !== null && item.recalled_at !== undefined;
+    // 后端 null 时间可能序列化为空串；仅非空字符串才算已撤回（否则所有历史消息都会被显示成「消息已撤回」）
+    const isRecalled = typeof item.recalled_at === 'string'
+      ? item.recalled_at.length > 0
+      : item.recalled_at !== null && item.recalled_at !== undefined;
     return {
       id: item.message_id,
       // 已撤回消息统一渲染占位文案（对齐前端：m.recalled_at ? '消息已撤回' : content）
@@ -693,7 +696,10 @@ export struct ChatPage {
       isSelf: isSelf,
       isSystem: item.type === 'system',
       recalled: isRecalled,
-      edited: item.edited_at !== null && item.edited_at !== undefined,
+      // 同上：空串不算已编辑（否则每条消息都显示「已编辑」）
+      edited: typeof item.edited_at === 'string'
+        ? item.edited_at.length > 0
+        : item.edited_at !== null && item.edited_at !== undefined,
       rawData: item
     };
   }
