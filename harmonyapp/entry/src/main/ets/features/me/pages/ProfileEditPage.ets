@@ -285,7 +285,9 @@ export struct ProfileEditPage {
         }
       },
       pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_PILL,
-      hoverFill: this.getCurrentThemePalette().accentMuted
+      hoverFill: this.getCurrentThemePalette().accentMuted,
+      // 行内 chip 自适应内容宽（默认 fillWidth=true 会占满一行，Flex wrap 下变成竖排）
+      fillWidth: false
     }) {
       Row() {
         Text(label)
