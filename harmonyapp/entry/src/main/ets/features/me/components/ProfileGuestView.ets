@@ -230,14 +230,14 @@ export struct ProfileGuestView {
           Row({ space: DesignConstants.SPACING.SM }) {
             Column() {
               SystemButton({
-                label: '登录 / 注册',
+                label: '登录 / 注册开启',
                 variant: 'primary',
                 buttonSize: 'default',
                 fullWidth: true,
                 onPress: () => { this.onLogin(); }
               })
             }
-            .layoutWeight(1)
+            .layoutWeight(1.25)
 
             Column() {
               SystemButton({
