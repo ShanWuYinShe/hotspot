@@ -814,9 +814,11 @@ export struct NotificationCenter {
               .fontSize(DesignConstants.FONT.SIZE.SM)
               .fontColor(notification.is_read ? this.getPalette().textSecondary : this.getPalette().textPrimary)
               .fontWeight(notification.is_read ? DesignConstants.FONT.WEIGHT.MEDIUM : DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            Span(' ' + this.buildNotificationMessage(notification))
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .fontColor(this.getPalette().textPrimary)
+            if (this.buildNotificationMessage(notification).length > 0) {
+              Span(' ' + this.buildNotificationMessage(notification))
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontColor(this.getPalette().textPrimary)
+            }
           }
           .maxLines(2)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -968,11 +970,12 @@ export struct NotificationCenter {
       if (Number.isNaN(date.getTime())) {
         return iso;
       }
-      const month = this.padNumber(date.getMonth() + 1);
-      const day = this.padNumber(date.getDate());
+      // 对齐 web：11月10日 09:50（月/日不补零，时分补零）
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
       const hour = this.padNumber(date.getHours());
       const minute = this.padNumber(date.getMinutes());
-      return `${month}-${day} ${hour}:${minute}`;
+      return `${month}月${day}日 ${hour}:${minute}`;
     } catch (_) {
       return iso;
     }
@@ -984,10 +987,11 @@ export struct NotificationCenter {
 
   private buildNotificationTitle(notification: NotifyItem): string {
     switch (notification.type) {
+      // web 关注类通知标题就是「actor 关注了你 / actor 和你互相关注了」
       case 'new_follower':
-        return '新的关注者';
+        return `${this.getActorName(notification.payload)} 关注了你`;
       case 'mutual_follow':
-        return '互相关注';
+        return `${this.getActorName(notification.payload)} 和你互相关注了`;
       case 'moment_commented':
         return '新的评论';
       case 'comment_reply':
@@ -1024,9 +1028,9 @@ export struct NotificationCenter {
     const actor = this.getActorName(payload);
     switch (notification.type) {
       case 'new_follower':
-        return `${actor} 关注了你`;
+        return '';
       case 'mutual_follow':
-        return `你与 ${actor} 已互相关注`;
+        return '';
       case 'moment_commented':
         return `${actor}: ${payload?.comment_preview ?? '发表了评论'}`;
       case 'comment_reply':
