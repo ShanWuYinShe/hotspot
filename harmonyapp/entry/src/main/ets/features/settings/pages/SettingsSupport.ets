@@ -960,6 +960,11 @@ export struct RelationshipListSection {
   }
 
   /** 关系行「发消息」：对齐 web 关系列表行尾按钮 */
+  /** 关系行副文本：对齐 web 的 @handle（320vp 窄屏放不下「@handle + 在线状态」，状态用头像圆点表达） */
+  private buildRelationMeta(item: RelatedUserItem): string {
+    return `@${item.user.user.user_id}`;
+  }
+
   private openChat(userId: string, nickname: string): void {
     if (userId.length === 0) {
       return;
@@ -998,8 +1003,9 @@ export struct RelationshipListSection {
           .fontColor(this.getPalette().textPrimary)
         if (meta) {
           Text(meta)
-            .fontSize(DesignConstants.FONT.SIZE.SM)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            // 对齐 web text-xs；SM 在 320vp 行宽下会把 @handle 折成两行
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
             .fontColor(this.getPalette().textSecondary)
         }
       }
@@ -1099,19 +1105,19 @@ export struct RelationshipListSection {
       ListGroup({ groupPadding: DesignConstants.SPACING.XS }) {
         if (this.friends.length > 0) {
           ForEach(this.friends, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `成为好友于 ${formatDateTime(item.followed_back_at ?? undefined)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, this.buildRelationMeta(item), item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.following.length > 0) {
           ForEach(this.following, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, this.buildRelationMeta(item), item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
         if (this.followers.length > 0) {
           ForEach(this.followers, (item: RelatedUserItem, index: number) => {
-            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, `关注你于 ${formatDateTime(item.followed_at)}`, item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
+            this.buildUserLine(item.user.user.user_id, item.user.user.nickname, this.buildRelationMeta(item), item.user.presence_status === 'online', '发消息', () => this.openChat(item.user.user.user_id, item.user.user.nickname))
           }, (item: RelatedUserItem) => item.user.user.user_id)
         }
 
