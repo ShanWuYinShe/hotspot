@@ -155,6 +155,9 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 **安全键盘坑**：密码框会弹出**安全键盘**（dump 里出现「安全键盘」节点），它盖住两个输入框——这就是「两次文本拼进同一字段」的常见原因（第二次点击落在安全键盘上，焦点没变）。
 
+**首次使用小艺输入法的向导坑**：模拟器首次聚焦输入框时弹的是**输入法首次配置 Sheet**（隐私声明 → 中文键盘布局 → 完成），不是键盘；此阶段输入命令全部被拦截，表现为「点了输入框、输入无效」。该 Sheet 属于应用窗口，uitest dumpLayout 能看到 `同意 / 同意基本模式 / 下一步 / 完成` 等 clickable 节点，按 dump 坐标走完向导再输入。向导流程可能连续出现多屏甚至重复（隐私 → 布局 → 完成 → 隐私再次弹出），未走完前不要把输入失败判成 app bug。
+
+
 **实测可用的登录输入流程**：
 
 1. 点账号框 → 用 `uitest uiInput inputText <x> <y> 'uitest_admin'` 输入 → **`uitest uiInput keyEvent Back` 一次**（此时 IME 打开，Back 只关键盘 ✓）→ dump 校验仍在登录页 ✓；
