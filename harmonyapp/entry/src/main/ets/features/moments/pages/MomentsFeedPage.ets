@@ -357,13 +357,15 @@ export struct MomentsFeedPage {
         if (this.hotTags.length > 0) {
           TabsPillGroup({
             variant: 'pills',
-            tabs: this.hotTags.map((tag: string): TabItem => ({ label: tag })),
-            activeIndex: this.activeTag ? Math.max(0, this.hotTags.indexOf(this.activeTag)) : -1,
+            freeWidth: true,
+            // 对齐 web nearby/moments：始终有「全部」档，再跟热门 tag
+            tabs: [{ label: '全部' } as TabItem].concat(this.hotTags.map((tag: string): TabItem => ({ label: tag }))),
+            activeIndex: this.activeTag ? Math.max(0, this.hotTags.indexOf(this.activeTag) + 1) : 0,
             actions: {
               onChange: (index: number) => {
-                const tag = this.hotTags[index];
+                const tag = index <= 0 ? '' : (this.hotTags[index - 1] ?? '');
                 // 再次点击已激活项可取消筛选（对齐前端 activeTag === id ? null : id）
-                this.activeTag = this.activeTag === tag ? '' : (tag ?? '');
+                this.activeTag = this.activeTag === tag ? '' : tag;
                 this.refreshVisibleDataSource();
                 // 内容替换（标签筛选）：重播进场
                 this.resetContentEnter();
