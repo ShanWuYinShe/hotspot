@@ -148,6 +148,11 @@ struct Index {
     }
     // 初始化全局路由
     AppRouter.init(this.navPathStack);
+    // 系统返回（返回键/侧滑）由 Navigation 直接弹栈，不会经过 AppRouter.pop，
+    // 导致 Dock 可见性停留在「隐藏」；用 didShow 拦截在每次跳转后重算。
+    this.navPathStack.setInterception({
+      didShow: () => { AppRouter.refreshDockVisibility(); }
+    });
 
     try {
       this.uiContext = this.getUIContext();

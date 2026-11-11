@@ -111,6 +111,11 @@ export class AppRouter {
    * 推入页均为全屏叶子页（web 移动端叶子页不展示底部导航），隐藏悬浮 Dock，
    * 避免 Dock 被叶子页透明底透出后仍显示但点击被页面拦截。
    */
+  /** 公开刷新 Dock 可见性：系统返回（手势/返回键）绕过 AppRouter.pop 时由 Navigation 拦截回调调用。 */
+  static refreshDockVisibility(): void {
+    AppRouter.syncDockVisibility();
+  }
+
   private static syncDockVisibility(): void {
     const stack = AppRouter.pathStack;
     if (!stack) {
