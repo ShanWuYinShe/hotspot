@@ -92,6 +92,10 @@ export struct MomentDetailPage {
   /** 举报动态确认弹窗可见性（非作者视角，SystemDialog danger 二次确认） */
   @State showReportConfirm: boolean = false;
   @State isReporting: boolean = false;
+  /** 评论举报确认弹窗（对齐 web MomentPostBody 评论行「举报」） */
+  @State showCommentReportConfirm: boolean = false;
+  @State reportCommentId: string = '';
+  @State isReportingComment: boolean = false;
 
   /** 删除确认弹窗可见性（作者视角，SystemDialog danger 二次确认） */
   @State showDeleteConfirm: boolean = false;
@@ -631,6 +635,16 @@ export struct MomentDetailPage {
           onCancel: () => { this.showReportConfirm = false; },
           onConfirm: () => { this.reportMoment(); }
         })
+        // 举报评论二次确认（对齐 web 评论行「举报」）
+        SystemDialog({
+          visible: this.showCommentReportConfirm,
+          title: '举报评论',
+          description: '确定举报该评论？举报后平台将进行审核。',
+          confirmText: '举报',
+          confirmVariant: 'danger',
+          onCancel: () => { this.showCommentReportConfirm = false; },
+          onConfirm: () => { this.reportComment(); }
+        })
       }
       .width('100%')
       .height('100%')
@@ -845,6 +859,31 @@ export struct MomentDetailPage {
     } finally {
       this.isDeleting = false;
       this.showDeleteConfirm = false;
+    }
+  }
+
+  /** 举报评论：对齐 web 评论行举报入口，reason 固定 other */
+  private async reportComment(): Promise<void> {
+    if (!this.reportCommentId || this.isReportingComment) return;
+    this.isReportingComment = true;
+    try {
+      const req: CreateReportRequest = {
+        target_type: 'comment',
+        target_id: this.reportCommentId,
+        reason: 'other',
+        description: '来自动态评论的举报'
+      };
+      const response = await ApiClient.createReport(req);
+      if (response.code === 0) {
+        SystemToast.showSuccess('举报已提交', this.getUIContext());
+      } else {
+        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
+      }
+    } catch {
+      SystemToast.showError('举报失败', this.getUIContext());
+    } finally {
+      this.isReportingComment = false;
+      this.showCommentReportConfirm = false;
     }
   }
 
@@ -1248,6 +1287,21 @@ export struct MomentDetailPage {
             .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
             .onClick(() => { this.replyToComment(comment); })
             .accessibilityText('回复评论')
+
+          // 举报评论：仅非本人评论展示（对齐 web 评论行「举报」）
+          if (comment.user?.user_id &&
+            comment.user.user_id !== (GlobalStateManager.getInstance().getCurrentUser()?.user_id ?? '')) {
+            Text('举报')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+              .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+              .onClick(() => {
+                this.reportCommentId = comment.comment_id;
+                this.showCommentReportConfirm = true;
+              })
+              .accessibilityText('举报评论')
+          }
         }
         .width('100%')
         .alignItems(VerticalAlign.Center)
