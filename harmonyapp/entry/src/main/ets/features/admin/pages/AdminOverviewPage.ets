@@ -472,13 +472,31 @@ struct AdminOverviewPage {
       .alignItems(VerticalAlign.Center)
 
       Column({ space: DesignConstants.SPACING.XS }) {
-        Text(m.title)
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-          .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-          .fontColor(this.getPalette().textPrimary)
-          .maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Row({ space: DesignConstants.SPACING.SM2 }) {
+          Text(m.title)
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+            .fontColor(this.getPalette().textPrimary)
+            .maxLines(1)
+            .textOverflow({ overflow: TextOverflow.Ellipsis })
+          // 对齐 web 举报卡「待处理 N」软色角标
+          if (m.title === '举报审核' && this.pendingReports !== null && this.pendingReports > 0) {
+            Text(`待处理 ${this.pendingReports}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+              .fontColor(this.getPalette().textStatusWarningOnSoft)
+              .padding({
+                left: DesignConstants.SPACING.SM,
+                right: DesignConstants.SPACING.SM,
+                top: DesignConstants.SPACING.HALF,
+                bottom: DesignConstants.SPACING.HALF
+              })
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getPalette().warningSoft)
+          }
+        }
+        .alignItems(VerticalAlign.Center)
         Text(this.hasPermission(m.perm) ? m.desc : '无访问权限')
           .fontSize(DesignConstants.FONT.SIZE.SM)
           .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.CARD))
