@@ -52,7 +52,7 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { LoadingUtil } from '../../../core/utils/LoadingUtil';
 import { BasicDataSource } from '../../../core/utils/BasicDataSource';
 import { NfcShareService } from '../../../core/services/NfcShareService';
-import { AppRouter, LoginRouteParam, ChatRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, LoginRouteParam, ChatRouteParam, ProfileRouteParam } from '../../../core/router/AppRouter';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
@@ -1785,6 +1785,16 @@ export struct GroupDetailPage {
                     surfaceBackground: this.getCurrentThemePalette().surfaceIsland,
                     menuItems: this.buildMemberActionMenus(member)
                   })
+                    // web 成员行可点进用户主页
+                    .onClick(() => {
+                      const userId = member.user?.user_id ?? '';
+                      if (userId.length === 0) {
+                        return;
+                      }
+                      const param = new ProfileRouteParam();
+                      param.userId = userId;
+                      AppRouter.push(PageNames.PROFILE, param);
+                    })
                 }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
 
                 if (this.members.length === 0) {
