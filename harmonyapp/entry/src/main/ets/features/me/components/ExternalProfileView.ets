@@ -254,8 +254,9 @@ export struct ExternalProfileView {
 
           if (this.handle.length > 0) {
             Text(`@${this.handle}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              // 320vp 窄屏：XS 会让 31 位 user_id 被截断，降一档保证完整展示
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
               .fontColor(this.getPalette().textSecondary)
               .maxLines(1)
               .textOverflow({ overflow: TextOverflow.Ellipsis })
