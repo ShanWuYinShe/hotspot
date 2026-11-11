@@ -430,38 +430,38 @@ export struct MomentsFeedPage {
         // Refresh 直接包可滚动的 WaterFlow（子组件需为滚动组件下拉刷新才生效）
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           Column() {
-            WaterFlow({ scroller: this.backToTopScroller }) {
-              // LazyForEach 虚拟化（审查 P1-9：替换全量 ForEach，长列表滚动不掉帧）；
-              // 数据源由 refreshVisibleDataSource 保持与标签过滤同步
-              LazyForEach(this.hotMomentsDataSource, (moment: MomentItem, index: number) => {
-                FlowItem() {
-                  MomentWallCard({
-                    moment: moment,
-                    // R6 首屏优先：前 2 张高清档（LazyForEach 离屏不创建）
-                    priority: index < 2,
-                    // 2 列窄墙用近 8:9（web 173×195）；3 列用 4:3
-                    cardAspectRatio: this.getWallColumns() === 2 ? 8 / 9 : 1.333,
-                    onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
-                    onImagePreview: (momentId: string, images: string[], index: number) => {
-                      this.previewImage(momentId, images, index);
+            List({ space: DesignConstants.SPACING.MD2, scroller: this.backToTopScroller }) {
+              ForEach(this.getVisibleMomentRows(), (row: MomentItem[], rowIndex: number) => {
+                ListItem() {
+                  Row({ space: DesignConstants.SPACING.MD2 }) {
+                    ForEach(row, (moment: MomentItem) => {
+                      MomentWallCard({
+                        moment: moment,
+                        priority: rowIndex === 0,
+                        cardAspectRatio: this.getWallColumns() === 2 ? 8 / 9 : 1.333,
+                        onOpenDetail: (item: MomentItem) => this.openMomentDetail(item),
+                        onImagePreview: (momentId: string, images: string[], index: number) => {
+                          this.previewImage(momentId, images, index);
+                        }
+                      })
+                        .layoutWeight(1)
+                    }, (moment: MomentItem) => moment.moment_id)
+                    if (row.length === 1) {
+                      Blank().layoutWeight(1)
                     }
-                  })
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Top)
                 }
-              }, (moment: MomentItem) => moment.moment_id)
+              }, (row: MomentItem[], rowIndex: number) => 'moment-row-' + rowIndex)
             }
             .width('100%')
             .layoutWeight(1)
-            .columnsTemplate(this.getWallColumns() === 3 ? '1fr 1fr 1fr' : '1fr 1fr')
-            // 卡片墙列/行间距 10（对齐任务口径：web 390 宽下 2 列卡 173×195，列间 10）
-            .columnsGap(DesignConstants.SPACING.MD2)
-            .rowsGap(DesignConstants.SPACING.MD2)
             .padding({
               bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.LG, 0)
             })
-            .cachedCount(4)
             .edgeEffect(EdgeEffect.None)
             .scrollBar(BarState.Off)
-            // 触底加载更多（cursor 分页，P2-3：突破首屏 20 条封顶）
             .onReachEnd(() => { this.loadMoreMoments(); })
             .onDidScroll(() => { this.updateBackToTop(); })
             .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
@@ -515,6 +515,17 @@ export struct MomentsFeedPage {
     .overlay(this.buildBackToTopOverlay(), { align: Alignment.BottomEnd })
     .width('100%')
     .height('100%')
+  }
+
+  /** 当前标签过滤后的瞬间，按双列/三列切行（WaterFlow 在本页卡片上出现行高错位/重叠） */
+  private getVisibleMomentRows(): MomentItem[][] {
+    const list = this.getVisibleMoments();
+    const columns = this.getWallColumns();
+    const rows: MomentItem[][] = [];
+    for (let i = 0; i < list.length; i += columns) {
+      rows.push(list.slice(i, i + columns));
+    }
+    return rows;
   }
 
   private getWallColumns(): number {
