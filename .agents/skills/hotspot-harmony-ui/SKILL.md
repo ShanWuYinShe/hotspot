@@ -126,6 +126,12 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 - 对应 web 长尾软岛化的鸿蒙落点：`MomentDetailPage` 单帖内容包软岛（surfaceIsland/20/shadow/clip），媒体大图圆角 24+shadow、九宫格 16+shadow，反馈容器/粘底操作条按功能线例外保留，加载态用骨架（媒体块+作者行+正文两行）；他人 `ProfilePage` 身份区软岛（20/p16/shadow），私信/已关注/备注按钮 surface 软填、关注 primary；`GroupDetailPage` hero 圆角 24+shadow+clip、Tab 内容一张软岛、行线保留（内容分隔例外）；`AdminOverviewPage` 权限卡/模块行软岛，其余后台页 web-only（N/A 登记）；首页 onboarding/HeroStats/轮播/附近人列表鸿蒙无对应组件（N/A，不强行造页面）。
 - 例外（保留功能边界）：媒体容器/九宫格圆角与阴影、输入框 2vp accent 焦点边、表格行线/内容分隔线、chip/badge、弹层/Sheet、地图控件、hero 封面裁切结构。验证：build + check:theme + 布局树；真机离线时阴影/焦点环/reduced-motion 开启路径标注待真机。
 
+## 地图 marker 契约
+
+- **浏览锚点**是已保存地理坐标的独立 marker：WGS84 → GCJ02 投影后交给 MapKit `MarkerOptions.position`，不得用视口中心图钉或 `showCenterPin` 代表锚点。
+- **地图中心**只放不可交互准星（`map_center_crosshair.svg`），它不承载任何地理语义；任何实体 marker（锚点/用户/群组/瞬间）都必须随底图缩放/平移，禁止固定在屏幕中心。
+- 设置锚点后立即 `updateMarkers()`，并以相机中心（cameraIdle 回写）作为 CTA 落点；验收：平移后锚点 marker 随底图移动，缩放后其屏幕坐标满足以缩放锚点为基准的投影关系。
+
 ## 审计基线与布局陷阱（指针）
 
 - 审计判据与假阳性规律（「固定高度」正确判据、交互反馈承载方式、性能审计基线：LazyForEach 键/cachedCount/@Reusable/Image 约束/事件生命周期）见 `references/audit-baselines.md`。
