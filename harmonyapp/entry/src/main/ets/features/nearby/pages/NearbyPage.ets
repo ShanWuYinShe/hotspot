@@ -16,7 +16,7 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import { ListGroup } from '../../../components/ListGroup';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
-import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, GroupDetailRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { curves } from '@kit.ArkUI';
 import { GlobalStateManager, KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR } from '../../../core/state/GlobalStateManager';
 import type { LocationInfo } from '../../../core/location/LocationUtil';
@@ -392,6 +392,11 @@ export struct NearbyPage {
       Row({ space: DesignConstants.SPACING.MD }) {
         ForEach(this.nearbyGroups.slice(0, NearbyPage.PREVIEW_GROUPS), (group: GroupItem) => {
           GroupCard({ group: group, variant: 'carousel' })
+            .onClick(() => {
+              const param = new GroupDetailRouteParam();
+              param.groupId = group.group?.group_id ?? '';
+              AppRouter.push(PageNames.GROUP_DETAIL, param);
+            })
         }, (group: GroupItem) => group.group?.group_id ?? '')
       }
     }
