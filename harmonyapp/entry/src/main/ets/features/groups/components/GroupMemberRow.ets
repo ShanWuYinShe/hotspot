@@ -18,6 +18,10 @@ export struct GroupMemberRow {
   @Prop roleText: string = '';
   @Prop roleColor: ResourceColor = '';
   @Prop showMenu: boolean = false;
+  /** 内联在成员 Tab 的白色分组卡里时去行级白卡/阴影，对齐 web 单卡多行 */
+  @Prop inlineMode: boolean = false;
+  /** 是否显示「加入于 …」（web 成员列表不显示） */
+  @Prop showJoinedAt: boolean = true;
   palette: AppThemePalette | null = null;
   surfaceBackground: string = '';
   /** 页面构建的菜单（bindMenu 需要 MenuElement[]，动作闭包在页面侧） */
@@ -48,7 +52,7 @@ export struct GroupMemberRow {
             .padding({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF })
             .borderRadius(DesignConstants.SHAPE.CHIP)
 
-          if (this.member.joined_at) {
+          if (this.showJoinedAt && this.member.joined_at) {
             Text(`加入于 ${formatDate(this.member.joined_at)}`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.palette?.textSecondary)
@@ -74,9 +78,9 @@ export struct GroupMemberRow {
     }
     .width('100%')
     .padding(DesignConstants.SPACING.MD)
-    .backgroundColor(this.surfaceBackground)
-    .borderRadius(DesignConstants.RADIUS.XL)
-    .shadow(this.palette?.controlShadow)
-    .margin({ bottom: DesignConstants.SPACING.SM })
+    .backgroundColor(this.inlineMode ? DesignConstants.COLOR.TRANSPARENT : this.surfaceBackground)
+    .borderRadius(this.inlineMode ? 0 : DesignConstants.RADIUS.XL)
+    .shadow(this.inlineMode ? DesignConstants.SHADOW.SMALL : this.palette?.controlShadow)
+    .margin({ bottom: this.inlineMode ? 0 : DesignConstants.SPACING.SM })
   }
 }

@@ -1607,7 +1607,7 @@ export struct GroupDetailPage {
         // 同一份数据（大版优先），切 tab 时由「群组成员」入口行延续上下文。
 
         // 三 Tab（对齐 web TabBar 默认下划线样式：文字 14、active accent + 2px 底线）
-        Row() {
+        Row({ space: DesignConstants.SPACING.MD }) {
           ForEach(['简介', '成员', '公告'], (label: string, index: number) => {
             Column({ space: DesignConstants.SPACING.SM2 }) {
               Text(label)
@@ -1627,11 +1627,13 @@ export struct GroupDetailPage {
                   ? this.getCurrentThemePalette().accentBackground
                   : DesignConstants.COLOR.TRANSPARENT)
             }
-            .layoutWeight(1)
             .alignItems(HorizontalAlign.Center)
             .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
             .onClick(() => {
               this.activeTab = index;
+              if (index === 1 && this.members.length === 0) {
+                void this.fetchGroupMembersSilently();
+              }
               if (index === 2 && this.announcements.length === 0) {
                 this.loadGroupAnnouncements();
               }
@@ -1639,7 +1641,8 @@ export struct GroupDetailPage {
           }, (label: string) => label)
         }
         .width('100%')
-        .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+        .justifyContent(FlexAlign.Start)
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
 
         // 使用 List 布局（扁平风格）
         List() {
@@ -1722,6 +1725,59 @@ export struct GroupDetailPage {
               .alignItems(HorizontalAlign.Start)
               .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
                 top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.MD })
+            }
+          }
+
+          // 成员 Tab：直接渲染成员行（对齐 web 成员列表；原先只靠弹层，切 Tab 会空白）
+          if (this.activeTab === 1) {
+            ListItem() {
+              Row() {
+                Text('成员')
+                  .fontSize(DesignConstants.FONT.SIZE.MD)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                  .fontColor(this.getCurrentThemePalette().textPrimary)
+                Text(`${this.members.length}`)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+                  .margin({ left: DesignConstants.SPACING.XS })
+              }
+              .width('100%')
+              .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG,
+                top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
+            }
+
+            ListItem() {
+              Column() {
+                ForEach(this.members, (member: GroupMemberItem) => {
+                  GroupMemberRow({
+                    member: member,
+                    roleText: this.getRoleDisplayText(member.role),
+                    roleColor: this.getRoleColor(member.role),
+                    showMenu: false,
+                    inlineMode: true,
+                    showJoinedAt: false,
+                    palette: this.getCurrentThemePalette(),
+                    surfaceBackground: this.getCurrentThemePalette().surfaceIsland,
+                    menuItems: this.buildMemberActionMenus(member)
+                  })
+                }, (member: GroupMemberItem) => member.user?.user_id ?? member.joined_at ?? '')
+
+                if (this.members.length === 0) {
+                  EmptyState({
+                    bare: true,
+                    icon: AppIcon.GROUP,
+                    title: this.isLoadingMembers ? '加载成员列表中…' : '暂无成员信息',
+                    fillMode: true
+                  })
+                  .height(200)
+                }
+              }
+              .width('100%')
+              .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+              .borderRadius(DesignConstants.SHAPE.CARD)
+              .shadow(this.getCurrentThemePalette().surfaceShadow)
             }
           }
 
