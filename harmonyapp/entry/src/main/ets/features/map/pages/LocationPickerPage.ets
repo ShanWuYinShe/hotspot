@@ -507,7 +507,10 @@ export struct LocationPickerPage {
     if (this.locationName.length === 0) {
       this.locationName = '当前位置';
     }
-    const wgs84 = CoordinateConverter.convertGcj02ToWgs84(this.centerLat, this.centerLng);
+    // 以当前相机中心为准（与页面中心准星同点）；lastCamera 由 cameraIdle 回写
+    const centerLat = this.lastCameraLat !== 0 ? this.lastCameraLat : this.centerLat;
+    const centerLng = this.lastCameraLng !== 0 ? this.lastCameraLng : this.centerLng;
+    const wgs84 = CoordinateConverter.convertGcj02ToWgs84(centerLat, centerLng);
     const location: LocationInfo = {
       latitude: wgs84.latitude,
       longitude: wgs84.longitude,
@@ -523,6 +526,8 @@ export struct LocationPickerPage {
     }
 
     GlobalStateManager.setBrowseAnchor(location);
+    // 立刻刷新 marker：锚点标记按新地理坐标重绘，而不是停留在旧的选中图钉位置
+    this.updateMarkers();
     // 锚点模式只写好锚点、不关页：用户自己决定何时离开（对齐 Web 地图页 handleConfirm）。
     // location_pick 模式（为创建群组/动态选点）仍需 pop，把结果带回调用页。
     SystemToast.showSuccess('浏览锚点已设置', this.getUIContext());
@@ -771,16 +776,20 @@ export struct LocationPickerPage {
       }));
     }
 
-    if (this.centerLat !== 0 || this.centerLng !== 0) {
+    // 已保存浏览锚点：按经纬度投影的独立 marker（对齐 web MapAnchorMarker）。
+    // 注意不能把它画在地图视口中心——中心准星只表示「地图中心」，锚点是地理坐标。
+    const savedAnchor = AppStorage.get<LocationInfo | null>(KEY_BROWSE_ANCHOR);
+    if (savedAnchor && (savedAnchor.latitude !== 0 || savedAnchor.longitude !== 0)) {
+      const anchorGcj = CoordinateConverter.convertWgs84ToGcj02(savedAnchor.latitude, savedAnchor.longitude);
       nextMarkers.push({
-        id: 'center_pin_selection',
-        latitude: this.centerLat,
-        longitude: this.centerLng,
-        title: '',
-        snippet: '',
+        id: 'browse_anchor',
+        latitude: anchorGcj.latitude,
+        longitude: anchorGcj.longitude,
+        title: '浏览锚点',
+        snippet: savedAnchor.locationName,
         type: 'user',
-        iconKey: 'center_pin',
-        clickable: false
+        iconKey: 'anchor',
+        clickable: true
       });
     }
     this.mapMarkers = nextMarkers;
@@ -893,6 +902,10 @@ export struct LocationPickerPage {
     if (this.showSearchBar) {
       this.closeSearchPanel();
     }
+    if (marker.id === 'browse_anchor') {
+      this.locateBrowseAnchor();
+      return;
+    }
 
     const item = this.renderItemsMap.get(marker.id);
     if (!item || !item.entity) {
@@ -996,6 +1009,15 @@ export struct LocationPickerPage {
         })
           .width('100%')
           .height('100%')
+
+        // 地图中心准星（对齐 web MapCenterCrosshair）：只表示「地图中心」，
+        // 不是任何地理 marker；不可交互，不拦截地图手势。
+        Image($rawfile('map_center_crosshair.svg'))
+          .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
+          .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
+          .align(Alignment.Center)
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no')
 
         // 地图 Toast 提示
         MapToast({ message: this.mapToastMessage, safeAreaTop: this.safeAreaTop, resolvedThemeId: this.resolvedThemeId })

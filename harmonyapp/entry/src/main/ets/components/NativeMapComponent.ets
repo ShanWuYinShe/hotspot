@@ -22,7 +22,7 @@ const TAG: string = 'NativeMapComponent';
 const CLUSTER_DISTANCE_VP: number = 64;
 
 type MapMarkerType = 'user' | 'group' | 'moment' | 'cluster' | 'heat_bucket';
-type MapMarkerIconKey = MapMarkerType | 'center_pin' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
+type MapMarkerIconKey = MapMarkerType | 'center_pin' | 'anchor' | 'user_cluster' | 'group_cluster' | 'moment_cluster';
 type ClusterableMapMarkerType = 'user' | 'group' | 'moment';
 
 export interface MapMarker {
@@ -231,10 +231,11 @@ export struct NativeMapComponent {
 
   private async initMarkerIcons(): Promise<void> {
     // 预加载单点与聚合点的所有 SVG 图标为 PixelMap
-    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'heat_bucket', 'center_pin', 'user_cluster', 'group_cluster', 'moment_cluster'];
+    const iconKeys: string[] = ['user', 'group', 'moment', 'cluster', 'heat_bucket', 'center_pin', 'anchor', 'user_cluster', 'group_cluster', 'moment_cluster'];
     const iconFiles: string[] = [
       'marker_user.svg', 'marker_group.svg', 'marker_moment.svg',
       'marker_mixed_cluster.svg', 'marker_mixed_cluster.svg', 'marker_center_pin.svg',
+      'marker_anchor.svg',
       'marker_user_cluster.svg', 'marker_group_cluster.svg', 'marker_moment_cluster.svg',
     ];
     const hostContext = this.getUIContext().getHostContext();
