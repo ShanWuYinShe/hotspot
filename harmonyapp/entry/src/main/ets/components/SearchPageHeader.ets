@@ -49,18 +49,6 @@ export struct SearchPageHeader {
     return this.getPalette().borderColor;
   }
 
-  aboutToAppear(): void {
-    // 对齐 web /search：进入页面即聚焦输入框；defaultFocus 在页面切换场景不生效，
-    // 用 FocusController 显式请求（等首帧布局完成）。
-    setTimeout(() => {
-      try {
-        this.getUIContext().getFocusController().requestFocus('search-page-input');
-      } catch (_) {
-        // 页面已销毁/输入框不存在时忽略
-      }
-    }, 300);
-  }
-
   @Builder
   private BackCircleButton() {
     // 返回钮统一走 SurfaceIconButton（与 SystemPageHeader 同款凸起中性 40vp：
@@ -90,7 +78,6 @@ export struct SearchPageHeader {
         })
 
       TextInput({ placeholder: this.placeholder, text: this.keyword })
-        .id('search-page-input')
         .layoutWeight(1)
         .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
         // 完全透明化：消除 TextInput 系统主题默认背景/圆角溢出
