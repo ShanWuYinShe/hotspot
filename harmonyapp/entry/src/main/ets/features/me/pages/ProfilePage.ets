@@ -753,7 +753,39 @@ export struct ProfilePage {
   }
 
   build() {
-    NavDestination() {
+    // 作为底部 Tab 根页时不能包 NavDestination：宿在 Navigation 之外会按系统页面卡片
+    // 渲染成带外边距/圆角的浮层，标题与状态栏区域宽度不铺满（与 Web 全幅页头不一致）。
+    // 仅「他人主页」这种推入场景才需要 NavDestination 提供路由壳。
+    if (this.isExternalProfileMode()) {
+      NavDestination() {
+        this.buildProfileContent()
+      }
+      .width('100%')
+      .height('100%')
+      .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      .hideTitleBar(true)
+      .onReady((context: NavDestinationContext) => {
+        this.pathStack = context.pathStack;
+        const params = context.pathInfo?.param as ProfilePageParams | undefined;
+        const routeUserId = params?.userId ?? params?.user_id ?? '';
+        const selfUserId = this.currentUser?.user_id ?? '';
+        if (routeUserId && routeUserId !== selfUserId) {
+          this.viewedUserId = routeUserId;
+          this.loadViewedUserProfile();
+        } else {
+          this.viewedUserId = '';
+          this.viewedUserProfile = null;
+          this.viewedUserLoading = false;
+          this.viewedUserError = '';
+        }
+      })
+    } else {
+      this.buildProfileContent()
+    }
+  }
+
+  @Builder
+  private buildProfileContent() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
         Stack({ alignContent: Alignment.Top }) {
           Column() {
@@ -864,23 +896,6 @@ export struct ProfilePage {
         backgroundColor: this.getCurrentThemePalette().sheetBackground
       })
       }
-    }
-    .hideTitleBar(true)
-    .onReady((context: NavDestinationContext) => {
-      this.pathStack = context.pathStack;
-      const params = context.pathInfo?.param as ProfilePageParams | undefined;
-      const routeUserId = params?.userId ?? params?.user_id ?? '';
-      const selfUserId = this.currentUser?.user_id ?? '';
-      if (routeUserId && routeUserId !== selfUserId) {
-        this.viewedUserId = routeUserId;
-        this.loadViewedUserProfile();
-      } else {
-        this.viewedUserId = '';
-        this.viewedUserProfile = null;
-        this.viewedUserLoading = false;
-        this.viewedUserError = '';
-      }
-    })
   }
 
   /** 胶囊内的无底色图标钮（外框由右侧玻璃胶囊统一承担） */
@@ -1265,9 +1280,6 @@ export struct ProfilePage {
         .scrollBar(BarState.Off)
       }
     }
-    .width('100%')
-    .height('100%')
-    .backgroundColor(this.getCurrentThemePalette().pageBackground)
   }
 
 
