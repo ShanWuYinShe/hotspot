@@ -80,8 +80,6 @@ export struct SearchPageHeader {
       TextInput({ placeholder: this.placeholder, text: this.keyword })
         .layoutWeight(1)
         .height(DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT)
-        // 对齐 web /search：进入页面即聚焦输入框（web 自动 focus 显示 accent 焦点环）
-        .defaultFocus(true)
         // 完全透明化：消除 TextInput 系统主题默认背景/圆角溢出
         .backgroundColor(DesignConstants.COLOR.TRANSPARENT)
         .background(DesignConstants.COLOR.TRANSPARENT)
