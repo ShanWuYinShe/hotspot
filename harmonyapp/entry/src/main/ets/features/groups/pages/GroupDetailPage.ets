@@ -1504,6 +1504,29 @@ export struct GroupDetailPage {
             // 对齐 web GroupHero 无 banner 分支：surface-island 浅色卡 + 深色标题
             .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
 
+          // 右上：群组图标（对齐 web 无 banner 分支的 accent-soft Users 方块）
+          // 固定高度内层 Stack：避免 height('100%') 参与父 Stack 测量把 hero 撑满整页
+          Stack({ alignContent: Alignment.TopEnd }) {
+            Row() {
+              LucideIcon({
+                icon: AppIcon.GROUP,
+                iconSize: DesignConstants.COMPONENT.ICON_SIZE_LG,
+                color: this.getCurrentThemePalette().accentBackground
+              })
+            }
+            .width(DesignConstants.SPACING.XXL)
+            .height(DesignConstants.SPACING.XXL)
+            .justifyContent(FlexAlign.Center)
+            .borderRadius(DesignConstants.RADIUS.LG)
+            .backgroundColor(this.getCurrentThemePalette().accentMuted)
+            .margin({ right: DesignConstants.SPACING.LG })
+            // 下移避开右上浮层更多钮（Stack TopEnd 下 margin-top 实测不生效，用 translate）
+            .translate({ y: DesignConstants.SPACING.XXL + DesignConstants.SPACING.XXL + DesignConstants.SPACING.XXL })
+          }
+          .width('100%')
+          .height(DesignConstants.LAYOUT.COVER_HEIGHT)
+          .hitTestBehavior(HitTestMode.Transparent)
+
           // 左下：分类胶囊 + 群名（对齐前端封面底部：玻璃徽章 + h1 白字）
           Column({ space: DesignConstants.SPACING.SM }) {
             if (this.groupInfo?.tags && this.groupInfo.tags.length > 0) {
