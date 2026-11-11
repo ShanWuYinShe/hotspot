@@ -165,7 +165,9 @@ export struct ProfilePage {
       if (this.isDestroyed) return;
       if (response.code === 0 && response.data?.user?.user?.user_id) {
         this.viewedUserProfile = response.data.user;
-        this.viewedUserMoments = response.data.recent_moments?.items ?? [];
+        // web 他人主页「最近瞬间」只展示带图瞬间；文字瞬间不计入画廊
+        this.viewedUserMoments = (response.data.recent_moments?.items ?? [])
+          .filter((moment: MomentItem) => (moment.images?.length ?? 0) > 0);
         InteractionStateStore.getInstance().patchUserFromItem(this.viewedUserProfile);
         // 播种：patch 已写入 store，读取快照恢复本页关系态
         const existing = interactionEventHub.getUserState(this.viewedUserProfile.user?.user_id ?? '');
@@ -971,11 +973,11 @@ export struct ProfilePage {
           this.buildExternalPillButton(AppIcon.SHARE, '分享资料', () => { this.shareViewedUser(); })
         }
         Row() {
-          LucideIcon({
-            icon: AppIcon.MORE,
-            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-            color: this.getCurrentThemePalette().textPrimary
-          })
+          // 系统符号 more 在端上渲染成四宫格，与 web 横向省略号不一致；用文本点阵兜底
+          Text('…')
+            .fontSize(DesignConstants.FONT.SIZE.XL)
+            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
+            .fontColor(this.getCurrentThemePalette().textPrimary)
         }
         .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
         .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
