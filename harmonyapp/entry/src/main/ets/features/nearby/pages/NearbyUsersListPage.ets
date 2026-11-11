@@ -283,8 +283,8 @@ export struct NearbyUsersListPage {
           // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
           titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
-          showBackButton: true,
-          onBack: () => { AppRouter.pop(); },
+          // 对齐 web 移动端 /nearby/people：底栏仍在，页头不显示返回钮（标题左对齐）
+          showBackButton: false,
           backgroundVariant: 'transparent',
           hasBelowContent: true,
           showDivider: false
@@ -310,8 +310,8 @@ export struct NearbyUsersListPage {
           }
         }
 
-        // 筛选行（对齐 web nearby/people）：左侧兴趣分类 + 右侧「排序 距离 ⌄」同一行
-        Row({ space: DesignConstants.SPACING.SM }) {
+        // 筛选区（对齐 web nearby/people 移动端 below）：分类胶囊占整行，排序在其下方右对齐
+        Column({ space: DesignConstants.SPACING.SM }) {
           Scroll() {
             TabsPillGroup({
               variant: 'pills',
@@ -328,13 +328,14 @@ export struct NearbyUsersListPage {
               }
             })
           }
+          .width('100%')
           .scrollable(ScrollDirection.Horizontal)
           .scrollBar(BarState.Off)
           .align(Alignment.Start)
-          .layoutWeight(1)
           .clip(true)
 
           Row({ space: DesignConstants.SPACING.XS }) {
+            Blank()
             Text('排序')
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .fontColor(this.getCurrentThemePalette().textTertiary)
@@ -347,9 +348,10 @@ export struct NearbyUsersListPage {
               paletteRole: 'textSecondary'
             })
           }
-          .flexShrink(0)
+          .width('100%')
+          .justifyContent(FlexAlign.End)
           .alignItems(VerticalAlign.Center)
-          .padding({ left: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
+          .padding({ right: DesignConstants.SPACING.LG })
           .accessibilityText('排序方式')
           .bindMenu([
             { value: '距离', action: () => this.onSortSelected(0) },
@@ -358,7 +360,6 @@ export struct NearbyUsersListPage {
           ])
         }
         .width('100%')
-        .alignItems(VerticalAlign.Center)
         .padding({ top: DesignConstants.SPACING.MD, bottom: DesignConstants.SPACING.SM })
         }
         .border({

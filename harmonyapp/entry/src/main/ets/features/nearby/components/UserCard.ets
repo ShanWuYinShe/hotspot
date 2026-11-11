@@ -237,7 +237,6 @@ export struct UserCard {
         shape: 'circle',
         decorative: true
       })
-        .shadow(this.getPalette().surfaceShadow)
 
       Text(this.getNickname())
         .fontSize(DesignConstants.FONT.SIZE.MD)

@@ -215,8 +215,8 @@ export struct NearbyGroupsListPage {
           // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
           titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
-          showBackButton: true,
-          onBack: () => { AppRouter.pop(); },
+          // 对齐 web 移动端 /nearby/groups：底栏仍在，页头不显示返回钮
+          showBackButton: false,
           backgroundVariant: 'transparent',
           hasBelowContent: true,
           showDivider: false

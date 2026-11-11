@@ -555,5 +555,5 @@ export struct MomentsFeedPage {
 
 @Builder
 export function MomentsFeedPageBuilder() {
-  MomentsFeedPage({ showBackButton: true })
+  MomentsFeedPage({ showBackButton: false })
 }
