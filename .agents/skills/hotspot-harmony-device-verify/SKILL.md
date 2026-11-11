@@ -20,6 +20,21 @@ description: hotspot 鸿蒙端模拟器实测流程：项目事实与测试账�
 
 **调试后端地址**：debug 构建按设备类型选：模拟器 `http://10.0.2.2:8888`，真机 `http://192.168.0.100:8888`（见 `AppConstants.ets` 的 `DEV_SERVER`）。模拟器还需额外设置 `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`：动态封面是后端**持久化 S3 预签名 URL**（本地签发 host 为 `127.0.0.1:8888`，签名含 host），不能改写成 `10.0.2.2`，所以图片走 rport 回宿主；否则 nginx 对封面返回 **403 SignatureDoesNotMatch**、页面显示占位（头像走请求时动态签名，不受影响）。判据：`docker logs hotspot-nginx-1 | grep '/s3/'` 封面响应 200；页面封面不再长期占位。模拟器重启后转发条目不自动恢复，装机前先设好并以 `hdc fport ls` 出现 `[Reverse]` 为准。
 
+## 系统权限弹窗（模拟器，会阻断 uitest）
+
+模拟器上的定位/通知等**系统权限弹窗不属于应用窗口**，`uitest uiInput click` / `uinput -T -c` 都点不中。定位权限还可能在触发 `getCurrentLocation` 时反复弹出，必须用 `atm` 在端上直接授权（仅 debug HAP token 可修改）：
+
+```bash
+HDC=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc
+TOKEN=$($HDC -t 127.0.0.1:5555 shell "bm dump -n com.lsyb.social" | grep -m1 'accessTokenId:' | sed 's/[^0-9]//g')
+$HDC -t 127.0.0.1:5555 shell "atm perm -g -i $TOKEN -p ohos.permission.LOCATION"
+$HDC -t 127.0.0.1:5555 shell "atm perm -g -i $TOKEN -p ohos.permission.APPROXIMATELY_LOCATION"
+$HDC -t 127.0.0.1:5555 shell aa force-stop com.lsyb.social
+$HDC -t 127.0.0.1:5555 shell aa start -b com.lsyb.social -a EntryAbility
+```
+
+判据：重启后进入附近不再弹「允许 HotSpot 访问你的位置」，且 `atm perm` 输出 `Success`。重装 HAP 后 token 会变，需重新取 token 再授权。
+
 ## 测试账号与造数（本地 dev 库）
 
 | 登录名 | 密码 | 角色 | user_id |
