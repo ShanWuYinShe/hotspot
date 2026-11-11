@@ -605,12 +605,8 @@ export struct GroupPage {
         }
         .width('100%')
         .height('100%')
-        .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
-          height: '68%',
-          showClose: false,
-          dragBar: true,
-          backgroundColor: this.getCurrentThemePalette().sheetBackground
-        })
+        // 两个 sheet 不能挂同一节点（实测第二个 bindSheet 会让第一个也不弹）；
+        // 申请 sheet 挂内容 Column，邀请 sheet 挂 NavDestination 根
         .bindSheet($$this.showMyApplicationsSheet, this.buildMyApplicationsSheet(), {
           height: '68%',
           showClose: false,
@@ -620,6 +616,15 @@ export struct GroupPage {
       }
     }
     .hideTitleBar(true)
+    // bindSheet 挂到 NavDestination 根节点；挂在 PageShellContainer 内的 Column 上
+    // 实测点击后不弹层（状态已置 true，但 sheet 不出现）
+    .bindSheet($$this.showMyInvitesSheet, this.buildMyInvitesSheet(), {
+      height: '68%',
+      showClose: false,
+      dragBar: true,
+      backgroundColor: this.getCurrentThemePalette().sheetBackground
+    })
+
   }
 
   /** 工具行（群数 + 在线数 + 搜索），对齐 web SectionGroups 的统计/搜索行 */
