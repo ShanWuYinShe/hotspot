@@ -212,11 +212,11 @@ export struct NearbyPage {
         SystemPageHeader({
           title: '附近',
           subtitle: this.getLocationSubtitle(),
-          // 附近域页头标题对齐 web 18px/600（audit §2.3 页头分档）
+          // 对齐 web nearby/+page：H1 titleSize 2xl(24)/600，位置副标题与标题同行
           subtitleIcon: AppIcon.LOCATION,
           subtitleCapsule: true,
           subtitleInline: true,
-          titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
+          titleSize: DesignConstants.FONT.SIZE.XXL,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           backgroundVariant: 'transparent'
         }) {
@@ -225,13 +225,13 @@ export struct NearbyPage {
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
-              kind: 'surface',
+              kind: 'neutral',
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
               accessibilityLabel: '地图',
-              kind: 'surface',
+              kind: 'neutral',
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })
           }
@@ -493,11 +493,6 @@ export struct NearbyPage {
         .alignItems(VerticalAlign.Center)
         .layoutWeight(1)
 
-        LucideIcon({
-          icon: AppIcon.ARROW_RIGHT,
-          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-          paletteRole: 'textSecondary'
-        })
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)

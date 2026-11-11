@@ -296,14 +296,14 @@ export struct NearbyUsersListPage {
             SurfaceIconButton({
               icon: AppIcon.SEARCH,
               accessibilityLabel: '搜索',
-              kind: 'surface',
+              kind: 'neutral',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.SEARCH)
             })
             SurfaceIconButton({
               icon: AppIcon.MAP,
               accessibilityLabel: '地图浏览',
-              kind: 'surface',
+              kind: 'neutral',
               buttonSize: DesignConstants.LAYOUT.ICON_BUTTON_SIZE,
               onPress: () => AppRouter.push(PageNames.LOCATION_PICKER)
             })
