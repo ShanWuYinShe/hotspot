@@ -124,7 +124,7 @@ export struct MomentWallCard {
   }
 
   @Builder
-  private buildAuthorRow() {
+  private buildAuthorRow(showTime: boolean = true) {
     Row({ space: DesignConstants.SPACING.SM }) {
       SystemAvatar({
         decorative: true,
@@ -155,7 +155,7 @@ export struct MomentWallCard {
 
       // 归属行只留时间（2026-10-20 跨端一致，对齐 web MomentCard）：卡片窄，
       // 位置+时间会把昵称挤成 1 个字；位置属于详情页信息。
-      if (formatCardTime(this.moment.created_at).length > 0) {
+      if (showTime && formatCardTime(this.moment.created_at).length > 0) {
         Text(formatCardTime(this.moment.created_at))
           .fontSize(DesignConstants.FONT.SIZE.XS2)
           .fontColor(this.mediaActive ? DesignConstants.COLOR.WHITE : this.getPalette().textSecondary)
@@ -299,7 +299,8 @@ export struct MomentWallCard {
         .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         Column({ space: DesignConstants.SPACING.SM }) {
-          this.buildAuthorRow()
+          // 文字卡日期已在右上角角标，作者行不再重复时间（避免挤压昵称）
+          this.buildAuthorRow(false)
           this.buildActions()
         }
         .width('100%')
