@@ -67,6 +67,8 @@ export struct SystemPageHeader {
    * 仅用于「附近」这类以位置为副标题的页面，默认关闭保持其他页纯文本副标题。
    */
   @Prop subtitleCapsule: boolean = false;
+  /** 副标题与标题同一行（对齐 web 附近枢纽：标题 + 位置 pill 同行，而不是上下堆叠）。 */
+  @Prop subtitleInline: boolean = false;
   /** 标题对齐，默认 Start；详情页居中标题用 Center。 */
   @Prop titleAlign: TextAlign = TextAlign.Start;
   /** 标题字号，默认 FONT.SIZE.XL（20）。顶级 Tab 页对齐前端传 XXL（24）。 */
@@ -176,6 +178,47 @@ export struct SystemPageHeader {
     })
   }
 
+  @Builder
+  private buildTitleText() {
+    Text(this.title)
+      .fontSize(this.titleSize)
+      .fontWeight(this.titleWeight)
+      // leading-none：前端标题行高恒等于字号，行盒不被字体默认行高撑高
+      .lineHeight(this.titleSize)
+      .fontColor(this.getPalette().textPrimary)
+      .maxLines(1)
+      .textOverflow({ overflow: TextOverflow.Ellipsis })
+      .textAlign(this.titleAlign)
+  }
+
+  @Builder
+  private buildSubtitleRow() {
+    Row({ space: DesignConstants.SPACING.XS }) {
+      if (this.subtitleIcon !== null) {
+        LucideIcon({
+          icon: this.subtitleIcon,
+          iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+          color: this.getPalette().accentBackground
+        })
+      }
+      Text(this.subtitle)
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+    }
+    .alignItems(VerticalAlign.Center)
+    .margin({ top: this.subtitleInline ? 0 : DesignConstants.SPACING.XS })
+    .padding(this.subtitleCapsule
+      ? { left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF }
+      : 0)
+    .borderRadius(this.subtitleCapsule ? DesignConstants.RADIUS.FULL : 0)
+    .backgroundColor(this.subtitleCapsule ? this.getPalette().surfaceIsland : DesignConstants.COLOR.TRANSPARENT)
+    .border(this.subtitleCapsule
+      ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor }
+      : { width: 0 })
+  }
+
   build() {
     Column() {
       Row({ space: DesignConstants.SPACING.SM }) {
@@ -209,44 +252,20 @@ export struct SystemPageHeader {
           .alignItems(VerticalAlign.Center)
         }
 
-        // 标题区：标题 + 可选副标题
-        // layoutWeight(1) 占据中间空间；居中标题时容器整体居中。
+        // 标题区：标题 + 可选副标题（subtitleInline 时与标题同行，对齐 web 附近枢纽位置 pill）
         Column() {
-          Text(this.title)
-            .fontSize(this.titleSize)
-            .fontWeight(this.titleWeight)
-            // leading-none：前端标题行高恒等于字号，行盒不被字体默认行高撑高
-            .lineHeight(this.titleSize)
-            .fontColor(this.getPalette().textPrimary)
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .textAlign(this.titleAlign)
-
-          if (this.subtitle.length > 0) {
-            Row({ space: DesignConstants.SPACING.XS }) {
-              if (this.subtitleIcon !== null) {
-                LucideIcon({
-                  icon: this.subtitleIcon,
-                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                  color: this.getPalette().accentBackground
-                })
-              }
-              Text(this.subtitle)
-                .fontSize(DesignConstants.FONT.SIZE.XS)
-                .fontColor(this.subtitleColor.length > 0 ? this.subtitleColor : this.getPalette().textSecondary)
-                .maxLines(1)
-                .textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (this.subtitleInline && this.subtitle.length > 0) {
+            Row({ space: DesignConstants.SPACING.SM }) {
+              this.buildTitleText()
+              this.buildSubtitleRow()
             }
             .alignItems(VerticalAlign.Center)
-            .margin({ top: DesignConstants.SPACING.XS })
-            .padding(this.subtitleCapsule
-              ? { left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM, top: DesignConstants.SPACING.HALF, bottom: DesignConstants.SPACING.HALF }
-              : 0)
-            .borderRadius(this.subtitleCapsule ? DesignConstants.RADIUS.FULL : 0)
-            .backgroundColor(this.subtitleCapsule ? this.getPalette().surfaceIsland : DesignConstants.COLOR.TRANSPARENT)
-            .border(this.subtitleCapsule
-              ? { width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getPalette().borderColor }
-              : { width: 0 })
+            .width('100%')
+          } else {
+            this.buildTitleText()
+            if (this.subtitle.length > 0) {
+              this.buildSubtitleRow()
+            }
           }
         }
         .layoutWeight(1)
