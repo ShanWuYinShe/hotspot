@@ -42,7 +42,6 @@ export struct MomentWallCard {
   @State private socialState: MomentSocialState | undefined = undefined;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
   @State private likePopped: boolean = false;
-  @State private favoritePopped: boolean = false;
   /** R2 整卡图片卡：是否有图（false = fallback，footer 换主题文字色） */
   @State private mediaActive: boolean = true;
 
@@ -75,11 +74,6 @@ export struct MomentWallCard {
   private isLikedByMe(): boolean {
     const state = this.getMomentState();
     return isMomentLikedByReactions(state?.reactions ?? this.moment.reactions);
-  }
-
-  private isFavorited(): boolean {
-    const state = this.getMomentState();
-    return state?.is_favorited ?? this.moment.is_favorited ?? false;
   }
 
   private getLikeCount(): number {
@@ -216,35 +210,6 @@ export struct MomentWallCard {
         })
       }
       .alignItems(VerticalAlign.Center)
-
-      Blank()
-
-      // 收藏
-      LucideIcon({
-        icon: this.isFavorited() ? AppIcon.BOOKMARK_FILL : AppIcon.BOOKMARK,
-        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-        color: this.mediaActive
-          ? (this.isFavorited() ? this.getPalette().accentBackground : DesignConstants.COLOR.WHITE)
-          : (this.isFavorited() ? this.getPalette().accentBackground : this.getPalette().textSecondary)
-      })
-      .id(`${NearbyImageCard.CHILD_CONTROL_PREFIX}favorite-${this.moment.moment_id}`)
-      .onClick(() => {
-        const wasFavorited: boolean = this.isFavorited();
-        if (!wasFavorited) {
-          MotionUtil.statePop(this.getUIContext(),
-            () => { this.favoritePopped = true; },
-            () => { this.favoritePopped = false; });
-        }
-        interactionActions.toggleMomentFavorite(this.moment.moment_id);
-      })
-      .scale({ x: MotionUtil.popScale(this.favoritePopped), y: MotionUtil.popScale(this.favoritePopped) })
-      .accessibilityText(this.isFavorited() ? '取消收藏' : '收藏')
-      .responseRegion({
-        x: -DesignConstants.SPACING.MD2,
-        y: -DesignConstants.SPACING.MD2,
-        width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
-        height: DesignConstants.LAYOUT.MIN_HIT_TARGET
-      })
     }
     .width('100%')
     .alignItems(VerticalAlign.Center)
@@ -326,6 +291,7 @@ export struct MomentWallCard {
     if (this.getCoverUrl().length === 0) {
       this.buildTextCard()
     } else {
+      Stack({ alignContent: Alignment.TopEnd }) {
       NearbyImageCard({
         imageUrl: this.getCoverUrl(),
         priority: this.priority,
@@ -367,6 +333,27 @@ export struct MomentWallCard {
           bottom: DesignConstants.SPACING.MD3
         })
       }
+
+      // 右上角时间徽章（对齐 web MomentCard：图片卡与文字卡都在右上角显示时间）
+      if (formatCardTime(this.moment.created_at).length > 0) {
+        Text(formatCardTime(this.moment.created_at))
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontColor(DesignConstants.COLOR.WHITE)
+          .backgroundColor(DesignConstants.COLOR.MEDIA_SCRIM_STRONG)
+          .borderRadius(DesignConstants.RADIUS.FULL)
+          .padding({
+            left: DesignConstants.SPACING.SM,
+            right: DesignConstants.SPACING.SM,
+            top: DesignConstants.SPACING.THREE,
+            bottom: DesignConstants.SPACING.THREE
+          })
+          .margin({ top: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2 })
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no')
+      }
+      }
+      .width('100%')
     }
   }
 }
