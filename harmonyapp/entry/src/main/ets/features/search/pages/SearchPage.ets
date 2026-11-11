@@ -973,7 +973,8 @@ export struct SearchPage {
                     .maxLines(1)
                     .textOverflow({ overflow: TextOverflow.Ellipsis })
                   LucideIcon({
-                    icon: AppIcon.ARROW_UP,
+                    // 话题行是「进入话题搜索」而非展开，web 为右箭头
+                    icon: AppIcon.ARROW_RIGHT,
                     iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
                     color: this.getCurrentThemePalette().textSecondary
                   })
