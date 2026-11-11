@@ -535,6 +535,17 @@ export struct MomentDetailPage {
     return state ? state.likes_count : sumReactionCounts(moment.reactions);
   }
 
+  /** 有封面图/位置占位 hero 时内容贴顶；纯文字动态无 hero，需为浮层控件让出顶部安全区 */
+  private hasHeroArea(): boolean {
+    const moment = this.moment;
+    if (!moment) {
+      return false;
+    }
+    const hasImages: boolean = (moment.images?.length ?? 0) > 0;
+    const hasLocation: boolean = (moment.location?.location_name ?? '').length > 0;
+    return hasImages || hasLocation;
+  }
+
   build() {
     NavDestination() {
     PageShellContainer({ variant: 'narrow', currentBreakpoint: this.currentBreakpoint, noHorizontalPadding: true }) {
@@ -570,6 +581,12 @@ export struct MomentDetailPage {
                 .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
               }
               .width('100%')
+              .padding({
+                top: this.hasHeroArea() ? 0 : SafeAreaUtils.resolveTopPadding(
+                  this.safeAreaTop,
+                  DesignConstants.LAYOUT.ICON_BUTTON_SIZE + DesignConstants.SPACING.XXL
+                )
+              })
               .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
               .opacity(this.enterOpacity)
               .translate({ y: this.enterOffset })
@@ -590,6 +607,7 @@ export struct MomentDetailPage {
       }
       .width('100%')
       .height('100%')
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
       }
       // 删除动态二次确认（作者视角，danger 范式对齐 GroupCard 退群确认）
       SystemDialog({
