@@ -78,10 +78,12 @@ export struct NearbyUsersListPage {
     return null;
   }
 
-  /** 位置行副标题（对齐前端 nearby 页 subtitle：{locationName} · 5km 内 / 5km 内） */
+  /** 位置行副标题（对齐前端 pageSubtitle：{locationName} · 5km 内 / 5km 内 · 实时更新，加载完成后追加 · N 人） */
   private getLocationSubtitle(): string {
     const name = (this.browseAnchor ?? this.currentLocation)?.locationName ?? '';
-    return name.length > 0 ? `${name} · 5km 内` : '5km 内';
+    const base = name.length > 0 ? `${name} · 5km 内` : '5km 内 · 实时更新';
+    const countSuffix = (!this.isLoading && this.users.length > 0) ? ` · ${this.users.length} 人` : '';
+    return base + countSuffix;
   }
 
   /**
