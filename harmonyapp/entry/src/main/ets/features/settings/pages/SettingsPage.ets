@@ -778,6 +778,8 @@ export struct SettingsPage {
           titleSize: DesignConstants.FONT.SIZE.LG_PLUS,
           titleWeight: DesignConstants.FONT.WEIGHT.SEMIBOLD,
           subtitle: '管理你的账号偏好、主题外观与系统选项',
+          // 对齐 web /settings：integrated PageHeader 副标题与标题同一行
+          subtitleInline: true,
           showBackButton: true,
           onBack: () => { AppRouter.pop(); }
         })
