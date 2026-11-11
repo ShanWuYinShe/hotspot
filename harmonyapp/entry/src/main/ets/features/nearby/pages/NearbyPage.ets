@@ -347,22 +347,22 @@ export struct NearbyPage {
   .height('100%')
   }
 
-  /** 附近瞬间双列预览（按 2 条切行，行内 layoutWeight 均分；最后一行单卡补 Blank） */
-  private getMomentPreviewRows(): MomentItem[][] {
+  /** 附近瞬间双列瀑布流：按奇偶分两列，文字卡高于图片卡时各自堆叠（对齐 web masonry） */
+  private getMomentPreviewColumns(): MomentItem[][] {
     const list: MomentItem[] = this.nearbyMoments.slice(0, NearbyPage.PREVIEW_MOMENTS);
-    const rows: MomentItem[][] = [];
-    for (let i = 0; i < list.length; i += 2) {
-      rows.push(list.slice(i, i + 2));
+    const columns: MomentItem[][] = [[], []];
+    for (let i = 0; i < list.length; i++) {
+      columns[i % 2].push(list[i]);
     }
-    return rows;
+    return columns;
   }
 
   @Builder
   private buildMomentPreview() {
-    Column({ space: DesignConstants.SPACING.MD }) {
-      ForEach(this.getMomentPreviewRows(), (rowMoments: MomentItem[], rowIndex: number) => {
-        Row({ space: DesignConstants.SPACING.MD }) {
-          ForEach(rowMoments, (moment: MomentItem) => {
+    Row({ space: DesignConstants.SPACING.MD }) {
+      ForEach(this.getMomentPreviewColumns(), (columnMoments: MomentItem[], columnIndex: number) => {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          ForEach(columnMoments, (moment: MomentItem) => {
             MomentWallCard({
               moment: moment,
               cardAspectRatio: NearbyPage.MOMENT_PREVIEW_ASPECT_RATIO,
@@ -372,18 +372,15 @@ export struct NearbyPage {
                 AppRouter.push(PageNames.MOMENT_DETAIL, param);
               }
             })
-              .layoutWeight(1)
+              .width('100%')
           }, (moment: MomentItem) => moment.moment_id)
-          if (rowMoments.length === 1) {
-            Blank()
-              .layoutWeight(1)
-          }
         }
-        .width('100%')
-        .alignItems(VerticalAlign.Top)
-      }, (rowMoments: MomentItem[], rowIndex: number) => `nearby-moment-row-${rowIndex}`)
+        .layoutWeight(1)
+        .alignItems(HorizontalAlign.Start)
+      }, (columnMoments: MomentItem[], columnIndex: number) => `nearby-moment-col-${columnIndex}`)
     }
     .width('100%')
+    .alignItems(VerticalAlign.Top)
   }
 
   /** 附近群组横滑卡（对齐 web GroupCarousel：140×140 方形图卡、横向滚动） */
