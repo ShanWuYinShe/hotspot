@@ -282,7 +282,7 @@ export struct TabsPillGroup {
     }) {
       ForEach(this.tabs, (tab: TabItem, index: number) => {
         this.buildTab(tab, index)
-      }, (tab: TabItem, index: number) => `${tab.label}-${index}`)
+      }, (tab: TabItem, index: number) => `${tab.label}-${index}-${tab.count ?? 0}`)
     }
     // 自由宽度不设 width：由内容撑开（外层可套 Scroll 横向滚动，对齐前端 overflow-x-auto 胶囊行）；
     // 换行模式铺满容器；等宽分段占满容器
