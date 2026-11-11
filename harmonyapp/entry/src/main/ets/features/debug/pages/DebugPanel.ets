@@ -145,9 +145,12 @@ export struct DebugPanel {
               .width('100%')
               Row({ space: DesignConstants.SPACING.SM }) {
                 Text('User ID').fontColor(this.getCurrentThemePalette().textSecondary)
-                Blank()
-                Text(this.currentUserId || 'N/A').maxLines(1)
+                // 30+ 字符 user_id：用 layoutWeight 让文本收缩并省略，避免溢出到屏幕外把复制按钮挤没
+                Text(this.currentUserId || 'N/A')
+                  .maxLines(1)
                   .textOverflow({ overflow: TextOverflow.Ellipsis })
+                  .textAlign(TextAlign.End)
+                  .layoutWeight(1)
                   .fontColor(this.getCurrentThemePalette().textPrimary)
                 SurfaceIconButton({
                   icon: AppIcon.COPY,
