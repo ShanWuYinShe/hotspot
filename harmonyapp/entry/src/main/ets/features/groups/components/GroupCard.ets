@@ -501,6 +501,7 @@ export struct GroupCard {
     .backgroundColor(this.getPalette().surfaceIsland)
     .borderRadius(DesignConstants.SHAPE.CARD)
     .clip(true)
+    .onClick(() => this.openGroupDetail())
   }
 
   @Builder
