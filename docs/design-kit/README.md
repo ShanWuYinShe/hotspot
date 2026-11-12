@@ -2,9 +2,11 @@
 
 Web（SvelteKit + Tailwind）与 HarmonyOS（ArkTS）共用的 UI 设计规范包，用于：
 
-- 作为双端 UI 对齐的**单一事实源**（token 由代码生成，不手工维护第二份）；
-- 导入 Figma / Stitch 做设计迭代与交付；
+- 作为双端 UI 对齐的 **token 事实源**（token 由代码生成，不手工维护第二份）；
+- 设计稿本体托管在 **Figma / Stitch**（页面截图只作为上传素材，不入库）；
 - 后续新增页面/组件时按本包的 token 与页面清单对齐。
+
+> 仓库只保留 token、生成脚本与文档；`pages/` 截图由脚本生成到 `.workwork/design-kit/pages`（git 忽略），上传到 Figma/Stitch 后即可删除本地副本。
 
 ## 目录
 
@@ -14,7 +16,7 @@ Web（SvelteKit + Tailwind）与 HarmonyOS（ArkTS）共用的 UI 设计规范�
 | `tokens.json` | 合并后的完整 token（global + 6 个主题模式 set），供脚本/其他工具消费 |
 | `tokens/global.json` | 与主题无关的 token：字体、字重、行高、圆角、间距、边框、透明度、动效、模糊、z-index、鸿蒙常量对照 |
 | `tokens/themes/<theme>-<mode>.json` | 6 个主题模式 set（vibrant/forest/inkwash × light/dark），DTCG 格式，可直接导入 Figma Tokens Studio |
-| `pages/` | 页面截图：`web-*.png`（390×844 实时页面）、`app-*.jpg`（HarmonyOS 模拟器/真机） |
+| `pages/`（不入库） | 页面截图临时产物：`web-*.png`（390×844 实时页面）、`app-*.jpg`（HarmonyOS 模拟器/真机）；由 `capture-pages.sh` 生成到 `.workwork/design-kit/pages`，用于上传 Figma/Stitch |
 
 ## 重新生成
 
@@ -23,7 +25,7 @@ Token 与规范页均由脚本从代码生成，**不要手工编辑 `tokens.jso
 ```bash
 node scripts/design-kit/build-tokens.mjs     # 解析 frontend themes/semantic/shared + harmonyapp DesignConstants
 node scripts/design-kit/build-ui-kit.mjs     # 生成 docs/design-kit/ui-kit.html
-bash scripts/design-kit/capture-pages.sh     # 可选：重新捕获 Web 390×844 页面截图（需本地 compose 与 QA 登录态）
+bash scripts/design-kit/capture-pages.sh     # 可选：重捕 Web 390×844 截图到 .workwork/design-kit/pages（需本地 compose 与 QA 登录态）
 ```
 
 Token 源头：
@@ -37,7 +39,7 @@ Token 源头：
 2. 安装 **Tokens Studio for Figma** 插件，导入：
    - `tokens/global.json`（一个 set：global）；
    - `tokens/themes/vibrant-light.json`、`vibrant-dark.json`、`forest-*`、`inkwash-*`（每个一个 set，按主题+明暗切换）；
-3. 把 `pages/` 里的截图拖入画布作为参考层（Figma 支持 PNG/JPG 直接拖入；也可 Place image 逐页放置）；
+3. 把 `.workwork/design-kit/pages/` 里的截图拖入画布作为参考层（Figma 支持 PNG/JPG 直接拖入；也可 Place image 逐页放置）；
 4. 按 `ui-kit.html` 的 Components 区建立 Figma 组件库：按钮（primary/secondary/soft/ghost/danger × sm/md/lg）、输入框（默认/聚焦/错误/禁用）、徽章与胶囊、Tabs（pills/segmented/underline）、列表行、卡片、底部弹层、Toast、空态/骨架。
 
 ## 导入 Stitch
@@ -45,7 +47,7 @@ Token 源头：
 可直接粘贴的 Stitch 提示词见 [`stitch-prompt.md`](stitch-prompt.md)（含页面清单、视觉语言、组件与输出要求）。
 
 1. 在 Stitch 新建项目；
-2. 上传 `pages/` 中的截图作为参考图（Web 与 App 各一组）；
+2. 上传 `.workwork/design-kit/pages/` 中的截图作为参考图（Web 与 App 各一组）；
 3. 粘贴下方「设计约束」作为生成提示；
 4. Stitch 的产出属于探索稿，需回填到代码 token 后重新生成本包，避免出现第三份事实源。
 

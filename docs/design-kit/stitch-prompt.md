@@ -1,6 +1,6 @@
 # Stitch 生成提示词（可直接粘贴）
 
-> 用法：在 Stitch 新建项目 → 上传 `pages/` 中的截图作为参考 → 把下面「提示词」整段粘贴 → 生成后对照 `ui-kit.html` 的 token 与组件语言修正。Stitch 产出是探索稿，最终以代码 token 为准。
+> 用法：在 Stitch 新建项目 → 上传 `.workwork/design-kit/pages/` 中的截图作为参考（由 `capture-pages.sh` 生成，不入库）→ 把下面「提示词」整段粘贴 → 生成后对照 `ui-kit.html` 的 token 与组件语言修正。Stitch 产出是探索稿，最终以代码 token 为准。
 
 ## 提示词
 
@@ -49,7 +49,7 @@
 ## Figma 快速清单
 
 1. 新建 Figma 文件 → 安装 Tokens Studio → 导入 `tokens/global.json` 与 `tokens/themes/*.json`（6 个 set）；
-2. 把 `pages/` 截图拖入画布作参考层；
+2. 把 `.workwork/design-kit/pages/` 截图拖入画布作参考层；
 3. 建组件库：按钮 5 变体 × 3 尺寸、输入 4 状态、徽章/胶囊、Tabs 3 形态、列表行、卡片、底部 sheet、对话框、Toast、空态/骨架；
 4. 用 token 绑定颜色/字号/圆角/间距，避免硬编码。
 

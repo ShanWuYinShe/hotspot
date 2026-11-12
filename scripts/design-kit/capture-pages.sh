@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT="$ROOT/docs/design-kit/pages"
+OUT="$ROOT/.workwork/design-kit/pages"
 mkdir -p "$OUT"
 
 agent-browser open http://localhost:8888 >/dev/null 2>&1

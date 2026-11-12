@@ -77,12 +77,24 @@ const harmonySpacing = Object.entries(harmony.spacing).map(([k, v]) => '<tr><td>
 const harmonyRadius = Object.entries(harmony.radius).map(([k, v]) => '<tr><td>RADIUS.' + k + '</td><td>' + v + '</td></tr>').join('');
 
 const pagesDir = join(KIT, 'pages');
-const files = readdirSync(pagesDir).filter((f) => /\.(png|jpg)$/.test(f)).sort();
+// 截图不入库：由 scripts/design-kit/capture-pages.sh 生成到 .workwork/design-kit/pages，
+// 上传到 Figma/Stitch 后即可删除本地副本。
+const files = (() => {
+	try {
+		return readdirSync(pagesDir).filter((f) => /\.(png|jpg)$/.test(f)).sort();
+	} catch (e) {
+		return [];
+	}
+})();
 function gallery(prefix, title, note) {
 	const items = files.filter((f) => f.startsWith(prefix)).map((f) => {
 		const label = f.replace(/^(web|app)-/, '').replace(/\.(png|jpg)$/, '');
 		return '<figure><a href="pages/' + f + '" target="_blank"><img src="pages/' + f + '" loading="lazy" alt="' + esc(label) + '"></a><figcaption>' + esc(label) + '</figcaption></figure>';
 	});
+	if (items.length === 0) {
+		return '<h3>' + esc(title) + '</h3><p class="muted">' + esc(note) +
+			'</p><div class="note">仓库不存页面截图。运行 <code>bash scripts/design-kit/capture-pages.sh</code> 生成到 <code>.workwork/design-kit/pages</code>，再把截图上传到 Figma / Stitch 管理。</div>';
+	}
 	return '<h3>' + esc(title) + '</h3><p class="muted">' + esc(note) + '</p><div class="gallery">' + items.join('') + '</div>';
 }
 const webGallery = gallery('web-', 'Web 端页面（390 × 844）', '实时页面截图，深色主题；与 docs/design-kit/pages 同源。');
