@@ -1,0 +1,14 @@
+{
+  "name": "HotSpot Design Kit",
+  "id": "202611120000000001",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": [
+    "figma"
+  ],
+  "networkAccess": {
+    "allowedDomains": [
+      "none"
+    ]
+  }
+}
