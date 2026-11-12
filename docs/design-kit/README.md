@@ -42,6 +42,8 @@ Token 源头：
 
 ## 导入 Stitch
 
+可直接粘贴的 Stitch 提示词见 [`stitch-prompt.md`](stitch-prompt.md)（含页面清单、视觉语言、组件与输出要求）。
+
 1. 在 Stitch 新建项目；
 2. 上传 `pages/` 中的截图作为参考图（Web 与 App 各一组）；
 3. 粘贴下方「设计约束」作为生成提示；
