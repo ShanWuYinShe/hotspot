@@ -1,106 +1,85 @@
-# HotSpot UI Design Kit
+# HotSpot UI Design Kit（跨端设计稿）
 
-Web（SvelteKit + Tailwind）与 HarmonyOS（ArkTS）共用的 UI 设计规范包，用于：
+Web（SvelteKit + Tailwind）与 HarmonyOS（ArkTS）共用的 UI 设计系统与**可编辑设计稿**包。
 
-- 作为双端 UI 对齐的 **token 事实源**（token 由代码生成，不手工维护第二份）；
-- 设计稿本体托管在 **Figma / Stitch**（页面截图只作为上传素材，不入库）；
-- 后续新增页面/组件时按本包的 token 与页面清单对齐。
+目标：把线上真实运行的 UI **转换成 Figma 可编辑设计稿**，而不是靠反复截图对齐；后续改代码后重跑脚本即可重新生成，保持设计稿与实现同源。
 
-> 仓库只保留 token、生成脚本与文档；`pages/` 截图由脚本生成到 `.workwork/design-kit/pages`（git 忽略），上传到 Figma/Stitch 后即可删除本地副本。
+## 这套包有什么
 
-## 目录
+| 层 | 产物 | 说明 |
+|---|---|---|
+| Token 源 | `tokens/runtime.json`、`tokens/global.json`、`tokens/themes/*.json` | 从代码 CSS Token + 运行时解析出的 6 个主题模式（3 主题 × 明暗）全部颜色值；可直接导入 Tokens Studio |
+| 设计规格 | `.workwork/design-kit/spec/spec.json`（生成物，不入库） | 从运行中的前端抓取：35 个页面 × 3 端（移动/平板/桌面）的盒模型、文字、图片、图标、圆角、描边、阴影、渐变，并已映射到语义 token |
+| Figma 插件 | `figma-plugin/`（manifest + code.js） | 本地开发插件：在 Figma 中一键生成「设计规范 + 3 端全部页面」，颜色绑定 Figma Variables，切换 6 种主题模式即可看到主题/明暗 |
+| 预览 | `node scripts/design-kit/render-preview.mjs` | 不需要 Figma 也能在浏览器查看规格渲染结果（自查用，输出到 `.workwork/`） |
+| Stitch 提示词 | `stitch-prompt.md` | 给 Stitch 的项目描述与约束（用于快速探索稿） |
 
-| 路径 | 内容 |
-|---|---|
-| `ui-kit.html` | 可交互设计规范页：三主题 × 明暗色彩、字体/圆角/间距/阴影/动效、组件样例、页面截图画廊、跨端对照、导入说明。浏览器直接打开即可（无需服务） |
-| `tokens.json` | 合并后的完整 token（global + 6 个主题模式 set），供脚本/其他工具消费 |
-| `tokens/global.json` | 与主题无关的 token：字体、字重、行高、圆角、间距、边框、透明度、动效、模糊、z-index、鸿蒙常量对照 |
-| `tokens/themes/<theme>-<mode>.json` | 6 个主题模式 set（vibrant/forest/inkwash × light/dark），DTCG 格式，可直接导入 Figma Tokens Studio |
-| `pages/`（不入库） | 页面截图临时产物：`web-*.png`（390×844 实时页面）、`app-*.jpg`（HarmonyOS 模拟器/真机）；由 `capture-pages.sh` 生成到 `.workwork/design-kit/pages`，用于上传 Figma/Stitch |
+## 生成流程（改完 UI 后重跑）
 
-## 重新生成
-
-Token 与规范页均由脚本从代码生成，**不要手工编辑 `tokens.json` / `ui-kit.html`**：
+前置：本地 dev compose 已启动（`http://localhost:8888`），`agent-browser` 可用（见根 AGENTS.md 的浏览器巡检前置）。
 
 ```bash
-node scripts/design-kit/build-tokens.mjs     # 解析 frontend themes/semantic/shared + harmonyapp DesignConstants
-node scripts/design-kit/build-ui-kit.mjs     # 生成 docs/design-kit/ui-kit.html
-bash scripts/design-kit/capture-pages.sh     # 可选：重捕 Web 390×844 截图到 .workwork/design-kit/pages（需本地 compose 与 QA 登录态）
+# 1. 抓取 6 个主题模式的 token 运行时值
+node scripts/design-kit/capture-tokens.mjs
+
+# 2. 抓取全部页面（35 页 × 3 端；默认体感约 5-8 分钟）
+node scripts/design-kit/capture-screens.mjs            # 全量
+node scripts/design-kit/capture-screens.mjs --device mobile   # 只抓某端
+node scripts/design-kit/capture-screens.mjs --only home,settings --force  # 只抓某几页
+
+# 3. 生成设计规格（压缩 + 去重 + token 映射；输出到 .workwork，不入库）
+node scripts/design-kit/build-design-spec.mjs
+
+# 4. 打包 Figma 插件（docs/design-kit/figma-plugin/code.js）
+node scripts/design-kit/build-figma-plugin.mjs
+
+# 5. 无 Figma 环境下的逻辑冒烟测试（可选）
+node scripts/design-kit/verify-figma-plugin.mjs
+
+# 6. 浏览器预览（可选，输出 .workwork/design-kit/preview/）
+node scripts/design-kit/render-preview.mjs --mode vibrant-light
 ```
 
-Token 源头：
+> 抓取脚本会以种子管理员账号（`admin@hotspot.local`）真实登录，并从运行中的页面读取计算样式；不含任何截图，页面结构由 DOM 盒模型生成。
 
-- Web：`frontend/src/styles/theme/{shared,semantic,theme-registry}.css`、`themes/{vibrant,forest,inkwash}.css`
-- HarmonyOS：`harmonyapp/entry/src/main/ets/constants/DesignConstants.ets`
+## 导入 Figma（一次操作，之后重跑插件即可刷新）
 
-## 导入 Figma
+1. 打开 **Figma 桌面端**（Dev Plugin 需要在桌面 App 中导入）；
+2. 菜单 `Plugins → Development → Import plugin from manifest…`，选择本包 `figma-plugin/manifest.json`；
+3. 运行插件 `HotSpot Design Kit`，等待完成（首次约 30–90 秒，会生成 4 个页面）：
+   - `01 · 设计规范 Design System`：6 个主题模式面板、语义色板、字号/圆角、组件库（按钮/输入/徽章/Tabs/列表行/卡片/底部导航/弹层/Toast/空态）；
+   - `02 · 移动端 Mobile`（390×844）、`03 · 平板端 Tablet`（834×1112）、`04 · 桌面端 Desktop`（1440×900），每页 35 个页面 frame；
+4. 主题/明暗切换：右侧 **Variables** 面板 → `HotSpot Tokens` 集合 → 切换 mode（`vibrant-light` / `vibrant-dark` / `forest-light` / `forest-dark` / `inkwash-light` / `inkwash-dark`），全文件即时换肤；也可对单个 frame 设置显式 mode 覆盖。
+5. 重新生成：改完代码重跑上面的脚本，再运行一次插件；插件会重建三个设备页（设计规范页也会刷新），Variables 保持同名复用。
 
-1. 新建 Figma 文件；
-2. 安装 **Tokens Studio for Figma** 插件，导入：
-   - `tokens/global.json`（一个 set：global）；
-   - `tokens/themes/vibrant-light.json`、`vibrant-dark.json`、`forest-*`、`inkwash-*`（每个一个 set，按主题+明暗切换）；
-3. 把 `.workwork/design-kit/pages/` 里的截图拖入画布作为参考层（Figma 支持 PNG/JPG 直接拖入；也可 Place image 逐页放置）；
-4. 按 `ui-kit.html` 的 Components 区建立 Figma 组件库：按钮（primary/secondary/soft/ghost/danger × sm/md/lg）、输入框（默认/聚焦/错误/禁用）、徽章与胶囊、Tabs（pills/segmented/underline）、列表行、卡片、底部弹层、Toast、空态/骨架。
+### 设计稿里有什么
 
-## 导入 Stitch
+- **颜色**绑定到 Figma Variables（127 个颜色 token）；文字/图标颜色 99.5% 绑定 token，填充约 90% 绑定 token，其余为图片/媒体遮罩等主题无关色值；
+- **文本**是真实 Figma 文本层（Inter / PingFang SC），可编辑；
+- **图标**是由内联 SVG 转成的矢量层；
+- **图片**使用抓取时生成的缩略图（不是截图拼贴）；
+- 每一屏都是独立 frame，按设备排在对应页；层结构保留页面真实层级（绝对定位），便于逐个核对。
 
-可直接粘贴的 Stitch 提示词见 [`stitch-prompt.md`](stitch-prompt.md)（含页面清单、视觉语言、组件与输出要求）。
+## 已知边界
 
-1. 在 Stitch 新建项目；
-2. 上传 `.workwork/design-kit/pages/` 中的截图作为参考图（Web 与 App 各一组）；
-3. 粘贴下方「设计约束」作为生成提示；
-4. Stitch 的产出属于探索稿，需回填到代码 token 后重新生成本包，避免出现第三份事实源。
+- 只捕获**首屏视口**（滚动内容不展开）；长列表页/聊天页的后续内容不在设计稿里；
+- 画布类内容（地图 canvas、视频）以占位块表示；
+- 动效、hover/focus 状态不在静态帧里（组件库给出了常用状态样例）；
+- 背景模糊（backdrop-filter）、复杂渐变在 Figma 中以近似实现；
+- 抓取基于当前种子数据，文案与图片随 seed 数据变化；
+- 插件生成的是绝对定位图层（未转 Auto Layout），适合作为设计基准与标注，不适合直接做响应式组件原型。
 
-## 设计约束（Stitch / Figma 生成提示）
+## 产物维护约定
 
-- 移动端基准视口 390×844（Web）；鸿蒙逻辑宽约 320vp，同 token 下视觉密度接近。
-- 只允许使用本包语义色（surface-page / surface-primary / text-primary / text-secondary / accent-default / status-online / status-warning / status-danger 等），禁止引入新色值；三主题（星际/清野/水墨）× 明暗必须同时可用。
-- 字号 9 档：10 / 11 / 12 / 14 / 18 / 20 / 24 / 30 / 36；正文 12–14，辅助 11，标题 18+；禁止 1–2px 近邻档并存。
-- 圆角 5 档：12 / 16 / 20 / 24 / 9999（底部 sheet 28）；卡片 20、输入框 16、按钮胶囊。
-- 间距 4px 网格：2/4/6/8/10/12/14/16/18/20/24/32。
-- 组件语言：主按钮 accent 实底 + 白字；筛选胶囊 accent-soft 淡底 + accent 字；分段控制器 accent 实底浮起；页级切换用下划线 Tab。
-- 页面结构：全幅页头 + 内容软岛（surface-island）+ 底部悬浮胶囊 Dock；推入页隐藏 Dock。
-- 状态色 on-soft 必须满足对比度 ≥4.5（见 `harmonyapp/scripts/check_status_parity.py`）。
-- 触控热区 ≥44×44；图标按钮必须有无障碍标签。
+- `tokens/`、`figma-plugin/` 是**生成物**但提交仓库（插件是可直接导入 Figma 的交付物）；中间规格 `spec/`、预览与截图在 `.workwork/`，不入库。不要手工编辑这些生成物，改 UI/Token 后按上面的流程重新生成；
+- token 事实源：Web `frontend/src/styles/theme/`（themes → semantic → shared/registry）与鸿蒙 `harmonyapp/entry/src/main/ets/constants/DesignConstants.ets`；
+- 跨端一致性校验：`cd frontend && bun run check:theme`、`python3 harmonyapp/scripts/check_status_parity.py`；
+- 页面截图（可选，给 Stitch 当参考图）由 `capture-pages.sh` 输出到 `.workwork/design-kit/pages`，不入库。
 
-## 跨端对齐与校验
+## 与 html.to.design / Stitch 的关系
 
-| 校验 | 命令 |
-|---|---|
-| 主题变量集合一致 | `cd frontend && bun run check:theme`（含色彩/刻度/氛围画布/类名） |
-| 状态色 on-soft 与对比度 | `python3 harmonyapp/scripts/check_status_parity.py` |
-| 组件原语一致性 | `cd frontend && bun run check:ui-consistency` |
+Figma 没有原生 HTML 导入；社区插件 `html.to.design`（免费额度 10 次/月，Pro 约 $12/月）与 `Multi-Screen HTML Importer` 可以把手写 HTML 转成 Figma 图层，但不支持组件、且每次导入需要人工操作、无法绑定多主题变量。本包选择自建本地插件：批量、免费、可重复生成、颜色绑定 Variables 支持 6 种主题模式。若只是想快速看一版探索稿，也可以用 `stitch-prompt.md` 在 Stitch 生成。
 
-改任一端 token 后必须同步另一端并通过以上校验，再重新生成设计包。
+## 跨端对齐
 
-## 页面清单（截图对应）
-
-| Web 路由 | 页面 | HarmonyOS |
-|---|---|---|
-| `/` | 首页信息流 | HomePage |
-| `/nearby` | 附近枢纽 | NearbyPage |
-| `/nearby/people` | 附近的人 | NearbyUsersListPage |
-| `/nearby/moments` | 附近瞬间 | MomentsFeedPage |
-| `/nearby/groups` | 附近群组 | NearbyGroupsListPage |
-| `/messages` | 消息列表 | MessagePage |
-| `/notify` | 通知中心 | 通知中心 overlay |
-| `/me` | 个人中心 | ProfilePage |
-| `/settings` | 设置 | SettingsPage |
-| `/search` | 搜索 | SearchPage |
-| `/me/edit` | 编辑资料 | ProfileEditPage |
-| `/me/relationships` | 关系 | RelationshipHubPage |
-| `/me/moments` | 我的瞬间 | MyMomentsPage |
-| `/me/groups` | 我的群组 | MyGroupsPage |
-| `/me/reports` | 我的举报 | MyReportsPage |
-| `/map` | 地图选点 | LocationPickerPage |
-| `/groups/:id` | 群详情 | GroupDetailPage |
-| `/moments/:id` | 瞬间详情 | MomentDetailPage |
-| `/users/:id` | 他人主页 | ProfilePage（external） |
-| `/admin` | 管理后台 | AdminOverviewPage |
-
-## 维护约定
-
-- `pages/` 截图是**参考**，像素级以 token 与代码为准；截图过期时重跑 `capture-pages.sh`。
-- 新增主题/语义色：先改代码 token 与校验脚本，再重新生成本包。
-- 本包不存放设计决策讨论过程；决策以代码注释与 `docs/design-system.md` 为准。
-
+Web 与 HarmonyOS 共用同一套语义 token（颜色/字号/圆角/间距/动效）。改任一端 token 必须同步另一端并通过上述校验，再重新生成本包，这样设计稿、Web、鸿蒙三边保持一致。
