@@ -26,21 +26,22 @@ API 契约见 `spec/api_spec_*.md`（仓库根 `spec/` 目录，只读权威）�
   限流阈值本身在 DB `AppConfig.rate_limits`（管理员配置，变更即时生效），可配合调小验证。
   生产 compose 不注入该变量，始终启用限流。
 
-### 推送前门禁（硬性）：`./scripts/verify-backend-ci.sh`
+### 本地复现 CI（按需）：`./scripts/verify-backend-ci.sh`
 
 > 路径说明：本文所有 `scripts/xxx.sh` 都在**仓库根 `hotspot/scripts/`**，不是 `backend-go/scripts/`（该目录不存在）。
 > 从 `backend-go/` 里执行要写 `../scripts/verify-backend-ci.sh`，或先 `cd ..` 到仓库根。同理 `docs/` 指的是
 > 仓库根 `hotspot/docs/`（如 `docs/backend-audit.md` = `../docs/backend-audit.md`）。
 
-`go test -short` **不覆盖** CI 的以下检查，本地绿、CI 红常源于此
+日常推送**不要求**本地跑全量验证：全量测试、`-race`、覆盖率门禁、真实库 IT 与 HTTP E2E 一律由
+GitHub Actions 承担，CI 全绿为准（流程见根 `AGENTS.md`「CI 门禁与本地验证分工」）。
+
+`go test -short` **不覆盖** CI 的以下检查；需要本地复现 CI 失败时按范围用仓库根脚本执行
 （真实库 SQL/参数错误会造成红灯）：
 
 - `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁（无 DB 单测口径下限）；
 - `TestPostgresIT` 真实库仓库集成测试（会暴露 SQL 列歧义、参数个数不符等
-  stub 单测无法发现的问题——**改任何 repo SQL 后必须跑**）；
+  stub 单测无法发现的问题；CI backend-integration job 已覆盖）；
 - HTTP 全链路集成（`test/integration`，~100 用例，需 compose dev 栈）。
-
-**推送前**按改动范围至少跑：
 
 ```bash
 ./scripts/verify-backend-ci.sh              # 静态 + race + 覆盖率（默认）

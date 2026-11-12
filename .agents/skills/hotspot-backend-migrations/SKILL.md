@@ -30,7 +30,7 @@ go run ./cmd/migrate -write-manifest=migrations/schema_manifest.json      # 在�
 - `migrations/schema_manifest.json` 是「全部迁移执行后应存在的表/列/索引名」快照（排除
   `schema_migrations`/`data_migrations` 簿记表）。
 - **新增或修改迁移后必须重建 manifest**：在全新库执行 `-write-manifest`，与迁移文件一起提交。
-  本地门禁 `verify-backend-ci.sh --with-db` 会用临时库重放全部迁移并 diff manifest，忘记重建即失败。
+  CI 的 `backend-integration` job（本地可用 `verify-backend-ci.sh --with-db` 复现）会用临时库重放全部迁移并 diff manifest，忘记重建即失败。
 - 校验方向只检查「期望对象缺失」，允许运维手工加索引/临时表。
 
 ## 破坏性 DDL 与幂等
