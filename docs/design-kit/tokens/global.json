@@ -1,0 +1,332 @@
+{
+  "$description": "HotSpot 跨端设计 token（Web CSS 为源，HarmonyOS DesignConstants 已对齐）",
+  "typography": {
+    "fontFamily": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "Inter, -apple-system, PingFang SC, Noto Sans SC, sans-serif"
+      }
+    },
+    "fontSize": {
+      "xxs": {
+        "$type": "dimension",
+        "$value": "10px"
+      },
+      "xs": {
+        "$type": "dimension",
+        "$value": "11px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "12px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "14px"
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": "18px"
+      },
+      "xl": {
+        "$type": "dimension",
+        "$value": "20px"
+      },
+      "2xl": {
+        "$type": "dimension",
+        "$value": "24px"
+      },
+      "3xl": {
+        "$type": "dimension",
+        "$value": "30px"
+      },
+      "4xl": {
+        "$type": "dimension",
+        "$value": "36px"
+      }
+    },
+    "fontWeight": {
+      "regular": {
+        "$type": "fontWeight",
+        "$value": 400
+      },
+      "medium": {
+        "$type": "fontWeight",
+        "$value": 500
+      },
+      "semibold": {
+        "$type": "fontWeight",
+        "$value": 600
+      },
+      "bold": {
+        "$type": "fontWeight",
+        "$value": 700
+      }
+    },
+    "lineHeight": {
+      "xs": {
+        "$type": "dimension",
+        "$value": "11px"
+      },
+      "sm": {
+        "$type": "dimension",
+        "$value": "12px"
+      },
+      "md": {
+        "$type": "dimension",
+        "$value": "14px"
+      },
+      "lg": {
+        "$type": "dimension",
+        "$value": "16px"
+      },
+      "xl": {
+        "$type": "dimension",
+        "$value": "20px"
+      }
+    }
+  },
+  "radius": {
+    "sm": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "20px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "full": {
+      "$type": "dimension",
+      "$value": "999px"
+    }
+  },
+  "spacing": {
+    "half": {
+      "$type": "dimension",
+      "$value": "2px"
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px"
+    },
+    "three": {
+      "$type": "dimension",
+      "$value": "3px"
+    },
+    "sm2": {
+      "$type": "dimension",
+      "$value": "6px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "md2": {
+      "$type": "dimension",
+      "$value": "10px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "md3": {
+      "$type": "dimension",
+      "$value": "14px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "lg_plus": {
+      "$type": "dimension",
+      "$value": "18px"
+    },
+    "lg2": {
+      "$type": "dimension",
+      "$value": "20px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "xxl": {
+      "$type": "dimension",
+      "$value": "32px"
+    }
+  },
+  "borderWidth": {
+    "hairline": {
+      "$type": "dimension",
+      "$value": "1px"
+    },
+    "regular": {
+      "$type": "dimension",
+      "$value": "1.5px"
+    },
+    "strong": {
+      "$type": "dimension",
+      "$value": "2px"
+    },
+    "heavy": {
+      "$type": "dimension",
+      "$value": "3px"
+    }
+  },
+  "opacity": {
+    "watermark": {
+      "$type": "number",
+      "$value": 0.08
+    }
+  },
+  "motion": {
+    "motion-instant": {
+      "$type": "string",
+      "$value": "100ms"
+    },
+    "motion-rapid": {
+      "$type": "string",
+      "$value": "150ms"
+    },
+    "motion-snappy": {
+      "$type": "string",
+      "$value": "180ms"
+    },
+    "motion-standard": {
+      "$type": "string",
+      "$value": "220ms"
+    },
+    "motion-relaxed": {
+      "$type": "string",
+      "$value": "260ms"
+    },
+    "motion-spring": {
+      "$type": "string",
+      "$value": "300ms"
+    },
+    "motion-slow": {
+      "$type": "string",
+      "$value": "400ms"
+    },
+    "motion-gentle": {
+      "$type": "string",
+      "$value": "500ms"
+    },
+    "motion-spinner": {
+      "$type": "string",
+      "$value": "700ms"
+    },
+    "motion-pulse": {
+      "$type": "string",
+      "$value": "2400ms"
+    },
+    "motion-reduced": {
+      "$type": "string",
+      "$value": "1400ms"
+    },
+    "motion-skeleton": {
+      "$type": "string",
+      "$value": "1500ms"
+    },
+    "motion-ambient": {
+      "$type": "string",
+      "$value": "24000ms"
+    },
+    "motion-ambient-slow": {
+      "$type": "string",
+      "$value": "36000ms"
+    },
+    "ease-standard": {
+      "$type": "string",
+      "$value": "cubic-bezier(0.22, 1, 0.36, 1)"
+    },
+    "ease-bounce": {
+      "$type": "string",
+      "$value": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+    }
+  },
+  "blur": {
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "24px"
+    }
+  },
+  "zIndex": {
+    "dropdown": {
+      "$type": "number",
+      "$value": 10
+    },
+    "sticky": {
+      "$type": "number",
+      "$value": 20
+    },
+    "chrome": {
+      "$type": "number",
+      "$value": 30
+    },
+    "overlay": {
+      "$type": "number",
+      "$value": 40
+    },
+    "modal": {
+      "$type": "number",
+      "$value": 50
+    },
+    "toast": {
+      "$type": "number",
+      "$value": 60
+    }
+  },
+  "harmonyReference": {
+    "$description": "HarmonyOS DesignConstants 对照（vp/fp），用于跨端对齐",
+    "fontSize": {
+      "XS": 11,
+      "SM": 12,
+      "MD": 14,
+      "LG": 16,
+      "XL": 20,
+      "XXL": 24,
+      "XXXL": 30,
+      "XS2": 10,
+      "LG_PLUS": 18,
+      "HERO": 36
+    },
+    "spacing": {
+      "HALF": 2,
+      "XS": 4,
+      "THREE": 3,
+      "SM2": 6,
+      "SM": 8,
+      "MD2": 10,
+      "MD": 12,
+      "MD3": 14,
+      "LG": 16,
+      "LG_PLUS": 18,
+      "LG2": 20,
+      "XL": 24,
+      "XXL": 32
+    },
+    "radius": {
+      "SM": 12,
+      "MD": 16,
+      "LG": 20,
+      "XL": 24,
+      "FULL": 999
+    }
+  }
+}

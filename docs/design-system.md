@@ -1371,3 +1371,12 @@ eager 图各 2 张且像素 diff 0 回归。
 - **0 值柱不画 accent 色条**（会读成 2px 渲染瑕疵）：画 `h-0.5 bg-border-strong` 中性基线记号；全窗口为 0 时整图换「近 N 天暂无新增」紧凑文案。
 - **x 轴标签抽稀**：点数 >10 时按端抽稀（移动最多 6 个、平板/桌面最多 16 个标签），未显示的标签用不可见同高占位（不改变柱位）。
 - 新增图表优先复用这三个 token 或扩展语义档，不在页面内裸写 px 高度/宽度。
+
+## 26. 设计包（Figma / Stitch 交付）
+
+跨端设计规范的**可交付副本**在 `docs/design-kit/`：由代码 token 生成的可交互规范页 `ui-kit.html`、DTCG 格式 token（`tokens/`，可直接导入 Figma Tokens Studio）、Web 390×844 与 HarmonyOS 页面截图画廊（`pages/`）。
+
+- 生成：`node scripts/design-kit/build-tokens.mjs` + `node scripts/design-kit/build-ui-kit.mjs`；截图重捕：`bash scripts/design-kit/capture-pages.sh`；
+- **不要手工编辑** `docs/design-kit/tokens.json` 与 `ui-kit.html`——改代码 token（`frontend/src/styles/theme`、`harmonyapp/.../DesignConstants.ets`）后重新生成；
+- 导入 Figma / Stitch 的步骤、设计约束与页面清单见 `docs/design-kit/README.md`；
+- 本文件仍是设计决策的权威来源；设计包只是同一事实源的机器可读/可视化副本。

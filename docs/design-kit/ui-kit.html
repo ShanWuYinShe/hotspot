@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="vibrant" data-mode="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HotSpot UI Design Kit</title>
+<style>
+[data-theme="vibrant"][data-mode="light"] {
+  --k-text-primary: #16233A;
+  --k-text-secondary: #52647F;
+  --k-text-on-accent: #FFFFFF;
+  --k-surface-primary: #FFFFFF;
+  --k-surface-page: #EFF3F9;
+  --k-surface-overlay-strong: rgba(12, 25, 48, 0.52);
+  --k-surface-chat: #EDF3FC;
+  --k-accent-default: #2B5EB2;
+  --k-accent-soft: rgba(43, 94, 178, 0.10);
+  --k-accent-border: rgba(43, 94, 178, 0.28);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(43, 94, 178, 0.18);
+  --k-border-strong: rgba(43, 94, 178, 0.32);
+  --k-elevation-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.08);
+  --k-opacity-glow: 0.70;
+  --k-status-online: #0D6A62;
+  --k-status-danger: #C81E4E;
+  --k-status-warning: #9C4708;
+  --k-field-bg: #FFFFFF;
+  --k-field-border: rgba(43, 94, 178, 0.18);
+  --k-field-border-hover: rgba(43, 94, 178, 0.32);
+  --k-field-border-focus: #2B5EB2;
+  --k-surface-panel: #FFFFFF;
+  --k-surface-raised: #FFFFFF;
+  --k-content-secondary: #52647F;
+  --k-navigation-content: #52647F;
+  --k-navigation-content-active: #2B5EB2;
+  --k-navigation-active-indicator: #2B5EB2;
+  --k-border-subtle: rgba(43, 94, 178, 0.18);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-border: rgba(43, 94, 178, 0.18);
+  --k-surface-scrim: rgba(14, 10, 35, 0.38);
+  --k-surface-overlay: rgba(14, 10, 35, 0.38);
+  --k-border-inverse: rgba(255, 255, 255, 0.25);
+  --k-content-inverse: #FFFFFF;
+  --k-content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --k-content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --k-content-on-marker: #FFFFFF;
+  --k-text-on-status: #0B1424;
+  --k-surface-glass-badge: rgba(255, 255, 255, 0.18);
+  --k-surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --k-surface-toggle-thumb: #FFFFFF;
+  --k-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --k-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
+  --k-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(8, 12, 22, 0.86) 0%, rgba(8, 12, 22, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(8, 12, 22, 0.94) 0%, rgba(8, 12, 22, 0.86) 30%, rgba(8, 12, 22, 0.64) 60%, transparent 90%);
+  --k-surface-card-fallback: #FFFFFF;
+  --k-surface-cover-placeholder: #FFFFFF;
+  --k-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --k-surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --k-surface-map-control: rgba(255, 255, 255, 0.20);
+  --k-surface-card-menu: #FFFFFF;
+  --k-palette-bg: #FFFFFF;
+  --k-palette-page-bg: #EFF3F9;
+  --k-palette-chat-bg: #EDF3FC;
+  --k-palette-text: #16233A;
+  --k-palette-text-muted: #52647F;
+  --k-palette-accent-primary: #2B5EB2;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.08);
+  --k-palette-border: rgba(43, 94, 178, 0.18);
+  --k-palette-border-pressed: rgba(43, 94, 178, 0.32);
+  --k-palette-accent-soft: rgba(43, 94, 178, 0.10);
+  --k-palette-accent-soft-border: rgba(43, 94, 178, 0.28);
+  --k-palette-hover: rgba(43, 94, 178, 0.10);
+  --k-palette-active-hover: rgba(43, 94, 178, 0.16);
+  --k-palette-on-accent: #FFFFFF;
+  --k-palette-online: #0D6A62;
+  --k-palette-hot: #C81E4E;
+  --k-palette-warning: #9C4708;
+  --k-palette-map-user: #2B5EB2;
+  --k-palette-map-group: #0B7653;
+  --k-palette-map-moment: #C2470B;
+  --k-palette-overlay-strong: rgba(12, 25, 48, 0.52);
+  --k-palette-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --k-palette-shadow-btn: 0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.70;
+}
+[data-theme="vibrant"][data-mode="dark"] {
+  --k-text-primary: #F1F5F9;
+  --k-text-secondary: #94A3B8;
+  --k-text-on-accent: #0B0E14;
+  --k-surface-primary: #121622;
+  --k-surface-page: #0B0E14;
+  --k-surface-overlay-strong: rgba(0, 4, 12, 0.65);
+  --k-surface-chat: #0E121B;
+  --k-accent-default: #5B9CF6;
+  --k-accent-soft: rgba(91, 156, 246, 0.12);
+  --k-accent-border: rgba(91, 156, 246, 0.26);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(160, 185, 220, 0.11);
+  --k-border-strong: rgba(160, 185, 220, 0.22);
+  --k-elevation-shadow-light: rgba(148, 163, 184, 0.05);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.75);
+  --k-opacity-glow: 0.10;
+  --k-status-online: #34D399;
+  --k-status-danger: #F87171;
+  --k-status-warning: #FBBF24;
+  --k-field-bg: #121622;
+  --k-field-border: rgba(160, 185, 220, 0.11);
+  --k-field-border-hover: rgba(160, 185, 220, 0.22);
+  --k-field-border-focus: #5B9CF6;
+  --k-surface-panel: #121622;
+  --k-surface-raised: #121622;
+  --k-content-secondary: #94A3B8;
+  --k-navigation-content: #94A3B8;
+  --k-navigation-content-active: #5B9CF6;
+  --k-navigation-active-indicator: #5B9CF6;
+  --k-border-subtle: rgba(160, 185, 220, 0.11);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-surface-island: #181E2B;
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(6, 9, 18, 0.86) 0%, rgba(6, 9, 18, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(6, 9, 18, 0.96) 0%, rgba(6, 9, 18, 0.88) 30%, rgba(6, 9, 18, 0.68) 60%, transparent 90%);
+  --k-surface-card-fallback: #121622;
+  --k-border: rgba(160, 185, 220, 0.11);
+  --k-surface-scrim: rgba(0, 0, 0, 0.42);
+  --k-surface-overlay: rgba(0, 0, 0, 0.42);
+  --k-text-on-status: #071426;
+  --k-content-on-marker: #071426;
+  --k-surface-card-menu: #121622;
+  --k-surface-cover-placeholder: #121622;
+  --k-palette-bg: #121622;
+  --k-palette-page-bg: #0B0E14;
+  --k-palette-chat-bg: #0E121B;
+  --k-palette-text: #F1F5F9;
+  --k-palette-text-muted: #94A3B8;
+  --k-palette-accent-primary: #5B9CF6;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(148, 163, 184, 0.05);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.75);
+  --k-palette-border: rgba(160, 185, 220, 0.11);
+  --k-palette-border-pressed: rgba(160, 185, 220, 0.22);
+  --k-palette-accent-soft: rgba(91, 156, 246, 0.12);
+  --k-palette-accent-soft-border: rgba(91, 156, 246, 0.26);
+  --k-palette-hover: rgba(91, 156, 246, 0.12);
+  --k-palette-active-hover: rgba(91, 156, 246, 0.18);
+  --k-palette-on-accent: #0B0E14;
+  --k-palette-online: #34D399;
+  --k-palette-hot: #F87171;
+  --k-palette-warning: #FBBF24;
+  --k-palette-map-user: #5B9CF6;
+  --k-palette-map-group: #34D399;
+  --k-palette-map-moment: #FB923C;
+  --k-palette-overlay-strong: rgba(0, 4, 12, 0.65);
+  --k-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --k-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.10;
+}
+[data-theme="forest"][data-mode="light"] {
+  --k-text-primary: #152219;
+  --k-text-secondary: #3F5547;
+  --k-text-on-accent: #FFFFFF;
+  --k-surface-primary: #F6F7F3;
+  --k-surface-page: #F6F7F3;
+  --k-surface-overlay-strong: rgba(20, 28, 20, 0.42);
+  --k-surface-chat: #F2F3F2;
+  --k-accent-default: #39714F;
+  --k-accent-soft: rgba(57, 113, 79, 0.11);
+  --k-accent-border: rgba(57, 113, 79, 0.30);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(42, 73, 52, 0.24);
+  --k-border-strong: rgba(42, 73, 52, 0.38);
+  --k-elevation-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-opacity-glow: 0.95;
+  --k-status-online: #39714F;
+  --k-status-danger: #A04B37;
+  --k-status-warning: #7E602B;
+  --k-field-bg: #F6F7F3;
+  --k-field-border: rgba(42, 73, 52, 0.24);
+  --k-field-border-hover: rgba(42, 73, 52, 0.38);
+  --k-field-border-focus: #39714F;
+  --k-surface-panel: #F6F7F3;
+  --k-surface-raised: #F6F7F3;
+  --k-content-secondary: #3F5547;
+  --k-navigation-content: #3F5547;
+  --k-navigation-content-active: #39714F;
+  --k-navigation-active-indicator: #39714F;
+  --k-border-subtle: rgba(42, 73, 52, 0.24);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-border: rgba(42, 73, 52, 0.24);
+  --k-surface-scrim: rgba(20, 28, 20, 0.38);
+  --k-surface-overlay: rgba(20, 28, 20, 0.38);
+  --k-border-inverse: rgba(255, 255, 255, 0.25);
+  --k-content-inverse: #FFFFFF;
+  --k-content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --k-content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --k-content-on-marker: #FFFFFF;
+  --k-text-on-status: #FFFFFF;
+  --k-surface-glass-badge: rgba(255, 255, 255, 0.18);
+  --k-surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --k-surface-toggle-thumb: #F6F7F3;
+  --k-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --k-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
+  --k-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(10, 18, 12, 0.86) 0%, rgba(10, 18, 12, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(10, 18, 12, 0.94) 0%, rgba(10, 18, 12, 0.86) 30%, rgba(10, 18, 12, 0.64) 60%, transparent 90%);
+  --k-surface-card-fallback: #F6F7F3;
+  --k-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --k-surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --k-surface-map-control: rgba(255, 255, 255, 0.20);
+  --k-surface-card-menu: #F6F7F3;
+  --k-palette-bg: #F6F7F3;
+  --k-palette-page-bg: #F6F7F3;
+  --k-palette-chat-bg: #F2F3F2;
+  --k-palette-text: #152219;
+  --k-palette-text-muted: #3F5547;
+  --k-palette-accent-primary: #39714F;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-palette-border: rgba(42, 73, 52, 0.24);
+  --k-palette-border-pressed: rgba(42, 73, 52, 0.38);
+  --k-palette-accent-soft: rgba(57, 113, 79, 0.11);
+  --k-palette-accent-soft-border: rgba(57, 113, 79, 0.30);
+  --k-palette-hover: rgba(57, 113, 79, 0.12);
+  --k-palette-active-hover: rgba(57, 113, 79, 0.17);
+  --k-palette-on-accent: #FFFFFF;
+  --k-palette-online: #39714F;
+  --k-palette-hot: #A04B37;
+  --k-palette-warning: #7E602B;
+  --k-palette-map-user: #39714F;
+  --k-palette-map-group: #4A703F;
+  --k-palette-map-moment: #8A6426;
+  --k-palette-overlay-strong: rgba(20, 28, 20, 0.42);
+  --k-palette-shadow-card: 0 0 0 1.5px rgba(61, 122, 85, 0.22);
+  --k-palette-shadow-btn: 0 0 0 1.5px rgba(61, 122, 85, 0.28);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.95;
+}
+[data-theme="forest"][data-mode="dark"] {
+  --k-text-primary: #E8F1E9;
+  --k-text-secondary: #A8BDAE;
+  --k-text-on-accent: #0C1911;
+  --k-surface-primary: #161A16;
+  --k-surface-page: #161A16;
+  --k-surface-overlay-strong: rgba(0, 0, 0, 0.54);
+  --k-surface-chat: #0E100E;
+  --k-accent-default: #52B878;
+  --k-accent-soft: rgba(82, 184, 120, 0.12);
+  --k-accent-border: rgba(82, 184, 120, 0.34);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(169, 199, 178, 0.18);
+  --k-border-strong: rgba(169, 199, 178, 0.30);
+  --k-elevation-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-opacity-glow: 0.95;
+  --k-status-online: #52B878;
+  --k-status-danger: #D97C5A;
+  --k-status-warning: #C4A75A;
+  --k-field-bg: #161A16;
+  --k-field-border: rgba(169, 199, 178, 0.18);
+  --k-field-border-hover: rgba(169, 199, 178, 0.30);
+  --k-field-border-focus: #52B878;
+  --k-surface-panel: #161A16;
+  --k-surface-raised: #161A16;
+  --k-content-secondary: #A8BDAE;
+  --k-navigation-content: #A8BDAE;
+  --k-navigation-content-active: #52B878;
+  --k-navigation-active-indicator: #52B878;
+  --k-border-subtle: rgba(169, 199, 178, 0.18);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(8, 15, 10, 0.86) 0%, rgba(8, 15, 10, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(8, 15, 10, 0.96) 0%, rgba(8, 15, 10, 0.88) 30%, rgba(8, 15, 10, 0.68) 60%, transparent 90%);
+  --k-surface-card-fallback: #161A16;
+  --k-border: rgba(169, 199, 178, 0.18);
+  --k-surface-scrim: rgba(0, 0, 0, 0.42);
+  --k-surface-overlay: rgba(0, 0, 0, 0.42);
+  --k-text-on-status: #0C1911;
+  --k-content-on-marker: #0C1911;
+  --k-surface-card-menu: #161A16;
+  --k-palette-bg: #161A16;
+  --k-palette-page-bg: #161A16;
+  --k-palette-chat-bg: #0E100E;
+  --k-palette-text: #E8F1E9;
+  --k-palette-text-muted: #A8BDAE;
+  --k-palette-accent-primary: #52B878;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-palette-border: rgba(169, 199, 178, 0.18);
+  --k-palette-border-pressed: rgba(169, 199, 178, 0.30);
+  --k-palette-accent-soft: rgba(82, 184, 120, 0.12);
+  --k-palette-accent-soft-border: rgba(82, 184, 120, 0.34);
+  --k-palette-hover: rgba(82, 184, 120, 0.18);
+  --k-palette-active-hover: rgba(82, 184, 120, 0.24);
+  --k-palette-on-accent: #0C1911;
+  --k-palette-online: #52B878;
+  --k-palette-hot: #D97C5A;
+  --k-palette-warning: #C4A75A;
+  --k-palette-map-user: #52B878;
+  --k-palette-map-group: #88B85A;
+  --k-palette-map-moment: #C4A75A;
+  --k-palette-overlay-strong: rgba(0, 0, 0, 0.54);
+  --k-palette-shadow-card: 0 0 0 1.5px rgba(82, 184, 120, 0.26);
+  --k-palette-shadow-btn: 0 0 0 1.5px rgba(82, 184, 120, 0.32);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.95;
+}
+[data-theme="inkwash"][data-mode="light"] {
+  --k-text-primary: #2B2A26;
+  --k-text-secondary: #6B675D;
+  --k-text-on-accent: #FFFFFF;
+  --k-surface-primary: #FBF9F3;
+  --k-surface-page: #F5F2EA;
+  --k-surface-overlay-strong: rgba(26, 24, 20, 0.42);
+  --k-surface-chat: #F1EDE3;
+  --k-accent-default: #A63A2E;
+  --k-accent-soft: rgba(166, 58, 46, 0.10);
+  --k-accent-border: rgba(166, 58, 46, 0.28);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(43, 42, 38, 0.20);
+  --k-border-strong: rgba(43, 42, 38, 0.32);
+  --k-elevation-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-opacity-glow: 0.95;
+  --k-status-online: #3F7256;
+  --k-status-danger: #9E2140;
+  --k-status-warning: #7F6422;
+  --k-field-bg: #FBF9F3;
+  --k-field-border: rgba(43, 42, 38, 0.20);
+  --k-field-border-hover: rgba(43, 42, 38, 0.32);
+  --k-field-border-focus: #A63A2E;
+  --k-surface-panel: #FBF9F3;
+  --k-surface-raised: #FBF9F3;
+  --k-content-secondary: #6B675D;
+  --k-navigation-content: #6B675D;
+  --k-navigation-content-active: #A63A2E;
+  --k-navigation-active-indicator: #A63A2E;
+  --k-border-subtle: rgba(43, 42, 38, 0.20);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-border: rgba(43, 42, 38, 0.20);
+  --k-surface-scrim: rgba(26, 24, 20, 0.38);
+  --k-surface-overlay: rgba(26, 24, 20, 0.38);
+  --k-border-inverse: rgba(255, 255, 255, 0.25);
+  --k-content-inverse: #FFFFFF;
+  --k-content-inverse-muted: rgba(255, 255, 255, 0.70);
+  --k-content-inverse-secondary: rgba(255, 255, 255, 0.80);
+  --k-content-on-marker: #FFFFFF;
+  --k-text-on-status: #FFFFFF;
+  --k-surface-glass-badge: rgba(255, 255, 255, 0.18);
+  --k-surface-toggle-off: rgba(120, 120, 128, 0.22);
+  --k-surface-toggle-thumb: #FBF9F3;
+  --k-surface-media-scrim-card: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%);
+  --k-surface-media-scrim-strong: rgba(0, 0, 0, 0.55);
+  --k-surface-cover-scrim: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%);
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(22, 18, 14, 0.86) 0%, rgba(22, 18, 14, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(22, 18, 14, 0.94) 0%, rgba(22, 18, 14, 0.86) 30%, rgba(22, 18, 14, 0.64) 60%, transparent 90%);
+  --k-surface-card-fallback: #FBF9F3;
+  --k-surface-gallery-scrim: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48));
+  --k-surface-gallery-label: rgba(0, 0, 0, 0.46);
+  --k-surface-map-control: rgba(255, 255, 255, 0.20);
+  --k-surface-card-menu: #FBF9F3;
+  --k-palette-bg: #FBF9F3;
+  --k-palette-page-bg: #F5F2EA;
+  --k-palette-chat-bg: #F1EDE3;
+  --k-palette-text: #2B2A26;
+  --k-palette-text-muted: #6B675D;
+  --k-palette-accent-primary: #A63A2E;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.0);
+  --k-palette-border: rgba(43, 42, 38, 0.20);
+  --k-palette-border-pressed: rgba(43, 42, 38, 0.32);
+  --k-palette-accent-soft: rgba(166, 58, 46, 0.10);
+  --k-palette-accent-soft-border: rgba(166, 58, 46, 0.28);
+  --k-palette-hover: rgba(166, 58, 46, 0.12);
+  --k-palette-active-hover: rgba(166, 58, 46, 0.17);
+  --k-palette-on-accent: #FFFFFF;
+  --k-palette-online: #3F7256;
+  --k-palette-hot: #9E2140;
+  --k-palette-warning: #7F6422;
+  --k-palette-map-user: #A63A2E;
+  --k-palette-map-group: #4A7048;
+  --k-palette-map-moment: #8A6426;
+  --k-palette-overlay-strong: rgba(26, 24, 20, 0.42);
+  --k-palette-shadow-card: 0 0 0 1.5px rgba(43, 42, 38, 0.14);
+  --k-palette-shadow-btn: 0 0 0 1.5px rgba(43, 42, 38, 0.20);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.95;
+}
+[data-theme="inkwash"][data-mode="dark"] {
+  --k-text-primary: #EAE6DA;
+  --k-text-secondary: #A8A49A;
+  --k-text-on-accent: #1F1512;
+  --k-surface-primary: #212426;
+  --k-surface-page: #181A1C;
+  --k-surface-overlay-strong: rgba(0, 0, 0, 0.58);
+  --k-surface-chat: #1D2022;
+  --k-accent-default: #DF7F6A;
+  --k-accent-soft: rgba(223, 127, 106, 0.12);
+  --k-accent-border: rgba(223, 127, 106, 0.30);
+  --k-glow-accent: rgba(0, 0, 0, 0);
+  --k-glow-danger: rgba(0, 0, 0, 0.12);
+  --k-border-default: rgba(234, 230, 218, 0.16);
+  --k-border-strong: rgba(234, 230, 218, 0.28);
+  --k-elevation-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-elevation-shadow-dark: rgba(0, 0, 0, 0.60);
+  --k-opacity-glow: 0.95;
+  --k-status-online: #82B297;
+  --k-status-danger: #DE8496;
+  --k-status-warning: #D6A54E;
+  --k-field-bg: #212426;
+  --k-field-border: rgba(234, 230, 218, 0.16);
+  --k-field-border-hover: rgba(234, 230, 218, 0.28);
+  --k-field-border-focus: #DF7F6A;
+  --k-surface-panel: #212426;
+  --k-surface-raised: #212426;
+  --k-content-secondary: #A8A49A;
+  --k-navigation-content: #A8A49A;
+  --k-navigation-content-active: #DF7F6A;
+  --k-navigation-active-indicator: #DF7F6A;
+  --k-border-subtle: rgba(234, 230, 218, 0.16);
+  --k-z-overlay: 40;
+  --k-border-width-hairline: 1px;
+  --k-border-width-regular: 1.5px;
+  --k-border-width-strong: 2px;
+  --k-border-width-heavy: 3px;
+  --k-marker-shadow: 0 2px 10px;
+  --k-page-content-max: 100%;
+  --k-surface-card-scrim-top: linear-gradient(to bottom, rgba(18, 14, 11, 0.86) 0%, rgba(18, 14, 11, 0.64) 40%, transparent 100%);
+  --k-surface-card-scrim-bottom: linear-gradient(to top, rgba(18, 14, 11, 0.96) 0%, rgba(18, 14, 11, 0.88) 30%, rgba(18, 14, 11, 0.68) 60%, transparent 90%);
+  --k-surface-card-fallback: #212426;
+  --k-border: rgba(234, 230, 218, 0.16);
+  --k-surface-scrim: rgba(0, 0, 0, 0.42);
+  --k-surface-overlay: rgba(0, 0, 0, 0.42);
+  --k-text-on-status: #1F1512;
+  --k-content-on-marker: #1F1512;
+  --k-surface-card-menu: #212426;
+  --k-palette-bg: #212426;
+  --k-palette-page-bg: #181A1C;
+  --k-palette-chat-bg: #1D2022;
+  --k-palette-text: #EAE6DA;
+  --k-palette-text-muted: #A8A49A;
+  --k-palette-accent-primary: #DF7F6A;
+  --k-palette-glow: rgba(0, 0, 0, 0);
+  --k-palette-shadow-light: rgba(255, 255, 255, 0.0);
+  --k-palette-shadow-dark: rgba(0, 0, 0, 0.60);
+  --k-palette-border: rgba(234, 230, 218, 0.16);
+  --k-palette-border-pressed: rgba(234, 230, 218, 0.28);
+  --k-palette-accent-soft: rgba(223, 127, 106, 0.12);
+  --k-palette-accent-soft-border: rgba(223, 127, 106, 0.30);
+  --k-palette-hover: rgba(223, 127, 106, 0.18);
+  --k-palette-active-hover: rgba(223, 127, 106, 0.24);
+  --k-palette-on-accent: #1F1512;
+  --k-palette-online: #82B297;
+  --k-palette-hot: #DE8496;
+  --k-palette-warning: #D6A54E;
+  --k-palette-map-user: #DF7F6A;
+  --k-palette-map-group: #7FA88B;
+  --k-palette-map-moment: #C89B5A;
+  --k-palette-overlay-strong: rgba(0, 0, 0, 0.58);
+  --k-palette-shadow-card: 0 2px 10px rgba(0, 0, 0, 0.50), 0 1px 3px rgba(0, 0, 0, 0.35);
+  --k-palette-shadow-btn: 0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30);
+  --k-palette-opacity-none: 0;
+  --k-palette-opacity-faint: 0.30;
+  --k-palette-opacity-subtle: 0.40;
+  --k-palette-opacity-muted: 0.50;
+  --k-palette-opacity-dim: 0.60;
+  --k-palette-opacity-soft: 0.70;
+  --k-palette-opacity-emphasis: 0.80;
+  --k-palette-opacity-tap: 0.84;
+  --k-palette-opacity-hover: 0.90;
+  --k-palette-opacity-full: 1;
+  --k-palette-opacity-active: 0.13;
+  --k-palette-opacity-glow: 0.95;
+}
+:root { color-scheme: light; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; background: var(--k-surface-page); color: var(--k-text-primary); }
+header.kit-header { padding: 40px 32px 24px; border-bottom: 1px solid var(--k-border-default); }
+header.kit-header h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.01em; }
+header.kit-header p { margin: 0; color: var(--k-text-secondary); max-width: 860px; line-height: 1.6; }
+.badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.badge { padding: 4px 10px; border-radius: 999px; background: var(--k-accent-soft); color: var(--k-accent-default); font-size: 11px; font-weight: 600; }
+.toolbar { position: sticky; top: 0; z-index: 50; display: flex; gap: 12px; align-items: center; padding: 12px 32px; background: color-mix(in srgb, var(--k-surface-primary) 88%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--k-border-default); }
+.toolbar button { border: 1px solid var(--k-border-default); background: var(--k-surface-primary); color: var(--k-text-primary); padding: 6px 14px; border-radius: 999px; font-size: 12px; cursor: pointer; }
+.toolbar button[aria-pressed="true"] { background: var(--k-accent-default); color: var(--k-on-accent); border-color: transparent; }
+main { max-width: 1180px; margin: 0 auto; padding: 32px; }
+section.kit-section { margin: 0 0 56px; }
+section.kit-section > h2 { font-size: 20px; margin: 0 0 6px; }
+section.kit-section > p.lead { margin: 0 0 20px; color: var(--k-text-secondary); line-height: 1.6; }
+.muted { color: var(--k-text-secondary); font-size: 12px; margin: 10px 0 6px; }
+code { font-family: "SF Mono", ui-monospace, monospace; font-size: 11px; background: var(--k-accent-soft); color: var(--k-accent-default); padding: 1px 6px; border-radius: 6px; }
+.swatch-theme { margin: 0 0 28px; }
+.swatch-theme h4 { margin: 0 0 4px; font-size: 14px; }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+.swatch { display: grid; grid-template-columns: 28px 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 6px; border-radius: 10px; background: var(--k-surface-primary); border: 1px solid var(--k-border-default); }
+.swatch .chip { grid-row: span 2; width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--k-border-default); }
+.swatch code { background: transparent; padding: 0; color: var(--k-text-primary); }
+.swatch small { color: var(--k-text-secondary); font-size: 10px; word-break: break-all; }
+.type-row, .space-row, .radius-row { display: flex; align-items: center; gap: 14px; padding: 6px 0; border-bottom: 1px dashed var(--k-border-default); }
+.type-row small, .space-row small, .radius-row small { margin-left: auto; color: var(--k-text-secondary); }
+.type-sample { flex: 1; }
+.radius-box { width: 44px; height: 44px; background: var(--k-accent-soft); border: 1px solid var(--k-accent-border); }
+.components { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.demo-card { background: var(--k-surface-primary); border: 1px solid var(--k-border-default); border-radius: 20px; padding: 16px; box-shadow: var(--k-elevation-card); }
+.demo-card h5 { margin: 0 0 12px; font-size: 12px; color: var(--k-text-secondary); font-weight: 600; }
+.btn { border: 0; border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--k-accent-default); color: var(--k-on-accent); }
+.btn-secondary { background: var(--k-surface-primary); color: var(--k-text-primary); border: 1px solid var(--k-border-default); }
+.btn-soft { background: var(--k-accent-soft); color: var(--k-accent-default); }
+.btn-ghost { background: transparent; color: var(--k-text-secondary); }
+.btn-danger { background: var(--k-status-danger); color: #fff; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-lg { padding: 12px 22px; font-size: 14px; }
+.field { display: grid; gap: 6px; margin-bottom: 10px; }
+.field span { font-size: 12px; color: var(--k-text-secondary); }
+.input { border: 1px solid var(--k-field-border, var(--k-border-default)); background: var(--k-field-bg, var(--k-surface-primary)); color: var(--k-text-primary); border-radius: 16px; padding: 10px 14px; font-size: 13px; outline: none; }
+.input:focus { border-color: var(--k-field-border-focus, var(--k-accent-default)); box-shadow: 0 0 0 3px var(--k-accent-soft); }
+.input-error { border-color: var(--k-status-danger); }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pill { padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--k-surface-primary); border: 1px solid var(--k-border-default); color: var(--k-text-secondary); }
+.pill-active { background: var(--k-accent-default); color: var(--k-on-accent); border-color: transparent; }
+.pill-soft { background: var(--k-accent-soft); color: var(--k-accent-default); border-color: transparent; }
+.seg { display: inline-flex; background: var(--k-surface-primary); border: 1px solid var(--k-border-default); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; color: var(--k-text-secondary); padding: 7px 16px; border-radius: 999px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--k-accent-default); color: var(--k-on-accent); }
+.underline { display: flex; gap: 20px; border-bottom: 1px solid var(--k-border-default); }
+.underline button { border: 0; background: transparent; padding: 8px 2px; font-size: 13px; color: var(--k-text-secondary); position: relative; cursor: pointer; }
+.underline button[aria-pressed="true"] { color: var(--k-text-primary); font-weight: 600; }
+.underline button[aria-pressed="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--k-accent-default); }
+.badge-accent { background: var(--k-accent-soft); color: var(--k-accent-default); }
+.badge-online { background: color-mix(in srgb, var(--k-status-online) 14%, transparent); color: var(--k-status-online); }
+.badge-warning { background: color-mix(in srgb, var(--k-status-warning) 14%, transparent); color: var(--k-status-warning); }
+.badge-danger { background: color-mix(in srgb, var(--k-status-danger) 14%, transparent); color: var(--k-status-danger); }
+.row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; }
+.row:hover { background: var(--k-accent-soft); }
+.avatar { width: 40px; height: 40px; border-radius: 999px; background: var(--k-accent-soft); color: var(--k-accent-default); display: grid; place-items: center; font-weight: 600; }
+.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--k-status-online); border: 2px solid var(--k-surface-primary); }
+.card-hero { background: linear-gradient(135deg, var(--k-accent-soft), transparent); border: 1px solid var(--k-border-default); border-radius: 24px; padding: 18px; }
+.sheet { background: var(--k-surface-panel); border-radius: 28px 28px 0 0; padding: 16px; box-shadow: 0 -8px 30px rgba(0,0,0,0.25); }
+.toast { background: var(--k-surface-panel); color: var(--k-text-primary); border: 1px solid var(--k-border-default); border-radius: 16px; padding: 12px 16px; box-shadow: var(--k-elevation-card); }
+.empty { text-align: center; padding: 24px; color: var(--k-text-secondary); }
+.skeleton { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--k-accent-soft), var(--k-surface-primary), var(--k-accent-soft)); background-size: 200% 100%; animation: shimmer 1.6s linear infinite; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.gallery figure { margin: 0; }
+.gallery img { width: 100%; border-radius: 16px; border: 1px solid var(--k-border-default); box-shadow: var(--k-elevation-card); display: block; }
+.gallery figcaption { font-size: 11px; color: var(--k-text-secondary); margin-top: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--k-border-default); }
+th { color: var(--k-text-secondary); font-weight: 600; }
+.cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.note { background: var(--k-accent-soft); border: 1px solid var(--k-accent-border); border-radius: 16px; padding: 14px 16px; font-size: 12px; line-height: 1.7; }
+footer { padding: 24px 32px 48px; color: var(--k-text-secondary); font-size: 11px; border-top: 1px solid var(--k-border-default); }
+</style>
+</head>
+<body>
+<header class="kit-header">
+  <h1>HotSpot UI Design Kit</h1>
+  <p>Web（SvelteKit + Tailwind）与 HarmonyOS（ArkTS）共用的设计规范单一事实源。Token 由 <code>frontend/src/styles/theme</code> 与 <code>harmonyapp/.../DesignConstants.ets</code> 生成，页面截图取自本地实时运行环境；后续迭代请修改代码 token 后重新生成本页。</p>
+  <div class="badges"><span class="badge">3 主题 × 明暗</span><span class="badge">9 档字号</span><span class="badge">5 档圆角</span><span class="badge">Web + HarmonyOS 双端</span><span class="badge">commit 69859e678</span></div>
+</header>
+<div class="toolbar">
+  <strong style="font-size:12px">预览主题</strong>
+  <button data-set-theme="vibrant" aria-pressed="true">星际</button>
+  <button data-set-theme="forest" aria-pressed="false">清野</button>
+  <button data-set-theme="inkwash" aria-pressed="false">水墨</button>
+  <span style="width:1px;height:20px;background:var(--k-border-default)"></span>
+  <button data-set-mode="light" aria-pressed="true">浅色</button>
+  <button data-set-mode="dark" aria-pressed="false">深色</button>
+</div>
+<main>
+<section class="kit-section"><h2>色彩 Colors</h2>
+<p class="lead">三层 token：原始色板 palette → 语义 semantic → 组件消费。所有页面只消费语义色；切换主题/明暗时语义色整体替换，组件不需要任何改动。</p>
+<section class="swatch-theme"><h4>星际 Vibrant · 浅色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>bg</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#EFF3F9;"></span><code>page-bg</code><small>#EFF3F9</small></div><div class="swatch"><span class="chip" style="background:#EDF3FC;"></span><code>chat-bg</code><small>#EDF3FC</small></div><div class="swatch"><span class="chip" style="background:#16233A;"></span><code>text</code><small>#16233A</small></div><div class="swatch"><span class="chip" style="background:#52647F;"></span><code>text-muted</code><small>#52647F</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>accent-primary</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.08);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.08)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.18);"></span><code>border</code><small>rgba(43, 94, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.32);"></span><code>border-pressed</code><small>rgba(43, 94, 178, 0.32)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.10);"></span><code>accent-soft</code><small>rgba(43, 94, 178, 0.10)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.28);"></span><code>accent-soft-border</code><small>rgba(43, 94, 178, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.10);"></span><code>hover</code><small>rgba(43, 94, 178, 0.10)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.16);"></span><code>active-hover</code><small>rgba(43, 94, 178, 0.16)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#0D6A62;"></span><code>online</code><small>#0D6A62</small></div><div class="swatch"><span class="chip" style="background:#C81E4E;"></span><code>hot</code><small>#C81E4E</small></div><div class="swatch"><span class="chip" style="background:#9C4708;"></span><code>warning</code><small>#9C4708</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>map-user</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:#0B7653;"></span><code>map-group</code><small>#0B7653</small></div><div class="swatch"><span class="chip" style="background:#C2470B;"></span><code>map-moment</code><small>#C2470B</small></div><div class="swatch"><span class="chip" style="background:rgba(12, 25, 48, 0.52);"></span><code>overlay-strong</code><small>rgba(12, 25, 48, 0.52)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 2px 6px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.70</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#16233A;"></span><code>text-primary</code><small>#16233A</small></div><div class="swatch"><span class="chip" style="background:#52647F;"></span><code>text-secondary</code><small>#52647F</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>text-on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-primary</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#EFF3F9;"></span><code>surface-page</code><small>#EFF3F9</small></div><div class="swatch"><span class="chip" style="background:rgba(12, 25, 48, 0.52);"></span><code>surface-overlay-strong</code><small>rgba(12, 25, 48, 0.52)</small></div><div class="swatch"><span class="chip" style="background:#EDF3FC;"></span><code>surface-chat</code><small>#EDF3FC</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>accent-default</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.10);"></span><code>accent-soft</code><small>rgba(43, 94, 178, 0.10)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.28);"></span><code>accent-border</code><small>rgba(43, 94, 178, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.18);"></span><code>border-default</code><small>rgba(43, 94, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.32);"></span><code>border-strong</code><small>rgba(43, 94, 178, 0.32)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>elevation-shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.08);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.08)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:#0D6A62;"></span><code>status-online</code><small>#0D6A62</small></div><div class="swatch"><span class="chip" style="background:#C81E4E;"></span><code>status-danger</code><small>#C81E4E</small></div><div class="swatch"><span class="chip" style="background:#9C4708;"></span><code>status-warning</code><small>#9C4708</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>field-bg</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.18);"></span><code>field-border</code><small>rgba(43, 94, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.32);"></span><code>field-border-hover</code><small>rgba(43, 94, 178, 0.32)</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>field-border-focus</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-panel</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-raised</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#52647F;"></span><code>content-secondary</code><small>#52647F</small></div><div class="swatch"><span class="chip" style="background:#52647F;"></span><code>navigation-content</code><small>#52647F</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>navigation-content-active</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:#2B5EB2;"></span><code>navigation-active-indicator</code><small>#2B5EB2</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.18);"></span><code>border-subtle</code><small>rgba(43, 94, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 94, 178, 0.18);"></span><code>border</code><small>rgba(43, 94, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(14, 10, 35, 0.38);"></span><code>surface-scrim</code><small>rgba(14, 10, 35, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(14, 10, 35, 0.38);"></span><code>surface-overlay</code><small>rgba(14, 10, 35, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.25);"></span><code>border-inverse</code><small>rgba(255, 255, 255, 0.25)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-inverse</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.70);"></span><code>content-inverse-muted</code><small>rgba(255, 255, 255, 0.70)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.80);"></span><code>content-inverse-secondary</code><small>rgba(255, 255, 255, 0.80)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-on-marker</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#0B1424;"></span><code>text-on-status</code><small>#0B1424</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.18);"></span><code>surface-glass-badge</code><small>rgba(255, 255, 255, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(120, 120, 128, 0.22);"></span><code>surface-toggle-off</code><small>rgba(120, 120, 128, 0.22)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-toggle-thumb</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-media-scrim-card</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.55);"></span><code>surface-media-scrim-strong</code><small>rgba(0, 0, 0, 0.55)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-cover-scrim</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(8, 12, 22, 0.86) 0%, rgba(8, 12, 22, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(8, 12, 22, 0.94) 0%, rgba(8, 12, 22, 0.86) 30%, rgba(8, 12, 22, 0.64) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-card-fallback</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-cover-placeholder</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-gallery-scrim</code><small>linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48))</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.46);"></span><code>surface-gallery-label</code><small>rgba(0, 0, 0, 0.46)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.20);"></span><code>surface-map-control</code><small>rgba(255, 255, 255, 0.20)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>surface-card-menu</code><small>#FFFFFF</small></div></div></section><section class="swatch-theme"><h4>星际 Vibrant · 深色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#121622;"></span><code>bg</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:#0B0E14;"></span><code>page-bg</code><small>#0B0E14</small></div><div class="swatch"><span class="chip" style="background:#0E121B;"></span><code>chat-bg</code><small>#0E121B</small></div><div class="swatch"><span class="chip" style="background:#F1F5F9;"></span><code>text</code><small>#F1F5F9</small></div><div class="swatch"><span class="chip" style="background:#94A3B8;"></span><code>text-muted</code><small>#94A3B8</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>accent-primary</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(148, 163, 184, 0.05);"></span><code>shadow-light</code><small>rgba(148, 163, 184, 0.05)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.75);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.75)</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.11);"></span><code>border</code><small>rgba(160, 185, 220, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.22);"></span><code>border-pressed</code><small>rgba(160, 185, 220, 0.22)</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.12);"></span><code>accent-soft</code><small>rgba(91, 156, 246, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.26);"></span><code>accent-soft-border</code><small>rgba(91, 156, 246, 0.26)</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.12);"></span><code>hover</code><small>rgba(91, 156, 246, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.18);"></span><code>active-hover</code><small>rgba(91, 156, 246, 0.18)</small></div><div class="swatch"><span class="chip" style="background:#0B0E14;"></span><code>on-accent</code><small>#0B0E14</small></div><div class="swatch"><span class="chip" style="background:#34D399;"></span><code>online</code><small>#34D399</small></div><div class="swatch"><span class="chip" style="background:#F87171;"></span><code>hot</code><small>#F87171</small></div><div class="swatch"><span class="chip" style="background:#FBBF24;"></span><code>warning</code><small>#FBBF24</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>map-user</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:#34D399;"></span><code>map-group</code><small>#34D399</small></div><div class="swatch"><span class="chip" style="background:#FB923C;"></span><code>map-moment</code><small>#FB923C</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 4, 12, 0.65);"></span><code>overlay-strong</code><small>rgba(0, 4, 12, 0.65)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 2px 10px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 2px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.10</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#F1F5F9;"></span><code>text-primary</code><small>#F1F5F9</small></div><div class="swatch"><span class="chip" style="background:#94A3B8;"></span><code>text-secondary</code><small>#94A3B8</small></div><div class="swatch"><span class="chip" style="background:#0B0E14;"></span><code>text-on-accent</code><small>#0B0E14</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-primary</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:#0B0E14;"></span><code>surface-page</code><small>#0B0E14</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 4, 12, 0.65);"></span><code>surface-overlay-strong</code><small>rgba(0, 4, 12, 0.65)</small></div><div class="swatch"><span class="chip" style="background:#0E121B;"></span><code>surface-chat</code><small>#0E121B</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>accent-default</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.12);"></span><code>accent-soft</code><small>rgba(91, 156, 246, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(91, 156, 246, 0.26);"></span><code>accent-border</code><small>rgba(91, 156, 246, 0.26)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.11);"></span><code>border-default</code><small>rgba(160, 185, 220, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.22);"></span><code>border-strong</code><small>rgba(160, 185, 220, 0.22)</small></div><div class="swatch"><span class="chip" style="background:rgba(148, 163, 184, 0.05);"></span><code>elevation-shadow-light</code><small>rgba(148, 163, 184, 0.05)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.75);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.75)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.10</small></div><div class="swatch"><span class="chip" style="background:#34D399;"></span><code>status-online</code><small>#34D399</small></div><div class="swatch"><span class="chip" style="background:#F87171;"></span><code>status-danger</code><small>#F87171</small></div><div class="swatch"><span class="chip" style="background:#FBBF24;"></span><code>status-warning</code><small>#FBBF24</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>field-bg</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.11);"></span><code>field-border</code><small>rgba(160, 185, 220, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.22);"></span><code>field-border-hover</code><small>rgba(160, 185, 220, 0.22)</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>field-border-focus</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-panel</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-raised</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:#94A3B8;"></span><code>content-secondary</code><small>#94A3B8</small></div><div class="swatch"><span class="chip" style="background:#94A3B8;"></span><code>navigation-content</code><small>#94A3B8</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>navigation-content-active</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:#5B9CF6;"></span><code>navigation-active-indicator</code><small>#5B9CF6</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.11);"></span><code>border-subtle</code><small>rgba(160, 185, 220, 0.11)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:#181E2B;"></span><code>surface-island</code><small>#181E2B</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(6, 9, 18, 0.86) 0%, rgba(6, 9, 18, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(6, 9, 18, 0.96) 0%, rgba(6, 9, 18, 0.88) 30%, rgba(6, 9, 18, 0.68) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-card-fallback</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:rgba(160, 185, 220, 0.11);"></span><code>border</code><small>rgba(160, 185, 220, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-scrim</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-overlay</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:#071426;"></span><code>text-on-status</code><small>#071426</small></div><div class="swatch"><span class="chip" style="background:#071426;"></span><code>content-on-marker</code><small>#071426</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-card-menu</code><small>#121622</small></div><div class="swatch"><span class="chip" style="background:#121622;"></span><code>surface-cover-placeholder</code><small>#121622</small></div></div></section><section class="swatch-theme"><h4>清野 Forest · 浅色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>bg</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>page-bg</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:#F2F3F2;"></span><code>chat-bg</code><small>#F2F3F2</small></div><div class="swatch"><span class="chip" style="background:#152219;"></span><code>text</code><small>#152219</small></div><div class="swatch"><span class="chip" style="background:#3F5547;"></span><code>text-muted</code><small>#3F5547</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>accent-primary</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.24);"></span><code>border</code><small>rgba(42, 73, 52, 0.24)</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.38);"></span><code>border-pressed</code><small>rgba(42, 73, 52, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.11);"></span><code>accent-soft</code><small>rgba(57, 113, 79, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.30);"></span><code>accent-soft-border</code><small>rgba(57, 113, 79, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.12);"></span><code>hover</code><small>rgba(57, 113, 79, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.17);"></span><code>active-hover</code><small>rgba(57, 113, 79, 0.17)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>online</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:#A04B37;"></span><code>hot</code><small>#A04B37</small></div><div class="swatch"><span class="chip" style="background:#7E602B;"></span><code>warning</code><small>#7E602B</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>map-user</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:#4A703F;"></span><code>map-group</code><small>#4A703F</small></div><div class="swatch"><span class="chip" style="background:#8A6426;"></span><code>map-moment</code><small>#8A6426</small></div><div class="swatch"><span class="chip" style="background:rgba(20, 28, 20, 0.42);"></span><code>overlay-strong</code><small>rgba(20, 28, 20, 0.42)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 0 0 1.5px rgba(61, 122, 85, 0.22)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 0 0 1.5px rgba(61, 122, 85, 0.28)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#152219;"></span><code>text-primary</code><small>#152219</small></div><div class="swatch"><span class="chip" style="background:#3F5547;"></span><code>text-secondary</code><small>#3F5547</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>text-on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-primary</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-page</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:rgba(20, 28, 20, 0.42);"></span><code>surface-overlay-strong</code><small>rgba(20, 28, 20, 0.42)</small></div><div class="swatch"><span class="chip" style="background:#F2F3F2;"></span><code>surface-chat</code><small>#F2F3F2</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>accent-default</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.11);"></span><code>accent-soft</code><small>rgba(57, 113, 79, 0.11)</small></div><div class="swatch"><span class="chip" style="background:rgba(57, 113, 79, 0.30);"></span><code>accent-border</code><small>rgba(57, 113, 79, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.24);"></span><code>border-default</code><small>rgba(42, 73, 52, 0.24)</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.38);"></span><code>border-strong</code><small>rgba(42, 73, 52, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>elevation-shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>status-online</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:#A04B37;"></span><code>status-danger</code><small>#A04B37</small></div><div class="swatch"><span class="chip" style="background:#7E602B;"></span><code>status-warning</code><small>#7E602B</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>field-bg</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.24);"></span><code>field-border</code><small>rgba(42, 73, 52, 0.24)</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.38);"></span><code>field-border-hover</code><small>rgba(42, 73, 52, 0.38)</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>field-border-focus</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-panel</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-raised</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:#3F5547;"></span><code>content-secondary</code><small>#3F5547</small></div><div class="swatch"><span class="chip" style="background:#3F5547;"></span><code>navigation-content</code><small>#3F5547</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>navigation-content-active</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:#39714F;"></span><code>navigation-active-indicator</code><small>#39714F</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.24);"></span><code>border-subtle</code><small>rgba(42, 73, 52, 0.24)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:rgba(42, 73, 52, 0.24);"></span><code>border</code><small>rgba(42, 73, 52, 0.24)</small></div><div class="swatch"><span class="chip" style="background:rgba(20, 28, 20, 0.38);"></span><code>surface-scrim</code><small>rgba(20, 28, 20, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(20, 28, 20, 0.38);"></span><code>surface-overlay</code><small>rgba(20, 28, 20, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.25);"></span><code>border-inverse</code><small>rgba(255, 255, 255, 0.25)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-inverse</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.70);"></span><code>content-inverse-muted</code><small>rgba(255, 255, 255, 0.70)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.80);"></span><code>content-inverse-secondary</code><small>rgba(255, 255, 255, 0.80)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-on-marker</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>text-on-status</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.18);"></span><code>surface-glass-badge</code><small>rgba(255, 255, 255, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(120, 120, 128, 0.22);"></span><code>surface-toggle-off</code><small>rgba(120, 120, 128, 0.22)</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-toggle-thumb</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-media-scrim-card</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.55);"></span><code>surface-media-scrim-strong</code><small>rgba(0, 0, 0, 0.55)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-cover-scrim</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(10, 18, 12, 0.86) 0%, rgba(10, 18, 12, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(10, 18, 12, 0.94) 0%, rgba(10, 18, 12, 0.86) 30%, rgba(10, 18, 12, 0.64) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-card-fallback</code><small>#F6F7F3</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-gallery-scrim</code><small>linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48))</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.46);"></span><code>surface-gallery-label</code><small>rgba(0, 0, 0, 0.46)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.20);"></span><code>surface-map-control</code><small>rgba(255, 255, 255, 0.20)</small></div><div class="swatch"><span class="chip" style="background:#F6F7F3;"></span><code>surface-card-menu</code><small>#F6F7F3</small></div></div></section><section class="swatch-theme"><h4>清野 Forest · 深色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>bg</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>page-bg</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:#0E100E;"></span><code>chat-bg</code><small>#0E100E</small></div><div class="swatch"><span class="chip" style="background:#E8F1E9;"></span><code>text</code><small>#E8F1E9</small></div><div class="swatch"><span class="chip" style="background:#A8BDAE;"></span><code>text-muted</code><small>#A8BDAE</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>accent-primary</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.18);"></span><code>border</code><small>rgba(169, 199, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.30);"></span><code>border-pressed</code><small>rgba(169, 199, 178, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.12);"></span><code>accent-soft</code><small>rgba(82, 184, 120, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.34);"></span><code>accent-soft-border</code><small>rgba(82, 184, 120, 0.34)</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.18);"></span><code>hover</code><small>rgba(82, 184, 120, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.24);"></span><code>active-hover</code><small>rgba(82, 184, 120, 0.24)</small></div><div class="swatch"><span class="chip" style="background:#0C1911;"></span><code>on-accent</code><small>#0C1911</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>online</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:#D97C5A;"></span><code>hot</code><small>#D97C5A</small></div><div class="swatch"><span class="chip" style="background:#C4A75A;"></span><code>warning</code><small>#C4A75A</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>map-user</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:#88B85A;"></span><code>map-group</code><small>#88B85A</small></div><div class="swatch"><span class="chip" style="background:#C4A75A;"></span><code>map-moment</code><small>#C4A75A</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.54);"></span><code>overlay-strong</code><small>rgba(0, 0, 0, 0.54)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 0 0 1.5px rgba(82, 184, 120, 0.26)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 0 0 1.5px rgba(82, 184, 120, 0.32)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#E8F1E9;"></span><code>text-primary</code><small>#E8F1E9</small></div><div class="swatch"><span class="chip" style="background:#A8BDAE;"></span><code>text-secondary</code><small>#A8BDAE</small></div><div class="swatch"><span class="chip" style="background:#0C1911;"></span><code>text-on-accent</code><small>#0C1911</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-primary</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-page</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.54);"></span><code>surface-overlay-strong</code><small>rgba(0, 0, 0, 0.54)</small></div><div class="swatch"><span class="chip" style="background:#0E100E;"></span><code>surface-chat</code><small>#0E100E</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>accent-default</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.12);"></span><code>accent-soft</code><small>rgba(82, 184, 120, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(82, 184, 120, 0.34);"></span><code>accent-border</code><small>rgba(82, 184, 120, 0.34)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.18);"></span><code>border-default</code><small>rgba(169, 199, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.30);"></span><code>border-strong</code><small>rgba(169, 199, 178, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>elevation-shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>status-online</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:#D97C5A;"></span><code>status-danger</code><small>#D97C5A</small></div><div class="swatch"><span class="chip" style="background:#C4A75A;"></span><code>status-warning</code><small>#C4A75A</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>field-bg</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.18);"></span><code>field-border</code><small>rgba(169, 199, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.30);"></span><code>field-border-hover</code><small>rgba(169, 199, 178, 0.30)</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>field-border-focus</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-panel</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-raised</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:#A8BDAE;"></span><code>content-secondary</code><small>#A8BDAE</small></div><div class="swatch"><span class="chip" style="background:#A8BDAE;"></span><code>navigation-content</code><small>#A8BDAE</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>navigation-content-active</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:#52B878;"></span><code>navigation-active-indicator</code><small>#52B878</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.18);"></span><code>border-subtle</code><small>rgba(169, 199, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(8, 15, 10, 0.86) 0%, rgba(8, 15, 10, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(8, 15, 10, 0.96) 0%, rgba(8, 15, 10, 0.88) 30%, rgba(8, 15, 10, 0.68) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-card-fallback</code><small>#161A16</small></div><div class="swatch"><span class="chip" style="background:rgba(169, 199, 178, 0.18);"></span><code>border</code><small>rgba(169, 199, 178, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-scrim</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-overlay</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:#0C1911;"></span><code>text-on-status</code><small>#0C1911</small></div><div class="swatch"><span class="chip" style="background:#0C1911;"></span><code>content-on-marker</code><small>#0C1911</small></div><div class="swatch"><span class="chip" style="background:#161A16;"></span><code>surface-card-menu</code><small>#161A16</small></div></div></section><section class="swatch-theme"><h4>水墨 Inkwash · 浅色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>bg</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:#F5F2EA;"></span><code>page-bg</code><small>#F5F2EA</small></div><div class="swatch"><span class="chip" style="background:#F1EDE3;"></span><code>chat-bg</code><small>#F1EDE3</small></div><div class="swatch"><span class="chip" style="background:#2B2A26;"></span><code>text</code><small>#2B2A26</small></div><div class="swatch"><span class="chip" style="background:#6B675D;"></span><code>text-muted</code><small>#6B675D</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>accent-primary</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.20);"></span><code>border</code><small>rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.32);"></span><code>border-pressed</code><small>rgba(43, 42, 38, 0.32)</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.10);"></span><code>accent-soft</code><small>rgba(166, 58, 46, 0.10)</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.28);"></span><code>accent-soft-border</code><small>rgba(166, 58, 46, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.12);"></span><code>hover</code><small>rgba(166, 58, 46, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.17);"></span><code>active-hover</code><small>rgba(166, 58, 46, 0.17)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#3F7256;"></span><code>online</code><small>#3F7256</small></div><div class="swatch"><span class="chip" style="background:#9E2140;"></span><code>hot</code><small>#9E2140</small></div><div class="swatch"><span class="chip" style="background:#7F6422;"></span><code>warning</code><small>#7F6422</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>map-user</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:#4A7048;"></span><code>map-group</code><small>#4A7048</small></div><div class="swatch"><span class="chip" style="background:#8A6426;"></span><code>map-moment</code><small>#8A6426</small></div><div class="swatch"><span class="chip" style="background:rgba(26, 24, 20, 0.42);"></span><code>overlay-strong</code><small>rgba(26, 24, 20, 0.42)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 0 0 1.5px rgba(43, 42, 38, 0.14)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 0 0 1.5px rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#2B2A26;"></span><code>text-primary</code><small>#2B2A26</small></div><div class="swatch"><span class="chip" style="background:#6B675D;"></span><code>text-secondary</code><small>#6B675D</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>text-on-accent</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-primary</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:#F5F2EA;"></span><code>surface-page</code><small>#F5F2EA</small></div><div class="swatch"><span class="chip" style="background:rgba(26, 24, 20, 0.42);"></span><code>surface-overlay-strong</code><small>rgba(26, 24, 20, 0.42)</small></div><div class="swatch"><span class="chip" style="background:#F1EDE3;"></span><code>surface-chat</code><small>#F1EDE3</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>accent-default</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.10);"></span><code>accent-soft</code><small>rgba(166, 58, 46, 0.10)</small></div><div class="swatch"><span class="chip" style="background:rgba(166, 58, 46, 0.28);"></span><code>accent-border</code><small>rgba(166, 58, 46, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.20);"></span><code>border-default</code><small>rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.32);"></span><code>border-strong</code><small>rgba(43, 42, 38, 0.32)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>elevation-shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.0);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.0)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div><div class="swatch"><span class="chip" style="background:#3F7256;"></span><code>status-online</code><small>#3F7256</small></div><div class="swatch"><span class="chip" style="background:#9E2140;"></span><code>status-danger</code><small>#9E2140</small></div><div class="swatch"><span class="chip" style="background:#7F6422;"></span><code>status-warning</code><small>#7F6422</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>field-bg</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.20);"></span><code>field-border</code><small>rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.32);"></span><code>field-border-hover</code><small>rgba(43, 42, 38, 0.32)</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>field-border-focus</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-panel</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-raised</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:#6B675D;"></span><code>content-secondary</code><small>#6B675D</small></div><div class="swatch"><span class="chip" style="background:#6B675D;"></span><code>navigation-content</code><small>#6B675D</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>navigation-content-active</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:#A63A2E;"></span><code>navigation-active-indicator</code><small>#A63A2E</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.20);"></span><code>border-subtle</code><small>rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:rgba(43, 42, 38, 0.20);"></span><code>border</code><small>rgba(43, 42, 38, 0.20)</small></div><div class="swatch"><span class="chip" style="background:rgba(26, 24, 20, 0.38);"></span><code>surface-scrim</code><small>rgba(26, 24, 20, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(26, 24, 20, 0.38);"></span><code>surface-overlay</code><small>rgba(26, 24, 20, 0.38)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.25);"></span><code>border-inverse</code><small>rgba(255, 255, 255, 0.25)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-inverse</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.70);"></span><code>content-inverse-muted</code><small>rgba(255, 255, 255, 0.70)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.80);"></span><code>content-inverse-secondary</code><small>rgba(255, 255, 255, 0.80)</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>content-on-marker</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:#FFFFFF;"></span><code>text-on-status</code><small>#FFFFFF</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.18);"></span><code>surface-glass-badge</code><small>rgba(255, 255, 255, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(120, 120, 128, 0.22);"></span><code>surface-toggle-off</code><small>rgba(120, 120, 128, 0.22)</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-toggle-thumb</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-media-scrim-card</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent 60%)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.55);"></span><code>surface-media-scrim-strong</code><small>rgba(0, 0, 0, 0.55)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-cover-scrim</code><small>linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 65%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(22, 18, 14, 0.86) 0%, rgba(22, 18, 14, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(22, 18, 14, 0.94) 0%, rgba(22, 18, 14, 0.86) 30%, rgba(22, 18, 14, 0.64) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-card-fallback</code><small>#FBF9F3</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-gallery-scrim</code><small>linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.48))</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.46);"></span><code>surface-gallery-label</code><small>rgba(0, 0, 0, 0.46)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.20);"></span><code>surface-map-control</code><small>rgba(255, 255, 255, 0.20)</small></div><div class="swatch"><span class="chip" style="background:#FBF9F3;"></span><code>surface-card-menu</code><small>#FBF9F3</small></div></div></section><section class="swatch-theme"><h4>水墨 Inkwash · 深色</h4><p class="muted">原始色板 palette</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#212426;"></span><code>bg</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:#181A1C;"></span><code>page-bg</code><small>#181A1C</small></div><div class="swatch"><span class="chip" style="background:#1D2022;"></span><code>chat-bg</code><small>#1D2022</small></div><div class="swatch"><span class="chip" style="background:#EAE6DA;"></span><code>text</code><small>#EAE6DA</small></div><div class="swatch"><span class="chip" style="background:#A8A49A;"></span><code>text-muted</code><small>#A8A49A</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>accent-primary</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.60);"></span><code>shadow-dark</code><small>rgba(0, 0, 0, 0.60)</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.16);"></span><code>border</code><small>rgba(234, 230, 218, 0.16)</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.28);"></span><code>border-pressed</code><small>rgba(234, 230, 218, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.12);"></span><code>accent-soft</code><small>rgba(223, 127, 106, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.30);"></span><code>accent-soft-border</code><small>rgba(223, 127, 106, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.18);"></span><code>hover</code><small>rgba(223, 127, 106, 0.18)</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.24);"></span><code>active-hover</code><small>rgba(223, 127, 106, 0.24)</small></div><div class="swatch"><span class="chip" style="background:#1F1512;"></span><code>on-accent</code><small>#1F1512</small></div><div class="swatch"><span class="chip" style="background:#82B297;"></span><code>online</code><small>#82B297</small></div><div class="swatch"><span class="chip" style="background:#DE8496;"></span><code>hot</code><small>#DE8496</small></div><div class="swatch"><span class="chip" style="background:#D6A54E;"></span><code>warning</code><small>#D6A54E</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>map-user</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:#7FA88B;"></span><code>map-group</code><small>#7FA88B</small></div><div class="swatch"><span class="chip" style="background:#C89B5A;"></span><code>map-moment</code><small>#C89B5A</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.58);"></span><code>overlay-strong</code><small>rgba(0, 0, 0, 0.58)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-card</code><small>0 2px 10px rgba(0, 0, 0, 0.50), 0 1px 3px rgba(0, 0, 0, 0.35)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>shadow-btn</code><small>0 2px 8px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.30)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-none</code><small>0</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-faint</code><small>0.30</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-subtle</code><small>0.40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-muted</code><small>0.50</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-dim</code><small>0.60</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-soft</code><small>0.70</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-emphasis</code><small>0.80</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-tap</code><small>0.84</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-hover</code><small>0.90</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-full</code><small>1</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-active</code><small>0.13</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div></div><p class="muted">语义色 semantic</p><div class="swatches"><div class="swatch"><span class="chip" style="background:#EAE6DA;"></span><code>text-primary</code><small>#EAE6DA</small></div><div class="swatch"><span class="chip" style="background:#A8A49A;"></span><code>text-secondary</code><small>#A8A49A</small></div><div class="swatch"><span class="chip" style="background:#1F1512;"></span><code>text-on-accent</code><small>#1F1512</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>surface-primary</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:#181A1C;"></span><code>surface-page</code><small>#181A1C</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.58);"></span><code>surface-overlay-strong</code><small>rgba(0, 0, 0, 0.58)</small></div><div class="swatch"><span class="chip" style="background:#1D2022;"></span><code>surface-chat</code><small>#1D2022</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>accent-default</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.12);"></span><code>accent-soft</code><small>rgba(223, 127, 106, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(223, 127, 106, 0.30);"></span><code>accent-border</code><small>rgba(223, 127, 106, 0.30)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0);"></span><code>glow-accent</code><small>rgba(0, 0, 0, 0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.12);"></span><code>glow-danger</code><small>rgba(0, 0, 0, 0.12)</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.16);"></span><code>border-default</code><small>rgba(234, 230, 218, 0.16)</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.28);"></span><code>border-strong</code><small>rgba(234, 230, 218, 0.28)</small></div><div class="swatch"><span class="chip" style="background:rgba(255, 255, 255, 0.0);"></span><code>elevation-shadow-light</code><small>rgba(255, 255, 255, 0.0)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.60);"></span><code>elevation-shadow-dark</code><small>rgba(0, 0, 0, 0.60)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>opacity-glow</code><small>0.95</small></div><div class="swatch"><span class="chip" style="background:#82B297;"></span><code>status-online</code><small>#82B297</small></div><div class="swatch"><span class="chip" style="background:#DE8496;"></span><code>status-danger</code><small>#DE8496</small></div><div class="swatch"><span class="chip" style="background:#D6A54E;"></span><code>status-warning</code><small>#D6A54E</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>field-bg</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.16);"></span><code>field-border</code><small>rgba(234, 230, 218, 0.16)</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.28);"></span><code>field-border-hover</code><small>rgba(234, 230, 218, 0.28)</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>field-border-focus</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>surface-panel</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>surface-raised</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:#A8A49A;"></span><code>content-secondary</code><small>#A8A49A</small></div><div class="swatch"><span class="chip" style="background:#A8A49A;"></span><code>navigation-content</code><small>#A8A49A</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>navigation-content-active</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:#DF7F6A;"></span><code>navigation-active-indicator</code><small>#DF7F6A</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.16);"></span><code>border-subtle</code><small>rgba(234, 230, 218, 0.16)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>z-overlay</code><small>40</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-hairline</code><small>1px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-regular</code><small>1.5px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-strong</code><small>2px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>border-width-heavy</code><small>3px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>marker-shadow</code><small>0 2px 10px</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>page-content-max</code><small>100%</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-top</code><small>linear-gradient(to bottom, rgba(18, 14, 11, 0.86) 0%, rgba(18, 14, 11, 0.64) 40%, transparent 100%)</small></div><div class="swatch"><span class="chip" style="background:repeating-linear-gradient(45deg,#ddd,#ddd 6px,#fff 6px,#fff 12px)"></span><code>surface-card-scrim-bottom</code><small>linear-gradient(to top, rgba(18, 14, 11, 0.96) 0%, rgba(18, 14, 11, 0.88) 30%, rgba(18, 14, 11, 0.68) 60%, transparent 90%)</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>surface-card-fallback</code><small>#212426</small></div><div class="swatch"><span class="chip" style="background:rgba(234, 230, 218, 0.16);"></span><code>border</code><small>rgba(234, 230, 218, 0.16)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-scrim</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:rgba(0, 0, 0, 0.42);"></span><code>surface-overlay</code><small>rgba(0, 0, 0, 0.42)</small></div><div class="swatch"><span class="chip" style="background:#1F1512;"></span><code>text-on-status</code><small>#1F1512</small></div><div class="swatch"><span class="chip" style="background:#1F1512;"></span><code>content-on-marker</code><small>#1F1512</small></div><div class="swatch"><span class="chip" style="background:#212426;"></span><code>surface-card-menu</code><small>#212426</small></div></div></section>
+</section>
+<section class="kit-section"><h2>字体 Typography</h2>
+<p class="lead">字号少档位收敛（禁止 1–2px 近邻档并存）：辅助 11、正文 12、强调 14、标题 18+。字重 400/500/600/700。</p>
+<div class="type-row"><code>text-xxs</code><span class="type-sample" style="font-size:10px">HotSpot 城市此刻</span><small>10px</small></div><div class="type-row"><code>text-xs</code><span class="type-sample" style="font-size:11px">HotSpot 城市此刻</span><small>11px</small></div><div class="type-row"><code>text-sm</code><span class="type-sample" style="font-size:12px">HotSpot 城市此刻</span><small>12px</small></div><div class="type-row"><code>text-md</code><span class="type-sample" style="font-size:14px">HotSpot 城市此刻</span><small>14px</small></div><div class="type-row"><code>text-lg</code><span class="type-sample" style="font-size:18px">HotSpot 城市此刻</span><small>18px</small></div><div class="type-row"><code>text-xl</code><span class="type-sample" style="font-size:20px">HotSpot 城市此刻</span><small>20px</small></div><div class="type-row"><code>text-2xl</code><span class="type-sample" style="font-size:24px">HotSpot 城市此刻</span><small>24px</small></div><div class="type-row"><code>text-3xl</code><span class="type-sample" style="font-size:30px">HotSpot 城市此刻</span><small>30px</small></div><div class="type-row"><code>text-4xl</code><span class="type-sample" style="font-size:36px">HotSpot 城市此刻</span><small>36px</small></div>
+<div class="cols" style="margin-top:16px">
+<table><thead><tr><th>字重</th><th>值</th></tr></thead><tbody><tr><td>regular</td><td>400</td></tr><tr><td>medium</td><td>500</td></tr><tr><td>semibold</td><td>600</td></tr><tr><td>bold</td><td>700</td></tr></tbody></table>
+<table><thead><tr><th>行高比例</th><th>值</th></tr></thead><tbody><tr><td>DEFAULT</td><td>1.5</td></tr><tr><td>CARD</td><td>1.7</td></tr><tr><td>COPY</td><td>1.75</td></tr></tbody></table>
+<table><thead><tr><th>字距</th><th>值</th></tr></thead><tbody><tr><td>EYEBROW</td><td>1.4</td></tr><tr><td>LABEL</td><td>1.2</td></tr><tr><td>FIELD</td><td>1.28</td></tr><tr><td>TITLE</td><td>-0.12</td></tr></tbody></table>
+</div></section>
+<section class="kit-section"><h2>圆角 / 间距 / 边框 Radius / Spacing / Border</h2>
+<p class="lead">圆角 4 档 + 全圆：12 / 16 / 20 / 24 / 9999（sheet 28）。间距 4px 网格（2/4/6/8/10/12/14/16/18/20/24/32）。</p>
+<div class="cols"><div><div class="radius-row"><span class="radius-box" style="border-radius:12px"></span><code>sm</code><small>12px</small></div><div class="radius-row"><span class="radius-box" style="border-radius:16px"></span><code>md</code><small>16px</small></div><div class="radius-row"><span class="radius-box" style="border-radius:20px"></span><code>lg</code><small>20px</small></div><div class="radius-row"><span class="radius-box" style="border-radius:24px"></span><code>xl</code><small>24px</small></div><div class="radius-row"><span class="radius-box" style="border-radius:999px"></span><code>full</code><small>999px</small></div></div><div><div class="space-row"><code>half</code><span class="space-bar" style="width:8px"></span><small>2px</small></div><div class="space-row"><code>xs</code><span class="space-bar" style="width:16px"></span><small>4px</small></div><div class="space-row"><code>three</code><span class="space-bar" style="width:12px"></span><small>3px</small></div><div class="space-row"><code>sm2</code><span class="space-bar" style="width:24px"></span><small>6px</small></div><div class="space-row"><code>sm</code><span class="space-bar" style="width:32px"></span><small>8px</small></div><div class="space-row"><code>md2</code><span class="space-bar" style="width:40px"></span><small>10px</small></div><div class="space-row"><code>md</code><span class="space-bar" style="width:48px"></span><small>12px</small></div><div class="space-row"><code>md3</code><span class="space-bar" style="width:56px"></span><small>14px</small></div><div class="space-row"><code>lg</code><span class="space-bar" style="width:64px"></span><small>16px</small></div><div class="space-row"><code>lg_plus</code><span class="space-bar" style="width:72px"></span><small>18px</small></div><div class="space-row"><code>lg2</code><span class="space-bar" style="width:80px"></span><small>20px</small></div><div class="space-row"><code>xl</code><span class="space-bar" style="width:96px"></span><small>24px</small></div><div class="space-row"><code>xxl</code><span class="space-bar" style="width:128px"></span><small>32px</small></div></div><div><div class="space-row"><code>hairline</code><span style="flex:0 0 auto;border-top:1px solid var(--k-text-primary);width:120px"></span><small>1px</small></div><div class="space-row"><code>regular</code><span style="flex:0 0 auto;border-top:1.5px solid var(--k-text-primary);width:120px"></span><small>1.5px</small></div><div class="space-row"><code>strong</code><span style="flex:0 0 auto;border-top:2px solid var(--k-text-primary);width:120px"></span><small>2px</small></div><div class="space-row"><code>heavy</code><span style="flex:0 0 auto;border-top:3px solid var(--k-text-primary);width:120px"></span><small>3px</small></div></div></div></section>
+<section class="kit-section"><h2>阴影 / 透明度 / 动效 / 模糊 / 层级</h2>
+<div class="cols"><div><div class="space-row"><code>watermark</code><span class="space-bar" style="width:12.8px;opacity:0.08;background:var(--k-accent-default)"></span><small>0.08</small></div></div><div><div class="space-row"><code>motion-instant</code><small>100ms</small></div><div class="space-row"><code>motion-rapid</code><small>150ms</small></div><div class="space-row"><code>motion-snappy</code><small>180ms</small></div><div class="space-row"><code>motion-standard</code><small>220ms</small></div><div class="space-row"><code>motion-relaxed</code><small>260ms</small></div><div class="space-row"><code>motion-spring</code><small>300ms</small></div><div class="space-row"><code>motion-slow</code><small>400ms</small></div><div class="space-row"><code>motion-gentle</code><small>500ms</small></div><div class="space-row"><code>motion-spinner</code><small>700ms</small></div><div class="space-row"><code>motion-pulse</code><small>2400ms</small></div><div class="space-row"><code>motion-reduced</code><small>1400ms</small></div><div class="space-row"><code>motion-skeleton</code><small>1500ms</small></div><div class="space-row"><code>motion-ambient</code><small>24000ms</small></div><div class="space-row"><code>motion-ambient-slow</code><small>36000ms</small></div><div class="space-row"><code>ease-standard</code><small>cubic-bezier(0.22, 1, 0.36, 1)</small></div><div class="space-row"><code>ease-bounce</code><small>cubic-bezier(0.34, 1.56, 0.64, 1)</small></div><div class="space-row"><code>blur-sm</code><small>8px</small></div><div class="space-row"><code>blur-md</code><small>16px</small></div><div class="space-row"><code>blur-lg</code><small>24px</small></div></div><div><div class="space-row"><code>z-dropdown</code><small>10</small></div><div class="space-row"><code>z-sticky</code><small>20</small></div><div class="space-row"><code>z-chrome</code><small>30</small></div><div class="space-row"><code>z-overlay</code><small>40</small></div><div class="space-row"><code>z-modal</code><small>50</small></div><div class="space-row"><code>z-toast</code><small>60</small></div></div></div></section>
+<section class="kit-section"><h2>组件 Components</h2>
+<p class="lead">以下组件全部消费当前预览主题的语义 token，切换上方主题即可验证暗色/主题适配。</p>
+<div class="components">
+<div class="demo-card"><h5>按钮 Buttons</h5><div class="pills"><button class="btn btn-primary">主按钮</button><button class="btn btn-secondary">次按钮</button><button class="btn btn-soft">柔和</button><button class="btn btn-ghost">幽灵</button><button class="btn btn-danger">危险</button></div>
+<div class="pills" style="margin-top:12px"><button class="btn btn-primary btn-sm">小号</button><button class="btn btn-primary">中号</button><button class="btn btn-primary btn-lg">大号</button><button class="btn btn-primary" disabled>禁用</button></div></div>
+<div class="demo-card"><h5>输入 Inputs</h5><label class="field"><span>默认</span><input class="input" value="输入内容"></label><label class="field"><span>错误</span><input class="input input-error" value="格式不正确"></label><label class="field"><span>禁用</span><input class="input" value="不可编辑" disabled></label></div>
+<div class="demo-card"><h5>徽章 / 胶囊 Badges</h5><div class="pills"><span class="badge badge-accent">accent</span><span class="badge badge-online">在线</span><span class="badge badge-warning">提醒</span><span class="badge badge-danger">危险</span><span class="badge">neutral</span></div>
+<div class="pills" style="margin-top:12px"><span class="pill">全部</span><span class="pill pill-active">已选</span><span class="pill pill-soft">筛选</span><span class="pill">#云龙湖</span><span class="pill">#摄影</span></div></div>
+<div class="demo-card"><h5>Tabs</h5><div class="pills"><button class="pill pill-active">胶囊选中</button><button class="pill">胶囊</button></div><div class="seg" style="margin-top:12px"><button aria-pressed="true">为你推荐</button><button aria-pressed="false">正在关注</button></div><div class="underline" style="margin-top:12px"><button aria-pressed="true">简介</button><button aria-pressed="false">成员</button><button aria-pressed="false">公告</button></div></div>
+<div class="demo-card"><h5>列表行 / 头像 List &amp; Avatar</h5><div class="row"><span class="avatar">鹿</span><div style="flex:1"><div style="font-size:13px;font-weight:600">鹿鸣</div><div style="font-size:11px;color:var(--k-text-secondary)">@user_seed_lumos · 济源市南天门</div></div><span class="dot"></span></div><div class="row"><span class="avatar">阿</span><div style="flex:1"><div style="font-size:13px;font-weight:600">阿禾</div><div style="font-size:11px;color:var(--k-text-secondary)">记录城市光影</div></div><span class="badge badge-accent">关注</span></div></div>
+<div class="demo-card"><h5>卡片 / Hero Card</h5><div class="card-hero"><div style="font-size:11px;letter-spacing:1.2px;color:var(--k-text-secondary)">附近</div><div style="font-size:20px;font-weight:700;margin:6px 0">实时附近</div><div style="display:flex;gap:18px"><div><b style="font-size:22px">8</b><div style="font-size:11px;color:var(--k-text-secondary)">人</div></div><div><b style="font-size:22px">6</b><div style="font-size:11px;color:var(--k-text-secondary)">瞬间</div></div><div><b style="font-size:22px">2</b><div style="font-size:11px;color:var(--k-text-secondary)">在线</div></div></div></div></div>
+<div class="demo-card"><h5>底部弹层 / 对话框 / Toast</h5><div class="sheet"><div style="width:36px;height:4px;border-radius:999px;background:var(--k-border-default);margin:0 auto 12px"></div><div style="font-size:15px;font-weight:700">封禁并移出</div><div style="font-size:12px;color:var(--k-text-secondary);margin:6px 0 12px">确定将「游客」封禁并移出群组？封禁后对方将无法再加入。</div><div class="pills"><button class="btn btn-secondary" style="flex:1">取消</button><button class="btn btn-danger" style="flex:1">封禁并移出</button></div></div><div class="toast" style="margin-top:12px">「用户管理」请在 Web 管理后台完成</div></div>
+<div class="demo-card"><h5>空态 / 骨架</h5><div class="empty"><div style="font-size:28px">☁️</div><div style="font-size:13px;font-weight:600;margin-top:6px">暂无内容</div><div style="font-size:11px">换个筛选条件试试</div></div><div class="skeleton" style="width:80%;margin:10px auto"></div><div class="skeleton" style="width:60%;margin:6px auto"></div></div>
+</div></section>
+<section class="kit-section"><h2>页面 Pages</h2>
+<p class="lead">页面截图为实时环境捕获（Web 390×844、HarmonyOS 模拟器/真机）。它们用于对齐布局、间距、层级与组件组合，不作为像素级唯一依据——像素级以 token 与代码为准。</p>
+<h3>Web 端页面（390 × 844）</h3><p class="muted">实时页面截图，深色主题；与 docs/design-kit/pages 同源。</p><div class="gallery"><figure><a href="pages/web-admin.png" target="_blank"><img src="pages/web-admin.png" loading="lazy" alt="admin"></a><figcaption>admin</figcaption></figure><figure><a href="pages/web-group-detail.png" target="_blank"><img src="pages/web-group-detail.png" loading="lazy" alt="group-detail"></a><figcaption>group-detail</figcaption></figure><figure><a href="pages/web-home.png" target="_blank"><img src="pages/web-home.png" loading="lazy" alt="home"></a><figcaption>home</figcaption></figure><figure><a href="pages/web-map.png" target="_blank"><img src="pages/web-map.png" loading="lazy" alt="map"></a><figcaption>map</figcaption></figure><figure><a href="pages/web-me-edit.png" target="_blank"><img src="pages/web-me-edit.png" loading="lazy" alt="me-edit"></a><figcaption>me-edit</figcaption></figure><figure><a href="pages/web-me.png" target="_blank"><img src="pages/web-me.png" loading="lazy" alt="me"></a><figcaption>me</figcaption></figure><figure><a href="pages/web-messages.png" target="_blank"><img src="pages/web-messages.png" loading="lazy" alt="messages"></a><figcaption>messages</figcaption></figure><figure><a href="pages/web-moment-detail.png" target="_blank"><img src="pages/web-moment-detail.png" loading="lazy" alt="moment-detail"></a><figcaption>moment-detail</figcaption></figure><figure><a href="pages/web-my-groups.png" target="_blank"><img src="pages/web-my-groups.png" loading="lazy" alt="my-groups"></a><figcaption>my-groups</figcaption></figure><figure><a href="pages/web-my-moments.png" target="_blank"><img src="pages/web-my-moments.png" loading="lazy" alt="my-moments"></a><figcaption>my-moments</figcaption></figure><figure><a href="pages/web-my-reports.png" target="_blank"><img src="pages/web-my-reports.png" loading="lazy" alt="my-reports"></a><figcaption>my-reports</figcaption></figure><figure><a href="pages/web-nearby-groups.png" target="_blank"><img src="pages/web-nearby-groups.png" loading="lazy" alt="nearby-groups"></a><figcaption>nearby-groups</figcaption></figure><figure><a href="pages/web-nearby-moments.png" target="_blank"><img src="pages/web-nearby-moments.png" loading="lazy" alt="nearby-moments"></a><figcaption>nearby-moments</figcaption></figure><figure><a href="pages/web-nearby-people.png" target="_blank"><img src="pages/web-nearby-people.png" loading="lazy" alt="nearby-people"></a><figcaption>nearby-people</figcaption></figure><figure><a href="pages/web-nearby.png" target="_blank"><img src="pages/web-nearby.png" loading="lazy" alt="nearby"></a><figcaption>nearby</figcaption></figure><figure><a href="pages/web-notify.png" target="_blank"><img src="pages/web-notify.png" loading="lazy" alt="notify"></a><figcaption>notify</figcaption></figure><figure><a href="pages/web-relationships.png" target="_blank"><img src="pages/web-relationships.png" loading="lazy" alt="relationships"></a><figcaption>relationships</figcaption></figure><figure><a href="pages/web-search.png" target="_blank"><img src="pages/web-search.png" loading="lazy" alt="search"></a><figcaption>search</figcaption></figure><figure><a href="pages/web-settings.png" target="_blank"><img src="pages/web-settings.png" loading="lazy" alt="settings"></a><figcaption>settings</figcaption></figure><figure><a href="pages/web-user-profile.png" target="_blank"><img src="pages/web-user-profile.png" loading="lazy" alt="user-profile"></a><figcaption>user-profile</figcaption></figure></div>
+<h3>HarmonyOS 端页面（模拟器/真机）</h3><p class="muted">浅色与深色混合，覆盖同一 IA 的关键页面。</p><div class="gallery"><figure><a href="pages/app-banned-list.jpg" target="_blank"><img src="pages/app-banned-list.jpg" loading="lazy" alt="banned-list"></a><figcaption>banned-list</figcaption></figure><figure><a href="pages/app-create-group.jpg" target="_blank"><img src="pages/app-create-group.jpg" loading="lazy" alt="create-group"></a><figcaption>create-group</figcaption></figure><figure><a href="pages/app-create-moment.jpg" target="_blank"><img src="pages/app-create-moment.jpg" loading="lazy" alt="create-moment"></a><figcaption>create-moment</figcaption></figure><figure><a href="pages/app-dark-home.jpg" target="_blank"><img src="pages/app-dark-home.jpg" loading="lazy" alt="dark-home"></a><figcaption>dark-home</figcaption></figure><figure><a href="pages/app-dark-map.jpg" target="_blank"><img src="pages/app-dark-map.jpg" loading="lazy" alt="dark-map"></a><figcaption>dark-map</figcaption></figure><figure><a href="pages/app-dark-messages.jpg" target="_blank"><img src="pages/app-dark-messages.jpg" loading="lazy" alt="dark-messages"></a><figcaption>dark-messages</figcaption></figure><figure><a href="pages/app-dark-nearby.jpg" target="_blank"><img src="pages/app-dark-nearby.jpg" loading="lazy" alt="dark-nearby"></a><figcaption>dark-nearby</figcaption></figure><figure><a href="pages/app-dark-profile.jpg" target="_blank"><img src="pages/app-dark-profile.jpg" loading="lazy" alt="dark-profile"></a><figcaption>dark-profile</figcaption></figure><figure><a href="pages/app-dark-settings.jpg" target="_blank"><img src="pages/app-dark-settings.jpg" loading="lazy" alt="dark-settings"></a><figcaption>dark-settings</figcaption></figure><figure><a href="pages/app-edit-profile.jpg" target="_blank"><img src="pages/app-edit-profile.jpg" loading="lazy" alt="edit-profile"></a><figcaption>edit-profile</figcaption></figure><figure><a href="pages/app-group-chat.jpg" target="_blank"><img src="pages/app-group-chat.jpg" loading="lazy" alt="group-chat"></a><figcaption>group-chat</figcaption></figure><figure><a href="pages/app-group-detail.jpg" target="_blank"><img src="pages/app-group-detail.jpg" loading="lazy" alt="group-detail"></a><figcaption>group-detail</figcaption></figure><figure><a href="pages/app-home.jpg" target="_blank"><img src="pages/app-home.jpg" loading="lazy" alt="home"></a><figcaption>home</figcaption></figure><figure><a href="pages/app-map.jpg" target="_blank"><img src="pages/app-map.jpg" loading="lazy" alt="map"></a><figcaption>map</figcaption></figure><figure><a href="pages/app-member-menu.jpg" target="_blank"><img src="pages/app-member-menu.jpg" loading="lazy" alt="member-menu"></a><figcaption>member-menu</figcaption></figure><figure><a href="pages/app-messages.jpg" target="_blank"><img src="pages/app-messages.jpg" loading="lazy" alt="messages"></a><figcaption>messages</figcaption></figure><figure><a href="pages/app-nearby.jpg" target="_blank"><img src="pages/app-nearby.jpg" loading="lazy" alt="nearby"></a><figcaption>nearby</figcaption></figure><figure><a href="pages/app-notify.jpg" target="_blank"><img src="pages/app-notify.jpg" loading="lazy" alt="notify"></a><figcaption>notify</figcaption></figure><figure><a href="pages/app-profile.jpg" target="_blank"><img src="pages/app-profile.jpg" loading="lazy" alt="profile"></a><figcaption>profile</figcaption></figure><figure><a href="pages/app-safety-settings.jpg" target="_blank"><img src="pages/app-safety-settings.jpg" loading="lazy" alt="safety-settings"></a><figcaption>safety-settings</figcaption></figure><figure><a href="pages/app-search.jpg" target="_blank"><img src="pages/app-search.jpg" loading="lazy" alt="search"></a><figcaption>search</figcaption></figure><figure><a href="pages/app-settings.jpg" target="_blank"><img src="pages/app-settings.jpg" loading="lazy" alt="settings"></a><figcaption>settings</figcaption></figure><figure><a href="pages/app-upgrade.jpg" target="_blank"><img src="pages/app-upgrade.jpg" loading="lazy" alt="upgrade"></a><figcaption>upgrade</figcaption></figure></div>
+</section>
+<section class="kit-section"><h2>跨端对齐 Parity</h2>
+<p class="lead">Web 字号/圆角/间距与 HarmonyOS DesignConstants 一一对应；改任一端需同步另一端并跑校验脚本（见 README）。</p>
+<div class="cols"><table><thead><tr><th>HarmonyOS 字号</th><th>vp</th></tr></thead><tbody><tr><td>FONT.SIZE.XS</td><td>11</td></tr><tr><td>FONT.SIZE.SM</td><td>12</td></tr><tr><td>FONT.SIZE.MD</td><td>14</td></tr><tr><td>FONT.SIZE.LG</td><td>16</td></tr><tr><td>FONT.SIZE.XL</td><td>20</td></tr><tr><td>FONT.SIZE.XXL</td><td>24</td></tr><tr><td>FONT.SIZE.XXXL</td><td>30</td></tr><tr><td>FONT.SIZE.XS2</td><td>10</td></tr><tr><td>FONT.SIZE.LG_PLUS</td><td>18</td></tr><tr><td>FONT.SIZE.HERO</td><td>36</td></tr></tbody></table>
+<table><thead><tr><th>HarmonyOS 圆角</th><th>vp</th></tr></thead><tbody><tr><td>RADIUS.SM</td><td>12</td></tr><tr><td>RADIUS.MD</td><td>16</td></tr><tr><td>RADIUS.LG</td><td>20</td></tr><tr><td>RADIUS.XL</td><td>24</td></tr><tr><td>RADIUS.FULL</td><td>999</td></tr></tbody></table>
+<table><thead><tr><th>HarmonyOS 间距</th><th>vp</th></tr></thead><tbody><tr><td>SPACING.HALF</td><td>2</td></tr><tr><td>SPACING.XS</td><td>4</td></tr><tr><td>SPACING.THREE</td><td>3</td></tr><tr><td>SPACING.SM2</td><td>6</td></tr><tr><td>SPACING.SM</td><td>8</td></tr><tr><td>SPACING.MD2</td><td>10</td></tr><tr><td>SPACING.MD</td><td>12</td></tr><tr><td>SPACING.MD3</td><td>14</td></tr><tr><td>SPACING.LG</td><td>16</td></tr><tr><td>SPACING.LG_PLUS</td><td>18</td></tr><tr><td>SPACING.LG2</td><td>20</td></tr><tr><td>SPACING.XL</td><td>24</td></tr><tr><td>SPACING.XXL</td><td>32</td></tr></tbody></table></div></section>
+<section class="kit-section"><h2>导入 Figma / Stitch 与迭代流程</h2>
+<div class="note"><p><b>Figma</b>：① 新建文件；② 安装 Tokens Studio 插件并导入 <code>tokens/global.json</code> 与 <code>tokens/themes/*.json</code>（一个主题一个 set）；③ 把 <code>pages/*.png|jpg</code> 拖入画布作为参考层（或逐页 Place image）；④ 用 Components 区截图/说明建立 Figma 组件库（按钮/输入/列表/Tab/弹层）。</p>
+<p><b>Stitch</b>：在 Stitch 新建项目，上传 <code>pages/</code> 中的截图作为参考图，并粘贴 README 的「设计约束」段落作为生成提示；后续迭代以本页 token 与截图为准，Stitch 产出需回填到代码 token 后重新生成本页。</p>
+<p><b>迭代</b>：改代码 token（frontend themes / semantic / shared 或 harmonyapp DesignConstants）→ 重新运行 <code>node scripts/design-kit/build-tokens.mjs</code> 与 <code>node scripts/design-kit/build-ui-kit.mjs</code> → 重新截图 → 提交。校验：<code>bun run check:theme</code>、<code>python3 harmonyapp/scripts/check_status_parity.py</code>。</p></div></section>
+</main>
+<footer>HotSpot UI Design Kit · generated from commit 69859e678 · tokens 由代码生成，勿手工编辑 tokens.json / ui-kit.html。</footer>
+<script>
+(function () {
+  var root = document.documentElement;
+  root.dataset.theme = "vibrant";
+  root.dataset.mode = "light";
+  function bind(group, attr) {
+    var buttons = document.querySelectorAll("[data-set-" + group + "]");
+    buttons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        root.dataset[attr] = btn.getAttribute("data-set-" + group);
+        buttons.forEach(function (b) { b.setAttribute("aria-pressed", String(b === btn)); });
+      });
+    });
+  }
+  bind("theme", "theme");
+  bind("mode", "mode");
+})();
+</script>
+</body>
+</html>
