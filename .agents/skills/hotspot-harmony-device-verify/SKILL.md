@@ -178,6 +178,44 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 - **纪律**：任何「输入串位 / 多字符 / 少字符」的端上现象，先用「输入 N 字符 → dump 看长度/掩码位数」做自证；长度不对先查坐标与键盘，再考虑 app 缺陷。
 - `keyEvent Back` 只有在 **IME/安全键盘打开时**才安全（只关键盘）；键盘未开时它等于导航后退，连按两次会退出应用。每次 Back 后都要 dump 校验页面没变。
 
+## Map Kit 地图验收（模拟器/真机）
+
+地图画布空白时，**先看 hilog 再归因**：
+
+```bash
+hdc -t <target> shell hilog -x | grep -iE 'OHMapSDK|map permission'
+```
+
+关键行：
+
+- `OHMapSDK_PermissionChecker: permission is granted: false` + `OHMapSDK_Mapview: The app does not have map permission` → 身份/权限校验失败；
+- `onMapLoadedCallBack.status unpdate` → 地图已加载成功。
+
+**首要排查：装的是不是「已签名 HAP」**。clean 构建产物有两个包：
+
+- `entry/build/default/outputs/default/entry-default-signed.hap`（带签名，真机/地图必须用这个）；
+- `entry-default-unsigned.hap`；`entry-default.hap` 在 clean 构建后可能是 unsigned 副本。
+
+模拟器**接受未签名包**（普通页面都能跑），但 Map Kit 身份校验会失败（`permission is granted: false`，瓦片请求 `no map permission`）；改装 signed HAP 后同一模拟器立即 `permission is granted: true`、地图正常渲染。真机则直接拒装 unsigned（`error: no signature file`），签名不一致时 `install sign info inconsistent`，需先 `uninstall` 再装 signed。
+
+**AGC 前置条件**：地图服务需在 AGC 开通，且证书/Profile 必须在开通后生成（先签名后开通会一直白屏）；开通后生效可能需要等待（官方 FAQ 称最长 24 小时）。真机已验证：signed HAP + 已开通服务 → 瓦片正常。
+
+**marker 锚定验收（对照「marker 固定在屏幕中心 / 缩放漂移」类 bug）**：
+
+1. 地图页点「将地图中心设为浏览锚点」→ 锚点 pin 出现在地图中心；
+2. 平移地图 → pin 必须随地图移动（若始终钉在屏幕中心即为 bug）；
+3. 点 `+`/`-` 缩放 → pin 必须绑定同一地理要素（相对路名/POI 不漂移）。
+
+App 端 marker 由 `@kit.MapKit` 的 `MapMarker(latitude, longitude)` 渲染，天然按地理坐标锚定；Web 端对应回归测试：
+
+```bash
+cd frontend && bunx vitest run src/components/map/__tests__
+```
+
+（含 `MapCanvas.zoom-anchor` / `wheel` / `pinch` / 投影与 GCJ 纠偏，共 35 项。）
+
+**真机无线调试**：`hdc tconn <手机IP>:<端口>` 后 `hdc list targets -v` 应出现 `<IP>:<端口> TCP Connected`；安装/截图/uitest 均用 `hdc -t <IP>:<端口>`。真机有可用输入法，`uitest uiInput text` 可正常注入中文（模拟器首次输入会弹小艺输入法隐私弹窗，可能反复出现）。
+
 ## 陷阱与纪律
 
 ### 走查铁律：截图与 dumpLayout 必须**同一次调用**获取
