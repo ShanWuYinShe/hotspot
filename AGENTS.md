@@ -31,29 +31,41 @@
 
 各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出（一律以子项目为准）。
 
+## CI 门禁与本地验证分工
+
+重活（全量测试、构建、打包、E2E、集成测试、镜像构建）一律交给 GitHub Actions，本地只跑秒级检查。
+完整流程见全局 skill `github-ci-flow`：开发分支推送 → `gh pr create` → `gh pr checks --watch`
+全绿 → `gh pr merge --rebase --delete-branch` → 本地 `git pull --ff-only` 并清理 worktree。
+
+- 本地（提交前，秒级）：`git commit` 的 husky 钩子按改动路径跑对应门禁（`frontend/` → `bun run check`；`backend-go/` → gofmt + 受影响包 `go build`/`go vet`/`go test -short`；`harmonyapp/` → hvigor `assembleApp`，工具链缺失时告警跳过），另有 `gofmt -l backend-go`、`go vet -C backend-go ./...` 等秒级复核命令。**不跑**：`go test ./...`（全量/含 `-race`）、`bun run test`、`bun run build`、生产镜像构建（`docker compose --profile prod build`）；本地 dev 容器（`docker-compose.dev.yml`）仅在交互式调试时按需构建/启动。
+- CI 覆盖（`.github/workflows/ci.yml`，`push: main` + `pull_request: main`，共 7 个 job）：
+  - `Go Backend (Unit Tests)`：go build、gofmt、go vet、govulncheck、staticcheck、gosec、迁移序号校验、`go test` + 覆盖率门禁。
+  - `Go Backend (Postgres Integration)`：真实 Postgres 迁移与 schema/索引校验、迁移幂等、真实库 repository 集成测试、模块覆盖率 ≥90%、SeaweedFS、后端 + nginx 网关 HTTP E2E。
+  - `Frontend (SvelteKit)`：`bun install`、svelte-check、vitest、`bun build`。
+  - `Infra (Compose & Nginx Config)`：`docker compose config`（base / dev / prod）、Prometheus 配置校验、`nginx -t`（base / dev / prod-tls）。
+  - `Contract Prefix Guard`：禁止 legacy 管理节点前缀回归（现行前缀为 `/admin/api/v1`，见 `spec/api_spec_base.md`）。
+  - `Secret scan (gitleaks)`：全量历史密钥扫描。
+  - `Docker Build + Runtime Smoke (Prod Images)`：生产后端/前端镜像构建 + 生产后端镜像运行时冒烟。
+- CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上真机/模拟器走查（见 skill `hotspot-harmony-device-verify`）；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
+- 发版/发布门禁：日常验证以 CI 为准；打 tag 前只需确认 `origin/main` 最近一次 CI 全绿（含 `Docker Build + Runtime Smoke`），镜像构建与容器内集成由 CI 在 PR/main 上覆盖，本地不再构建生产镜像、不再核对本地镜像指纹。详见下节「版本号与发布」。
+
 ## 版本号与发布
 
 版本号以 git tag 为源（流程见 `git-workflow`「版本号以 tag 为源」），版本串注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`，内置门禁：tag 形态 `vX.Y.Z`、必须落在 `origin/main`、该提交 CI 全绿）构建镜像并附 `.sha256` 挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；回滚用 `./scripts/rollback-production.sh`（复用同一链路）。鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。完整流程（含热修复）见 `docs/release-runbook.md`。
 
-### 发布门禁（硬性）：先本地 Docker 验证，再打 tag
+### 发布门禁（硬性）：main CI 全绿再打 tag
 
-禁止把未经本地验证的改动打 tag 发布：在 `git tag vX.Y.Z` 之前，必须按顺序完成：
+禁止在 `origin/main` 的 CI 未全绿时打 tag 发布。打 tag 前按顺序确认：
 
-1. 联调：`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` 全员 healthy，在 `http://localhost:8888`（nginx 网关）走通本次改动；前端改动辅以 `bun run browser:qa` 巡检（见 `frontend/AGENTS.md`）。
-2. 集成测试（后端有改动时）：按 `backend-go/AGENTS.md`「集成测试」的约定启动 `backend-test` 并执行（命令以该文件为唯一维护处，此处不重复）。
-3. 生产镜像本地构建（与 CI Release 同构的 Dockerfile；CI 在打 tag 后才构建，本地先构建等于把失败提前；三个指纹变量必须一起传，否则 OCI version 回落为 `dev`）：
-   ```bash
-   GIT_VERSION=<候选版本> GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-     IMAGE_TAG=<候选版本> docker compose --profile prod build backend frontend-build
-   ```
-4. 版本指纹就地核对：`docker inspect hotspot-backend:<候选版本> / hotspot-frontend:<候选版本>` 的 OCI `org.opencontainers.image.version` 必须等于候选版本、`revision` 等于本次 commit（Release 工作流同款断言，本地先跑）。
-5. 鸿蒙端人工确认（CI 不覆盖 harmonyapp）：其构建/类型检查仅存在于开发者本机 DevEco 链路（pre-commit 调 hvigor `assembleApp`，工具链缺失时告警跳过），CI 无对应 job 兜底——tag 前必须人工确认涉及 `harmonyapp/` 的改动已在本地通过 hvigor 构建（见 `harmonyapp/AGENTS.md`）。
+1. 本次改动已通过 PR 门禁：PR 上 CI 全绿（含 `Docker Build + Runtime Smoke (Prod Images)` 与 `Go Backend (Postgres Integration)`）——生产镜像构建、运行时冒烟、真实库集成与 HTTP E2E 均由 CI 在开发分支/PR 上覆盖，本地不构建生产镜像。
+2. `origin/main` 最近一次 CI 全绿（`gh run list --branch main --limit 1 --json conclusion` 应为 `success`；Release 工作流也会在 tag 后强制断言该提交 CI 全绿）。
+3. 鸿蒙端人工确认（CI 不覆盖 harmonyapp）：其构建/类型检查仅存在于开发者本机 DevEco 链路（pre-commit 调 hvigor `assembleApp`，工具链缺失时告警跳过），CI 无对应 job 兜底——tag 前必须人工确认涉及 `harmonyapp/` 的改动已在本地通过 hvigor 构建（见 `harmonyapp/AGENTS.md`）。
 
-全部通过后才打 tag → 等 CI「Release」成功 → `./scripts/deploy-production.sh vX.Y.Z`（脚本会复核 tag 位置、发布包校验和、镜像 OCI 指纹与线上三级版本）。
+全部通过后才打 tag → 等 CI「Release」成功：Release 工作流构建前后端生产镜像（注入 `GIT_VERSION`/`GIT_COMMIT`/`GIT_BUILD_TIME` 指纹）、冒烟核对 OCI 指纹后打包挂到 GitHub Release，auto-deploy job 下载镜像包到服务器 `docker load` + compose 起服务；需要手动分发时执行 `./scripts/deploy-production.sh vX.Y.Z`（同一条链路，脚本会复核 tag 位置、发布包校验和、镜像 OCI 指纹与线上三级版本）。
 
 **热修复遵循同一门禁**：本项目 tag 必须落在 `origin/main` 上，热修同样要回合主干后打 patch tag，不存在绕过主干的旁路发布；线上先止血用 `./scripts/rollback-production.sh --previous`。流程见 `docs/release-runbook.md`。
 
-例外：纯文档/注释改动（`*.md`、代码注释）可跳过第 1、2 步；文档改动不进镜像时第 3、4 步也可跳过。
+例外：纯文档/注释改动（`*.md`、代码注释）不影响镜像产物，无额外本地验证要求，仍以 CI 全绿为准。
 
 ## UI 审计基线
 
@@ -106,7 +118,7 @@ worktree 内调试同样通过 Docker Compose，与主工作树自动隔离。
 - 契约权威：`spec/` 是 API 契约的唯一权威来源；修改接口、字段、错误码前先对齐 `spec/`。
 - 跨端边界：距离与位置计算统一由后端完成，前端和客户端只展示结果。
 - **int64 跨端序列化统一为字符串**：JS（Svelte）与 ArkTS 的 number 是 IEEE754 double，无法无损表示 Go int64（安全整数上限 2^53）。凡 spec 定义 string、后端为 int64 的字段（如 WS `server_seq`），后端 JSON tag 必须加 `,string` 下发字符串；前端/harmonyapp 类型保持 string 仅透传/去重、不做数值运算。禁止以「后端实际下发数字」为由把客户端类型改成 number——正确修法是后端序列化为字符串。
-- Docker Compose 统一管理：运行时服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个运行时服务绕过 compose。静态检查（`bun run check/test/build`、Go 单测等不依赖服务间协作的命令）可在宿主机执行。
+- Docker Compose 统一管理：运行时服务（postgres、redis、seaweedfs、backend、frontend、nginx）统一通过 `docker compose` 编排启动/停止；不得混用宿主机进程与容器，也不允许单独启动某个运行时服务绕过 compose。本地验证分工见「CI 门禁与本地验证分工」：秒级静态检查（`bun run check`、`gofmt`/`go vet` 等）可在宿主机执行，全量测试、构建与镜像构建交 CI。
 - **改动生效闭环**：代码改动合并到主分支后，若主环境 Docker 容器在运行，必须主动重启相关容器，确保最新效果立即可见（命令与健康检查见 skill `hotspot-worktree-debug`）。
 - **环境类结论必须可复现，否则视为未验证假设**：在 skill / 文档 / 对话里写下「本机不可验证」「必须真机」「环境限制」「某页面白屏」这类结论时，必须同时给出**验证方式（命令/取数口径）+ 复现步骤**；沿用既有环境结论前，**先证伪一次**。
   - 典型失真：把问题归为「推入式页面白屏、必须真机」可能掩盖真 bug（ArkUI 裸 `{ }` 块 → `layoutWeight` 失效 → 内容区全空），须在端上截图确认。

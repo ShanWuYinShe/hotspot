@@ -45,7 +45,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 发布为**产物分发模式**，服务器不接触源码、不构建：
 
-0. 本地 Docker 验证（硬性前置，链路见 `AGENTS.md`「发布门禁」：dev 联调 → 集成测试 → 生产镜像构建 → 版本指纹核对），通过后才允许打 tag；
+0. 发布门禁（硬性前置）：PR 与 `origin/main` 的 CI 全绿（含 `Docker Build + Runtime Smoke`、`Go Backend (Postgres Integration)`），即视为生产镜像构建与容器内验证已通过——本地不做生产镜像构建与指纹核对；CI 不覆盖的鸿蒙端改动需本地 hvigor 构建确认（见 `AGENTS.md`「发布门禁」）；
 1. 打 tag 并推送（`git tag vX.Y.Z && git push origin vX.Y.Z`，一次一个）；
 2. CI「Release」工作流先过发布门禁（tag 必须是 `vX.Y.Z` 且落在 `origin/main` 上、该提交 CI 全绿），再构建前后端镜像（注入版本指纹），打包并生成 `.sha256` 校验和，挂到同名 GitHub Release；
 3. 本地执行 `./scripts/deploy-production.sh vX.Y.Z`：校验发布包校验和 → 从该 tag 导出部署配置（配置与镜像同源）→ 服务器 `docker load` → 核对镜像 OCI 指纹 → 数据库快照 → 滚动更新 → 后端/前端/网关三级版本校验，失败自动回滚上一版本；结束后回收旧镜像并写入部署审计日志。

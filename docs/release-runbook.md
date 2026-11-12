@@ -26,22 +26,22 @@
 
 ## 1. 发布门禁（打 tag 之前，硬性）
 
-顺序执行，全部通过才允许 `git tag`。完整命令见根 `AGENTS.md`「发布门禁」：
+全部通过才允许 `git tag`。镜像构建与容器内验证由 CI 承担，本地不构建生产镜像：
 
-1. **联调**：`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` 全员 healthy，在 `http://localhost:8888` 走通本次改动（前端改动补 `bun run --cwd frontend browser:qa`）。
-2. **集成测试**（后端有改动时）：`--profile test up -d backend-test` + `BACKEND_URL=http://localhost:8082 go test -count=1 ./test/integration/`。
-3. **生产镜像本地构建**（与 CI 同构，先跑等于把失败提前）：`GIT_VERSION=<候选> GIT_COMMIT=$(git rev-parse HEAD) GIT_BUILD_TIME=<UTC> IMAGE_TAG=<候选> docker compose --profile prod build backend frontend-build`。
-4. **指纹核对**：`docker inspect hotspot-backend:<候选> hotspot-frontend:<候选>` 的 OCI `version` 必须等于候选版本、`revision` 必须等于本次 commit。
-5. **鸿蒙端**：涉及 `harmonyapp/` 时人工确认本机 hvigor 构建通过（CI 不覆盖）。
+1. **改动已过 PR 门禁**：PR 上 CI 全绿——`Go Backend (Unit Tests)` 与 `Go Backend (Postgres Integration)` 覆盖单测、`-race`、覆盖率、迁移幂等/manifest、真实库 IT 与 HTTP E2E；`Docker Build + Runtime Smoke (Prod Images)` 构建并运行生产镜像（启动迁移 + manifest 校验、`/readyz`/`/healthz`、OCI version 指纹）。
+2. **`origin/main` CI 全绿**：`gh run list --branch main --limit 1 --json conclusion` 为 `success`（Release 的 `require-ci` job 会在 tag 后再次强制断言该提交 CI 全绿）。
+3. **鸿蒙端**：涉及 `harmonyapp/` 时人工确认本机 hvigor 构建通过（CI 不覆盖）。
 
-例外：纯文档/注释改动可跳过 1、2；文档改动不进镜像时 3、4 也可跳过。
+需要本地联调或复现 CI 失败时（不是打 tag 的硬性前置）：`docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d` 起 dev 环境（入口 `http://localhost:8888`）；全量后端检查本地复现用 `./scripts/verify-backend-ci.sh --with-db`（见 `backend-go/AGENTS.md`「本地复现 CI」）。
+
+例外：纯文档/注释改动不进镜像，无额外本地验证要求，仍以 CI 全绿为准。
 
 ---
 
 ## 2. 标准发布
 
 ```bash
-# 1) 代码已合入 main（worktree 内开发 → git merge --ff-only）
+# 1) 代码已合入 main（worktree 内开发 → 推分支 → PR → CI 全绿后 rebase 合并）
 git push                                   # 先推分支
 
 # 2) 在 main 当前提交打 annotated tag，一个一个推
@@ -108,7 +108,7 @@ ssh workwork-server '~/hotspot/scripts/health-check.sh'              # 巡检（
 
 ### 3.3 数据面（必读）
 
-**回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill）。schema 变更已不再强制「旧镜像兼容」——项目明确不考虑二进制向后兼容，迁移允许破坏性 DDL（文件内 `-- allow-destructive: <理由>` 声明）。因此：**普通增量迁移**回滚后是「旧镜像 + 新 schema」，通常可用；**破坏性迁移**（删表/列/类型变更）发布后旧镜像无法跑在新 schema 上，回滚必须按 `docs/backup-restore.md` 恢复数据库到发布前备份。打 tag 前必须在本地 compose 完整验证迁移 + 新镜像。
+**回滚只回滚镜像，不回滚数据**：迁移无 down 迁移（见 `hotspot-backend-migrations` skill）。schema 变更已不再强制「旧镜像兼容」——项目明确不考虑二进制向后兼容，迁移允许破坏性 DDL（文件内 `-- allow-destructive: <理由>` 声明）。因此：**普通增量迁移**回滚后是「旧镜像 + 新 schema」，通常可用；**破坏性迁移**（删表/列/类型变更）发布后旧镜像无法跑在新 schema 上，回滚必须按 `docs/backup-restore.md` 恢复数据库到发布前备份。打 tag 前以 main CI 全绿为准：`backend-integration` job 已校验迁移幂等与 manifest 一致性、`docker-build` job 已运行生产镜像完成迁移与就绪校验，本地不再构建新镜像验证。
 
 **迁移执行方式**：生产部署先运行独立迁移 job（见 §2），server 启动期仅幂等校验并在缺失时补跑。两者共用同一 runner：按 `schema_migrations` 版本表增量执行迁移（只跑未登记文件）；每个文件与其版本登记在同一事务内提交，已应用文件以 sha256 checksum 冻结（历史迁移被改动/删除会拒绝启动）；启动末尾用 `migrations/schema_manifest.json` 校验期望表/列/索引是否齐全。**不做基线、不做存量库接管**：若目标库「已有业务表但版本表为空」，或已登记迁移缺少 checksum，启动直接失败；迁移只从空库按文件顺序全量执行，旧库需将数据迁移到新库。迁移只读校验可用 `go run ./cmd/migrate -verify-only`。
 
@@ -148,12 +148,11 @@ git worktree add -b hotfix/<缺陷名> .agents/worktrees/hotfix-<缺陷名> v1.1
 
 # 3) 最小修复 + 按 $1 门禁验证（改动小不等于可以跳过验证）
 
-# 4) 与 main 对齐（保持 ff-only 可达）
-git rebase main
-
-# 5) 合并进 main（主工作树执行）
-git merge --ff-only hotfix/<缺陷名>
-git push
+# 4) 推分支 → 开 PR → CI 全绿后 rebase 合并进 main（见 github-ci-flow skill）
+git push -u origin hotfix/<缺陷名>
+gh pr create --draft --base main --head hotfix/<缺陷名> --title "<中文标题>" --body-file /tmp/pr-body.md
+gh pr checks <PR号> --watch
+gh pr ready <PR号> && gh pr merge <PR号> --rebase --delete-branch
 
 # 6) 打 patch tag（打在 main 当前提交上，一个一个推）
 git tag -a v1.1.11 -m "v1.1.11 热修：<一句话缺陷描述>"
