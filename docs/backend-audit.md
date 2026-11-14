@@ -3930,15 +3930,12 @@ staticcheck U1000（-tests=false）清零。
   PUT 至 nginx `client_max_body_size 100m`），未完成会话保留 7 天且 GC 100/小时。发布后不可变已由
   copy-on-complete 解决，但「弃置大对象」的存储/带宽成本仍需配额或 S3 POST policy（需改客户端协议）
   等多方案评估，另行立项。
-- **保留期治理**：`outbox_events` 无清理（processed 索引无人使用、死信与成功不可区分）；
-  `announcement_reads` 随软删公告永久泄漏；reports 保留期按 `handled_at` 无索引（EXPLAIN 已复现
-  Bitmap+Filter）；admin 审计/举报清理是无界单条 DELETE（与 notify 分批纪律不一致）。
-- notify/mark_read 公告与通知两段写无事务；share/fetch_created 预览 N+1；seed 仍写旧
-  `system_announcement` 通知行（dev 数据重复）；注销级联不删媒体对象；EXIF 清洗缺口（JPEG 填充
-  字节 fail-open 保留 GPS、PNG 不清 XMP，媒体解析器无 fuzz）。
+- **outbox 死信仍不自动清理**：成功投递事件已按保留期分批清理；死信与重试中事件按设计永久保留
+  供排查，若线上死信量大需另设保留期/告警与归档（保留期治理其余项已在批次 3 修复）。
+- **注销级联不删媒体对象**：注销只清模块归属数据，不删除 S3 对象（保留期 GC 仅覆盖未完成上传），
+  长期会留下孤儿对象。
 - bootstrap 未读摘要的聊天未读（private/group chat count）仍恒 0：现有实现没有全量聚合入口，
   需在 privatechats/groups repo 新增 SUM 查询后接线（字段与公式已就位）。
-- Redis 启动不可达静默降级（幂等/限流退化为单实例、内存幂等 map 无容量上限）；Redis client 停机未关闭。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`，若服务器口令含
   `@`/裸空格/`%` 会连不上库（部署脚本建议的 base64 口令无 `@`；需核对服务器 .env）。
 - moment 分享封面用作者头像而非瞬间图（产品口径待确认）。
@@ -3991,3 +3988,31 @@ staticcheck U1000（-tests=false）清零。
 验证：受影响包 `go test -short` 全绿；media 真实库契约 IT（memory+postgres，断言发布键写入与重复
 complete 幂等）、admin 真实库 IT（审计失败回滚/重试后仅一条审计）、share 单测（CTA/绝对化/Vary）
 均通过；PR CI 全绿（含 Infra 的 nginx -t 与 Docker 构建/运行时冒烟）。
+
+### 七、后续批次 3 修复（2026-11-15）
+
+保留期治理、通知已读事务、分享预览 N+1、EXIF 清洗缺口与 Redis 降级可观测性已修复（同一 PR 门禁：CI 全绿后合并）：
+
+- **保留期治理**：outbox 成功投递事件按 7 天保留期、500 行/批、单轮上限分批清理（以
+  `last_error IS NULL` 判别成功，死信与重试中事件不删）；admin 审计日志与终态举报改为循环分批
+  删除（500×200/轮，独立短事务不长时间持锁，日志记累计删除数）；新增迁移 070 为 reports
+  `handled_at` 加部分索引（EXPLAIN：`Bitmap Index Scan on idx_reports_handled_at` 6 buffers /
+  0.12ms，旧 schema 212 buffers / 1.6ms），schema manifest 已重建；死信仍不自动清理（保留排查）。
+- **notify mark_read 事务化**：公告虚拟化已读（announcement_reads）与普通通知已读两段写包进同一
+  事务（仓储层 RunInTransaction + ctx 事务传递），第二段失败整体回滚；`MarkAllRead` 同步处理。
+  system 公告软删时同事务清理 `announcement_reads`（067 的 ON DELETE CASCADE 对软删不生效）。
+- **share 预览批量**：`fetch_created` 列表按目标类型集合批量解析（user/group/moment 各 1 次，
+  纯 location 列表 0 次），Preview 结构与不可见目标降级语义与单条路径完全一致。
+- **EXIF 清洗**：JPEG 按 T.81 处理段前连续 0xFF 填充字节，不再因合法 fill fail-open 保留 GPS；
+  PNG 删除 eXIf 与 XMP（iTXt/zTXt/tEXt keyword `XML:com.adobe.xmp` / `Raw profile type exif|xmp`），
+  非元数据文本块保留；新增 `FuzzStripImageMetadata`（本地 10s / 27.8 万 execs 无 panic）。
+- **Redis 降级可观测性**：`REDIS_URL` 配置但启动不可达时打 Error 级降级日志（endpoint/原因脱敏）、
+  新增 `hotspot_redis_startup_degraded` Gauge，`/readyz` 显示 degraded（仍 200 不摘流量）；
+  内存幂等 store 加 10000 条上限（FIFO 淘汰 + 过期优先清理，读路径不加锁）；App.Shutdown 关闭共享
+  Redis client（bridge/realtime/hotCache 之后、DB 之前）。
+- **seed 数据**：移除旧 `system_announcement` 通知行（通知 9→8、总行 358→357），公告改由虚拟化
+  读取生成，dry-run/测试/AGENTS/README 数字同步。
+
+验证：受影响包 `go test -short` 与 `-race` 全绿；真实库临时库上 outbox 保留期清理、admin 分批
+删除、notify 事务失败回滚、公告 reads 清理 IT 通过；全模块 IT + platform 全绿；`migrate -verify-only`
+与 `check-migrations.sh`/manifest 一致性通过；PR CI 全绿（含 nginx -t、Docker 构建/运行时冒烟）。
