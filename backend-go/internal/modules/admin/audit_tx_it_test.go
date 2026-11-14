@@ -34,18 +34,35 @@ func TestPostgresIT_ReportJudgeAuditInDecisionTx(t *testing.T) {
 	ctx := context.Background()
 	repo := NewPostgresRepository(factory)
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
+	qdb, ok := factory.DB.(persistence.QueryableDB)
+	if !ok {
+		t.Fatal("factory.DB is not QueryableDB")
+	}
 	adminID := testdb.InsertUser(t, factory, "it_audit_admin_"+suffix, "ItAuditAdmin")
 	reporterID := testdb.InsertUser(t, factory, "it_audit_reporter_"+suffix, "ItAuditReporter")
 	// uq_reports_creator_target 对同人同目标全状态唯一，成功/失败两条举报
 	// 必须用不同目标用户。
 	targetOKID := testdb.InsertUser(t, factory, "it_audit_target_ok_"+suffix, "ItAuditTargetOK")
 	targetFailID := testdb.InsertUser(t, factory, "it_audit_target_fail_"+suffix, "ItAuditTargetFail")
+	// 本用例为了验证多事务提交语义必须真实提交数据；共享库上的其它包 IT
+	// （如 reports 的保留期删除断言会把「已处理举报」一并计数）会被残留行污染，
+	// 故测试结束（含失败路径）清理本用例创建的全部行。
+	// admin_audit_logs 无外键，先删；users 级联清理 admin_users / reports 等。
+	userIDs := []string{adminID, reporterID, targetOKID, targetFailID}
+	reportIDs := []string{"it_audit_ok_" + suffix, "it_audit_fail_" + suffix}
+	t.Cleanup(func() {
+		cleanupCtx := context.Background()
+		if err := qdb.Exec(cleanupCtx,
+			"DELETE FROM admin_audit_logs WHERE target_id = ANY($1) OR operator_id = ANY($2)",
+			reportIDs, userIDs); err != nil {
+			t.Logf("cleanup it audit logs: %v", err)
+		}
+		if err := qdb.Exec(cleanupCtx, "DELETE FROM users WHERE user_id = ANY($1)", userIDs); err != nil {
+			t.Logf("cleanup it audit users: %v", err)
+		}
+	})
 	if err := repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: adminID, GrantAllPermissions: true}); err != nil {
 		t.Fatalf("grant admin: %v", err)
-	}
-	qdb, ok := factory.DB.(persistence.QueryableDB)
-	if !ok {
-		t.Fatal("factory.DB is not QueryableDB")
 	}
 	insertReport := func(reportID, targetUserID string) {
 		t.Helper()
