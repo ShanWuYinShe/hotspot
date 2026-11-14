@@ -35,10 +35,10 @@ type Repository interface {
 	SearchReports(context.Context, AdminReportListRequest) (adminReportPage, error)
 	GetReportHandleRecord(context.Context, string) (reportHandleRecord, bool, error)
 	AppendAuditLog(context.Context, AuditLogEntry) error
-	// DeleteAuditLogsBefore / DeleteHandledReportsBefore 物理删除超保留期数据，
-	// 供后台 retention worker 调用（幂等；返回删除行数用于日志）。举报只删
-	// resolved/dismissed 终态，pending 不受影响。
-	DeleteAuditLogsBefore(ctx context.Context, cutoff time.Time) (int64, error)
+	// DeleteAuditLogsBefore 物理删除 created_at 早于 cutoff 的审计日志，单次最多
+	// limit 行（后台 retention worker 循环分批调用，避免无界 DELETE 长时间持锁）；
+	// 返回本批删除行数用于日志。
+	DeleteAuditLogsBefore(ctx context.Context, cutoff time.Time, limit int) (int64, error)
 	// StatsGeo 地理统计聚合（区域/地点排名 + 全站存量 + 可选趋势），见 service_stats.go。
 	StatsGeo(context.Context, geoStatsQuery) (AdminGeoStatsResponse, error)
 	// StatsGeoDrilldown 区域下钻明细（keyset 分页），见 service_stats.go。

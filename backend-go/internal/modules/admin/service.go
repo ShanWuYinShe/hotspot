@@ -128,7 +128,7 @@ type commentModerator interface {
 // reportAdminStore 是 reports 模块的管理端能力（裁决/保留期清理）。
 type reportAdminStore interface {
 	MarkHandledAsAdmin(ctx context.Context, reportID, status string, handledAt time.Time, handledByID *string, note *string) (bool, error)
-	DeleteHandledBefore(ctx context.Context, before time.Time) (int64, error)
+	DeleteHandledBefore(ctx context.Context, before time.Time, limit int) (int64, error)
 }
 
 // accountStateWriter 写入账户封禁状态（users 模块 Service 实现；users 表归属

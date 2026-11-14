@@ -71,7 +71,7 @@ func TestPostgresRepositoryNotConfigured(t *testing.T) {
 	expect("ListAuditLogs", err)
 	err = repo.AppendAuditLog(ctx, AuditLogEntry{Action: AuditActionRoleCreate})
 	expect("AppendAuditLog", err)
-	_, err = repo.DeleteAuditLogsBefore(ctx, time.Now().UTC())
+	_, err = repo.DeleteAuditLogsBefore(ctx, time.Now().UTC(), retentionDeleteBatchSize)
 	expect("DeleteAuditLogsBefore", err)
 	_, err = repo.StatsGeo(ctx, geoStatsQuery{})
 	expect("StatsGeo", err)

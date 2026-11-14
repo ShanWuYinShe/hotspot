@@ -172,6 +172,100 @@ func TestOutboxDispatcherStartSurvivesHandlerPanic(t *testing.T) {
 	waitOutbox(t, 5*time.Second, func() bool { return goodDelivered.Load() >= 1 }, "毒事件退避期间正常事件未被投递")
 }
 
+// TestPostgresIT_OutboxRetentionPrune 覆盖保留期清理的删除口径：只删
+// 「成功投递（last_error 为空）且 processed_at 早于保留期」的行；pending、
+// 退避重试中、死信（last_error 非空）一律保留。全流程包在 TxScope 内，结束
+// 回滚，不向共享测试库提交任何行。
+func TestPostgresIT_OutboxRetentionPrune(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		qdb, ok := txFactory.DB.(persistence.QueryableDB)
+		if !ok {
+			t.Fatal("factory.DB is not QueryableDB")
+		}
+		suffix := time.Now().UnixNano()
+		topicOf := func(class string) string {
+			return fmt.Sprintf("it_outbox_retention_%s_%d", class, suffix)
+		}
+		insert := func(class string, processedAt *time.Time, attempts int, lastError *string) {
+			t.Helper()
+			var processed any
+			if processedAt != nil {
+				processed = *processedAt
+			}
+			var lastErr any
+			if lastError != nil {
+				lastErr = *lastError
+			}
+			if err := qdb.Exec(ctx,
+				"INSERT INTO outbox_events (topic, payload, processed_at, attempts, last_error) VALUES ($1, '{}'::jsonb, $2, $3, $4)",
+				topicOf(class), processed, attempts, lastErr); err != nil {
+				t.Fatalf("insert outbox row %s: %v", class, err)
+			}
+		}
+		now := time.Now().UTC()
+		oldProcessed := now.Add(-defaultRetention - 24*time.Hour)
+		errText := "handler boom"
+		insert("success_old", &oldProcessed, 1, nil)
+		insert("success_recent", pointerTo(now.Add(-time.Hour)), 1, nil)
+		insert("pending", nil, 0, nil)
+		insert("retrying", nil, 1, &errText)
+		insert("dead_letter", &oldProcessed, maxAttempts, &errText)
+
+		dispatcher := NewDispatcher(txFactory, nil)
+		dispatcher.pruneRetentionOnce(ctx)
+
+		counts := map[string]int{}
+		rows, err := qdb.Query(ctx, "SELECT topic FROM outbox_events WHERE topic LIKE $1", topicOf("%"))
+		if err != nil {
+			t.Fatalf("query retained rows: %v", err)
+		}
+		for rows.Next() {
+			var topic string
+			if err := rows.Scan(&topic); err != nil {
+				rows.Close()
+				t.Fatalf("scan retained row: %v", err)
+			}
+			counts[topic]++
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			t.Fatalf("iterate retained rows: %v", err)
+		}
+		rows.Close()
+		for class, want := range map[string]int{
+			"success_old":    0, // 成功投递且超保留期：删除
+			"success_recent": 1, // 成功但未超期：保留
+			"pending":        1, // 未处理：保留
+			"retrying":       1, // 重试中：保留
+			"dead_letter":    1, // 死信：保留（失败记录供排查）
+		} {
+			if got := counts[topicOf(class)]; got != want {
+				t.Fatalf("%s retained = %d, want %d", class, got, want)
+			}
+		}
+
+		// 分批语义：单批最多 limit 行，循环删除直到空（避免一次 DELETE 无界锁行）。
+		for i := 0; i < 3; i++ {
+			insert("batch", &oldProcessed, 1, nil)
+		}
+		cutoff := now.Add(-defaultRetention)
+		for _, want := range []int64{2, 1, 0} {
+			deleted, err := dispatcher.deleteProcessedBatch(ctx, cutoff, 2)
+			if err != nil {
+				t.Fatalf("delete batch: %v", err)
+			}
+			if deleted != want {
+				t.Fatalf("batch deleted = %d, want %d", deleted, want)
+			}
+		}
+	})
+}
+
+// pointerTo 返回 v 的指针（构造 outbox_events.processed_at 测试值用）。
+func pointerTo[T any](v T) *T { return &v }
+
 // waitOutbox 在 deadline 内轮询 cond；超时即 t.Fatalf。
 func waitOutbox(t *testing.T, timeout time.Duration, cond func() bool, msg string) {
 	t.Helper()

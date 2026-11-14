@@ -194,7 +194,7 @@ func TestAdminAuditLogContract(t *testing.T) {
 				appendEntry(t, repo, state, entry("audit_expired", now.AddDate(0, 0, -400), AuditActionAnnouncementCreate, "op1", "announcement", "a1"))
 				appendEntry(t, repo, state, entry("audit_fresh", now.AddDate(0, 0, -10), AuditActionAnnouncementUpdate, "op1", "announcement", "a1"))
 
-				deleted, err := repo.DeleteAuditLogsBefore(state.ctx, now.AddDate(0, 0, -365))
+				deleted, err := repo.DeleteAuditLogsBefore(state.ctx, now.AddDate(0, 0, -365), retentionDeleteBatchSize)
 				if err != nil {
 					t.Fatalf("delete expired: %v", err)
 				}
@@ -207,6 +207,34 @@ func TestAdminAuditLogContract(t *testing.T) {
 				}
 				if got := idsOf(page.Items); !equalIDs(got, []string{"audit_fresh"}) {
 					t.Fatalf("remaining ids = %v, want [audit_fresh]", got)
+				}
+			},
+		},
+		{
+			Name: "retention honors batch limit and repeats until empty",
+			Run: func(t *testing.T, repo Repository, state adminAuditContractState) {
+				now := time.Now().UTC()
+				cutoff := now.AddDate(0, 0, -365)
+				for _, logID := range []string{"audit_batch_1", "audit_batch_2", "audit_batch_3", "audit_batch_4", "audit_batch_5"} {
+					appendEntry(t, repo, state, entry(logID, now.AddDate(0, 0, -400), AuditActionAnnouncementCreate, "op1", "announcement", "a1"))
+				}
+				appendEntry(t, repo, state, entry("audit_batch_fresh", now.AddDate(0, 0, -10), AuditActionAnnouncementUpdate, "op1", "announcement", "a1"))
+
+				for i, want := range []int64{2, 2, 1, 0} {
+					deleted, err := repo.DeleteAuditLogsBefore(state.ctx, cutoff, 2)
+					if err != nil {
+						t.Fatalf("batch %d: %v", i, err)
+					}
+					if deleted != want {
+						t.Fatalf("batch %d deleted = %d, want %d", i, deleted, want)
+					}
+				}
+				page, err := repo.ListAuditLogs(state.ctx, AuditLogFilter{Pagination: PaginationParams{Limit: 10}}, false)
+				if err != nil {
+					t.Fatalf("list after batched prune: %v", err)
+				}
+				if got := idsOf(page.Items); !equalIDs(got, []string{"audit_batch_fresh"}) {
+					t.Fatalf("remaining ids = %v, want [audit_batch_fresh]", got)
 				}
 			},
 		},

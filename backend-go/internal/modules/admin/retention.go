@@ -21,6 +21,12 @@ var (
 	retentionSweepStarted  bool
 	retentionSweepInterval = 24 * time.Hour
 	retentionSweepTimeout  = 5 * time.Minute
+
+	// 保留期删除分批参数：一次 DELETE 无界会长时间持住大量行锁并撑大 WAL，
+	// 与 notify/media 等后台清理的分批纪律保持一致。单轮最多
+	// retentionDeleteMaxBatches 批（默认 10 万行），积压时下一轮继续追平。
+	retentionDeleteBatchSize  = 500
+	retentionDeleteMaxBatches = 200
 )
 
 // StartRetentionSweeper 启动审计日志/终态举报保留期清理；两条目天数均 <=0 时
@@ -62,9 +68,9 @@ func (s *Service) pruneRetentionOnce(ctx context.Context, auditRetentionDays, re
 	now := time.Now().UTC()
 	if auditRetentionDays > 0 {
 		cutoff := now.AddDate(0, 0, -auditRetentionDays)
-		deleted, err := s.repo.DeleteAuditLogsBefore(sweepCtx, cutoff)
+		deleted, err := s.deleteAuditLogsInBatches(sweepCtx, cutoff)
 		if err != nil {
-			observability.FromContext(ctx).Warn("admin.retention audit prune failed", "error", err)
+			observability.FromContext(ctx).Warn("admin.retention audit prune failed", "deleted", deleted, "error", err)
 		} else if deleted > 0 {
 			observability.FromContext(ctx).Info("admin.retention audit pruned", "deleted", deleted, "cutoff", cutoff)
 		}
@@ -74,12 +80,52 @@ func (s *Service) pruneRetentionOnce(ctx context.Context, auditRetentionDays, re
 			observability.FromContext(ctx).Warn("admin.retention report prune skipped: reports module not wired")
 		} else {
 			cutoff := now.AddDate(0, 0, -reportRetentionDays)
-			deleted, err := s.reportAdmin.DeleteHandledBefore(sweepCtx, cutoff)
+			deleted, err := s.deleteHandledReportsInBatches(sweepCtx, cutoff)
 			if err != nil {
-				observability.FromContext(ctx).Warn("admin.retention report prune failed", "error", err)
+				observability.FromContext(ctx).Warn("admin.retention report prune failed", "deleted", deleted, "error", err)
 			} else if deleted > 0 {
 				observability.FromContext(ctx).Info("admin.retention reports pruned", "deleted", deleted, "cutoff", cutoff)
 			}
 		}
 	}
+}
+
+// deleteAuditLogsInBatches 按 cutoff 循环分批删除超保留期审计日志，直到没有
+// 可删行或达到单轮批数上限（积压时由下一轮继续追平）；返回累计删除行数，
+// 中途失败也返回已完成部分，便于日志定位。
+func (s *Service) deleteAuditLogsInBatches(ctx context.Context, cutoff time.Time) (int64, error) {
+	var total int64
+	for batch := 0; batch < retentionDeleteMaxBatches; batch++ {
+		if err := ctx.Err(); err != nil {
+			return total, err
+		}
+		deleted, err := s.repo.DeleteAuditLogsBefore(ctx, cutoff, retentionDeleteBatchSize)
+		total += deleted
+		if err != nil {
+			return total, err
+		}
+		if deleted < int64(retentionDeleteBatchSize) {
+			break
+		}
+	}
+	return total, nil
+}
+
+// deleteHandledReportsInBatches 终态举报保留期清理，分批语义同审计日志。
+func (s *Service) deleteHandledReportsInBatches(ctx context.Context, cutoff time.Time) (int64, error) {
+	var total int64
+	for batch := 0; batch < retentionDeleteMaxBatches; batch++ {
+		if err := ctx.Err(); err != nil {
+			return total, err
+		}
+		deleted, err := s.reportAdmin.DeleteHandledBefore(ctx, cutoff, retentionDeleteBatchSize)
+		total += deleted
+		if err != nil {
+			return total, err
+		}
+		if deleted < int64(retentionDeleteBatchSize) {
+			break
+		}
+	}
+	return total, nil
 }

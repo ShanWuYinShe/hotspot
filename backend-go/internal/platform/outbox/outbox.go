@@ -25,6 +25,17 @@ const (
 	defaultBatchSize    = 50
 	maxAttempts         = 10
 	maxBackoff          = 5 * time.Minute
+
+	// 保留期清理（审计缺口：outbox_events 只增不减）：成功投递的事件行保留
+	// defaultRetention 后分批物理删除；死信与重试中的行永不自动删除——失败记录
+	// 要留给人排查。成功/死信此前都只靠 processed_at 标记、无法区分，这里以
+	// last_error 为判别口径：成功路径显式清空 last_error，死信路径必然写入
+	// 错误文本，故 last_error IS NULL 等价于「成功投递」。
+	defaultRetention      = 7 * 24 * time.Hour // 成功事件保留期（7 天）
+	retentionBatchSize    = 500                // 单批删除行数上限，避免一次 DELETE 长时间持锁/撑大 WAL
+	retentionMaxBatches   = 100                // 单轮批数上限（单轮最多 5 万行，积压时多轮追平）
+	retentionSweepPeriod  = time.Hour          // 后台清理周期
+	retentionSweepTimeout = 5 * time.Minute    // 单轮超时，避免慢删除拖住后续周期
 )
 
 const queryInsertOutbox = `INSERT INTO outbox_events (topic, payload) VALUES ($1, $2::jsonb)`
@@ -35,6 +46,27 @@ WHERE processed_at IS NULL AND available_at <= now()
 ORDER BY event_id
 LIMIT $1
 FOR UPDATE SKIP LOCKED`
+
+// queryDeleteProcessedOutboxBefore 单批删除「成功投递且超过保留期」的事件行：
+// 子查询借 idx_outbox_processed 按 processed_at 顺序取最早的一批，再按 ctid
+// 定位删除，避免无界 DELETE 一次锁住大批历史行。last_error IS NULL 是成功
+// 投递的判别口径（见上方保留期注释），死信与重试中的行不满足条件、不会被删。
+// CTE + RETURNING 用于统计删除行数（persistence.Queryable 的 Exec 不暴露
+// affected rows）。
+const queryDeleteProcessedOutboxBefore = `
+WITH deleted AS (
+    DELETE FROM outbox_events
+    WHERE ctid IN (
+        SELECT ctid FROM outbox_events
+        WHERE processed_at IS NOT NULL
+          AND processed_at < $1
+          AND last_error IS NULL
+        ORDER BY processed_at
+        LIMIT $2
+    )
+    RETURNING 1
+)
+SELECT COUNT(*) FROM deleted`
 
 // Writer 在业务事务内写事件行；ctx 内存在事务时与业务写同事务提交。
 type Writer struct {
@@ -149,6 +181,64 @@ func (d *Dispatcher) Start(ctx context.Context) {
 			}
 		}
 	})
+	// 保留期清理挂在 Start 的既有生命周期内（rootCtx 取消即退出），不额外增加
+	// bootstrap wiring。单独 goroutine：大批删除不阻塞事件投递；启动先跑一轮
+	//（与既有 notify/media/auth sweeper 一致），之后每 retentionSweepPeriod 一轮。
+	worker.GoRestartable("outbox.retention", func() {
+		d.pruneRetentionOnce(ctx)
+		ticker := time.NewTicker(retentionSweepPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				d.pruneRetentionOnce(ctx)
+			}
+		}
+	})
+}
+
+// pruneRetentionOnce 执行一轮保留期清理：按 processed_at 从旧到新分批删除成功
+// 投递的事件，直到没有可删行或达到单轮批数上限（积压时多轮追平）。单轮独立
+// 超时，避免慢删除拖住后续周期；ctx 取消（优雅停机）时立即返回。
+func (d *Dispatcher) pruneRetentionOnce(ctx context.Context) {
+	if d == nil || d.factory == nil || ctx.Err() != nil {
+		return
+	}
+	sweepCtx, cancel := context.WithTimeout(ctx, retentionSweepTimeout)
+	defer cancel()
+	cutoff := time.Now().UTC().Add(-defaultRetention)
+	var total int64
+	for batch := 0; batch < retentionMaxBatches; batch++ {
+		deleted, err := d.deleteProcessedBatch(sweepCtx, cutoff, retentionBatchSize)
+		total += deleted
+		if err != nil {
+			if sweepCtx.Err() == nil {
+				d.logger.Warn("outbox: retention prune failed", "deleted", total, "error", err)
+			}
+			return
+		}
+		if deleted < retentionBatchSize {
+			break
+		}
+	}
+	if total > 0 {
+		d.logger.Info("outbox: processed events pruned", "deleted", total, "cutoff", cutoff)
+	}
+}
+
+// deleteProcessedBatch 删除一批超过保留期的已成功投递事件，返回删除行数。
+func (d *Dispatcher) deleteProcessedBatch(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
+	queryable, ok := persistence.QueryableForTx(ctx, d.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var deleted int64
+	if err := queryable.QueryRow(ctx, queryDeleteProcessedOutboxBefore, cutoff, limit).Scan(&deleted); err != nil {
+		return 0, err
+	}
+	return deleted, nil
 }
 
 type outboxRow struct {
