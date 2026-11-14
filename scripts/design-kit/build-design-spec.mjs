@@ -201,8 +201,14 @@ function parseGradient(str) {
 }
 
 // ---------- 单节点压缩 ----------
-function compactNode(n) {
-  const o = { t: n.svg ? 'v' : n.img ? 'i' : n.canvas || n.video ? 'c' : n.text ? 't' : 'r', x: round(n.x), y: round(n.y), w: round(n.w), h: round(n.h) };
+function compactNode(n, vw) {
+  let targetW = n.w;
+  // 防止长文本超出视口右边界（留至少 16px 安全边距）
+  if (n.text && vw && n.x + targetW > vw - 8) {
+    targetW = Math.max(24, vw - n.x - 16);
+  }
+  const o = { t: n.svg ? 'v' : n.img ? 'i' : n.canvas || n.video ? 'c' : n.text ? 't' : 'r', x: round(n.x), y: round(n.y), w: round(targetW), h: round(n.h) };
+  if (n.z !== undefined && n.z !== 0) o.z = n.z;
   if (n.bg) { const f = colorToToken(n.bg, n.bgA === undefined ? 1 : n.bgA, 'fill'); o.f = f.c; if (f.a < 1) o.fa = f.a; }
   if (n.bgImg) { const g = gradientId(n.bgImg); if (g !== null) o.g = g; }
   if (n.border) { const b = colorToToken(n.border.c, n.border.a, 'border'); o.bd = [n.border.w, b.c, b.a < 1 ? b.a : 1]; }
@@ -242,6 +248,8 @@ for (const device of DEVICES) {
   for (const file of files) {
     const raw = JSON.parse(readFileSync(join(dir, file), 'utf8'));
     const meta = raw.meta || {};
+    // 稳定排序：低层级的普通内容排在前面，浮动吸顶 Header / 底部固定 TabBar 等高 z-index 排在后面
+    const sortedRawNodes = raw.nodes.slice().sort((a, b) => (a.z || 0) - (b.z || 0));
     screens.push({
       id: meta.id || file.replace(/\.json$/, ''),
       title: meta.title || meta.id || file,
@@ -249,7 +257,7 @@ for (const device of DEVICES) {
       device,
       w: raw.vw,
       h: raw.vh,
-      nodes: raw.nodes.map(compactNode)
+      nodes: sortedRawNodes.map((n) => compactNode(n, raw.vw))
     });
   }
   perDevice[device] = screens;

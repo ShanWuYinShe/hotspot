@@ -44,9 +44,9 @@
 					<Radar class="relative size-5 text-text-on-accent" strokeWidth={2} />
 				</div>
 				<div class="min-w-0">
-					<div class="flex items-center gap-2">
-						<p class="text-md font-semibold text-text-primary">实时附近</p>
-						<Badge tone="online">
+					<div class="flex items-center gap-2.5">
+						<p class="text-md font-semibold text-text-primary shrink-0">实时附近</p>
+						<Badge tone="online" class="shrink-0">
 							<span class="size-1.5 rounded-full bg-status-online"></span>
 							实时雷达
 						</Badge>

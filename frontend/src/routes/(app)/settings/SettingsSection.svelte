@@ -20,9 +20,9 @@
 </script>
 
 <section class="pb-6 last:pb-0 {className}">
-	<div class="mb-3">
+	<div class="mb-3 max-w-full">
 		<h2 class="text-md font-semibold text-text-primary">{title}</h2>
-		<p class="mt-1 text-xs leading-relaxed text-text-secondary">{description}</p>
+		<p class="mt-1 text-xs leading-relaxed text-text-secondary break-words max-w-full">{description}</p>
 	</div>
 	{@render children()}
 </section>
