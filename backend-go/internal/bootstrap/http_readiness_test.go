@@ -74,8 +74,5 @@ func TestRouterRegistersReadyz(t *testing.T) {
 	}
 }
 
-func TestRedisReadinessPingNilClient(t *testing.T) {
-	if redisReadinessPing(nil) != nil {
-		t.Fatal("nil redis client must yield nil ping (treated as ok)")
-	}
-}
+// Redis 三态探针的完整用例见 app_redis_test.go（TestRedisReadinessProbeStates）：
+// 未配置 → nil（ok）；可用 → 实时 Ping；配置但启动探测失败 → 持续 degraded。
