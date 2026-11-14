@@ -226,11 +226,17 @@ jobs:
           cd backend-go
           go test -v -count=1 ./test/integration -run 'TestRequiredTablesExist|TestExplainUsesExpectedS2Indexes'
 
-      - name: test real postgres repository integration
+      - name: test real postgres repository & platform integration
         run: |
           cd backend-go
           # -p 1：共享真实库，IT 用例会提交 fixture，串行执行避免跨包统计断言偶发红灯。
           go test -p 1 -v -count=1 -run 'TestPostgresIT|Contract' ./internal/modules/...
+          # platform 层真实库 IT：outbox 事务回滚/派发、RunInTransaction aftercommit、
+          # WarmPlanner、auth session/refresh token 契约。这些用例的命名不含
+          # TestPostgresIT|Contract 前缀，此步骤此前只跑 modules，platform IT 从未
+          # 在 CI 执行；这里不传 -run 直接跑整包（无库单测成本可忽略），后续新增的
+          # platform 真实库用例（SkipIfShort 门控）自动纳入。
+          go test -p 1 -v -count=1 ./internal/platform/...
 
       # 模块覆盖率门禁（真实库口径 >=90%）：repo/IT/契约测试计入后每包必须
       # 达标；无 DB 的 backend job 保留 70% 下限，本 job 具备 Postgres，

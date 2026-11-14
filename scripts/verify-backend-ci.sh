@@ -97,7 +97,7 @@ PG_PASSWORD=${PG_PASSWORD:-postgres}
 VERIFY_AUTH_SECRET=${AUTH_TOKEN_SECRET:-$(printf 'verify-local-%s' "$(openssl rand -hex 24)")}
 
 if [ "$WITH_DB" = "1" ]; then
-  step "真实库仓库集成测试（TestPostgresIT + 双实现契约测试，库 hotspot_it）"
+  step "真实库集成测试（modules 仓库/契约 IT + platform IT，库 hotspot_it）"
   DB=hotspot_it
   "${COMPOSE[@]}" exec -T postgres psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$DB'" | grep -q 1 \
     || "${COMPOSE[@]}" exec -T postgres psql -U postgres -c "CREATE DATABASE $DB"
@@ -129,6 +129,9 @@ if [ "$WITH_DB" = "1" ]; then
   # -p 1：各包串行。真实库是共享数据库，IT 测试会提交 fixture 行（BeginScope 之外的
   # 用例），并行包会让「统计类」断言（如 admin 今日新增）采到其它包的行而偶发红灯。
   ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -p 1 -count=1 -run "TestPostgresIT|Contract" ./internal/modules/... )
+  # platform 层真实库 IT（outbox 事务/派发、aftercommit、WarmPlanner、auth store
+  # 契约）：命名不含 TestPostgresIT|Contract 前缀，故不传 -run 跑整包，与 CI 同步。
+  ( cd "$BACKEND" && POSTGRES_DSN="$DSN" APP_ENV=ci AUTH_TOKEN_SECRET="$VERIFY_AUTH_SECRET" go test -p 1 -count=1 ./internal/platform/... )
 
   # 真实库口径覆盖率门禁（>=90%）：repo/IT/契约测试计入后，每个业务模块包
   # 的语句覆盖率必须达标。无 DB 的默认阶段保留 70% 下限：没有真实库时
