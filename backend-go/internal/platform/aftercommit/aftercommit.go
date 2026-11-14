@@ -8,7 +8,10 @@ package aftercommit
 
 import (
 	"context"
+	"runtime/debug"
 	"sync"
+
+	"hotspot/backend-go/internal/platform/observability"
 )
 
 type hooksContextKey struct{}
@@ -66,8 +69,24 @@ func Run(ctx context.Context) {
 	base := hooks.base
 	hooks.mu.Unlock()
 	for _, fn := range fns {
-		fn(base)
+		runHook(fn, base)
 	}
+}
+
+// runHook 执行单个提交后回调并隔离 panic：回调（审计日志/通知/实时广播）本身
+// 出错不应牵连同一事务的其余副作用，更不能把 panic 冒泡给调用方——执行到这里
+// 时事务已经 COMMIT，向上抛出只会让调用方误判提交失败并触发错误的回滚/重试。
+// panic 记 Error 日志（含堆栈）便于定位具体回调。
+func runHook(fn func(context.Context), ctx context.Context) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			observability.L().Error("aftercommit: hook panic recovered",
+				"panic", rec,
+				"stack", string(debug.Stack()),
+			)
+		}
+	}()
+	fn(ctx)
 }
 
 // Discard 在 ROLLBACK/panic 后丢弃全部回调（只丢弃一次）。
