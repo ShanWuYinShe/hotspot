@@ -21,8 +21,8 @@ func TestNotifications(t *testing.T) {
 	readIndex := columnIndex(t, columns, "is_read")
 	payloadIndex := columnIndex(t, columns, "payload")
 
-	if len(rows) != 9 {
-		t.Fatalf("通知数 = %d，期望 9", len(rows))
+	if len(rows) != 8 {
+		t.Fatalf("通知数 = %d，期望 8（公告通知已虚拟化，不再写实体通知行）", len(rows))
 	}
 	unread := 0
 	types := map[string]bool{}
@@ -52,7 +52,7 @@ func TestNotifications(t *testing.T) {
 	for _, wantType := range []string{
 		"new_follower", "mutual_follow", "reaction_added", "moment_commented",
 		"comment_reply", "group_invite_received", "group_application_rejected",
-		"nearby_new_moment", "system_announcement",
+		"nearby_new_moment",
 	} {
 		if !types[wantType] {
 			t.Errorf("缺少通知类型 %s", wantType)
@@ -80,8 +80,6 @@ func validateNotifyPayload(notifyType string, payload map[string]any) error {
 		required = []string{"group_id", "group_name", "application_id", "reason"}
 	case "nearby_new_moment":
 		required = []string{"actor", "moment_id", "moment_summary", "distance"}
-	case "system_announcement":
-		required = []string{"announcement_id", "title", "severity"}
 	default:
 		return stringError("未知通知类型 " + notifyType)
 	}

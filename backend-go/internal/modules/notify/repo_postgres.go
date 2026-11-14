@@ -13,12 +13,31 @@ import (
 type PostgresRepository struct {
 	factory       *persistence.Factory
 	announcements AnnouncementNotificationSource
+	// txRunner 仅供单测注入「模拟回滚」的事务执行器替身；生产为 nil，
+	// runInTx 默认走 persistence.RunInTransaction。
+	txRunner persistence.TxRunner
 }
 
 // SetAnnouncementNotificationSource 注入 system 模块的公告虚拟通知能力
 // （bootstrap 装配）。未注入时通知列表现有行为不变。
 func (r *PostgresRepository) SetAnnouncementNotificationSource(source AnnouncementNotificationSource) {
 	r.announcements = source
+}
+
+// SetTxRunner 注入事务执行器（单测用回滚替身模拟失败撤销）。生产不注入：
+// 默认行为仍是 persistence.RunInTransaction，两者语义一致。
+func (r *PostgresRepository) SetTxRunner(runner persistence.TxRunner) {
+	r.txRunner = runner
+}
+
+// runInTx 在同一事务内执行 fn：无注入时用 persistence.RunInTransaction 开启
+// pgx 事务并经 ctx 传递，system 模块的公告已读仓储（同一 factory）因此加入
+// 同一事务，公告已读与普通通知已读要么同提交要么同回滚。
+func (r *PostgresRepository) runInTx(ctx context.Context, fn func(context.Context) error) error {
+	if r.txRunner != nil {
+		return r.txRunner(ctx, fn)
+	}
+	return persistence.RunInTransaction(ctx, r.factory, fn)
 }
 
 func NewPostgresRepository(factory *persistence.Factory) *PostgresRepository {
@@ -92,7 +111,9 @@ func (r *PostgresRepository) AppendBatchPerUser(ctx context.Context, userIDs []s
 
 func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids []string) error {
 	// 公告虚拟通知的 notify_id（sysann_ 前缀）路由到 system 模块的公告已读表；
-	// 其余 ID 走 notifications 表。两类可同时出现（mark_read scope=ids）。
+	// 其余 ID 走 notifications 表。两类可同时出现（mark_read scope=ids），
+	// 两段写必须同事务：中途失败只完成其中一段会把通知中心留在「部分已读」的
+	// 分裂状态（公告已读/普通通知未读，或反之），且客户端无法自愈。
 	persisted := ids
 	var announcementIDs []string
 	if r.announcements != nil {
@@ -104,33 +125,39 @@ func (r *PostgresRepository) MarkAsRead(ctx context.Context, userID string, ids 
 			}
 			persisted = append(persisted, id)
 		}
+	}
+	return r.runInTx(ctx, func(txCtx context.Context) error {
 		if len(announcementIDs) > 0 {
-			if err := r.announcements.MarkAnnouncementRead(ctx, userID, announcementIDs); err != nil {
+			if err := r.announcements.MarkAnnouncementRead(txCtx, userID, announcementIDs); err != nil {
 				return err
 			}
 		}
-		if len(persisted) == 0 {
+		// 仅公告 ID 且已启用公告路由时无需访问 notifications 表（保持原有短路）。
+		if r.announcements != nil && len(persisted) == 0 {
 			return nil
 		}
-	}
-	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	return queryable.Exec(ctx, queryMarkNotifysRead, userID, persisted)
+		queryable, ok := r.txQueryable(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		return queryable.Exec(txCtx, queryMarkNotifysRead, userID, persisted)
+	})
 }
 
 func (r *PostgresRepository) MarkAllRead(ctx context.Context, userID string) error {
-	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
-	if !ok {
-		return persistence.ErrNotImplemented
-	}
-	if r.announcements != nil {
-		if err := r.announcements.MarkAllAnnouncementsRead(ctx, userID); err != nil {
-			return err
+	// 与 MarkAsRead 同因：公告全部已读 + 普通通知全部已读必须同事务。
+	return r.runInTx(ctx, func(txCtx context.Context) error {
+		queryable, ok := r.txQueryable(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
 		}
-	}
-	return queryable.Exec(ctx, queryMarkAllNotifysRead, userID)
+		if r.announcements != nil {
+			if err := r.announcements.MarkAllAnnouncementsRead(txCtx, userID); err != nil {
+				return err
+			}
+		}
+		return queryable.Exec(txCtx, queryMarkAllNotifysRead, userID)
+	})
 }
 
 // pruneBatchSize 单批删除上限（审查 M-4）：存量千万级已读通知时单条无界

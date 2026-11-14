@@ -38,8 +38,12 @@ type shareBackendStub struct {
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
-	users        map[string]shareStubUser
-	groups       map[string][3]string
+	// queryCounts/queryRowCounts 统计各 SQL 的调用次数，用于断言列表 preview
+	// 批量解析（N+1 → 每类目标一次查询）。
+	queryCounts    map[string]int
+	queryRowCounts map[string]int
+	users          map[string]shareStubUser
+	groups         map[string][3]string
 	// moments 值末位为可见性：public 之外的值（private/deleted）模拟
 	// queryShareMomentExists 的 privacy_level='public' AND is_deleted=FALSE 过滤。
 	moments map[string][5]string
@@ -47,11 +51,13 @@ type shareBackendStub struct {
 
 func newShareBackendStub() *shareBackendStub {
 	return &shareBackendStub{
-		shares:       make(map[string]shareStubRecord),
-		byCode:       make(map[string]string),
-		execErrs:     make(map[string]error),
-		queryErrs:    make(map[string]error),
-		queryRowErrs: make(map[string]error),
+		shares:         make(map[string]shareStubRecord),
+		byCode:         make(map[string]string),
+		execErrs:       make(map[string]error),
+		queryErrs:      make(map[string]error),
+		queryRowErrs:   make(map[string]error),
+		queryCounts:    make(map[string]int),
+		queryRowCounts: make(map[string]int),
 		users: map[string]shareStubUser{
 			"user_alice": {Nickname: "Alice", Avatar: "https://example.com/alice.png"},
 			"user_bob":   {Nickname: "Bob", Avatar: "https://example.com/bob.png"},
@@ -100,6 +106,7 @@ func (b *shareBackendStub) Exec(_ context.Context, query string, args ...any) er
 }
 
 func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any) persistence.Row {
+	b.queryRowCounts[query]++
 	if err := b.queryRowErrs[query]; err != nil {
 		return testdb.RowValues{Err: err}
 	}
@@ -144,8 +151,46 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 }
 
 func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
+	b.queryCounts[query]++
 	if err := b.queryErrs[query]; err != nil {
 		return nil, err
+	}
+	switch query {
+	case queryShareUsersByIDs:
+		ids := args[0].([]string)
+		rows := make([][]any, 0, len(ids))
+		for _, id := range ids {
+			user, ok := b.users[id]
+			// 对齐 SQL 过滤：已注销（is_deleted）用户按不存在处理。
+			if !ok || user.Deleted {
+				continue
+			}
+			rows = append(rows, []any{id, user.Nickname, user.Avatar})
+		}
+		return &testdb.RowsValues{Rows: rows}, nil
+	case queryShareGroupsByIDs:
+		ids := args[0].([]string)
+		rows := make([][]any, 0, len(ids))
+		for _, id := range ids {
+			group, ok := b.groups[id]
+			if !ok {
+				continue
+			}
+			rows = append(rows, []any{id, group[0], group[1], group[2]})
+		}
+		return &testdb.RowsValues{Rows: rows}, nil
+	case queryShareMomentsByIDs:
+		ids := args[0].([]string)
+		rows := make([][]any, 0, len(ids))
+		for _, id := range ids {
+			moment, ok := b.moments[id]
+			// 对齐 SQL 过滤：privacy_level='public' 且未删除的瞬间才可见。
+			if !ok || moment[4] != "public" {
+				continue
+			}
+			rows = append(rows, []any{id, moment[0], moment[1], moment[2], moment[3]})
+		}
+		return &testdb.RowsValues{Rows: rows}, nil
 	}
 	if query != queryListShares {
 		return &persistence.InMemoryRows{}, nil

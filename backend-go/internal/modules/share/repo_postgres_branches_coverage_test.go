@@ -299,7 +299,7 @@ func TestSharePostgresListPreviewAndErrors(t *testing.T) {
 
 	previewErrBackend := newShareBackendStub()
 	previewErrBackend.shares["share_preview_fail"] = shareStubRecord{ShareID: "share_preview_fail", ShareCode: "ABCDEFGHJKLM", ShareType: ShareTypeUser, CreatorUserID: "user_alice", PayloadJSON: sharePayloadJSONOf(t, map[string]any{"shared_user_id": "user_bob"}), CreatedAt: "2026-01-01T00:00:00Z"}
-	previewErrBackend.queryRowErrs[queryShareUserExists] = errors.New("preview boom")
+	previewErrBackend.queryErrs[queryShareUsersByIDs] = errors.New("preview boom")
 	if _, err := newShareTestRepo(previewErrBackend).List(ctx, listSharesQuery{CreatorUserID: "user_alice", Limit: 20}); err == nil {
 		t.Fatal("expected list preview error")
 	}

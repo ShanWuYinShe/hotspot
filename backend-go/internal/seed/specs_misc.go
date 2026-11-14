@@ -134,9 +134,14 @@ func previewText(text string, maxRunes int) string {
 	return string(runes[:maxRunes]) + "…"
 }
 
-// seedNotifications 返回 9 条通知，全部发给 lumos（规格 §3.5）。
+// seedNotifications 返回 8 条通知，全部发给 lumos（规格 §3.5）。
 // 未读 4 条：new_follower / reaction_added / moment_commented / group_invite_received，
 // notify/unread_summary 由 notifications 表实时聚合，与列表天然同源。
+//
+// 不再写 system_announcement 通知行（原 notify_seed_09）：迁移 067 起系统公告改
+// 虚拟通知模型（system_announcements + announcement_reads，读取时由 notify 侧
+// 合并成虚拟行），旧 fanout 行已被迁移删除；种子再写会造成通知中心出现实体行 +
+// 虚拟行两份同主题公告，且与「只有未读才在 announcement_reads 有行」的口径不符。
 func seedNotifications() []notifySpec {
 	return []notifySpec{
 		{
@@ -242,18 +247,6 @@ func seedNotifications() []notifySpec {
 					"moment_id":      "moment_seed_14",
 					"moment_summary": c.momentSummary("moment_seed_14"),
 					"distance":       520,
-				}
-			},
-		},
-		{
-			NotifyID: "notify_seed_09", UserID: "user_seed_lumos", Type: "system_announcement",
-			IsRead: true, CreatedAgo: 5 * oneDay,
-			Payload: func(c payloadContext) map[string]any {
-				return map[string]any{
-					"type":            "system_announcement",
-					"announcement_id": "sysann_seed_1",
-					"title":           "社区公约更新提醒",
-					"severity":        "info",
 				}
 			},
 		},

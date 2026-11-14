@@ -97,3 +97,64 @@ func TestPostgresITAnnouncementNotificationVirtualization(t *testing.T) {
 		}
 	})
 }
+
+// TestPostgresITDeleteAnnouncementCleansReads：公告软删与 announcement_reads
+// 清理同事务——删除后该公告的稀疏已读行消失，其它公告的已读行不受影响。
+// TxScope 外层事务在用例结束时回滚，不向共享库提交任何行。
+func TestPostgresITDeleteAnnouncementCleansReads(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		qdb, ok := txFactory.DB.(persistence.QueryableDB)
+		if !ok {
+			t.Fatal("factory.DB is not QueryableDB")
+		}
+		userID := "it_ann_reads_cleanup_user"
+		if err := qdb.Exec(ctx, "INSERT INTO users (user_id, nickname, avatar_url, user_type, bio, gender, email, phone, location_name, latitude, longitude, s2_cell_id, presence_status, last_online, created_at, register_ip, register_location, last_login_ip, last_login_location) VALUES ($1,$1,'','normal','','','','', '',0,0,0,'offline',$2,$2,'','','','')", userID, time.Now().UTC().Add(-time.Hour)); err != nil {
+			t.Fatalf("insert user: %v", err)
+		}
+		repo := NewPostgresRepository(txFactory)
+		createAnnouncement := func(title string) AnnouncementRecord {
+			t.Helper()
+			ann, err := repo.CreateAnnouncement(ctx, AnnouncementCreateInput{
+				Actor:    AnnouncementActor{UserID: userID, Nickname: "管理员"},
+				Title:    title,
+				Content:  "内容",
+				Severity: AnnounceLevelInfo,
+			})
+			if err != nil {
+				t.Fatalf("create announcement %q: %v", title, err)
+			}
+			return ann
+		}
+		deleted := createAnnouncement("将被删除")
+		kept := createAnnouncement("保留公告")
+		if err := repo.MarkAnnouncementRead(ctx, userID, []string{deleted.AnnouncementID, kept.AnnouncementID}); err != nil {
+			t.Fatalf("mark read: %v", err)
+		}
+		countReads := func(announcementID string) int {
+			t.Helper()
+			var count int
+			if err := qdb.QueryRow(ctx, "SELECT COUNT(*) FROM announcement_reads WHERE announcement_id = $1", announcementID).Scan(&count); err != nil {
+				t.Fatalf("count announcement_reads %s: %v", announcementID, err)
+			}
+			return count
+		}
+		if got := countReads(deleted.AnnouncementID); got != 1 {
+			t.Fatalf("mark read 后 reads 行 = %d，期望 1", got)
+		}
+
+		if err := repo.DeleteAnnouncement(ctx, deleted.AnnouncementID); err != nil {
+			t.Fatalf("delete announcement: %v", err)
+		}
+		if got := countReads(deleted.AnnouncementID); got != 0 {
+			t.Fatalf("软删后 announcement_reads 行 = %d，期望 0（必须同事务清理）", got)
+		}
+		if got := countReads(kept.AnnouncementID); got != 1 {
+			t.Fatalf("其它公告 announcement_reads 行 = %d，期望 1（不得受影响）", got)
+		}
+		if count, err := repo.UnreadAnnouncementCount(ctx, userID); err != nil || count != 0 {
+			t.Fatalf("软删后未读公告数 = %d err=%v，期望 0", count, err)
+		}
+	})
+}

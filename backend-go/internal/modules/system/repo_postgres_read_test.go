@@ -16,17 +16,21 @@ import (
 
 type announcementBackendStub struct {
 	announcements map[string]AnnouncementRecord
-	queryErrs     map[string]error
-	queryRowErrs  map[string]error
-	execErrs      map[string]error
+	// announcementReads 模拟 announcement_reads 表：announcement_id → user_id 集合，
+	// 用于验证 DeleteAnnouncement 的同事务清理。
+	announcementReads map[string]map[string]bool
+	queryErrs         map[string]error
+	queryRowErrs      map[string]error
+	execErrs          map[string]error
 }
 
 func newAnnouncementBackendStub() *announcementBackendStub {
 	return &announcementBackendStub{
-		announcements: make(map[string]AnnouncementRecord),
-		queryErrs:     make(map[string]error),
-		queryRowErrs:  make(map[string]error),
-		execErrs:      make(map[string]error),
+		announcements:     make(map[string]AnnouncementRecord),
+		announcementReads: make(map[string]map[string]bool),
+		queryErrs:         make(map[string]error),
+		queryRowErrs:      make(map[string]error),
+		execErrs:          make(map[string]error),
 	}
 }
 
@@ -81,6 +85,8 @@ func (b *announcementBackendStub) Exec(_ context.Context, query string, args ...
 		deletedAt := args[1].(time.Time)
 		item.DeletedAt = &deletedAt
 		b.announcements[announcementID] = item
+	case queryDeleteAnnouncementReads:
+		delete(b.announcementReads, args[0].(string))
 	}
 	return nil
 }
