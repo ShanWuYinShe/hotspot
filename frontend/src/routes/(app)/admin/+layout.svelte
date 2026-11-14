@@ -94,7 +94,7 @@
 			{#snippet islandTrailing()}
 				<!-- 岛内行动区（≤2 控件）：子模块滚动后给「返回概览」出口，概览页不重复提供 -->
 				{#if activeId !== 'overview'}
-					<Button type="button" variant="soft" size="sm" onclick={() => void goto(ROUTES.admin)}>
+					<Button type="button" variant="soft" size="sm" shape="pill" class="h-6.5 px-2.5 text-xs" onclick={() => void goto(ROUTES.admin)}>
 						返回概览
 					</Button>
 				{/if}

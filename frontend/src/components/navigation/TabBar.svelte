@@ -120,7 +120,7 @@
 				{#if tab.count !== undefined}
 					<!-- 计数继承选项文字色：旧实现叠 opacity-emphasis(0.8) 使未激活计数
 					     只有 3.60:1（10px 小字需 4.5），去掉折半后同色达 5.2:1 -->
-					<span class="text-xxs">{tab.count}</span>
+					<span class="text-xxs shrink-0 whitespace-nowrap min-w-[14px] text-center inline-block">{tab.count}</span>
 				{/if}
 			</button>
 		{/each}
@@ -148,7 +148,7 @@
 				{tab.label}
 				{#if tab.count !== undefined}
 					<!-- 计数继承选项文字色（同 segmented 档：不叠 opacity 折半，保证 ≥4.5:1） -->
-					<span class="text-xxs">{tab.count}</span>
+					<span class="text-xxs shrink-0 whitespace-nowrap min-w-[14px] text-center inline-block">{tab.count}</span>
 				{/if}
 			</button>
 		{/each}

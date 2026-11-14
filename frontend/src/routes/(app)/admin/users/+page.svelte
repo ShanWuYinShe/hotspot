@@ -188,7 +188,7 @@
 											{u.banned_until ? `至 ${formatDateTime(u.banned_until)}` : '永久'}
 										</span>
 									{:else}
-										<Badge>正常</Badge>
+										<Badge tone="online">正常</Badge>
 									{/if}
 								</td>
 								<td class={TD_TABLET_HIDDEN}>{u.email ?? '—'}</td>

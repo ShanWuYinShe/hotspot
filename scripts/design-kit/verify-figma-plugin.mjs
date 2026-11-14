@@ -69,6 +69,10 @@ const figma = {
   createImage() { stats.images++; return { hash: 'image-' + stats.images }; },
   loadFontAsync() { return Promise.resolve(); },
   notify(msg) { stats.notify.push(String(msg)); },
+  saveVersionHistoryAsync(title, description) {
+    stats.versionHistory = { title, description };
+    return Promise.resolve({ id: 'version-' + Date.now() });
+  },
   closePlugin() { globalThis.__closed = true; },
   variables: {
     getLocalVariableCollections() { return collections; },
@@ -108,6 +112,7 @@ setTimeout(() => {
     svgs: stats.svgs,
     variables: stats.variables,
     notify: stats.notify.slice(0, 6),
+    versionHistory: stats.versionHistory,
     errors: stats.errors
   }, null, 1));
   if (stats.errors.length || !globalThis.__closed) process.exit(1);

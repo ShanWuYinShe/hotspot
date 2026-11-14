@@ -4,7 +4,7 @@
  * docs/design-kit/figma-plugin/code.js，供 Figma 桌面端「导入插件」直接运行。
  * 用法：node scripts/design-kit/build-figma-plugin.mjs
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
@@ -17,7 +17,22 @@ const OUT = join(ROOT, 'docs', 'design-kit', 'figma-plugin');
 let commit = 'dev';
 try { commit = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim(); } catch (e) {}
 
-const spec = JSON.parse(readFileSync(SPEC, 'utf8'));
+let spec;
+if (existsSync(SPEC)) {
+  spec = JSON.parse(readFileSync(SPEC, 'utf8'));
+} else if (existsSync(join(OUT, 'code.js'))) {
+  const existingCode = readFileSync(join(OUT, 'code.js'), 'utf8');
+  const startIdx = existingCode.indexOf('var SPEC = ');
+  const endIdx = existingCode.indexOf(';\n', startIdx);
+  if (startIdx >= 0 && endIdx > startIdx) {
+    const jsonStr = existingCode.slice(startIdx + 'var SPEC = '.length, endIdx).trim();
+    spec = JSON.parse(jsonStr);
+  } else {
+    throw new Error('Cannot locate existing SPEC in code.js');
+  }
+} else {
+  throw new Error('Neither spec.json nor code.js exists to build plugin');
+}
 const runtime = readFileSync(RUNTIME, 'utf8');
 
 spec.meta.builtAt = new Date().toISOString();

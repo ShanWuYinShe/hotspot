@@ -55,6 +55,10 @@
       childClip = { x:inc.x, y:inc.y, w:inc.w, h:inc.h, radii: radii || clip.radii || null };
     }
     const node = { tag, x:+r.x.toFixed(1), y:+r.y.toFixed(1), w:+r.width.toFixed(1), h:+r.height.toFixed(1) };
+    const zi = st.zIndex === 'auto' ? 0 : parseInt(st.zIndex, 10) || 0;
+    const pos = st.position;
+    const effectiveZ = (pos === 'fixed' || pos === 'sticky') ? Math.max(zi, 25) : zi;
+    if (effectiveZ > 0) node.z = effectiveZ;
     if (clip.radii) node.clip = { x:+clip.x.toFixed(1), y:+clip.y.toFixed(1), w:+clip.w.toFixed(1), h:+clip.h.toFixed(1), r:clip.radii };
     const bg = toRgba(st.backgroundColor);
     if (bg && bg.a>0.01) { node.bg=hex(st.backgroundColor); if (bg.a<0.999) node.bgA=+bg.a.toFixed(3); }

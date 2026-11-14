@@ -299,12 +299,31 @@ async function addText(parent, opts) {
   if (opts.letterSpacing) text.letterSpacing = { unit: 'PIXELS', value: opts.letterSpacing };
   if (opts.align === 'center') text.textAlignHorizontal = 'CENTER';
   else if (opts.align === 'right') text.textAlignHorizontal = 'RIGHT';
-  if (opts.align === 'center' || (opts.h > (opts.size || 14) * 1.3 && opts.h <= (opts.size || 14) * 3.5)) {
-    try { text.textAlignVertical = 'CENTER'; } catch (e) {}
+
+  var isMultiLine = (opts.text && opts.text.indexOf('\n') !== -1) || (opts.h && opts.h > (opts.size || 14) * 2.2);
+
+  if (!isMultiLine) {
+    // 单行文本/短文本/数字徽标/按钮标签：启用完全自适应，杜绝排版引擎导致的异常折行与基线漂移
+    text.textAutoResize = 'WIDTH_AND_HEIGHT';
+    if (opts.align === 'center' && opts.w > text.width) {
+      text.x = opts.x + (opts.w - text.width) / 2;
+    } else {
+      text.x = opts.x;
+    }
+    if (opts.h && opts.h > text.height && (opts.align === 'center' || opts.isBadge)) {
+      text.y = opts.y + (opts.h - text.height) / 2;
+    } else {
+      text.y = opts.y;
+    }
+  } else {
+    // 多行段落：宽度限制在安全边界内，高度自适应换行
+    text.textAutoResize = 'HEIGHT';
+    var maxAllowedW = Math.max(24, (opts.parentW || 390) - opts.x - 16);
+    var finalW = Math.min(Math.max(1, opts.w), maxAllowedW);
+    text.resize(finalW, Math.max(1, opts.h));
+    text.x = opts.x;
+    text.y = opts.y;
   }
-  text.textAutoResize = 'NONE';
-  text.resize(Math.max(1, opts.w), Math.max(1, opts.h));
-  text.x = opts.x; text.y = opts.y;
   if (opts.color) {
     var paint = solidPaint(opts.color, opts.alpha === undefined ? 1 : opts.alpha);
     text.fills = [paint];
@@ -419,7 +438,7 @@ function bindVectorColors(node, tokenName, alpha) {
   }
 }
 
-async function addNode(parent, n, clipCache) {
+async function addNode(parent, n, clipCache, screen) {
   var target = parent;
   var tx = n.x;
   var ty = n.y;
@@ -439,32 +458,40 @@ async function addNode(parent, n, clipCache) {
     return;
   }
   if (n.t === 't') {
-    if (n.f || n.g !== undefined || n.bd) {
+    var isBadge = !!(n.f || n.g !== undefined || n.bd);
+    if (isBadge) {
       var bgRect = figma.createRectangle();
       target.appendChild(bgRect);
+      bgRect.name = 'BadgeBg';
       bgRect.resize(Math.max(1, n.w), Math.max(1, n.h));
       bgRect.x = tx; bgRect.y = ty;
       if (n.r) applyRadius(bgRect, n.r);
       applyCommon(bgRect, n);
     }
-    var adjX = tx;
-    var adjW = n.w;
-    var isSingleLine = !n.tx || (n.tx.indexOf('\n') === -1 && (String(n.tx).trim().length <= 14 || !n.h || n.h <= (n.s || 14) * 3.5));
-    if (n.cl) {
-      if (!n.al || n.al === 'left') {
-        adjX = tx + 14;
-        adjW = Math.max(1, n.w - 14);
-      } else if (n.al === 'right') {
-        adjW = Math.max(1, n.w - 14);
+    var renderX = tx;
+    var renderW = n.w;
+    var textAlign = n.al || (isBadge ? 'center' : 'left');
+
+    // 针对未被组件排布器捕获但仍有同行紧邻图标的后备避让
+    if (!n._reconciled && screen && screen.nodes) {
+      for (var ni = 0; ni < screen.nodes.length; ni++) {
+        var other = screen.nodes[ni];
+        if (other !== n && other.t === 'v' && Math.abs(other.x - n.x) < 4 && Math.abs(other.y - n.y) < 6) {
+          var shift = (other.w || 16) + 5;
+          renderX += shift;
+          renderW = Math.max(1, renderW - shift);
+          textAlign = 'left';
+          break;
+        }
       }
     }
-    if (isSingleLine && (!n.al || n.al === 'left')) {
-      adjW = Math.max(adjW, (n.s || 14) * String(n.tx).length * 1.15 + 8);
-    }
+
     await addText(target, {
-      x: adjX, y: ty, w: adjW, h: n.h, text: n.tx, size: n.s, weight: n.fw,
+      x: renderX, y: ty, w: renderW, h: n.h, text: n.tx, size: n.s, weight: n.fw,
       lineHeight: n.lh || undefined, letterSpacing: n.ls || undefined,
-      align: n.al || 'left', color: n.c, alpha: n.ca, cjk: !!n.cj, opacity: n.o
+      align: textAlign, color: n.c, alpha: n.ca, cjk: !!n.cj, opacity: n.o,
+      isBadge: isBadge,
+      parentW: screen ? screen.w : 390
     });
     return;
   }
@@ -514,6 +541,255 @@ async function addNode(parent, n, clipCache) {
   }
 }
 
+async function addStatusBar(frame, isDark) {
+  var bar = figma.createFrame();
+  bar.name = 'System / Status Bar (iOS)';
+  bar.resize(390, 44);
+  bar.x = 0; bar.y = 0;
+  bar.fills = [];
+  frame.appendChild(bar);
+
+  var timeText = figma.createText();
+  var font = await loadFont(FAMILY_LATIN, 'Bold');
+  timeText.fontName = font;
+  timeText.fontSize = 15;
+  timeText.characters = '9:41';
+  timeText.textAutoResize = 'WIDTH_AND_HEIGHT';
+  timeText.x = 28; timeText.y = 12;
+  timeText.fills = [solidPaint(isDark ? 'content-inverse' : 'text-primary', 1)];
+  bar.appendChild(timeText);
+
+  var iconGroup = figma.createFrame();
+  iconGroup.name = 'Status Icons';
+  iconGroup.resize(68, 14);
+  iconGroup.x = 390 - 28 - 68; iconGroup.y = 15;
+  iconGroup.fills = [];
+  bar.appendChild(iconGroup);
+
+  var iconColor = solidPaint(isDark ? 'content-inverse' : 'text-primary', 1);
+
+  for (var b = 0; b < 4; b++) {
+    var barH = 4 + b * 2.5;
+    var cBar = figma.createRectangle();
+    cBar.resize(3, barH);
+    cBar.x = b * 4.5;
+    cBar.y = 12 - barH;
+    cBar.cornerRadius = 1;
+    cBar.fills = [iconColor];
+    iconGroup.appendChild(cBar);
+  }
+
+  var battBody = figma.createRectangle();
+  battBody.resize(22, 11);
+  battBody.x = 42; battBody.y = 1.5;
+  battBody.cornerRadius = 3;
+  battBody.strokes = [iconColor];
+  battBody.strokeWeight = 1;
+  battBody.fills = [];
+  iconGroup.appendChild(battBody);
+
+  var battFill = figma.createRectangle();
+  battFill.resize(16, 7);
+  battFill.x = 44; battFill.y = 3.5;
+  battFill.cornerRadius = 1.5;
+  battFill.fills = [iconColor];
+  iconGroup.appendChild(battFill);
+
+  var battCap = figma.createRectangle();
+  battCap.resize(1.5, 4);
+  battCap.x = 65; battCap.y = 5;
+  battCap.cornerRadius = 1;
+  battCap.fills = [iconColor];
+  iconGroup.appendChild(battCap);
+
+  return bar;
+}
+
+function addHomeIndicator(frame, isDark) {
+  var home = figma.createFrame();
+  home.name = 'System / Home Indicator (iOS)';
+  home.resize(390, 34);
+  home.x = 0; home.y = 810;
+  home.fills = [];
+  frame.appendChild(home);
+
+  var bar = figma.createRectangle();
+  bar.resize(134, 5);
+  bar.cornerRadius = 2.5;
+  bar.x = (390 - 134) / 2;
+  bar.y = 20;
+  bar.fills = [solidPaint(isDark ? 'content-inverse' : 'text-primary', isDark ? 0.8 : 0.85)];
+  home.appendChild(bar);
+  return home;
+}
+
+function getNodeLayerWeight(node, screenW, screenH) {
+  var explicitZ = node.z || 0;
+  if (explicitZ > 0) return explicitZ;
+
+  var x = node.x || 0;
+  var y = node.y || 0;
+  var w = node.w || 0;
+  var h = node.h || 0;
+
+  // 1. 顶部悬浮操作栏（返回圆形按钮、关闭按钮、右上角药丸按钮）：置顶 (权重 50)
+  if (y <= 50 && w <= 48 && h <= 48) {
+    return 50;
+  }
+  if (y <= 50 && x >= (screenW - 100) && w <= 96) {
+    return 50;
+  }
+
+  // 2. 底部悬浮栏（TabBar、评论输入框）：置顶 (权重 40)
+  if (y >= (screenH - 100) && (w >= screenW * 0.7 || node.tx === '写下你的评论...')) {
+    return 40;
+  }
+  // 底部栏内的元素：权重 45
+  if (y >= (screenH - 95)) {
+    return 45;
+  }
+
+  // 3. 顶部大图 / 封面图 / 全屏背景：沉底 (权重 -10 / -20)，绝不遮挡 Header 和操作浮层
+  if ((node.t === 'i' || node.im !== undefined || node.t === 'c') && (w >= screenW * 0.8 && y <= 50)) {
+    return -10;
+  }
+  if (node.t === 'r' && w >= screenW * 0.9 && h >= screenH * 0.8) {
+    return -20;
+  }
+
+  return 0;
+}
+
+function reconcileScreenNodes(nodes, screen) {
+  if (!nodes || !nodes.length) return nodes;
+  var screenW = screen.w || 390;
+  var screenH = screen.h || 844;
+
+  // 1. 识别顶栏灵动岛（PageIsland / DynamicIsland）容器
+  var islandBg = null;
+  for (var i = 0; i < nodes.length; i++) {
+    var n = nodes[i];
+    if (n.t === 'r' && n.y <= 40 && n.h >= 30 && n.h <= 48 && n.w >= 180 && n.w <= 550 && n.r) {
+      if (Math.abs((n.x + n.w / 2) - screenW / 2) < 220) {
+        islandBg = n;
+        break;
+      }
+    }
+  }
+
+  // 2. 识别所有复合按钮与操作胶囊（无论是灵动岛内、卡片内还是页面上）
+  for (var i = 0; i < nodes.length; i++) {
+    var bg = nodes[i];
+    if (bg.t === 'r' && bg.w >= 36 && bg.w <= 280 && bg.h >= 20 && bg.h <= 54 && (bg.f || bg.bd) && bg.r) {
+      var isInsideIsland = islandBg && (bg.x >= islandBg.x - 4 && bg.x + bg.w <= islandBg.x + islandBg.w + 4 && bg.y >= islandBg.y - 4 && bg.y + bg.h <= islandBg.y + islandBg.h + 4);
+
+      // A. 灵动岛内部按钮微调（如“返回概览”等次级操作按钮）：
+      // 灵动岛自身高 34~36px，内部按钮高度规范应为 26px，上下留 4~5px 呼吸边距，圆角强制 pill
+      if (isInsideIsland && bg.h >= 28) {
+        bg.h = 26;
+        bg.y = islandBg.y + (islandBg.h - bg.h) / 2;
+        bg.r = [9999, 9999, 9999, 9999];
+      }
+
+      // 寻找落在该按钮内部的子元素：矢量图标 (v) 与文本 (t)
+      var childIcons = [];
+      var childTexts = [];
+      for (var j = 0; j < nodes.length; j++) {
+        var child = nodes[j];
+        if (child === bg) continue;
+        if (child.x >= bg.x - 4 && child.x + child.w <= bg.x + bg.w + 6 &&
+            child.y >= bg.y - 4 && child.y + child.h <= bg.y + bg.h + 6) {
+          if (child.t === 'v' && child.w <= 24 && child.h <= 24) {
+            childIcons.push(child);
+          } else if (child.t === 't' && child.tx) {
+            childTexts.push(child);
+          }
+        }
+      }
+
+      // B. 图文混排按钮排布（彻底根治“图标和文字重叠”，如“编辑资料”、“设置”、“关注”等）：
+      if (childIcons.length === 1 && childTexts.length === 1) {
+        var icon = childIcons[0];
+        var text = childTexts[0];
+        var charCount = String(text.tx).trim().length;
+        var approxTextW = text.w || (charCount * (text.s || 12) * 1.05);
+        if (text.cj && text.s) approxTextW = Math.max(approxTextW, charCount * text.s);
+
+        var iconW = icon.w || 14;
+        var gap = 5;
+        var contentW = iconW + gap + approxTextW;
+
+        var startX = bg.x + Math.max(4, (bg.w - contentW) / 2);
+        icon.x = startX;
+        icon.y = bg.y + (bg.h - icon.h) / 2;
+
+        text.x = startX + iconW + gap;
+        text.y = bg.y + (bg.h - text.h) / 2;
+        text.al = 'left';
+        text._reconciled = true;
+      } else if (childIcons.length === 0 && childTexts.length === 1) {
+        // C. 纯文本微胶囊按钮（如“返回概览”）：
+        var text = childTexts[0];
+        text.y = bg.y + (bg.h - text.h) / 2;
+        text.al = 'center';
+      }
+    }
+  }
+
+  // 3. 全局 Badge / 状态标签的“语义色纠偏”与“严格几何居中”
+  for (var k = 0; k < nodes.length; k++) {
+    var node = nodes[k];
+    if (node.t === 't' && node.tx) {
+      var tx = String(node.tx).trim();
+      var isSingleShort = tx.length <= 8 && tx.indexOf('\n') === -1;
+      var isBadge = (node.f && node.r && node.w <= 90 && node.h <= 30);
+
+      if (!isBadge && isSingleShort && node.w <= 90 && node.h <= 30) {
+        for (var b = 0; b < nodes.length; b++) {
+          var rect = nodes[b];
+          if (rect.t === 'r' && rect.r && Math.abs(rect.x - node.x) < 8 && Math.abs(rect.y - node.y) < 8 &&
+              rect.w <= 100 && rect.h <= 32) {
+            node.x = rect.x + (rect.w - node.w) / 2;
+            node.y = rect.y + (rect.h - node.h) / 2;
+            node.al = 'center';
+            node._reconciled = true;
+            break;
+          }
+        }
+      }
+
+      if (isBadge) {
+        if (tx === '正常' || tx === '在线' || tx === '互相关注' || tx === '已认证' || tx === '已解决' || tx === '已开通') {
+          if (node.f === 'surface-subtle' || !node.f || node.f.indexOf('subtle') >= 0) {
+            node.f = 'status-online-bg';
+            node.c = 'text-status-online-on-soft';
+            node.fa = 1;
+          }
+        } else if (tx === '已封禁' || tx === '封禁' || tx === '已屏蔽' || tx === '严重' || tx === '失败') {
+          node.f = 'danger-bg';
+          node.c = 'text-status-danger-on-soft';
+          node.fa = 1;
+        } else if (tx.indexOf('待') >= 0 || tx === '中等' || tx === '审核中') {
+          node.f = 'status-warning-bg';
+          node.c = 'text-status-warning-on-soft';
+          node.fa = 1;
+        }
+        node.al = 'center';
+      }
+
+      // 4. 数字徽标与断行防挤压（举一反三，如“举报 16”、“消息 99+”）
+      if (/\d+/.test(tx) && tx.length <= 12 && tx.indexOf('\n') === -1) {
+        var minRequiredW = (tx.length * (node.s || 12) * 1.15) + 12;
+        if (node.w < minRequiredW) {
+          node.w = minRequiredW;
+        }
+      }
+    }
+  }
+
+  return nodes;
+}
+
 async function buildScreen(parent, screen, x, y) {
   var frame = figma.createFrame();
   parent.appendChild(frame);
@@ -523,16 +799,71 @@ async function buildScreen(parent, screen, x, y) {
   frame.clipsContent = true;
   frame.fills = [solidPaint('surface-page', 1)];
   var clipCache = {};
-  for (var i = 0; i < screen.nodes.length; i++) {
-    await addNode(frame, screen.nodes[i], clipCache);
+
+  // 全局复合组件与排版协调优化（按钮图文排布、灵动岛微胶囊尺寸、Badge 语义色与居中）
+  var reconciledNodes = reconcileScreenNodes((screen.nodes || []).slice(), screen);
+
+  // 智能深度排序：底层大图/背景优先绘制，内容居中，返回按钮、TabBar、悬浮栏最后置顶绘制！
+  var sortedNodes = reconciledNodes.sort(function (a, b) {
+    var wa = getNodeLayerWeight(a, screen.w, screen.h);
+    var wb = getNodeLayerWeight(b, screen.w, screen.h);
+    return wa - wb;
+  });
+
+  for (var i = 0; i < sortedNodes.length; i++) {
+    await addNode(frame, sortedNodes[i], clipCache, screen);
     if (i % 120 === 119) await new Promise(function (r) { setTimeout(r, 0); });
   }
+
+  // 移动端挂载系统 Safe Area 视觉标杆（置于画板最顶层，永不被大图遮盖）
+  if (screen.device === 'mobile') {
+    var isDarkHeader = false;
+    for (var n = 0; n < sortedNodes.length; n++) {
+      var item = sortedNodes[n];
+      if ((item.t === 'i' || item.im !== undefined) && item.y <= 10 && item.h >= 200) {
+        isDarkHeader = true;
+        break;
+      }
+    }
+    await addStatusBar(frame, isDarkHeader);
+    await addHomeIndicator(frame, isDarkHeader);
+  }
+
   return frame;
+}
+
+function isCustomizedFrame(node) {
+  if (!node) return false;
+  var name = node.name || '';
+  if (name.indexOf('首页信息流') >= 0) return true;
+  try {
+    if (typeof node.findAll === 'function') {
+      var custom = node.findAll(function (child) {
+        var cid = child.id || '';
+        var cname = child.name || '';
+        if (cid.indexOf('25:') === 0) return true;
+        if (cname.indexOf('独立滚动区域') >= 0 ||
+            cname.indexOf('保留原有卡片') >= 0 ||
+            cname.indexOf('信息流卡片') >= 0 ||
+            cname.indexOf('Auto Layout') >= 0) {
+          return true;
+        }
+        return false;
+      });
+      if (custom && custom.length > 0) return true;
+    }
+  } catch (e) {}
+  return false;
 }
 
 async function buildScreensPage(page, device) {
   await safeSetCurrentPage(page);
-  await clearPage(page);
+  try {
+    if (typeof page.loadAsync === 'function') {
+      await page.loadAsync();
+    }
+  } catch (e) {}
+
   var screens = SPEC.screens.filter(function (s) { return s.device === device; });
   var columns = device === 'desktop' ? 1 : device === 'tablet' ? 2 : 3;
   var gapX = device === 'desktop' ? 80 : 96;
@@ -540,6 +871,20 @@ async function buildScreensPage(page, device) {
   var startX = 0;
   var startY = 0;
   var rowH = 0;
+
+  var existingChildren = page.children ? page.children.slice() : [];
+  var existingMap = {};
+  for (var k = 0; k < existingChildren.length; k++) {
+    var child = existingChildren[k];
+    var cname = child.name || '';
+    var title = cname.split('  ·  ')[0].trim();
+    if (title) existingMap[title] = child;
+    existingMap[cname] = child;
+  }
+
+  var preserved = 0;
+  var updated = 0;
+
   for (var i = 0; i < screens.length; i++) {
     var col = i % columns;
     var row = Math.floor(i / columns);
@@ -547,8 +892,64 @@ async function buildScreensPage(page, device) {
     var x = startX + col * (screen.w + gapX);
     var y = startY + row * (rowH + gapY);
     if (col === 0) rowH = screen.h;
+
+    var existing = existingMap[screen.title] || existingMap[screen.title + '  ·  ' + screen.route];
+    if (existing && isCustomizedFrame(existing)) {
+      preserved++;
+      // 对保留的自定义画板（如「首页信息流」）执行微创优化与安全区注入：
+      try {
+        // 1. 开启滚动容器剪裁，杜绝卡片底部从 TabBar 漏出
+        if (typeof existing.findAll === 'function') {
+          var scrollAreas = existing.findAll(function (c) {
+            return (c.id && c.id.indexOf('25:') === 0) || (c.name && c.name.indexOf('独立滚动区域') >= 0);
+          });
+          for (var sa = 0; sa < scrollAreas.length; sa++) {
+            scrollAreas[sa].clipsContent = true;
+          }
+
+          // 2. 修复已有 TabBar 导航文字压在图标上的历史重叠
+          var tabTexts = existing.findAll(function (c) {
+            return c.type === 'TEXT' && (c.name === '首页' || c.name === '附近' || c.name === '消息' || c.name === '我的');
+          });
+          for (var ti = 0; ti < tabTexts.length; ti++) {
+            var tt = tabTexts[ti];
+            if (tt.y < 42) tt.y = 42;
+          }
+        }
+
+        // 3. 补齐顶部 44px 状态栏与 34px 底部手势条（若不存在）
+        var hasStatus = false;
+        var hasHome = false;
+        if (existing.children) {
+          for (var ci = 0; ci < existing.children.length; ci++) {
+            var ch = existing.children[ci];
+            if (ch.name && ch.name.indexOf('Status Bar') >= 0) hasStatus = true;
+            if (ch.name && ch.name.indexOf('Home Indicator') >= 0) hasHome = true;
+          }
+        }
+        if (!hasStatus && screen.device === 'mobile') {
+          await addStatusBar(existing, false);
+        }
+        if (!hasHome && screen.device === 'mobile') {
+          await addHomeIndicator(existing, false);
+        }
+      } catch (e) {}
+      continue;
+    }
+
+    if (existing) {
+      try { existing.remove(); } catch (e) {}
+    }
+
     await buildScreen(page, screen, x, y);
+    updated++;
     if (i % 2 === 1) await new Promise(function (r) { setTimeout(r, 0); });
+  }
+
+  if (preserved > 0) {
+    try {
+      figma.notify('HotSpot：' + page.name + '（' + updated + ' 个画板修复刷新，' + preserved + ' 个自定义画板已保留）');
+    } catch (e) {}
   }
 }
 
@@ -594,7 +995,14 @@ async function buildModePanel(parent, x, y, mode) {
 
 async function buildDesignSystemPage(page) {
   await safeSetCurrentPage(page);
-  await clearPage(page);
+  var existingChildren = page.children ? page.children.slice() : [];
+  var hasCustom = false;
+  for (var c = 0; c < existingChildren.length; c++) {
+    if (isCustomizedFrame(existingChildren[c])) { hasCustom = true; break; }
+  }
+  if (!hasCustom) {
+    await clearPage(page);
+  }
   var y = 0;
   await addText(page, { x: 0, y: 0, w: 1800, h: 64, text: 'HotSpot 设计规范 · Design System', size: 44, weight: 700, color: 'text-primary' });
   await addText(page, { x: 0, y: 64, w: 1800, h: 28, text: '由前端代码 token 与实时页面结构生成；主题/明暗通过 Figma Variables 的 6 个模式切换。', size: 14, weight: 400, color: 'text-secondary' });
@@ -987,6 +1395,37 @@ async function buildComponents(page, startY) {
         await new Promise(function (r) { setTimeout(r, 0); });
       }
       log('HotSpot：全部页面生成完成，用时 ' + Math.round((Date.now() - started) / 1000) + 's');
+
+      // 在 Figma 的 Version History（版本历史）中留下明确的里程碑检查点，记录本次自动变更与修复内容
+      try {
+        if (typeof figma.saveVersionHistoryAsync === 'function') {
+          var now = new Date();
+          var timeStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' +
+                        String(now.getHours()).padStart(2, '0') + ':' +
+                        String(now.getMinutes()).padStart(2, '0');
+          var versionTitle = '细节精修版 · 灵动岛交互与状态徽章对齐 (' + timeStr + ')';
+          var versionDesc =
+            '【本次版本更新内容摘要】\n\n' +
+            '1. 灵动岛微交互优化：\n' +
+            '   • 修复灵动岛内「编辑资料」等按钮图标与文字重叠问题，建立复合排布器，保持 5px 优雅间隙并居中；\n' +
+            '   • 规范灵动岛内「返回概览」等次级操作按钮尺寸为 26px 微胶囊，上下保留 5px 呼吸空间，全圆角 pill 融入 36px 外壳。\n\n' +
+            '2. 状态徽章与色彩语义（举一反三）：\n' +
+            '   • 用户管理等页面的「正常」状态从发灰无语义底色升级为 status-online 柔和薄荷绿背景与深绿文字；\n' +
+            '   • 全量 Badge 开启双向几何严格居中，彻底消除文字偏右与留白不对称；\n' +
+            '   • 修复「举报 16」等数字标签因宽度不足被截断换成两行的问题。\n\n' +
+            '3. 全站图文混排避让：\n' +
+            '   • 全量卡片操作按钮（设置/关注/私信等）启用图文自动排布，杜绝压盖；\n' +
+            '   • 修复底部 TabBar 文字与图标纵向重叠，顶层 Header 浮层权重置顶。\n\n' +
+            '4. 智能保护与增量安全：\n' +
+            '   • 完整保留「首页信息流」等画板的 Figma AI 自定义滚动结构（25:2/25:3），实现无侵入式渐进式更新。';
+
+          await figma.saveVersionHistoryAsync(versionTitle, versionDesc);
+          log('HotSpot：已成功在 Figma 版本历史记录中保存里程碑「' + versionTitle + '」');
+          figma.notify('HotSpot：已在版本历史中创建里程碑「' + versionTitle + '」', { timeout: 6000 });
+        }
+      } catch (vhErr) {
+        console.warn('saveVersionHistoryAsync skipped or failed:', vhErr && vhErr.message ? vhErr.message : vhErr);
+      }
     } catch (e) {
       var errMsg = e && e.message ? e.message : String(e);
       figma.notify('HotSpot 设计稿生成异常：' + errMsg, { error: true, timeout: 30000 });
