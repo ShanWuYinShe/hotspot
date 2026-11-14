@@ -162,7 +162,8 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 	var first bool
 	userShard.mu.Lock()
 	if len(userShard.byUser[userID]) >= maxConnectionsPerUser {
-		// 踢最旧连接：新连接几乎总是活跃方；被踢连接由其读循环的 Close 报错退出。
+		// 踢最旧连接：新连接几乎总是活跃方；被踢连接在全部 shard 锁外显式
+		// Close（见下方 evicted 清理），其读循环收到错误后退出。
 		oldest := userShard.byUser[userID][0]
 		evicted = oldest
 		removeSinkFromSlice(userShard.byUser, userID, oldest)
@@ -182,6 +183,10 @@ func (h *Hub) RegisterUser(userID, sessionID string, sink FanoutSink) bool {
 	// 会做网络 Close 并最多等待写超时（5s），持锁关闭会阻塞同 shard 广播。
 	if evicted != nil {
 		h.dropSink(evicted)
+		// 仅从注册表摘除不会让连接退出：被逐出连接的读循环仍阻塞在 ReadMessage，
+		// 客户端也收不到任何关闭信号（连接变僵尸，继续占用 fd/缓冲与读 goroutine）。
+		// 必须显式关闭，读循环报错后走正常注销收尾（审计 A 平台层 P1-1）。
+		_ = evicted.Close()
 	}
 	return first
 }

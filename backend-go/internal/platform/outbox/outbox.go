@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -103,12 +104,38 @@ func (d *Dispatcher) handlerFor(topic string) Handler {
 	return d.handlers[topic]
 }
 
+// invokeHandler 在 recover 保护下调用 handler：panic 转成普通 error（记 ERROR
+// 日志 + 堆栈）。handler 在领取事务内执行，panic 若逃逸会掀掉整批事务——同批
+// 事件一起回滚、attempts 不增长，毒事件每次被重新领取并永久阻塞它之后的事件。
+// 转成 error 后走既有失败路径：事务继续提交，attempts/指数退避/dead-letter
+// 语义与普通 handler 错误一致，at-least-once 语义不变。
+func (d *Dispatcher) invokeHandler(ctx context.Context, handler Handler, row outboxRow) (err error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			d.logger.Error("outbox: handler panic recovered",
+				"event_id", row.eventID,
+				"topic", row.topic,
+				"panic", rec,
+				"stack", string(debug.Stack()),
+			)
+			err = fmt.Errorf("outbox: handler panic on topic %q: %v", row.topic, rec)
+		}
+	}()
+	return handler(ctx, row.payload)
+}
+
 // Start 在 ctx 生命周期内后台轮询；随应用优雅停机退出。
+//
+// 用 worker.GoRestartable 而非 worker.Go：handler 的 panic 已在本包的
+// invokeHandler 里转成 error，但领取/提交等非 handler 路径仍可能 panic，而
+// worker.Go 恢复后 goroutine 就永久退出——dispatcher 停转会让所有 topic
+// （含事务里刚提交的事件）再也不投递。GoRestartable 记录堆栈后退避重启；
+// 干净返回（ctx 取消）不重启，符合优雅停机语义。
 func (d *Dispatcher) Start(ctx context.Context) {
 	if d == nil || d.factory == nil {
 		return
 	}
-	worker.Go("outbox.dispatcher", func() {
+	worker.GoRestartable("outbox.dispatcher", func() {
 		ticker := time.NewTicker(d.pollInterval)
 		defer ticker.Stop()
 		for {
@@ -169,7 +196,7 @@ func (d *Dispatcher) DrainOnce(ctx context.Context) (int, error) {
 			if handler == nil {
 				handlerErr = fmt.Errorf("outbox: no handler for topic %q", row.topic)
 			} else {
-				handlerErr = handler(txCtx, row.payload)
+				handlerErr = d.invokeHandler(txCtx, handler, row)
 			}
 			nextAttempts := row.attempts + 1
 			if handlerErr == nil {
