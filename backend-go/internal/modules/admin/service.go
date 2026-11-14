@@ -41,9 +41,10 @@ type Service struct {
 	groupModerator          groupModerator
 	accountStateWriter      accountStateWriter
 	sessionAdmin            sessionAdmin
-	// runInTx 让「跨模块编排写」（举报裁决：内容删除 + 封禁 + 举报终态）在
-	// 同一事务内提交；nil 时退化为直跑（单测/内存装配）。审计/通知等副作用
-	// 经 aftercommit 在 COMMIT 后执行。
+	// runInTx 让「跨模块编排写」（举报裁决：内容删除 + 封禁 + 举报终态 + 裁决
+	// 审计；公告创建：落库 + 审计 + 广播入队）在同一事务内提交；nil 时退化为
+	// 直跑（单测/内存装配）。通知/广播等外部副作用经 aftercommit 在 COMMIT 后
+	// 执行。
 	runInTx persistence.TxRunner
 	// eventOutbox 是关键实时事件的事件生产者（bootstrap 注入通用 outbox
 	// writer）：公告创建/举报裁决与事件入队同事务提交，进程在 COMMIT 后崩溃
