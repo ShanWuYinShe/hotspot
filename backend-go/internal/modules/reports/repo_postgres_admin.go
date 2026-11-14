@@ -28,14 +28,15 @@ func (r *PostgresRepository) MarkHandledAsAdmin(ctx context.Context, reportID, s
 }
 
 // DeleteHandledBefore 物理删除已处理终态且 handled_at 早于 cutoff 的举报
-// （pending 永不自动清理）。
-func (r *PostgresRepository) DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+// （pending 永不自动清理），单次最多 limit 行；调用方循环分批直到删空或达到
+// 单轮上限，避免无界 DELETE 长时间持锁。
+func (r *PostgresRepository) DeleteHandledBefore(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {
 		return 0, persistence.ErrNotImplemented
 	}
 	var deleted int64
-	if err := queryable.QueryRow(ctx, queryDeleteHandledReportsBefore, cutoff.UTC()).Scan(&deleted); err != nil {
+	if err := queryable.QueryRow(ctx, queryDeleteHandledReportsBefore, cutoff.UTC(), limit).Scan(&deleted); err != nil {
 		return 0, err
 	}
 	return deleted, nil

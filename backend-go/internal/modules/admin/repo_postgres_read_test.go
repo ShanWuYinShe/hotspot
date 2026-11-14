@@ -114,11 +114,11 @@ func (r *adminFallbackRepo) RevokeAdmin(context.Context, string) error {
 	r.used = true
 	return nil
 }
-func (r *adminFallbackRepo) DeleteAuditLogsBefore(context.Context, time.Time) (int64, error) {
+func (r *adminFallbackRepo) DeleteAuditLogsBefore(context.Context, time.Time, int) (int64, error) {
 	return 0, nil
 }
 
-func (r *adminFallbackRepo) DeleteHandledReportsBefore(context.Context, time.Time) (int64, error) {
+func (r *adminFallbackRepo) DeleteHandledReportsBefore(context.Context, time.Time, int) (int64, error) {
 	return 0, nil
 }
 

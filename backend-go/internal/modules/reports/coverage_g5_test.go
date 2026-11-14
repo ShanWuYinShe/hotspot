@@ -33,7 +33,7 @@ func TestServiceAdminReportStoreUnsupported(t *testing.T) {
 	if _, err := svc.MarkHandledAsAdmin(context.Background(), "report_x", "resolved", time.Now(), nil, nil); !errors.Is(err, errAdminReportStoreUnsupported) {
 		t.Fatalf("MarkHandledAsAdmin err = %v, want errAdminReportStoreUnsupported", err)
 	}
-	if _, err := svc.DeleteHandledBefore(context.Background(), time.Now()); !errors.Is(err, errAdminReportStoreUnsupported) {
+	if _, err := svc.DeleteHandledBefore(context.Background(), time.Now(), 500); !errors.Is(err, errAdminReportStoreUnsupported) {
 		t.Fatalf("DeleteHandledBefore err = %v, want errAdminReportStoreUnsupported", err)
 	}
 }
@@ -96,7 +96,7 @@ func TestPostgresIT_AdminReportStoreRoundTrip(t *testing.T) {
 			t.Fatalf("Create pending report: %v", err)
 		}
 
-		deleted, err := svc.DeleteHandledBefore(ctx, now.Add(time.Hour))
+		deleted, err := svc.DeleteHandledBefore(ctx, now.Add(time.Hour), 500)
 		if err != nil {
 			t.Fatalf("DeleteHandledBefore: %v", err)
 		}
@@ -108,6 +108,30 @@ func TestPostgresIT_AdminReportStoreRoundTrip(t *testing.T) {
 		}
 		if _, duplicate, err := repo.FindExistingReport(ctx, reporter, ReportTargetTypeUser, "u_g5_report_target_1"); err != nil || duplicate {
 			t.Fatalf("handled report should be pruned: duplicate=%v err=%v", duplicate, err)
+		}
+
+		// 分批语义：每次最多删除 limit 行，循环直到删空（避免无界 DELETE 长时间持锁）。
+		for i, targetID := range []string{"u_g5_report_batch_1", "u_g5_report_batch_2"} {
+			created, err := repo.Create(ctx, reporter, CreateReportRequest{
+				TargetType: ReportTargetTypeUser,
+				TargetID:   targetID,
+				Reason:     ReportReasonSpam,
+			}, nil)
+			if err != nil {
+				t.Fatalf("create batch report %d: %v", i, err)
+			}
+			if _, err := svc.MarkHandledAsAdmin(ctx, created.ReportID, "resolved", now, &admin, nil); err != nil {
+				t.Fatalf("handle batch report %d: %v", i, err)
+			}
+		}
+		for i, want := range []int64{1, 1, 0} {
+			deleted, err := svc.DeleteHandledBefore(ctx, now.Add(time.Hour), 1)
+			if err != nil {
+				t.Fatalf("batch %d: %v", i, err)
+			}
+			if deleted != want {
+				t.Fatalf("batch %d deleted = %d, want %d", i, deleted, want)
+			}
 		}
 	})
 }
@@ -132,7 +156,7 @@ func TestPostgresRepositoryWithoutDatabaseReturnsNotImplemented(t *testing.T) {
 	if _, err := repo.MarkHandledAsAdmin(ctx, "report_x", "resolved", time.Now(), nil, nil); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("MarkHandledAsAdmin err = %v, want ErrNotImplemented", err)
 	}
-	if _, err := repo.DeleteHandledBefore(ctx, time.Now()); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, err := repo.DeleteHandledBefore(ctx, time.Now(), 500); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("DeleteHandledBefore err = %v, want ErrNotImplemented", err)
 	}
 }

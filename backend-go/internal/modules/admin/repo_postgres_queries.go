@@ -520,13 +520,19 @@ ORDER BY m.created_at DESC, m.moment_id DESC
 LIMIT $7`
 )
 
-// queryDeleteAuditLogsBefore / queryDeleteHandledReportsBefore 保留期清理：
-// 用 CTE + RETURNING 拿删除行数（persistence.Queryable.Exec 不暴露 affected rows）。
-// 审计日志按 created_at 删；举报只删已处理终态，pending 永不清理。
-const (
-	queryDeleteAuditLogsBefore = `
+// queryDeleteAuditLogsBefore 保留期清理（单批）：借 idx_admin_audit_logs_created_at
+// 按 created_at 顺序取最早的一批（$2 行），再按 ctid 定位删除，避免无界 DELETE
+// 一次锁住整表历史；CTE + RETURNING 拿删除行数（persistence.Queryable.Exec 不
+// 暴露 affected rows）。
+const queryDeleteAuditLogsBefore = `
 WITH deleted AS (
-    DELETE FROM admin_audit_logs WHERE created_at < $1 RETURNING 1
+    DELETE FROM admin_audit_logs
+    WHERE ctid IN (
+        SELECT ctid FROM admin_audit_logs
+        WHERE created_at < $1
+        ORDER BY created_at DESC, log_id DESC
+        LIMIT $2
+    )
+    RETURNING 1
 )
 SELECT COUNT(*) FROM deleted`
-)

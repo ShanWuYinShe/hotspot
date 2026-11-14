@@ -337,7 +337,7 @@ func (s covReportAdminStore) MarkHandledAsAdmin(context.Context, string, string,
 	return s.updated, nil
 }
 
-func (s covReportAdminStore) DeleteHandledBefore(context.Context, time.Time) (int64, error) {
+func (s covReportAdminStore) DeleteHandledBefore(context.Context, time.Time, int) (int64, error) {
 	return 0, nil
 }
 

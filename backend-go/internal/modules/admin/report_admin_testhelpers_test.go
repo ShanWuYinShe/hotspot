@@ -26,6 +26,6 @@ func (s testReportAdminStore) MarkHandledAsAdmin(ctx context.Context, reportID, 
 	return ok, err
 }
 
-func (s testReportAdminStore) DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error) {
-	return s.store.DeleteHandledReportsBefore(ctx, cutoff)
+func (s testReportAdminStore) DeleteHandledBefore(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
+	return s.store.DeleteHandledReportsBefore(ctx, cutoff, limit)
 }

@@ -59,12 +59,21 @@ SET status = $2,
 WHERE report_id = $1 AND status = 'pending'
 RETURNING report_id`
 
+	// queryDeleteHandledReportsBefore 保留期清理（单批）：借 idx_reports_handled_at
+	// 部分索引（handled_at IS NOT NULL，迁移 070）按 handled_at 顺序取最早的一批
+	//（$2 行），再按 ctid 定位删除，避免无界 DELETE 一次锁住大批行。只删已处理
+	// 终态，pending 永不清理；CTE + RETURNING 统计删除行数。
 	queryDeleteHandledReportsBefore = `
 WITH deleted AS (
     DELETE FROM reports
-    WHERE handled_at IS NOT NULL
-      AND handled_at < $1
-      AND status IN ('resolved', 'dismissed')
+    WHERE ctid IN (
+        SELECT ctid FROM reports
+        WHERE handled_at IS NOT NULL
+          AND handled_at < $1
+          AND status IN ('resolved', 'dismissed')
+        ORDER BY handled_at
+        LIMIT $2
+    )
     RETURNING 1
 )
 SELECT COUNT(*) FROM deleted`

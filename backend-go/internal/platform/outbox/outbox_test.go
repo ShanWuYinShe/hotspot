@@ -6,12 +6,32 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
+
+	"hotspot/backend-go/internal/platform/persistence"
 )
 
 var errHandlerSentinel = errors.New("handler sentinel failure")
 
 // payloadJSON 是单测用的标准 payload（避免手写转义串）。
 const payloadJSON = `{"k":"v"}`
+
+// TestDispatcherRetentionNoopWithoutFactory 覆盖保留期清理在无数据库/无 dispatcher
+// 时的降级语义：不 panic、不报错（dispatcher 可能因 DB 未配置而未真正启动）。
+func TestDispatcherRetentionNoopWithoutFactory(t *testing.T) {
+	var nilDispatcher *Dispatcher
+	nilDispatcher.pruneRetentionOnce(context.Background())
+
+	dispatcher := NewDispatcher(nil, nil)
+	dispatcher.pruneRetentionOnce(context.Background())
+	if _, err := dispatcher.deleteProcessedBatch(context.Background(), time.Now(), 10); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("deleteProcessedBatch err = %v, want ErrNotImplemented", err)
+	}
+	// ctx 已取消时快速返回，不发 SQL。
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	dispatcher.pruneRetentionOnce(cancelled)
+}
 
 // TestDispatcherInvokeHandlerRecoversPanic 锁定 handler panic 的转换语义：
 // 必须返回错误（而不是让 panic 逃逸掀掉领取事务），错误信息要带上 panic 内容，

@@ -543,6 +543,7 @@
     "reactions:idx_reactions_user_reacted_at",
     "reactions:reactions_pkey",
     "reports:idx_reports_creator_created_at",
+    "reports:idx_reports_handled_at",
     "reports:idx_reports_status_created_at",
     "reports:idx_reports_target_type_created_at",
     "reports:reports_pkey",

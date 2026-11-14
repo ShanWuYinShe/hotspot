@@ -138,7 +138,7 @@ func isValidReportReason(value ReportReason) bool {
 // 大接口稳定、测试桩不必实现。
 type adminReportStore interface {
 	MarkHandledAsAdmin(ctx context.Context, reportID, status string, handledAt time.Time, handledByID *string, note *string) (bool, error)
-	DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error)
+	DeleteHandledBefore(ctx context.Context, cutoff time.Time, limit int) (int64, error)
 }
 
 var errAdminReportStoreUnsupported = errors.New("reports: admin report store unsupported")
@@ -152,11 +152,12 @@ func (s *Service) MarkHandledAsAdmin(ctx context.Context, reportID, status strin
 	return store.MarkHandledAsAdmin(ctx, reportID, status, handledAt, handledByID, note)
 }
 
-// DeleteHandledBefore 保留期清理已处理举报（admin 保留期 sweeper 消费）。
-func (s *Service) DeleteHandledBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+// DeleteHandledBefore 保留期清理已处理举报（admin 保留期 sweeper 消费）；单次
+// 最多删除 limit 行，由调用方循环分批调用，避免无界 DELETE 长时间持锁。
+func (s *Service) DeleteHandledBefore(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
 	store, ok := s.repo.(adminReportStore)
 	if !ok {
 		return 0, errAdminReportStoreUnsupported
 	}
-	return store.DeleteHandledBefore(ctx, cutoff)
+	return store.DeleteHandledBefore(ctx, cutoff, limit)
 }
