@@ -15,6 +15,9 @@ func TestStripJPEGMetadataRejectsMalformedSegments(t *testing.T) {
 		{"segment header beyond buffer", []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00}},
 		{"non-marker byte after segment", []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0x12}},
 		{"truncated marker", []byte{0xFF, 0xD8, 0xFF}},
+		{"fill bytes then eof", []byte{0xFF, 0xD8, 0xFF, 0xFF, 0xFF}},
+		{"standalone rst marker in header", []byte{0xFF, 0xD8, 0xFF, 0xD0}},
+		{"stuffed zero byte in header", []byte{0xFF, 0xD8, 0xFF, 0x00}},
 		{"sos segment beyond buffer", []byte{0xFF, 0xD8, 0xFF, 0xDA, 0x00}},
 	}
 	for _, tc := range cases {
@@ -32,6 +35,7 @@ func TestStripJPEGMetadataHandlesEOIAndSegmentEnd(t *testing.T) {
 		"eoi immediately after soi": {0xFF, 0xD8, 0xFF, 0xD9},
 		"ends at segment boundary":  {0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02},
 		"app0 then eoi without sos": {0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9},
+		"fill bytes before eoi":     {0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xFF, 0xFF, 0xD9},
 	} {
 		t.Run(name, func(t *testing.T) {
 			cleaned, changed, err := stripImageMetadata(src)
@@ -61,4 +65,54 @@ func TestStripWebPMetadataRejectsTrailingBytes(t *testing.T) {
 	if _, _, err := stripImageMetadata(data); err == nil {
 		t.Fatal("webp with trailing bytes must fail parsing")
 	}
+}
+
+// FuzzStripImageMetadata：上传内容完全不可信，图片解析历史上出现过 panic。
+// 契约：任意字节输入不 panic；失败返回 nil 字节（调用方 fail-open 保留原图）；
+// 成功时输出不长于输入，「未修改」必须逐字节一致，「已修改」必须幂等
+// （第 81 轮审计要求媒体解析器有 fuzz 覆盖，禁止静默改写文件）。
+func FuzzStripImageMetadata(f *testing.F) {
+	pngSeed := buildTestPNGChunks(f,
+		pngChunkWithCRC("tEXt", pngTextPayload("XML:com.adobe.xmp", "<x:xmpmeta>GPS</x:xmpmeta>")),
+		pngChunkWithCRC("eXIf", []byte("Exif\x00\x00GPS")),
+	)
+	seeds := [][]byte{
+		buildTestJPEG(true),
+		buildTestJPEG(false),
+		buildTestJPEGWithFillBytes(2),
+		buildTestWebP(true),
+		buildTestWebP(false),
+		pngSeed,
+		{0xFF, 0xD8, 0xFF, 0xE1, 0x7F, 0xFF, 0x01, 0x02},                     // JPEG 段长越界
+		{0xFF, 0xD8, 0xFF, 0xFF, 0xFF},                                       // 纯填充后截断
+		append(append([]byte(nil), pngSignature...), 0xFF, 0xFF, 0xFF, 0xFF), // PNG 块长越界
+		append(append([]byte(nil), pngSignature...), 1, 2, 3, 4),             // PNG 尾随残余字节
+		[]byte("RIFF\x00\x00\x00\x00WEBP" + "VP8L\x00\x00\x00\x00"),          // 空 WebP body
+		[]byte("%PDF-1.7 not an image"),
+		[]byte(nil),
+	}
+	for _, seed := range seeds {
+		f.Add(seed)
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		cleaned, changed, err := stripImageMetadata(data)
+		if err != nil {
+			if cleaned != nil {
+				t.Fatalf("error must not return bytes: %v", err)
+			}
+			return
+		}
+		if len(cleaned) > len(data) {
+			t.Fatalf("scrub must not grow data: before=%d after=%d", len(data), len(cleaned))
+		}
+		if !changed {
+			if !bytes.Equal(cleaned, data) {
+				t.Fatalf("unchanged scrub must be byte-identical: before=%x after=%x", data, cleaned)
+			}
+			return
+		}
+		if again, changedAgain, err := stripImageMetadata(cleaned); err != nil || changedAgain || !bytes.Equal(again, cleaned) {
+			t.Fatalf("scrub must be idempotent: err=%v changed=%v", err, changedAgain)
+		}
+	})
 }
