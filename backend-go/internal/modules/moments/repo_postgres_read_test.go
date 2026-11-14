@@ -296,7 +296,8 @@ func (b *backendStub) Query(_ context.Context, query string, args ...any) (persi
 		}
 		rows := make([][]any, 0, len(items))
 		for _, item := range items {
-			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted})
+			// 尾列 sort_score：搜索 SQL 输出的排序分值（桩不重算，只占位）。
+			rows = append(rows, []any{item.MomentID, item.User.UserID, item.User.Nickname, avatarString(item.User.AvatarURL), item.Description, item.CreatedAt, item.CommentsCount, item.SharesCount, item.InteractionCount, item.Location.LocationName, item.Location.Point.Latitude, item.Location.Point.Longitude, item.PrivacyLevel, item.IsDeleted, 0.0})
 		}
 		return &rowsValues{rows: rows}, nil
 	}

@@ -80,7 +80,16 @@ func buildRankedSearchUsersQuery(rawKeyword, tag, sortBy string, cursor searchCu
 	kwArg := len(args)
 	scoreExpr := rankedRelevanceScoreSQL(kwArg, tag != "")
 	inner.WriteString("(" + scoreExpr + ") AS search_score FROM users u JOIN user_settings us ON us.user_id = u.user_id WHERE us.searchable = TRUE AND u.is_deleted = FALSE AND us.privacy_level = 'public'")
-	inner.WriteString(fmt.Sprintf(" AND (u.nickname &@ $%d OR u.bio &@ $%d)", kwArg, kwArg))
+	inner.WriteString(fmt.Sprintf(" AND (u.nickname &@ $%d OR u.bio &@ $%d", kwArg, kwArg))
+	// 手机号格式 keyword 需同时按登录手机号精确匹配（spec user.md → users/search
+	// keyword 说明）：手机号真值在 auth_accounts.login_id（users.phone 只是回填），
+	// 与候选路径 buildSearchUsersQuery 同口径，受 us.phone_searchable 控制。
+	// 手机号命中本身不计相关性分（评分/排序口径不变，仅决定是否进入候选集）。
+	if isPhoneFormatKeyword(rawKeyword) {
+		args = append(args, rawKeyword)
+		inner.WriteString(fmt.Sprintf(" OR (us.phone_searchable = TRUE AND EXISTS (SELECT 1 FROM auth_accounts aa WHERE aa.user_id = u.user_id AND aa.login_id = $%d))", len(args)))
+	}
+	inner.WriteString(")")
 	if tag != "" {
 		args = append(args, tag)
 		inner.WriteString(fmt.Sprintf(" AND EXISTS (SELECT 1 FROM user_profile_tags upt WHERE upt.user_id = u.user_id AND lower(upt.tag_name) = lower($%d))", len(args)))
