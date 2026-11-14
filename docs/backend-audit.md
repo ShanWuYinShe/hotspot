@@ -75,8 +75,8 @@
   `persistence.Queryable` stub 做集成测试。
 - `reports.TargetOwner`、`groupmessages` 成员/群名在内存模式依赖测试注入（跨模块真值不可得，
   已提供 `SeedTargetOwner`/`SeedMember`/`SetGroupName` 等测试口子）。
-- `platform/auth` 的 session/refresh store 直连连接池（不感知 ctx 事务），调用链在事务外；
-  `bootstrap` 启动期查询同理——已在「Repository 事务上下文一致性审计」节记录为残留项。
+- `platform/auth` 的 session/refresh store 已改为 ctx 事务感知（`persistence.RepoQueryable`，
+  第 81 轮），不再是残留项；仅 `bootstrap` 启动期查询直连连接池（启动期无事务，属预期）。
 - `admin` 角色/管理员列表全量加载后 Go 侧分页：管理员数量有界，暂可接受；若增长需下推 SQL。
 - media `GetObject` 读取整对象（EXIF 清洗链路）：受「declared size == Head size 且 ≤ 类别上限」
   约束，图片类别上限内可接受。
@@ -648,9 +648,9 @@ Repository 双实现约定：凡可能被事务包裹的读写必须经 `persist
 自锁/等待）。生产上这些代码路径兜底可用（池连接能写成功），但事务语义名存实亡。
 
 已全部改为 `persistence.RepoQueryable(ctx, factory)`；`privatemessages.getMessageMetaImpl` 原先
-手写「ctx 优先、池回落」也统一收口到同一 helper。bootstrap/app.go 与 platform/auth 的
-session/refresh store 仍直接用池：前者为启动期/无事务路径，后者调用链在事务外；若后续纳入
-`RunInTransaction` 需一并改造（已记录）。
+手写「ctx 优先、池回落」也统一收口到同一 helper。`platform/auth` 的 session/refresh store
+（第 81 轮）同样改为 ctx 事务感知并补了真实库事务回滚 IT（封禁回滚不再残留已撤销会话）；
+仅 `bootstrap/app.go` 的启动期查询仍直连连接池（启动期无事务，属预期）。
 
 ## 双实现契约测试第十一批（2026-10-24，reports）
 
@@ -3893,3 +3893,81 @@ staticcheck U1000（-tests=false）清零。
 - **验证**：后端 verify-backend-ci.sh --all ALL CHECKS PASSED（含真实库 IT/E2E/govulncheck）；
   前端 bun run check + bun run test 全绿（142 文件 / 869 用例）；鸿蒙 hvigor assembleApp
   BUILD SUCCESSFUL；docs/release-runbook.md 与 hotspot-backend-migrations skill 同步为无 adopt 现状。
+
+## 后端潜在问题审计第 81 轮（2026-11-14）与本批修复
+
+方法：4 路并行静态审计（平台层 / 核心业务模块 / 侧业务模块+迁移 / 依赖与运行时）+ 运行时复核
+（真实 dev 栈 API、PostgreSQL EXPLAIN、最小 nginx 容器）；基线 `37bf0cfb7`（= origin/main，CI 全绿）。
+先复核「已确认无问题/已知残留」清单，不复报旧结论；每个新结论都附可复核命令。
+
+### 一、本轮修复（P1 批次，均含回归测试）
+
+| # | 问题 | 影响 | 修复 |
+|---|---|---|---|
+| 1 | moments/search keyset 游标分值由 Go 侧重算、时间用秒级展示字段 | popular/relevance/newest 跨页重复/丢行，popular 可死循环（dev 实测：popular limit=2 从 38 条只翻出 26 条；relevance limit=3 从 22 条只翻出 7 条；limit=1 连续 8 页同一条） | SELECT 输出 `sort_score` + 全精度 `created_at` 直接编码游标；真实库「跨页不重不漏」IT（做过改坏→断言失败→恢复验证） |
+| 2 | 分片 Hub 逐出连接只摘表不 Close（2026-11-07 重构回归） | 每用户 20 连接上限失效：僵尸连接持 fd/goroutine、可占满全局 WS 连接；被逐出连接静默丢事件 | shard 锁外 dropSink 后显式 Close；逐出/锁外关闭回归测试 |
+| 3 | outbox dispatcher 用 worker.Go（panic 后永久停转）；handler 在领取事务内执行，panic 回滚整批 attempts | 任一 handler panic → 全部 topic 停投递；毒事件 attempts 恒 0、头部阻塞、永不进死信 | Start 改 GoRestartable；handler panic recover→error（事务继续、退避/死信正常）；单测+真实库 IT |
+| 4 | users/search ranked 快路径漏手机号精确匹配分支 | 默认搜索形态（无 radius、relevance/newest）手机号搜索完全失效，违反 spec | ranked SQL 补同一 `auth_accounts.login_id` + `phone_searchable` EXISTS；单测+真实库 IT |
+| 5 | aftercommit 回调无 panic 隔离 | 一个 hook panic → 已 COMMIT 请求返回 10600 诱发重试，其余副作用丢失 | 每 hook recover + Error 日志；单测 |
+| 6 | platform/auth session/refresh store 取连接忽略 ctx 事务 | 封禁事务回滚后会话仍被撤销（用户没被封但全端下线） | 改 `persistence.RepoQueryable(ctx, factory)`；真实库事务回滚 IT |
+| 7 | 限流分类把 moments update/delete/set_favorite、comments/delete 判只读 | 写端点跳过 `write_per_minute` 桶（纵深防御缺口） | 显式写端点白名单；分类用例补齐 |
+| 8 | private_messages/mark_read 空会话仍向任意 user_id 广播 | 任意登录用户可注入 PrivateMessageRead WS 事件 | 空位点（MessageID=""）不广播；单测 |
+| 9 | system/bootstrap unread_summary 缺 report/nearby 分类、total_badge 公式不符 | 客户端冷启动分类角标丢两类、总量口径不符 spec | 六键齐全 + spec 求和公式 + 查询失败降级仍为对象；单测 |
+
+### 二、测试与门禁保真度修复
+
+- `testdb` 连接协议由 simple protocol 改为与生产一致的 `QueryExecModeCacheStatement`（原注释错误地
+  声称与生产一致；此前 IT 与生产协议分叉，Scan/预编译相关差异可能被掩盖）。切换后 modules IT 与
+  platform 真实库测试全绿，未发现协议相关回归。
+- CI backend-integration job 与 `verify-backend-ci.sh --with-db` 增加 `./internal/platform/...` 真实库
+  测试：outbox 事务回滚/派发、aftercommit、WarmPlanner、auth 存储契约等 platform 层 IT 此前在任何
+  CI/本地门禁中 0 执行。
+- `archtest` 工具链守卫由「只校验 ci.yml 首个 go-version」改为校验全部（当前 3 处），并做负向验证。
+
+### 三、已复核、本轮未修（后续批次，按优先级）
+
+- **media 预签名安全边界**：签名只覆盖 host、UNSIGNED-PAYLOAD、TTL 15 分钟 → complete/发布后仍可
+  重 PUT 同一 key（绕过魔数/大小/EXIF 校验；同源 `/s3/` + CSP `unsafe-inline` 存在直接打开媒体 URL
+  的执行面）；body 大小不受签名约束（nginx `client_max_body_size 100m`，未完成会话保留 7 天且 GC
+  100/小时）。`docker/nginx.proxy.inc` 注释里「对象发布后内容不可变」的安全前提不成立。需架构选择
+  （copy-on-complete 换 key / S3 POST policy / `/s3/` 响应加固）。
+- **微信/QQ 内嵌浏览器与预览抓取器共用 `$share_crawler` map**：内嵌浏览器拿到 OG 页且 CTA 指回同
+  URL → SPA 分享页永远打不开（dev 实测 MicroMessenger UA 返回 OG 页）；OG 响应缺 `Vary: User-Agent`。
+  需产品取舍 + nginx 部署配置变更。
+- **举报裁决审计**仍在 aftercommit best-effort（同批只为通知做了事务内 + outbox）；**公告创建审计**
+  在事务外且失败返回 10600，幂等重试会重复发布 + 重复全体广播。
+- **保留期治理**：`outbox_events` 无清理（processed 索引无人使用、死信与成功不可区分）；
+  `announcement_reads` 随软删公告永久泄漏；reports 保留期按 `handled_at` 无索引（EXPLAIN 已复现
+  Bitmap+Filter）；admin 审计/举报清理是无界单条 DELETE（与 notify 分批纪律不一致）。
+- notify/mark_read 公告与通知两段写无事务；share/fetch_created 预览 N+1；seed 仍写旧
+  `system_announcement` 通知行（dev 数据重复）；注销级联不删媒体对象；EXIF 清洗缺口（JPEG 填充
+  字节 fail-open 保留 GPS、PNG 不清 XMP，媒体解析器无 fuzz）。
+- bootstrap 未读摘要的聊天未读（private/group chat count）仍恒 0：现有实现没有全量聚合入口，
+  需在 privatechats/groups repo 新增 SUM 查询后接线（字段与公式已就位）。
+- Redis 启动不可达静默降级（幂等/限流退化为单实例、内存幂等 map 无容量上限）；Redis client 停机未关闭。
+- pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`，若服务器口令含
+  `@`/裸空格/`%` 会连不上库（部署脚本建议的 base64 口令无 `@`；需核对服务器 .env）。
+- OG `og:image` 输出相对路径（微信等爬虫可能不解析）；moment 分享封面用作者头像而非瞬间图。
+
+### 四、本轮证伪 / 复核无问题
+
+- 生产 nginx `location /share/` 内 `if ($share_crawler){proxy_pass}` 与 `try_files` 共存被怀疑会让
+  生产 OG 全失效：以最小 nginx 容器按同结构实测（crawler → 后端 OG、普通 UA → SPA index），
+  **该怀疑不成立**。
+- 依赖升级（pgx 5.9.2→5.12.0、x/sync 0.24→0.25、Go 1.26.11）：两个 pgx 安全修复在本仓库不可达
+  （0 处 SendBatch、无 require_auth/channel_binding）；BatchResults/Rows 接口新增无自定义实现；
+  Go 1.26.11 修复的 MaxBytesReader 漏洞对本站可达且已修复；`go mod tidy -diff` 干净。
+- 运行时：dev 后端 0 ERROR、goroutine 26 稳定、pgxpool 2/2 idle；空表 outbox 轮询 60-120ms 经
+  `EXPLAIN (ANALYZE)` 证实为 VM 调度/启动预热伪象（Execution 0.06-0.16ms），非 SQL 成本。
+- OG 页 html.EscapeString/无头注入、Cookie 标志、严格 JSON 解码、错误不泄漏内部细节、/metrics 与
+  /readyz 不对外、迁移纪律（check-migrations）等复核通过。
+
+### 五、验证
+
+- 本地：gofmt 空；`go build ./...`/`go vet ./...` 通过；受影响包 `go test -short` 全绿；
+- 真实库（临时库）：`go test -p 1 -run 'TestPostgresIT|Contract' ./internal/modules/...` 17 包全绿；
+  `go test -p 1 ./internal/platform/...` 29 包全绿（含此前从不执行的 platform 层 IT）；
+- 修复敏感性：moments 分页 IT、users 手机号 IT、auth 事务 IT、Hub 逐出、限流分类、空会话广播均已做
+  「改坏→断言失败→恢复」验证；
+- 门禁：本批以 PR 形式合并，PR CI 全绿（含 go vet/staticcheck/gosec/govulncheck/-race/真实库 IT/E2E/
+  镜像构建与运行时冒烟）后合入 main。
