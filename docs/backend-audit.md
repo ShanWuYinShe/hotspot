@@ -3926,16 +3926,10 @@ staticcheck U1000（-tests=false）清零。
 
 ### 三、已复核、本轮未修（后续批次，按优先级）
 
-- **media 预签名安全边界**：签名只覆盖 host、UNSIGNED-PAYLOAD、TTL 15 分钟 → complete/发布后仍可
-  重 PUT 同一 key（绕过魔数/大小/EXIF 校验；同源 `/s3/` + CSP `unsafe-inline` 存在直接打开媒体 URL
-  的执行面）；body 大小不受签名约束（nginx `client_max_body_size 100m`，未完成会话保留 7 天且 GC
-  100/小时）。`docker/nginx.proxy.inc` 注释里「对象发布后内容不可变」的安全前提不成立。需架构选择
-  （copy-on-complete 换 key / S3 POST policy / `/s3/` 响应加固）。
-- **微信/QQ 内嵌浏览器与预览抓取器共用 `$share_crawler` map**：内嵌浏览器拿到 OG 页且 CTA 指回同
-  URL → SPA 分享页永远打不开（dev 实测 MicroMessenger UA 返回 OG 页）；OG 响应缺 `Vary: User-Agent`。
-  需产品取舍 + nginx 部署配置变更。
-- **举报裁决审计**仍在 aftercommit best-effort（同批只为通知做了事务内 + outbox）；**公告创建审计**
-  在事务外且失败返回 10600，幂等重试会重复发布 + 重复全体广播。
+- **未完成上传的存储放大（DoS 面，未修）**：预签名 PUT 的 body 大小不受签名约束（声明 1 字节可
+  PUT 至 nginx `client_max_body_size 100m`），未完成会话保留 7 天且 GC 100/小时。发布后不可变已由
+  copy-on-complete 解决，但「弃置大对象」的存储/带宽成本仍需配额或 S3 POST policy（需改客户端协议）
+  等多方案评估，另行立项。
 - **保留期治理**：`outbox_events` 无清理（processed 索引无人使用、死信与成功不可区分）；
   `announcement_reads` 随软删公告永久泄漏；reports 保留期按 `handled_at` 无索引（EXPLAIN 已复现
   Bitmap+Filter）；admin 审计/举报清理是无界单条 DELETE（与 notify 分批纪律不一致）。
@@ -3947,7 +3941,7 @@ staticcheck U1000（-tests=false）清零。
 - Redis 启动不可达静默降级（幂等/限流退化为单实例、内存幂等 map 无容量上限）；Redis client 停机未关闭。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`，若服务器口令含
   `@`/裸空格/`%` 会连不上库（部署脚本建议的 base64 口令无 `@`；需核对服务器 .env）。
-- OG `og:image` 输出相对路径（微信等爬虫可能不解析）；moment 分享封面用作者头像而非瞬间图。
+- moment 分享封面用作者头像而非瞬间图（产品口径待确认）。
 
 ### 四、本轮证伪 / 复核无问题
 
@@ -3971,3 +3965,29 @@ staticcheck U1000（-tests=false）清零。
   「改坏→断言失败→恢复」验证；
 - 门禁：本批以 PR 形式合并，PR CI 全绿（含 go vet/staticcheck/gosec/govulncheck/-race/真实库 IT/E2E/
   镜像构建与运行时冒烟）后合入 main。
+
+### 六、后续批次 2 修复（2026-11-14）
+
+媒体发布不可变、分享分流与审计事务化三项高风险项已修复（同一 PR 门禁：CI 全绿后合并）：
+
+- **media copy-on-complete**：complete 时把对象从可写上传键 `uploads/<user>/<uploadID>.<ext>` 复制/
+  清洗落盘到不可写发布键 `published/...`（图片：清洗后字节直接 PUT 发布键；其余类别：服务端
+  `CopyObject`，不占应用内存），同一条条件 UPDATE 把 `storage_key` 改写为发布键；提交成功后才
+  尽力删除上传键。发布键从不签发预签名 PUT，因此发布后内容不可变（旧实现可在 TTL 内重写同一 key
+  绕过魔数/大小/EXIF 校验）。`ObjectStorageProvider` 新增带 `x-amz-copy-source` 签名头的
+  `CopyObject`，已在本机 SeaweedFS 冒烟验证（保留 Content-Type、字节一致）；无迁移，存量已完成
+  数据无需回填。残留：弃置未完成上传的存储放大（见「三」）与失败批次可能留下未被引用的发布键副本。
+- **/s3/ 纵深防御**：dev/prod 的 `/s3/` location 追加 `Content-Security-Policy: sandbox`（多份 CSP
+  头按浏览器语义取交集，直接打开对象文档时不执行脚本；对 `<img>`/`<video>` 子资源不生效）。
+- **分享页分流**：nginx 用 `map "$share_crawler|$arg_spa" $share_og` 组合判定，只有「爬虫 UA 且未带
+  `?spa=1`」才走 OG；OG 页 CTA 带 `?spa=1`（微信/QQ 内嵌浏览器由此进入 SPA），并补绝对
+  `og:url`、把相对 `og:image` 按 X-Forwarded-Proto + Host 绝对化、响应加 `Vary: User-Agent`；
+  dev 网关 `/share/` 的 Host 改 `$http_host` 以保留端口。dev/prod 完整 nginx 配置已在一次性容器内
+  `nginx -t` + 分流矩阵实测。
+- **审计事务化**：`report.judge` 审计移入举报裁决事务（审计失败整体回滚，举报仍 pending，可重试）；
+  公告创建（含 `send_push=false`）改为「落库 + 审计 + outbox 入队」同事务，审计失败不落库不入队，
+  幂等重试只发布一次；aftercommit 仅保留未装配 outbox 时的通知回退。
+
+验证：受影响包 `go test -short` 全绿；media 真实库契约 IT（memory+postgres，断言发布键写入与重复
+complete 幂等）、admin 真实库 IT（审计失败回滚/重试后仅一条审计）、share 单测（CTA/绝对化/Vary）
+均通过；PR CI 全绿（含 Infra 的 nginx -t 与 Docker 构建/运行时冒烟）。
