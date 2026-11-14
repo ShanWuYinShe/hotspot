@@ -11,6 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// PostgresSessionStore 是 SessionStore 的生产实现。所有读写经
+// persistence.RepoQueryable 取连接：ctx 携带事务时加入该事务，否则回落连接池。
+// 事务内撤销必须随事务一起回滚——否则 admin 封禁在事务后续步骤失败回滚后，
+// 会出现「用户没被封但全端会话已失效」。
 type PostgresSessionStore struct {
 	factory  *persistence.Factory
 	fallback SessionStore
@@ -24,7 +28,7 @@ func NewPostgresSessionStore(factory *persistence.Factory, fallback SessionStore
 }
 
 func (s *PostgresSessionStore) Save(ctx context.Context, session SessionRecord) error {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Save(ctx, session)
 	}
@@ -51,7 +55,7 @@ func isDeviceSessionConflict(err error) bool {
 }
 
 func (s *PostgresSessionStore) Touch(ctx context.Context, sessionID string) error {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Touch(ctx, sessionID)
 	}
@@ -66,7 +70,7 @@ func (s *PostgresSessionStore) Revoke(ctx context.Context, sessionID string) (bo
 	if !ok || record.RevokedAt != nil {
 		return false, nil
 	}
-	queryable, pg := s.queryable()
+	queryable, pg := persistence.RepoQueryable(ctx, s.factory)
 	if !pg {
 		return s.fallback.Revoke(ctx, sessionID)
 	}
@@ -77,7 +81,7 @@ func (s *PostgresSessionStore) Revoke(ctx context.Context, sessionID string) (bo
 }
 
 func (s *PostgresSessionStore) RevokeOthers(ctx context.Context, userID, currentSessionID string) (int, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.RevokeOthers(ctx, userID, currentSessionID)
 	}
@@ -97,7 +101,7 @@ SELECT COUNT(*) FROM revoked`, userID, currentSessionID).Scan(&revoked); err != 
 }
 
 func (s *PostgresSessionStore) Get(ctx context.Context, sessionID string) (SessionRecord, bool, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Get(ctx, sessionID)
 	}
@@ -114,7 +118,7 @@ func (s *PostgresSessionStore) Get(ctx context.Context, sessionID string) (Sessi
 }
 
 func (s *PostgresSessionStore) ListActiveByUser(ctx context.Context, userID string) ([]SessionRecord, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.ListActiveByUser(ctx, userID)
 	}
@@ -137,12 +141,4 @@ func (s *PostgresSessionStore) ListActiveByUser(ctx context.Context, userID stri
 		return nil, err
 	}
 	return items, nil
-}
-
-func (s *PostgresSessionStore) queryable() (persistence.QueryableDB, bool) {
-	if s.factory == nil || s.factory.DB == nil || s.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := s.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
 }

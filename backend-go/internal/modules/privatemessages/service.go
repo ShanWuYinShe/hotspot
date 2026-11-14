@@ -396,6 +396,15 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		observability.FromContext(ctx).Error("privatemessages.mark_as_read failed", "error", err, "target_user_id", req.TargetUserID, "up_to_message_id", req.UpToMessageID)
 		return err
 	}
+	// 空会话守卫：repo 对无消息的会话返回空位点（MessageID == ""，见
+	// repo_postgres.go/repo_memory 实现），此时 TargetUserID 只是请求入参、
+	// 未经任何服务端校验——任意登录用户都能填入任意 user_id 并触发广播，
+	// 向他人 WS 通道注入 PrivateMessageRead 事件。无消息可标记时不应产生
+	// 已读事件，故仅在确有消息位点时广播；请求本身仍返回成功（空会话幂等，
+	// 与 repo 的空位点语义一致）。
+	if meta.MessageID == "" {
+		return nil
+	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: PrivateMessageReadPayload{
 		TargetUserID:  meta.TargetUserID,
 		UpToMessageID: meta.MessageID,

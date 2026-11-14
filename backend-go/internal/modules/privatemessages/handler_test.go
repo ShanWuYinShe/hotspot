@@ -307,6 +307,72 @@ func TestMarkAsReadBroadcastsPrivateMessageReadToTarget(t *testing.T) {
 	}
 }
 
+// 空会话（repo 无消息可标记）时 MarkAsRead 不得广播：此时 TargetUserID 只是
+// 请求入参、未经服务端校验，广播会让任意登录用户向任意 user_id 注入
+// PrivateMessageRead WS 事件。请求本身仍须成功（空会话幂等语义不变）。
+func TestMarkAsReadEmptyConversationDoesNotBroadcast(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	// 受害者账号在线（任意 user_id，均不应收到事件）。
+	victimSink := &eventSink{}
+	hub.RegisterUser("user_victim", "sess_victim", victimSink)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	if err := service.MarkAsRead(ctx, MarkPrivateMessagesReadRequest{TargetUserID: "user_victim"}); err != nil {
+		t.Fatalf("empty conversation mark as read should succeed, got %v", err)
+	}
+	if len(victimSink.events) != 0 {
+		t.Fatalf("empty conversation must not broadcast, got %d events: %#v", len(victimSink.events), victimSink.events)
+	}
+}
+
+// 会话有消息时，「标记整个会话已读」（不带 UpToMessageID，位点由 repo 返回）
+// 仍须向对端广播 PrivateMessageRead——守卫只拦空位点，不得误伤正常路径。
+func TestMarkAsReadWholeChatBroadcastsWhenConversationHasMessages(t *testing.T) {
+	hub := realtime.NewHub()
+	realtime.SetDefaultHub(hub)
+
+	repo := NewInMemoryRepository()
+	userStub := &privateMessageUserStub{
+		item:     users.UserItem{Relation: &users.Relationship{}},
+		ok:       true,
+		settings: users.UserSettings{AllowPrivateChat: users.ChatPermEveryone},
+	}
+	service := NewServiceWithDeps(repo, userStub)
+
+	ctx := platformauth.WithPrincipal(context.Background(), platformauth.Principal{UserID: "user_alice", SessionID: "sess_alice"})
+	sent, err := service.Send(ctx, SendPrivateMessageRequest{TargetUserID: "user_bob", Type: "text", Content: "hello"})
+	if err != nil {
+		t.Fatalf("send: %v", err)
+	}
+
+	bobSink := &eventSink{}
+	hub.RegisterUser("user_bob", "sess_bob", bobSink)
+
+	if err := service.MarkAsRead(ctx, MarkPrivateMessagesReadRequest{TargetUserID: "user_bob"}); err != nil {
+		t.Fatalf("mark whole chat as read: %v", err)
+	}
+	if len(bobSink.events) != 1 || bobSink.events[0].Type != "PrivateMessageRead" {
+		t.Fatalf("expected 1 PrivateMessageRead for bob, got %v", bobSink.events)
+	}
+	payload, ok := bobSink.events[0].Payload.(PrivateMessageReadPayload)
+	if !ok {
+		t.Fatalf("unexpected payload type: %T", bobSink.events[0].Payload)
+	}
+	if payload.UpToMessageID != sent.MessageID {
+		t.Fatalf("expected up_to_message_id %s, got %s", sent.MessageID, payload.UpToMessageID)
+	}
+}
+
 // 契约(api_spec_index.md 预留):不提供 self-sync 事件——mark_all_read 只更新本端状态,
 // 不向自己推送已读同步事件。
 func TestMarkAllReadDoesNotBroadcastSelfSync(t *testing.T) {

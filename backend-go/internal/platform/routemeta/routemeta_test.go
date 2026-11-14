@@ -2,9 +2,11 @@ package routemeta
 
 import "testing"
 
-// TestClassifyPath 迁移自 ratelimit 分类逻辑的行为契约：同一路径必须得到
-// 与迁移前完全一致的 (ReadOnly, AdminOnly)。这些都是限流桶选择依据，
-// 分类漂移等于写端点跑进读桶（安全影响），故逐条固化。
+// TestClassifyPath 限流分类行为契约：这些都是限流桶选择依据，分类漂移
+// 等于写端点跑进读桶（安全影响），故逐条固化。moments/comments 的写端点
+// 由显式白名单判定（见 classify.go 的 isMomentWritePath/isCommentWritePath）：
+// 旧「非 /create 即只读」规则漏判 update/delete/set_favorite，曾使写端点
+// 跳过 write_per_minute 桶。
 func TestClassifyPath(t *testing.T) {
 	cases := []struct {
 		path      string
@@ -25,10 +27,21 @@ func TestClassifyPath(t *testing.T) {
 		{"/api/v1/media/presign_upload", false, false, true},
 		{"/api/v1/reports/fetch", true, false, true},
 		{"/api/v1/reports/create", false, false, true},
-		{"/api/v1/moments/fetch_feed", true, false, true},
+		// moments/comments：写端点显式白名单，其余（open_the_door/search/
+		// fetch_*）保持只读。旧后缀规则漏判 update/delete/set_favorite。
 		{"/api/v1/moments/create", false, false, true},
-		{"/api/v1/comments/fetch", true, false, true},
+		{"/api/v1/moments/update", false, false, true},
+		{"/api/v1/moments/delete", false, false, true},
+		{"/api/v1/moments/set_favorite", false, false, true},
+		{"/api/v1/moments/open_the_door", true, false, true},
+		{"/api/v1/moments/search", true, false, true},
+		{"/api/v1/moments/fetch_created", true, false, true},
+		{"/api/v1/moments/fetch_favorites", true, false, true},
 		{"/api/v1/comments/create", false, false, true},
+		{"/api/v1/comments/delete", false, false, true},
+		{"/api/v1/comments/fetch", true, false, true},
+		{"/api/v1/comments/fetch_replies", true, false, true},
+		{"/api/v1/comments/open_the_door", true, false, true},
 		{"/api/v1/groups/search", true, false, true},
 		{"/api/v1/groups/open_the_door", true, false, true},
 		{"/api/v1/groups/fetch_joined", true, false, true},
