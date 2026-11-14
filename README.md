@@ -43,12 +43,13 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 | Docker 镜像 | `IMAGE_TAG` 即版本串；OCI label（`org.opencontainers.image.revision`）含完整 commit |
 | 鸿蒙客户端 | 设置页「关于」行显示 `AppScope/app.json5` 的 `versionName`（发版约定见 `harmonyapp/AGENTS.md`） |
 
-发布为**产物分发模式**，服务器不接触源码、不构建：
+发布为**产物分发模式**：tag 触发 Release 工作流构建前后端镜像（注入版本指纹）并附 `.sha256` 挂 GitHub Release，
+本地 `./scripts/deploy-production.sh vX.Y.Z` 完成校验和核验 → 配置导出 → 服务器 `docker load` → OCI 指纹核对 →
+数据库快照 → 滚动更新 → 三级版本校验，失败自动回滚。
 
-0. 发布门禁（硬性前置）：PR 与 `origin/main` 的 CI 全绿（含 `Docker Build + Runtime Smoke`、`Go Backend (Postgres Integration)`），即视为生产镜像构建与容器内验证已通过——本地不做生产镜像构建与指纹核对；CI 不覆盖的鸿蒙端改动需本地 hvigor 构建确认（见 `AGENTS.md`「发布门禁」）；
-1. 打 tag 并推送（`git tag vX.Y.Z && git push origin vX.Y.Z`，一次一个）；
-2. CI「Release」工作流先过发布门禁（tag 必须是 `vX.Y.Z` 且落在 `origin/main` 上、该提交 CI 全绿），再构建前后端镜像（注入版本指纹），打包并生成 `.sha256` 校验和，挂到同名 GitHub Release；
-3. 本地执行 `./scripts/deploy-production.sh vX.Y.Z`：校验发布包校验和 → 从该 tag 导出部署配置（配置与镜像同源）→ 服务器 `docker load` → 核对镜像 OCI 指纹 → 数据库快照 → 滚动更新 → 后端/前端/网关三级版本校验，失败自动回滚上一版本；结束后回收旧镜像并写入部署审计日志。
+发布门禁（硬性）：打 tag 前 `origin/main` CI 必须全绿（含 `Docker Build + Runtime Smoke` 与 `Go Backend (Postgres Integration)`）
+——生产镜像构建与容器内验证由 CI 在 PR/main 上覆盖，本地不构建生产镜像；鸿蒙端改动需本地 hvigor 构建确认
+（见 `AGENTS.md`「发布门禁」）。
 
 回滚：`./scripts/rollback-production.sh --previous`（或指定版本）——复用同一条部署链路，只回滚镜像、不回滚数据。
 
