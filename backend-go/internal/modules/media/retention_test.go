@@ -43,6 +43,9 @@ func (p *retentionProvider) GetObject(context.Context, string) ([]byte, error) {
 func (p *retentionProvider) PutObject(context.Context, string, string, []byte) error {
 	return errors.New("not implemented")
 }
+func (p *retentionProvider) CopyObject(context.Context, string, string) error {
+	return errors.New("not implemented")
+}
 
 func (p *retentionProvider) deletedKeys() []string {
 	p.mu.Lock()
@@ -88,7 +91,7 @@ func TestSweepStaleUploadsDeletesObjectAndRow(t *testing.T) {
 	if err := repo.Save(ctx, completed); err != nil {
 		t.Fatalf("save completed: %v", err)
 	}
-	if ok, err := repo.Complete(ctx, "upload_completed", UploadedMedia{FileID: "file_completed", FileSize: 1024, MimeType: "image/png"}, "idem"); err != nil || !ok {
+	if ok, err := repo.Complete(ctx, "upload_completed", UploadedMedia{FileID: "file_completed", FileSize: 1024, MimeType: "image/png"}, "published/it_retention_user/upload_completed.png", "idem"); err != nil || !ok {
 		t.Fatalf("complete: %v %v", ok, err)
 	}
 

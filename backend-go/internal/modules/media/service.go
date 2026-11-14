@@ -135,123 +135,180 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 	return PresignedUploads{Uploads: uploads}, nil
 }
 
-// scrubImageMetadata 清洗图片元数据（EXIF/XMP/IPTC，含 GPS）：直传对象
-// 原样入库，带 GPS 的照片会把发布坐标之外的住址级位置暴露给一切可见者。
-// fail-open：读取/解析失败保留原文件并告警——清洗不可用不能阻塞合法上传，
-// 只记录该对象未经清洗（配合保留期 GC 与审计排查）。
-func (s *Service) scrubImageMetadata(ctx context.Context, storageKey, mimeType string) {
-	data, err := s.provider.GetObject(ctx, storageKey)
+// publishImageObject 把图片从可写上传键发布到不可写发布键，同时清洗图片元数据
+// （EXIF/XMP/IPTC，含 GPS）：直传对象原样入库会把发布坐标之外的住址级位置暴露
+// 给一切可见者。需要清洗时把清洗后字节直接 PUT 到发布键——不再回写上传键，
+// 上传键仍可被原预签名 PUT 覆盖，而发布键从不签发给客户端，因此发布后内容不可变
+// （第 81 轮审计：原实现发布后仍可被原 URL 重 PUT 替换）。
+// fail-open：读取/解析失败保留原文件并告警（复制原对象），清洗不可用不能阻塞
+// 合法上传；PUT 清洗版失败时同样退回复制原对象并告警。返回错误表示发布键未就绪，
+// complete 不得提交。
+func (s *Service) publishImageObject(ctx context.Context, uploadKey, publishedKey, mimeType string) error {
+	data, err := s.provider.GetObject(ctx, uploadKey)
 	if err != nil {
-		observability.FromContext(ctx).Warn("image metadata scrub: get object failed", "error", err, "storage_key", storageKey)
-		return
+		observability.FromContext(ctx).Warn("image metadata scrub: get object failed, publishing original", "error", err, "storage_key", uploadKey)
+		return s.provider.CopyObject(ctx, uploadKey, publishedKey)
 	}
 	cleaned, changed, err := stripImageMetadata(data)
 	if err != nil {
-		observability.FromContext(ctx).Warn("image metadata scrub: parse failed, keeping original", "error", err, "storage_key", storageKey)
-		return
+		observability.FromContext(ctx).Warn("image metadata scrub: parse failed, publishing original", "error", err, "storage_key", uploadKey)
+		return s.provider.CopyObject(ctx, uploadKey, publishedKey)
 	}
 	if !changed {
-		return
+		return s.provider.CopyObject(ctx, uploadKey, publishedKey)
 	}
-	if err := s.provider.PutObject(ctx, storageKey, mimeType, cleaned); err != nil {
-		// 回写失败：对象仍为未清洗原版，仅告警（Head 核对只对 Content-Type/Length，
-		// 回写后的长度差不会使 complete 失败——此时 meta 仍是原对象尺寸）。
-		observability.FromContext(ctx).Warn("image metadata scrub: put cleaned object failed", "error", err, "storage_key", storageKey)
-		return
+	if err := s.provider.PutObject(ctx, publishedKey, mimeType, cleaned); err != nil {
+		observability.FromContext(ctx).Warn("image metadata scrub: put cleaned object failed, publishing original", "error", err, "storage_key", publishedKey)
+		return s.provider.CopyObject(ctx, uploadKey, publishedKey)
 	}
-	observability.FromContext(ctx).Info("image metadata scrubbed", "storage_key", storageKey, "bytes_before", len(data), "bytes_after", len(cleaned))
+	observability.FromContext(ctx).Info("image metadata scrubbed", "upload_key", uploadKey, "published_key", publishedKey, "bytes_before", len(data), "bytes_after", len(cleaned))
+	return nil
 }
 
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
-	file, err := s.PrepareComplete(ctx, uploadID)
+	prepared, err := s.PrepareComplete(ctx, uploadID)
 	if err != nil {
 		return UploadedMedia{}, err
 	}
-	return s.CommitComplete(ctx, uploadID, file)
+	return s.CommitComplete(ctx, uploadID, prepared)
+}
+
+// preparedComplete 是 PrepareComplete 的产物：待落库的 file 元数据 + copy-on-complete
+// 的键信息。published=false 表示 Prepare 阶段即发现已完成（自然幂等），Commit 无副作用。
+type preparedComplete struct {
+	file         UploadedMedia
+	uploadKey    string // 可写上传键，提交成功后尽力删除
+	publishedKey string // 不可写发布键，提交时写入 media_upload_sessions.storage_key
+	published    bool   // 本次是否已把对象复制/落盘到发布键
 }
 
 // PrepareComplete 执行 complete 的全部校验与副作用前置（归属、对象存在性、
-// 元数据、图片魔数与 EXIF 清洗），但不置 completed 状态。批量 complete 以
-// 「先整批校验、再整批提交」两阶段满足 spec 的整批原子语义
-// （api_spec_media.md：任一 upload_id 校验失败则整批失败，不部分完成）。
-// 已完成 upload 直接返回既有 file（自然幂等，无副作用）。
-func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (UploadedMedia, error) {
+// 元数据、图片魔数与 EXIF 清洗），并把对象发布到不可写发布键（copy-on-complete）：
+// 上传键仍可被客户端凭原预签名 PUT 覆盖，发布键从不签发给客户端，因此发布后
+// 内容不可变。批量 complete 以「先整批校验、再整批提交」两阶段满足 spec 的整批
+// 原子语义（api_spec_media.md：任一 upload_id 校验失败则整批失败，不部分完成）；
+// 提交前失败留下的发布副本未被任何行引用，重试会覆盖同一键（幂等），不产生可见
+// 影响。已完成 upload 直接返回既有 file（自然幂等，不做复制/删除等副作用）。
+func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (preparedComplete, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
-		return UploadedMedia{}, ErrInvalidMediaRequest
+		return preparedComplete{}, ErrInvalidMediaRequest
 	}
 	upload, ok, err := s.repo.Get(ctx, uploadID)
 	if err != nil {
 		observability.FromContext(ctx).Error("media.complete get failed", "error", err, "upload_id", uploadID)
-		return UploadedMedia{}, err
+		return preparedComplete{}, err
 	}
 	if !ok || upload.UserID != principal.UserID {
-		return UploadedMedia{}, ErrUploadNotFound
+		return preparedComplete{}, ErrUploadNotFound
 	}
 	if upload.Completed {
 		// 自然幂等（spec api_spec_media.md）：upload_id → file_id 映射在首次 complete 成功后
 		// 持久化，同一 upload_id 重复调用直接返回相同 file_id（等价成功），不依赖
 		// Idempotency-Key——覆盖"complete 成功但响应丢失后重试"场景。
-		return upload.File, nil
+		return preparedComplete{file: upload.File}, nil
 	}
 	meta, err := s.provider.Head(ctx, upload.StorageKey)
 	if err != nil {
 		if errors.Is(err, ErrUploadNotReady) {
-			return UploadedMedia{}, ErrUploadNotReady
+			return preparedComplete{}, ErrUploadNotReady
 		}
 		observability.FromContext(ctx).Error("media.complete head failed", "error", err, "upload_id", uploadID, "storage_key", upload.StorageKey)
-		return UploadedMedia{}, err
+		return preparedComplete{}, err
 	}
 	if err := validateCompletedObjectMetadata(upload, meta); err != nil {
-		return UploadedMedia{}, err
+		return preparedComplete{}, err
 	}
 	// 魔数嗅探（P2-1）：图片类别在 complete 阶段读取对象前 512 字节校验魔数，
 	// 与声明/实际 Content-Type 比对——预签名直传的 Content-Type 由客户端控制，
 	// 仅凭声明无法防止把非图片内容（如 HTML）伪装成图片（存储型 XSS/解析器混淆）。
+	// 校验通过后发布到不可写发布键：图片清洗后字节直接写发布键，无需清洗/清洗
+	// 链路失败时复制原对象；非图片类别用服务端 CopyObject（不把 100MB 视频读进内存）。
+	publishedKey := publishedStorageKeyFor(upload.UserID, upload.UploadID, upload.FileName)
 	if isImageCategory(upload.Category) {
 		if err := s.sniffImageMagic(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType)); err != nil {
-			return UploadedMedia{}, err
+			return preparedComplete{}, err
 		}
-		s.scrubImageMetadata(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType))
+		if err := s.publishImageObject(ctx, upload.StorageKey, publishedKey, normalizeMimeType(meta.MimeType)); err != nil {
+			observability.FromContext(ctx).Error("media.complete publish image failed", "error", err, "upload_id", uploadID, "published_key", publishedKey)
+			return preparedComplete{}, err
+		}
+	} else {
+		if err := s.provider.CopyObject(ctx, upload.StorageKey, publishedKey); err != nil {
+			observability.FromContext(ctx).Error("media.complete copy object failed", "error", err, "upload_id", uploadID, "published_key", publishedKey)
+			return preparedComplete{}, err
+		}
 	}
-	return UploadedMedia{
-		FileID:   buildFileID(upload.UploadID, upload.UserID),
-		FileSize: meta.FileSize,
-		MimeType: meta.MimeType,
+	return preparedComplete{
+		file: UploadedMedia{
+			FileID:   buildFileID(upload.UploadID, upload.UserID),
+			FileSize: meta.FileSize,
+			MimeType: meta.MimeType,
+		},
+		uploadKey:    upload.StorageKey,
+		publishedKey: publishedKey,
+		published:    true,
 	}, nil
 }
 
-// CommitComplete 将 PrepareComplete 通过的 upload 落为 completed。仅剩 DB
-// 写入；此时再失败属内部错误，靠 upload 级幂等重试恢复。
-func (s *Service) CommitComplete(ctx context.Context, uploadID string, file UploadedMedia) (UploadedMedia, error) {
+// CommitComplete 将 PrepareComplete 通过的 upload 落为 completed：条件 UPDATE
+// 同时写入发布键；成功后尽力删除原上传键（失败仅告警——发布键已是唯一被引用的
+// 对象，旧键残留只是垃圾）。条件 UPDATE 未命中（并发/重复完成）时回滚本次复制
+// 出的发布键（若已完成行引用同一键则保留，避免删掉并发方刚提交的对象），并回读
+// 既有 file 保持自然幂等。仅剩 DB 写入 + 清理；此时失败属内部错误，靠 upload 级
+// 幂等重试恢复。
+func (s *Service) CommitComplete(ctx context.Context, uploadID string, prepared preparedComplete) (UploadedMedia, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
 	if !ok || principal.UserID == "" {
 		return UploadedMedia{}, ErrInvalidMediaRequest
 	}
+	if !prepared.published {
+		// Prepare 阶段即已完成：自然幂等返回既有 file，不做复制/删除等副作用。
+		return prepared.file, nil
+	}
 	// 单次往返：条件 UPDATE（status <> 'completed'）成功即返回——file 元数据
-	// 由 PrepareComplete 校验后传入，正是本次写入库的值（审查 P2-19：此前
-	// 先 Get 判幂等、UPDATE 后再 Get 回读，每文件 3 次往返）。
-	updated, err := s.repo.Complete(ctx, uploadID, file, idempotency.KeyFromContext(ctx))
+	// 由 PrepareComplete 校验后传入，正是本次写入库的值（审查 P2-19）。
+	updated, err := s.repo.Complete(ctx, uploadID, prepared.file, prepared.publishedKey, idempotency.KeyFromContext(ctx))
 	if err != nil {
 		observability.FromContext(ctx).Error("media.complete save failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
 	if updated {
-		return file, nil
+		// 发布键已随 UPDATE 入库，上传键不再被引用：尽力删除（失败仅告警）。
+		s.discardObject(ctx, prepared.uploadKey)
+		return prepared.file, nil
 	}
-	// 未更新：会话不存在，或已被并发/重复请求完成——回读一次区分并保持幂等。
+	// 未更新：会话不存在，或已被并发/重复请求完成——回滚本次复制出的发布键并
+	// 回读一次区分，保持幂等。
 	upload, found, err := s.repo.Get(ctx, uploadID)
 	if err != nil {
 		observability.FromContext(ctx).Error("media.complete get failed", "error", err, "upload_id", uploadID)
 		return UploadedMedia{}, err
 	}
 	if !found {
+		s.discardObject(ctx, prepared.publishedKey)
 		return UploadedMedia{}, ErrUploadNotFound
 	}
 	if upload.Completed {
+		if upload.StorageKey != prepared.publishedKey {
+			// 并发方用别的发布键完成了该 upload：本次复制出的对象无人引用，删除。
+			s.discardObject(ctx, prepared.publishedKey)
+		}
 		return upload.File, nil
 	}
+	s.discardObject(ctx, prepared.publishedKey)
 	return UploadedMedia{}, ErrUploadNotFound
+}
+
+// discardObject 尽力删除对象（complete 清理路径）：失败仅告警，不影响已被条件
+// UPDATE 保护的完成态；残留对象由保留期/人工清理兜底。
+func (s *Service) discardObject(ctx context.Context, storageKey string) {
+	if storageKey == "" {
+		return
+	}
+	if err := s.provider.Delete(ctx, storageKey); err != nil {
+		observability.FromContext(ctx).Warn("media.complete object cleanup failed", "error", err, "storage_key", storageKey)
+	}
 }
 
 // ResolveMomentImages resolves the given file_ids to their stored media assets,
@@ -495,6 +552,14 @@ func storageKeyFor(userID, uploadID, fileName string) string {
 		ext = "bin"
 	}
 	return fmt.Sprintf("uploads/%s/%s.%s", userID, uploadID, ext)
+}
+
+// publishedStorageKeyFor 返回 copy-on-complete 的发布键：仅前缀由 uploads/ 换成
+// published/，用户/上传 ID/扩展名与上传键同构（扩展名口径复用 storageKeyFor，
+// 避免两处规则漂移）。发布键从不由预签名 PUT 下发给客户端，因此发布后对象不可
+// 被原上传 URL 覆盖；同一 upload 重复 complete 也幂等落到同一键。
+func publishedStorageKeyFor(userID, uploadID, fileName string) string {
+	return "published/" + strings.TrimPrefix(storageKeyFor(userID, uploadID, fileName), "uploads/")
 }
 
 // CompletedFileMetaByID 按 file_id 读取完成态文件的展示元数据（跨模块只读

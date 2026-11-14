@@ -110,7 +110,7 @@ func TestPostgresRepositoryGetAndCompleteUpload(t *testing.T) {
 	if !upload.Completed || upload.File.FileID != "file_1" || upload.CompletedIdempotencyKey != "key_1" {
 		t.Fatalf("unexpected upload: %#v", upload)
 	}
-	ok, err = repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1")
+	ok, err = repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "published/u1/upload_1.png", "key_1")
 	if err != nil || !ok {
 		t.Fatalf("Complete returned ok=%v err=%v", ok, err)
 	}
@@ -138,7 +138,7 @@ func TestPostgresRepositoryPropagatesExecErrors(t *testing.T) {
 	if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_1"}); err == nil {
 		t.Fatal("expected insert error")
 	}
-	if _, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "key_1"); err == nil {
+	if _, err := repo.Complete(context.Background(), "upload_1", UploadedMedia{FileID: "file_1", FileSize: 100, MimeType: "image/png"}, "published/u1/upload_1.png", "key_1"); err == nil {
 		t.Fatal("expected complete error")
 	}
 }

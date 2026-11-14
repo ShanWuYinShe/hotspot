@@ -101,7 +101,7 @@ func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingU
 	return result, true, nil
 }
 
-func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (bool, error) {
+func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, storageKey, idempotencyKey string) (bool, error) {
 	queryable, err := r.queryable(ctx)
 	if err != nil {
 		return false, err
@@ -120,6 +120,7 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 		nullableInt(file.Height),
 		idempotencyKey,
 		completedAt,
+		storageKey,
 	).Scan(&returnedID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// 会话不存在，或已被其它请求完成（状态守卫 0 行）

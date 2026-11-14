@@ -37,12 +37,15 @@ location /ws/ {
 #
 # ── 该做法的安全前提（任一不成立就必须收紧或关闭本 location 的缓存）──
 # 1) 对象路径不可枚举：media 的 storage key 形如
-#    uploads/<userID>/<uploadID>.<ext>，uploadID 由 platform/idgen 以 96bit
-#    crypto/rand 生成（见 backend-go/internal/platform/idgen），路径整体不可
-#    猜测；
-# 2) 对象发布后内容不可变：media.Complete 的元数据/EXIF 清洗（scrub）在资产
-#    登记前完成（GET→清洗→PUT 覆盖同一 key 只发生在发布前）；发布后重新上传
-#    会生成新 uploadID（新 key），不存在「同一路径内容事后被换掉」的场景；
+#    uploads/<userID>/<uploadID>.<ext>（完成前）与
+#    published/<userID>/<uploadID>.<ext>（完成后），uploadID 由 platform/idgen
+#    以 96bit crypto/rand 生成（见 backend-go/internal/platform/idgen），路径
+#    整体不可猜测；
+# 2) 对象发布后内容不可变：complete 以 copy-on-complete 把对象从可写上传键
+#    （uploads/，预签名 PUT 只签这个键）复制/清洗落盘到发布键（published/），
+#    并把 media_upload_sessions.storage_key 改写为发布键；发布键从不签发预签名
+#    PUT，客户端无法覆盖——因此「同一路径内容事后被换掉」不存在（第 81 轮审计
+#    修复前该前提不成立：原实现发布后仍可凭旧 PUT URL 在 TTL 内重写同一 key）；
 # 3) 命中缓存时不再校验签名：nginx 本身不验签（SigV4 验签在 SeaweedFS），
 #    cache hit 直接返回内容，等价于把「对象路径」当作可读凭证。对头像/瞬间图
 #    这类本就以 URL 在页面与客户端传播的媒体可接受；若将来出现严格私有对象
@@ -108,6 +111,12 @@ location /s3/ {
     # 媒体响应本身无效，但直接打开用户上传的 SVG/HTML 时仍在文档上下文生效）。
     include /etc/nginx/conf.d/headers.inc;
     include /etc/nginx/conf.d/csp.inc;
+    # /s3/ 响应追加严格 CSP（多份 CSP 头按浏览器语义取交集）：csp.inc 为 SPA
+    # 放行了 script-src 'unsafe-inline'，直接在同源打开一个对象（文档上下文）时
+    # 该策略仍允许脚本。sandbox 使该文档进入沙箱（不执行脚本、无同源能力），
+    # 纵深受损/透传的场景也被兜底；对 <img>/<video> 等子资源不生效（子资源不应用
+    # 响应 CSP），不影响正常媒体展示。
+    add_header Content-Security-Policy "sandbox" always;
 
     # 超时收紧：对象存储同机内网，连不上/挂起时快速失败，不拖死首屏（头像并发多）；
     # read 放 30s 以覆盖大图/聊天文件。

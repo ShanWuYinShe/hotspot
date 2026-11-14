@@ -71,7 +71,7 @@ func TestPostgresRepositoryWithoutQueryableReturnsNotImplemented(t *testing.T) {
 	if _, _, err := repo.Get(ctx, "upload_mediacov"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("Get = %v, want ErrNotImplemented", err)
 	}
-	if _, err := repo.Complete(ctx, "upload_mediacov", UploadedMedia{FileID: "file_mediacov"}, ""); !errors.Is(err, persistence.ErrNotImplemented) {
+	if _, err := repo.Complete(ctx, "upload_mediacov", UploadedMedia{FileID: "file_mediacov"}, "published/u1/upload_mediacov.png", ""); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("Complete = %v, want ErrNotImplemented", err)
 	}
 	if _, err := repo.ResolveByFileIDs(ctx, []string{"file_mediacov"}, "u1", CategoryAvatar); !errors.Is(err, persistence.ErrNotImplemented) {
@@ -99,7 +99,7 @@ func TestPostgresRepositoryPropagatesScanErrors(t *testing.T) {
 	if _, _, err := repo.Get(ctx, "upload_mediacov"); !errors.Is(err, scanErr) {
 		t.Fatalf("Get scan error = %v, want %v", err, scanErr)
 	}
-	if _, err := repo.Complete(ctx, "upload_mediacov", UploadedMedia{FileID: "file_mediacov"}, "key"); !errors.Is(err, scanErr) {
+	if _, err := repo.Complete(ctx, "upload_mediacov", UploadedMedia{FileID: "file_mediacov"}, "published/u1/upload_mediacov.png", "key"); !errors.Is(err, scanErr) {
 		t.Fatalf("Complete scan error = %v, want %v", err, scanErr)
 	}
 	// CompletedFileMetaByID 的查询串是函数内局部常量，兜底行返回非 ErrNoRows 错误。

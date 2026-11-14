@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -198,8 +199,8 @@ func (p *ObjectStorageProvider) GetObject(ctx context.Context, storageKey string
 	return io.ReadAll(resp.Body)
 }
 
-// PutObject 覆写对象（清洗后原键回写；Content-Type 必须保持，否则存储端
-// MIME 变化会使后续 Head 核对与客户端展示错位）。
+// PutObject 写入对象（copy-on-complete 把清洗后的图片字节直接写到发布键；
+// Content-Type 必须保持，否则存储端 MIME 变化会使客户端展示错位）。
 func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, contentType string, data []byte) error {
 	signedURL, err := p.presignInternalURL(ctx, http.MethodPut, storageKey, 5*time.Minute)
 	if err != nil {
@@ -222,6 +223,52 @@ func (p *ObjectStorageProvider) PutObject(ctx context.Context, storageKey, conte
 		return fmt.Errorf("media object storage put failed: status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// CopyObject 在存储端把对象从 srcKey 复制到 dstKey（copy-on-complete 的发布
+// 步骤），避免把最大 100MB 的视频/聊天附件读进应用内存。实现为 S3 CopyObject：
+// 对内部端点发起带 x-amz-copy-source 的预签名 PUT——该头必须进入签名
+// （X-Amz-SignedHeaders=host;x-amz-copy-source），否则 SeaweedFS/AWS 会按未签名
+// 请求验签失败；请求头值必须与签名时的 canonical 值完全一致。
+func (p *ObjectStorageProvider) CopyObject(ctx context.Context, srcKey, dstKey string) error {
+	srcKey = strings.TrimSpace(srcKey)
+	dstKey = strings.TrimSpace(dstKey)
+	if srcKey == "" || dstKey == "" {
+		return fmt.Errorf("media object storage copy: empty object key")
+	}
+	copySource := canonicalCopySource(p.cfg.S3Bucket, srcKey)
+	signedURL, err := p.presignInternalURLWithHeaders(ctx, http.MethodPut, dstKey, 5*time.Minute, map[string]string{"x-amz-copy-source": copySource})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, signedURL, nil) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-amz-copy-source", copySource)
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		// 源对象不存在（complete 与 copy 之间被保留期 GC/并发删除）：按未就绪
+		// 处理，客户端可重试 complete；服务端不引入新错误码。
+		return ErrUploadNotReady
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return fmt.Errorf("media object storage copy failed: status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// canonicalCopySource 构造 CopyObject 的 x-amz-copy-source 值（标准形态
+// /<bucket>/<key>）。对象键由本服务生成，仅含字母数字、'-'、'_'、'.' 与 '/'，
+// 无需百分号编码；保留未编码的 '/'——SeaweedFS 直接按路径解析该头。
+func canonicalCopySource(bucket, storageKey string) string {
+	cleanKey := path.Clean("/" + strings.TrimLeft(storageKey, "/"))
+	return "/" + strings.TrimSpace(bucket) + cleanKey
 }
 
 // PresignGet returns a client-facing absolute URL that grants short-term
@@ -297,14 +344,22 @@ func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string, ttl time
 }
 
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
-	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint)
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint, nil)
 }
 
 func (p *ObjectStorageProvider) presignInternalURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
-	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint)
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, nil)
 }
 
-func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func(context.Context) (*url.URL, bool, error)) (string, error) {
+// presignInternalURLWithHeaders 为内部端点签名请求，并把 extraHeaders 纳入签名
+// （写入 X-Amz-SignedHeaders）。调用方发请求时必须原样设置这些头：SigV4 的
+// canonical headers 取头值的去空白形态，wire 上的值一旦不同（增删/改大小写
+// 之外的内容）就会验签失败。CopyObject 用它签名 x-amz-copy-source。
+func (p *ObjectStorageProvider) presignInternalURLWithHeaders(ctx context.Context, method, storageKey string, ttl time.Duration, extraHeaders map[string]string) (string, error) {
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, extraHeaders)
+}
+
+func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func(context.Context) (*url.URL, bool, error), extraHeaders map[string]string) (string, error) {
 	endpoint, forcePathStyle, err := endpointFn(ctx)
 	if err != nil {
 		return "", err
@@ -328,14 +383,32 @@ func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, meth
 	// part of the signed canonical URI. The client-facing URL below still
 	// keeps endpoint.Path so the request is routed to the proxy correctly.
 	canonicalURI := canonicalURIForEndpoint(endpoint, strings.TrimSpace(p.cfg.S3Bucket), storageKey, forcePathStyle)
+	// canonical headers 按头名升序拼接（host 恒在首位）；每个额外签名头的值取
+	// 去首尾空白形态，发请求时必须原样设置同一值。
 	signedHeaders := "host"
+	canonicalHeaders := "host:" + host + "\n"
+	if len(extraHeaders) > 0 {
+		type signedHeader struct{ name, value string }
+		headers := make([]signedHeader, 0, len(extraHeaders))
+		for name, value := range extraHeaders {
+			headers = append(headers, signedHeader{name: strings.ToLower(strings.TrimSpace(name)), value: strings.TrimSpace(value)})
+		}
+		sort.Slice(headers, func(i, j int) bool { return headers[i].name < headers[j].name })
+		headerNames := make([]string, 1, len(headers)+1)
+		headerNames[0] = "host"
+		for _, header := range headers {
+			headerNames = append(headerNames, header.name)
+			canonicalHeaders += header.name + ":" + header.value + "\n"
+		}
+		sort.Strings(headerNames)
+		signedHeaders = strings.Join(headerNames, ";")
+	}
 	query := url.Values{}
 	query.Set("X-Amz-Algorithm", "AWS4-HMAC-SHA256")
 	query.Set("X-Amz-Credential", p.cfg.S3AccessKey+"/"+credentialScope)
 	query.Set("X-Amz-Date", amzDate)
 	query.Set("X-Amz-Expires", strconv.Itoa(int(ttl.Seconds())))
 	query.Set("X-Amz-SignedHeaders", signedHeaders)
-	canonicalHeaders := "host:" + host + "\n"
 	canonicalRequest := strings.Join([]string{
 		method,
 		canonicalURI,

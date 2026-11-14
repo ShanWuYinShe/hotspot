@@ -39,6 +39,9 @@ location /ws/ {
 #
 # 安全前提与取舍（为什么可以按 URI 缓存、TTL 为何 1h、删除/回收后窗口多大）
 # 见 docker/nginx.proxy.inc 的 /s3/ 头注释，改动缓存策略时以那里为准。
+# 对象发布后不可变由 copy-on-complete 保证（完成时把对象复制/清洗落盘到
+# published/ 发布键，发布键从不签发预签名 PUT）；与此处的按 URI 缓存共同构成
+# 「路径即内容」的缓存前提。dev 也追加 sandbox CSP（dev 不挂载 csp.inc）。
 #
 # 用 $http_host（含端口）而非 $host（不含端口）：presigned URL 的 SigV4 签名
 # 把 host 头（如 localhost:8888）纳入签名，nginx 的 $host 会丢掉端口导致验签失败。
@@ -68,6 +71,9 @@ location /s3/ {
     add_header Cache-Control "public, max-age=3600";
     add_header X-S3-Cache $upstream_cache_status;
     include /etc/nginx/conf.d/headers.inc;
+    # 直接打开媒体对象（同源文档上下文）时禁止脚本执行（纵深防御）：dev 不挂载
+    # csp.inc，这里单独追加；与 prod 的 /s3/ 同构。对 <img> 等子资源不生效。
+    add_header Content-Security-Policy "sandbox" always;
 
     proxy_connect_timeout 3s;
     proxy_send_timeout 15s;

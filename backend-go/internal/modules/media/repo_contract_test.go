@@ -66,6 +66,10 @@ func TestMediaRepositoryContract(t *testing.T) {
 		}
 	}
 
+	// publishedKey 是 copy-on-complete 的发布键形态：与上传键同构、前缀换成
+	// published/（服务层由 publishedStorageKeyFor 生成，仓库层只透传写入）。
+	publishedKey := func(uploadID string) string { return "published/" + uploadID }
+
 	saveComplete := func(t *testing.T, repo Repository, state mediaContractState, uploadID string, category MediaCategory) pendingUpload {
 		t.Helper()
 		upload := pending(uploadID, state.userA, category, base)
@@ -74,7 +78,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 		if err := repo.Save(state.ctx, upload); err != nil {
 			t.Fatalf("save %s: %v", uploadID, err)
 		}
-		completed, err := repo.Complete(state.ctx, uploadID, upload.File, "idem-"+uploadID)
+		completed, err := repo.Complete(state.ctx, uploadID, upload.File, publishedKey(uploadID), "idem-"+uploadID)
 		if err != nil || !completed {
 			t.Fatalf("complete %s = %v err=%v", uploadID, completed, err)
 		}
@@ -115,7 +119,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 					t.Fatalf("save: %v", err)
 				}
 				final := file("file_complete")
-				if updated, err := repo.Complete(state.ctx, "upload_complete", final, "idem-key-1"); err != nil || !updated {
+				if updated, err := repo.Complete(state.ctx, "upload_complete", final, publishedKey("upload_complete"), "idem-key-1"); err != nil || !updated {
 					t.Fatalf("complete = %v err=%v", updated, err)
 				}
 				got, found, err := repo.Get(state.ctx, "upload_complete")
@@ -125,14 +129,19 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if !got.Completed || got.File.FileID != "file_complete" || got.File.Width != 1080 || got.File.Height != 1920 {
 					t.Fatalf("completed upload = %#v", got)
 				}
+				// copy-on-complete：完成态 storage_key 必须是发布键（原文可写键换掉）。
+				if got.StorageKey != publishedKey("upload_complete") {
+					t.Fatalf("completed storage_key = %q, want %q", got.StorageKey, publishedKey("upload_complete"))
+				}
 				if got.CompletedIdempotencyKey != "idem-key-1" || got.CompletedAt == "" {
 					t.Fatalf("completion audit fields = %#v", got)
 				}
 				if _, err := time.Parse(time.RFC3339, got.CompletedAt); err != nil {
 					t.Fatalf("completed_at must be RFC3339: %q", got.CompletedAt)
 				}
-				// 已完成会话不可被再次改写（并发完成只有一个生效）。
-				if updated, err := repo.Complete(state.ctx, "upload_complete", file("file_other"), "idem-key-2"); err != nil || updated {
+				// 已完成会话不可被再次改写（并发完成只有一个生效）；重复 complete
+				// 不得把发布键改回别的键。
+				if updated, err := repo.Complete(state.ctx, "upload_complete", file("file_other"), "published/upload_complete_other", "idem-key-2"); err != nil || updated {
 					t.Fatalf("second complete = %v err=%v", updated, err)
 				}
 				again, _, err := repo.Get(state.ctx, "upload_complete")
@@ -142,7 +151,10 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if again.File.FileID != "file_complete" || again.CompletedIdempotencyKey != "idem-key-1" {
 					t.Fatalf("completion overwritten: %#v", again)
 				}
-				if updated, err := repo.Complete(state.ctx, "upload_missing", final, "idem"); err != nil || updated {
+				if again.StorageKey != publishedKey("upload_complete") {
+					t.Fatalf("replayed completion storage_key = %q, want %q", again.StorageKey, publishedKey("upload_complete"))
+				}
+				if updated, err := repo.Complete(state.ctx, "upload_missing", final, publishedKey("upload_missing"), "idem"); err != nil || updated {
 					t.Fatalf("complete missing = %v err=%v", updated, err)
 				}
 			},
@@ -162,7 +174,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if err := repo.Save(state.ctx, otherOwner); err != nil {
 					t.Fatalf("save other owner: %v", err)
 				}
-				if completed, err := repo.Complete(state.ctx, "upload_other_owner", otherOwner.File, "idem-other"); err != nil || !completed {
+				if completed, err := repo.Complete(state.ctx, "upload_other_owner", otherOwner.File, publishedKey("upload_other_owner"), "idem-other"); err != nil || !completed {
 					t.Fatalf("complete other owner: %v err=%v", completed, err)
 				}
 
@@ -180,7 +192,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 					if !ok {
 						t.Fatalf("asset %s missing: %#v", id, assets)
 					}
-					if asset.StorageKey != "uploads/"+id || asset.Width != 1080 || asset.Height != 1920 || asset.MimeType != "image/webp" {
+					if asset.StorageKey != publishedKey(id) || asset.Width != 1080 || asset.Height != 1920 || asset.MimeType != "image/webp" {
 						t.Fatalf("asset %s = %#v", id, asset)
 					}
 				}
@@ -215,7 +227,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if meta, found, err := repo.CompletedFileMetaByID(state.ctx, "file_meta"); err != nil || found {
 					t.Fatalf("meta before complete = %#v found=%v err=%v", meta, found, err)
 				}
-				if completed, err := repo.Complete(state.ctx, "upload_meta", upload.File, "idem-meta"); err != nil || !completed {
+				if completed, err := repo.Complete(state.ctx, "upload_meta", upload.File, publishedKey("upload_meta"), "idem-meta"); err != nil || !completed {
 					t.Fatalf("complete: %v err=%v", completed, err)
 				}
 				meta, found, err := repo.CompletedFileMetaByID(state.ctx, "file_meta")
@@ -254,7 +266,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if err := repo.Save(state.ctx, completed); err != nil {
 					t.Fatalf("save completed: %v", err)
 				}
-				if ok, err := repo.Complete(state.ctx, "upload_stale_completed", completed.File, "idem-stale"); err != nil || !ok {
+				if ok, err := repo.Complete(state.ctx, "upload_stale_completed", completed.File, publishedKey("upload_stale_completed"), "idem-stale"); err != nil || !ok {
 					t.Fatalf("complete: %v err=%v", ok, err)
 				}
 

@@ -43,7 +43,7 @@ func seedCompletedAvatar(t *testing.T, repo *InMemoryRepository, uploadID, userI
 		t.Fatalf("save %s: %v", uploadID, err)
 	}
 	fileID := "file_" + uploadID
-	if ok, err := repo.Complete(ctx, uploadID, UploadedMedia{FileID: fileID, FileSize: 100, MimeType: "image/png"}, "idem-"+uploadID); err != nil || !ok {
+	if ok, err := repo.Complete(ctx, uploadID, UploadedMedia{FileID: fileID, FileSize: 100, MimeType: "image/png"}, "published/u1/"+uploadID+".png", "idem-"+uploadID); err != nil || !ok {
 		t.Fatalf("complete %s: ok=%v err=%v", uploadID, ok, err)
 	}
 	return fileID
