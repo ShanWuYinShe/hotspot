@@ -407,14 +407,16 @@ func TestServiceHandleReportPersistenceErrors(t *testing.T) {
 		}
 	})
 
-	t.Run("audit failure is best effort", func(t *testing.T) {
+	// 裁决审计已移入裁决事务（第 81 轮审计）：审计失败不再 best-effort 吞掉，
+	// 必须把错误上抛交由事务回滚（真实库回滚语义见 audit_tx_it_test.go）。
+	t.Run("audit failure aborts decision", func(t *testing.T) {
 		svc, repo := seedAndRun(t, testReportAdminStore{}, nil, func(s *Service, r *covRepo) {
 			s.SetReportAdminStore(testReportAdminStore{store: r.InMemoryRepository})
 			r.auditErr = errCovAdmin
 		})
 		apiErr, err := svc.HandleReport(ctx, JudgeAdminReportRequest{ReportID: "report_cov", Action: ReportActionResolve})
-		if apiErr != nil || err != nil {
-			t.Fatalf("audit failure should not fail decision: apiErr=%v err=%v", apiErr, err)
+		if !errors.Is(err, errCovAdmin) || apiErr != nil {
+			t.Fatalf("audit failure must abort decision: apiErr=%v err=%v", apiErr, err)
 		}
 		_ = repo
 	})

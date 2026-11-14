@@ -35,6 +35,16 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("baseline StatsGeo: %v", err)
 		}
+		// 趋势基线：共享真实库上其它测试也会创建「今天」的用户/群组，
+		// today 趋势不能用绝对值断言（增量口径才稳定）。
+		sh := time.FixedZone("UTC+8", 8*60*60)
+		nowSH := dbNow.In(sh)
+		todaySH := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh)
+		trendStart := todaySH.AddDate(0, 0, -6) // 服务端语义：TrendStart 起逐日填 TrendDays 天
+		baseTrendResp, err := repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 10, TrendDays: 7, TrendStart: trendStart})
+		if err != nil {
+			t.Fatalf("baseline trend StatsGeo: %v", err)
+		}
 
 		seed := func(sql string, args ...any) {
 			t.Helper()
@@ -127,10 +137,6 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		}
 
 		// === 趋势（trend_days=7）===
-		sh := time.FixedZone("UTC+8", 8*60*60)
-		nowSH := dbNow.In(sh)
-		todaySH := time.Date(nowSH.Year(), nowSH.Month(), nowSH.Day(), 0, 0, 0, 0, sh)
-		trendStart := todaySH.AddDate(0, 0, -6) // 服务端语义：TrendStart 起逐日填 TrendDays 天
 		trendResp, err := repo.StatsGeo(ctx, geoStatsQuery{Level: 8, Limit: 10, TrendDays: 7, TrendStart: trendStart})
 		if err != nil {
 			t.Fatalf("trend StatsGeo: %v", err)
@@ -142,10 +148,27 @@ func TestPostgresIT_StatsGeoAggregation(t *testing.T) {
 		if today.Date != nowSH.Format("2006-01-02") {
 			t.Fatalf("last trend point should be today(+08): %+v", today)
 		}
-		// 种子中落在今天的：3 用户（含无位置者——趋势不限位置）+ 1 群组 +
-		// 1 现存动态（m_old 40 天前不计）。
-		if today.User != 3 || today.Moment != 1 || today.Group != 1 {
-			t.Fatalf("unexpected today trend: %+v", today)
+		// 用基线做增量断言（共享库上其它测试今天也会造数据）：种子中落在今天的
+		// 是 3 用户（含无位置者——趋势不限位置）+ 1 群组 + 1 现存动态
+		// （m_old 40 天前不计），历史 6 天增量为 0。
+		if len(baseTrendResp.Trends) != len(trendResp.Trends) {
+			t.Fatalf("baseline trend length mismatch: %d vs %d", len(baseTrendResp.Trends), len(trendResp.Trends))
+		}
+		for i := range trendResp.Trends {
+			got := trendResp.Trends[i]
+			wantBase := baseTrendResp.Trends[i]
+			dUser := got.User - wantBase.User
+			dMoment := got.Moment - wantBase.Moment
+			dGroup := got.Group - wantBase.Group
+			if i == len(trendResp.Trends)-1 {
+				if dUser != 3 || dMoment != 1 || dGroup != 1 {
+					t.Fatalf("unexpected today trend delta: got %+v base %+v", got, wantBase)
+				}
+				continue
+			}
+			if dUser != 0 || dMoment != 0 || dGroup != 0 {
+				t.Fatalf("unexpected historical trend delta at %s: got %+v base %+v", got.Date, got, wantBase)
+			}
 		}
 
 		// === 下钻（drilldown）===

@@ -113,6 +113,11 @@ func (s *Service) ListAdminAnnouncements(ctx context.Context, req ListAdminAnnou
 // CreateAnnouncement 发布公告（spec api_spec_admin.md announcements/create：
 // Response 为 ApiResponse<AdminAnnouncementItem>，返回完整公告对象供客户端
 // 直接渲染）。
+//
+// 落库、审计与 WS 广播事件入队在同一个事务内提交：审计写失败整体回滚（公告
+// 未发布、广播未入队），幂等中间件只缓存成功响应，管理员用同一 Idempotency-Key
+// 重试只会真正发布一次。未装配 TxRunner（单测/内存装配）时退化为直跑 + 同步
+// 广播，语义与旧实现一致，但该回退路径的审计失败无法回滚已落库的公告。
 func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncementRequest) (AdminAnnouncementItem, *httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
 	if apiErr != nil || err != nil {
@@ -127,28 +132,42 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		Title: title, Content: strings.TrimSpace(req.Content), Severity: req.Severity,
 		ActionURL: strings.TrimSpace(req.ActionURL), SendPush: req.SendPush,
 	}
+	auditEntry := func(created systemmodule.AnnouncementRecord) AuditLogEntry {
+		return AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: created.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}
+	}
 	var item systemmodule.AnnouncementRecord
 	enqueued := false
-	if s.pushService != nil && req.SendPush && s.eventOutbox != nil && s.runInTx != nil {
-		// 公告创建 + WS 广播事件入队同一事务：崩溃后 dispatcher 从 outbox
-		// 补投，消除「公告已落库但在线广播丢失」；事务外的直接广播仅在
-		// 未装配 outbox 时保留（单测/内存装配）。
+	if s.runInTx != nil {
+		// 公告创建 + 审计 + WS 广播事件入队同一事务：审计失败整体回滚（不会出现
+		// 「公告已发布但审计缺失」），崩溃后 dispatcher 从 outbox 补投广播，消除
+		// 「公告已落库但在线广播丢失」；事务外的直接广播仅在未装配 outbox 时保留。
 		txErr := s.runInTx(ctx, func(txCtx context.Context) error {
 			created, createErr := s.moderationStore.CreateAnnouncement(txCtx, input)
 			if createErr != nil {
 				return createErr
 			}
 			item = created
-			enqueued = true
-			return s.eventOutbox.Enqueue(txCtx, outbox.TopicSystemAnnouncement, AnnouncementBroadcastPayload{
-				Item:     created.PublicItem(),
-				NotifyID: systemmodule.AnnouncementNotifyID(created.AnnouncementID),
-			})
+			// 审计与公告落库同事务：此前审计在事务提交后追加，审计失败返回 10600
+			// 时公告已发布、广播已入队，同 Key 重试会重复发布 + 重复全体广播。
+			if auditErr := s.appendAudit(txCtx, auditEntry(created)); auditErr != nil {
+				return auditErr
+			}
+			if s.pushService != nil && req.SendPush && s.eventOutbox != nil {
+				enqueued = true
+				return s.eventOutbox.Enqueue(txCtx, outbox.TopicSystemAnnouncement, AnnouncementBroadcastPayload{
+					Item:     created.PublicItem(),
+					NotifyID: systemmodule.AnnouncementNotifyID(created.AnnouncementID),
+				})
+			}
+			return nil
 		})
 		if txErr != nil {
 			return AdminAnnouncementItem{}, nil, txErr
 		}
 	} else {
+		// 非事务回退路径（内存/未装配，仅单测使用）：保持旧语义——先落库，随后
+		// 同步广播、再追加审计；审计失败返回错误但无法回滚已落库的公告。生产
+		// bootstrap 始终注入 TxRunner，不会走这里。
 		created, createErr := s.moderationStore.CreateAnnouncement(ctx, input)
 		if createErr != nil {
 			return AdminAnnouncementItem{}, nil, createErr
@@ -161,8 +180,10 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 		// system 模块注入的公告来源合并；这里只做一次全体在线广播。
 		s.pushService.PushSystemAnnouncement(ctx, item.PublicItem(), systemmodule.AnnouncementNotifyID(item.AnnouncementID))
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementCreate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: item.AnnouncementID, TargetName: title, Details: AuditDetails{"type": string(AuditActionAnnouncementCreate), "title": title}}); err != nil {
-		return AdminAnnouncementItem{}, nil, err
+	if s.runInTx == nil {
+		if auditErr := s.appendAudit(ctx, auditEntry(item)); auditErr != nil {
+			return AdminAnnouncementItem{}, nil, auditErr
+		}
 	}
 	return toAdminAnnouncementItem(item), nil, nil
 }

@@ -42,9 +42,10 @@ func (s *Service) SearchReports(ctx context.Context, req AdminReportListRequest)
 	return resp, nil, nil
 }
 
-// HandleReport 是举报裁决入口：跨模块编排写（内容删除/封禁/举报终态）在同一
-// 事务内提交；审计与举报人通知经 aftercommit 在 COMMIT 后执行，回滚时丢弃。
-// 未注入 TxRunner（单测/内存装配）时直跑，语义与旧实现一致。
+// HandleReport 是举报裁决入口：跨模块编排写（内容删除/封禁/举报终态）与裁决
+// 审计在同一事务内提交（审计写失败整体回滚）；举报人通知的 WS 广播经 outbox
+// 在 COMMIT 后补投，未装配 outbox 时的同步通知回退经 aftercommit 在 COMMIT 后
+// 执行，回滚时丢弃。未注入 TxRunner（单测/内存装配）时直跑，无回滚语义。
 func (s *Service) HandleReport(ctx context.Context, req JudgeAdminReportRequest) (*httpx.APIError, error) {
 	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
 		return s.handleReport(txCtx, req)
@@ -170,6 +171,13 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 		// 封禁时长进裁决审计：与 user.ban 审计互为印证，裁决记录自身可回答「禁了多久」。
 		judgeDetails["ban_duration_days"] = *req.BanDurationDays
 	}
+	// 裁决审计在裁决事务内写入（与举报终态、内容删除/封禁同事务）：审计写失败
+	// 整体回滚并返回错误，管理员可安全重试（举报仍 pending）。此前走 aftercommit
+	// best-effort，COMMIT 与回调间崩溃/审计写失败会永久丢审计，且与同一次裁决里
+	// 已在事务内写入的 user.ban 审计口径不一致。
+	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
+		return nil, err
+	}
 	// 举报结果通知的落库在裁决事务内完成（与举报终态同事务）；WS 广播走 outbox
 	// 在 COMMIT 后补投，进程崩溃不会丢广播。未装配 outbox 时保留同步回退。
 	notifyReporter := req.Action == ReportActionResolve || req.Action == ReportActionDismiss
@@ -195,20 +203,14 @@ func (s *Service) handleReport(ctx context.Context, req JudgeAdminReportRequest)
 			return nil, enqueueErr
 		}
 	}
-	// 审计/通知在事务 COMMIT 后执行（aftercommit）：回滚时不会有「内容已删但
-	// 审计/通知已发」的幻影副作用；无事务时 Register 立即执行，语义不变。
-	aftercommit.Register(ctx, func(postCtx context.Context) {
-		// 裁决审计失败按 best-effort 处理（记错误日志，不回滚已生效的裁决）：
-		// 此时举报已终态，返回错误只会诱导重试并撞上 10400 已处理。
-		if err := s.appendAudit(postCtx, AuditLogEntry{Action: AuditAction("report.judge"), Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetType("report"), TargetID: req.ReportID, TargetName: req.ReportID, Details: judgeDetails}); err != nil {
-			observability.FromContext(ctx).Error("admin: report judge audit log append failed", "error", err, "report_id", req.ReportID)
-		}
-		// Notify the reporter about the outcome (resolve/dismiss only; escalate
-		// keeps the report pending and does not notify).
-		if notifyReporter && !useOutboxForReport {
+	// 未装配 outbox 时的举报人通知回退仍在事务 COMMIT 后执行（aftercommit）：
+	// 回滚时不会发出「裁决未生效但举报人已收到通知」的幻影副作用；无事务时
+	// Register 立即执行，语义与旧实现一致。审计已移入事务，不再在此重复写入。
+	if notifyReporter && !useOutboxForReport {
+		aftercommit.Register(ctx, func(postCtx context.Context) {
 			s.notifyReportHandled(postCtx, record.Item.Reporter.UserID, req.ReportID, string(record.Item.TargetType), record.Item.TargetID, note, req.Action == ReportActionResolve)
-		}
-	})
+		})
+	}
 	return nil, nil
 }
 
