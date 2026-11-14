@@ -32,7 +32,7 @@ func (r *InMemoryRepository) Get(ctx context.Context, uploadID string) (pendingU
 	return upload, ok, nil
 }
 
-func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, idempotencyKey string) (bool, error) {
+func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file UploadedMedia, storageKey, idempotencyKey string) (bool, error) {
 	_ = ctx
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -46,6 +46,9 @@ func (r *InMemoryRepository) Complete(ctx context.Context, uploadID string, file
 	}
 	upload.Completed = true
 	upload.File = file
+	// 与 PG 的 SET storage_key = $12 同口径：完成态会话的 storage_key 改写为
+	// copy-on-complete 的发布键（不可写键）。
+	upload.StorageKey = storageKey
 	upload.CompletedIdempotencyKey = idempotencyKey
 	// PG queryCompleteUploadSession 同时写 completed_at；内存实现此前漏写，
 	// 导致完成态会话的审计字段在降级模式下恒为空（契约测试发现）。

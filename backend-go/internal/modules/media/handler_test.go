@@ -30,7 +30,7 @@ func (r *mediaErrorRepo) ListStaleUploads(context.Context, time.Time, int) ([]pe
 }
 func (r *mediaErrorRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
-func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string) (bool, error) {
+func (r *mediaErrorRepo) Complete(context.Context, string, UploadedMedia, string, string) (bool, error) {
 	return false, r.completeErr
 }
 func (r *mediaErrorRepo) ResolveByFileIDs(context.Context, []string, string, MediaCategory) (map[string]MediaAsset, error) {
@@ -44,6 +44,15 @@ type mediaStubProvider struct {
 	headErr     error
 	prefix      []byte
 	prefixErr   error
+	// copy-on-complete / EXIF 清洗发布键断言用：记录的调用轨迹。
+	copyErr     error
+	copies      [][2]string
+	deleteErr   error
+	deletedKeys []string
+	putErr      error
+	putKey      string
+	putMime     string
+	putBody     []byte
 }
 
 func (p *mediaStubProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
@@ -58,11 +67,23 @@ func (p *mediaStubProvider) Head(context.Context, string) (ObjectMetadata, error
 func (p *mediaStubProvider) ReadPrefix(context.Context, string, int64) ([]byte, error) {
 	return p.prefix, p.prefixErr
 }
-func (p *mediaStubProvider) Delete(context.Context, string) error { return nil }
+func (p *mediaStubProvider) Delete(_ context.Context, storageKey string) error {
+	p.deletedKeys = append(p.deletedKeys, storageKey)
+	return p.deleteErr
+}
 func (p *mediaStubProvider) GetObject(context.Context, string) ([]byte, error) {
 	return p.prefix, p.prefixErr
 }
-func (p *mediaStubProvider) PutObject(context.Context, string, string, []byte) error { return nil }
+func (p *mediaStubProvider) PutObject(_ context.Context, storageKey, contentType string, data []byte) error {
+	p.putKey = storageKey
+	p.putMime = contentType
+	p.putBody = append([]byte(nil), data...)
+	return p.putErr
+}
+func (p *mediaStubProvider) CopyObject(_ context.Context, srcKey, dstKey string) error {
+	p.copies = append(p.copies, [2]string{srcKey, dstKey})
+	return p.copyErr
+}
 
 func mediaAuthedRequest(method, target, body string) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))

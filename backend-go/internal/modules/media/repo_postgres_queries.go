@@ -62,7 +62,8 @@ WHERE upload_id = $1`
 
 	// queryCompleteUploadSession 条件更新（已 completed 的行不再改写的幂等保障）
 	// 并用 RETURNING 判断是否命中（审查 P2-19：此前 UPDATE 后再 Get 一次拿结果，
-	// 每文件 2 次往返；调用方本已持有待写入的 file 元数据）。
+	// 每文件 2 次往返；调用方本已持有待写入的 file 元数据）。同一条 UPDATE 把
+	// storage_key 改写为 copy-on-complete 的发布键（不可写键，发布后内容不可变）。
 	queryCompleteUploadSession = `
 UPDATE media_upload_sessions
 SET status = $2,
@@ -74,7 +75,8 @@ SET status = $2,
     width = $8,
     height = $9,
     completed_idempotency_key = $10,
-    completed_at = $11
+    completed_at = $11,
+    storage_key = $12
 WHERE upload_id = $1 AND status <> 'completed'
 RETURNING upload_id`
 

@@ -65,7 +65,7 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteServerError(w, r, err)
 		}
 	}
-	prepared := make([]UploadedMedia, 0, len(req.UploadIDs))
+	prepared := make([]preparedComplete, 0, len(req.UploadIDs))
 	for _, uploadID := range req.UploadIDs {
 		file, err := h.service.PrepareComplete(r.Context(), uploadID)
 		if err != nil {

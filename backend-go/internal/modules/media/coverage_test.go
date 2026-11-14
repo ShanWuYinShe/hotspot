@@ -31,11 +31,11 @@ func (r *mediaErrRepo) ListStaleUploads(context.Context, time.Time, int) ([]pend
 }
 func (r *mediaErrRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
-func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey string) (bool, error) {
+func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey, idempotencyKey string) (bool, error) {
 	if r.err != nil {
 		return false, r.err
 	}
-	return r.repo.Complete(ctx, uploadID, media, storageKey)
+	return r.repo.Complete(ctx, uploadID, media, storageKey, idempotencyKey)
 }
 func (r *mediaErrRepo) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
 	return r.repo.ResolveByFileIDs(ctx, fileIDs, userID, category)

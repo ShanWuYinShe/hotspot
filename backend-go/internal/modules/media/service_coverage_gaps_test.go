@@ -27,9 +27,12 @@ type coverageProvider struct {
 	getObject      []byte
 	getObjectErr   error
 	putErr         error
+	copyErr        error
 	deletedKeys    []string
+	putKey         string
 	putContentType string
 	putData        []byte
+	copiedPairs    [][2]string
 }
 
 func (p *coverageProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
@@ -57,10 +60,16 @@ func (p *coverageProvider) GetObject(context.Context, string) ([]byte, error) {
 	return p.getObject, p.getObjectErr
 }
 
-func (p *coverageProvider) PutObject(_ context.Context, _ string, contentType string, data []byte) error {
+func (p *coverageProvider) PutObject(_ context.Context, storageKey, contentType string, data []byte) error {
+	p.putKey = storageKey
 	p.putContentType = contentType
 	p.putData = append([]byte(nil), data...)
 	return p.putErr
+}
+
+func (p *coverageProvider) CopyObject(_ context.Context, srcKey, dstKey string) error {
+	p.copiedPairs = append(p.copiedPairs, [2]string{srcKey, dstKey})
+	return p.copyErr
 }
 
 // mediaRepoOverride 在内存仓储基础上注入单方法错误/行为，覆盖服务层对仓储
@@ -83,14 +92,14 @@ func (r *mediaRepoOverride) Get(ctx context.Context, uploadID string) (pendingUp
 	return r.InMemoryRepository.Get(ctx, uploadID)
 }
 
-func (r *mediaRepoOverride) Complete(ctx context.Context, uploadID string, file UploadedMedia, key string) (bool, error) {
+func (r *mediaRepoOverride) Complete(ctx context.Context, uploadID string, file UploadedMedia, storageKey, key string) (bool, error) {
 	if r.completeErr != nil {
 		return false, r.completeErr
 	}
 	if r.completeNoop {
 		return false, nil
 	}
-	return r.InMemoryRepository.Complete(ctx, uploadID, file, key)
+	return r.InMemoryRepository.Complete(ctx, uploadID, file, storageKey, key)
 }
 
 func (r *mediaRepoOverride) ResolveByFileIDs(ctx context.Context, fileIDs []string, userID string, category MediaCategory) (map[string]MediaAsset, error) {
@@ -266,28 +275,48 @@ func coveragePNGWithEXIF() []byte {
 	return data
 }
 
-func TestScrubImageMetadataPaths(t *testing.T) {
+// publishImageObject：图片元数据清洗结果必须直接写到发布键（不能回写可写
+// 上传键——上传键在预签名 TTL 内仍可被客户端重 PUT 覆盖，发布后内容不可变的
+// 前提是发布键从不签发给客户端）。fail-open：读取/解析/PUT 失败退回复制原对象。
+func TestPublishImageObjectPaths(t *testing.T) {
 	ctx := context.Background()
+	const uploadKey = "uploads/u1/upload_pub.png"
+	const publishedKey = "published/u1/upload_pub.png"
 
-	t.Run("get object error keeps original", func(t *testing.T) {
+	t.Run("get object error falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObjectErr: errors.New("get boom")}
-		NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).scrubImageMetadata(ctx, "uploads/u1/a.png", "image/png")
+		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
 		if provider.putData != nil {
-			t.Fatal("must not write back when object read fails")
+			t.Fatal("must not PUT when object read fails")
+		}
+		if len(provider.copiedPairs) != 1 || provider.copiedPairs[0] != [2]string{uploadKey, publishedKey} {
+			t.Fatalf("copied pairs = %#v", provider.copiedPairs)
 		}
 	})
 
-	t.Run("parse error keeps original", func(t *testing.T) {
+	t.Run("parse error falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObject: []byte{0xFF, 0xD8, 0xFF, 0xE1, 0x7F, 0xFF, 0x01, 0x02}}
-		NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).scrubImageMetadata(ctx, "uploads/u1/a.png", "image/jpeg")
+		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/jpeg"); err != nil {
+			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
 		if provider.putData != nil {
-			t.Fatal("must not write back when metadata parsing fails")
+			t.Fatal("must not PUT when metadata parsing fails")
+		}
+		if len(provider.copiedPairs) != 1 {
+			t.Fatalf("expected copy fallback, got %#v", provider.copiedPairs)
 		}
 	})
 
-	t.Run("cleaned object is written back", func(t *testing.T) {
+	t.Run("cleaned bytes are written directly to the published key", func(t *testing.T) {
 		provider := &coverageProvider{getObject: coveragePNGWithEXIF()}
-		NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).scrubImageMetadata(ctx, "uploads/u1/a.png", "image/png")
+		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+			t.Fatalf("publish image: %v", err)
+		}
+		if provider.putKey != publishedKey {
+			t.Fatalf("cleaned object put key = %q, want published key %q", provider.putKey, publishedKey)
+		}
 		if provider.putContentType != "image/png" {
 			t.Fatalf("put content type = %q", provider.putContentType)
 		}
@@ -297,13 +326,26 @@ func TestScrubImageMetadataPaths(t *testing.T) {
 		if !bytes.Contains(provider.putData, []byte("imagedata")) {
 			t.Fatal("image payload must survive scrubbing")
 		}
+		if len(provider.copiedPairs) != 0 {
+			t.Fatalf("must not copy when cleaned bytes are written, got %#v", provider.copiedPairs)
+		}
 	})
 
-	t.Run("put failure is fail-open", func(t *testing.T) {
+	t.Run("put failure falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObject: coveragePNGWithEXIF(), putErr: errors.New("put boom")}
-		NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).scrubImageMetadata(ctx, "uploads/u1/a.png", "image/png")
-		if provider.putData == nil {
-			t.Fatal("expected cleaned object write attempt")
+		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
+		if len(provider.copiedPairs) != 1 {
+			t.Fatalf("expected copy fallback after PUT failure, got %#v", provider.copiedPairs)
+		}
+	})
+
+	t.Run("copy failure propagates so complete cannot commit", func(t *testing.T) {
+		copyErr := errors.New("copy boom")
+		provider := &coverageProvider{getObjectErr: errors.New("get boom"), copyErr: copyErr}
+		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); !errors.Is(err, copyErr) {
+			t.Fatalf("expected copy error, got %v", err)
 		}
 	})
 }
@@ -338,10 +380,18 @@ func TestServicePresignErrorBranches(t *testing.T) {
 func TestCommitCompleteBranches(t *testing.T) {
 	ctx := mediaContextWithUserAndKey("u1", "key1")
 	file := UploadedMedia{FileID: "file_mediacov_commit", FileSize: 100, MimeType: "image/png"}
+	published := func() preparedComplete {
+		return preparedComplete{
+			file:         file,
+			uploadKey:    "uploads/u1/upload_mediacov_commit.png",
+			publishedKey: "published/u1/upload_mediacov_commit.png",
+			published:    true,
+		}
+	}
 
 	t.Run("requires principal", func(t *testing.T) {
 		svc := NewServiceWithRepoAndProvider(NewInMemoryRepository(), &coverageProvider{})
-		if _, err := svc.CommitComplete(context.Background(), "upload_mediacov_commit", file); !errors.Is(err, ErrInvalidMediaRequest) {
+		if _, err := svc.CommitComplete(context.Background(), "upload_mediacov_commit", published()); !errors.Is(err, ErrInvalidMediaRequest) {
 			t.Fatalf("expected ErrInvalidMediaRequest, got %v", err)
 		}
 	})
@@ -350,7 +400,7 @@ func TestCommitCompleteBranches(t *testing.T) {
 		writeErr := errors.New("write boom")
 		repo := &mediaRepoOverride{InMemoryRepository: NewInMemoryRepository(), completeErr: writeErr}
 		svc := NewServiceWithRepoAndProvider(repo, &coverageProvider{})
-		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", file); !errors.Is(err, writeErr) {
+		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", published()); !errors.Is(err, writeErr) {
 			t.Fatalf("expected write error, got %v", err)
 		}
 	})
@@ -359,16 +409,21 @@ func TestCommitCompleteBranches(t *testing.T) {
 		readErr := errors.New("read boom")
 		repo := &mediaRepoOverride{InMemoryRepository: NewInMemoryRepository(), completeNoop: true, getErr: readErr}
 		svc := NewServiceWithRepoAndProvider(repo, &coverageProvider{})
-		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", file); !errors.Is(err, readErr) {
+		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", published()); !errors.Is(err, readErr) {
 			t.Fatalf("expected read error, got %v", err)
 		}
 	})
 
 	t.Run("upload vanished", func(t *testing.T) {
+		provider := &coverageProvider{}
 		repo := &mediaRepoOverride{InMemoryRepository: NewInMemoryRepository(), completeNoop: true}
-		svc := NewServiceWithRepoAndProvider(repo, &coverageProvider{})
-		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", file); !errors.Is(err, ErrUploadNotFound) {
+		svc := NewServiceWithRepoAndProvider(repo, provider)
+		if _, err := svc.CommitComplete(ctx, "upload_mediacov_commit", published()); !errors.Is(err, ErrUploadNotFound) {
 			t.Fatalf("expected ErrUploadNotFound, got %v", err)
+		}
+		// 行不存在：本次复制出的发布键无人引用，必须回滚删除。
+		if len(provider.deletedKeys) != 1 || provider.deletedKeys[0] != "published/u1/upload_mediacov_commit.png" {
+			t.Fatalf("published key must be rolled back, deleted = %#v", provider.deletedKeys)
 		}
 	})
 
@@ -377,22 +432,65 @@ func TestCommitCompleteBranches(t *testing.T) {
 		if err := repo.Save(context.Background(), pendingUpload{UploadID: "upload_mediacov_pending", UserID: "u1", StorageKey: "uploads/u1/p.png", FileName: "p.png", DeclaredFileSize: 100, DeclaredMimeType: "image/png", Category: CategoryAvatar}); err != nil {
 			t.Fatalf("save pending upload: %v", err)
 		}
-		svc := NewServiceWithRepoAndProvider(&mediaRepoOverride{InMemoryRepository: repo, completeNoop: true}, &coverageProvider{})
-		if _, err := svc.CommitComplete(ctx, "upload_mediacov_pending", file); !errors.Is(err, ErrUploadNotFound) {
+		provider := &coverageProvider{}
+		svc := NewServiceWithRepoAndProvider(&mediaRepoOverride{InMemoryRepository: repo, completeNoop: true}, provider)
+		if _, err := svc.CommitComplete(ctx, "upload_mediacov_pending", published()); !errors.Is(err, ErrUploadNotFound) {
 			t.Fatalf("expected ErrUploadNotFound for pending row, got %v", err)
+		}
+		if len(provider.deletedKeys) != 1 || provider.deletedKeys[0] != "published/u1/upload_mediacov_commit.png" {
+			t.Fatalf("published key must be rolled back, deleted = %#v", provider.deletedKeys)
 		}
 	})
 
-	t.Run("already completed is idempotent", func(t *testing.T) {
+	t.Run("already completed is idempotent and keeps the referenced published key", func(t *testing.T) {
 		repo := NewInMemoryRepository()
 		seedCompletedAvatar(t, repo, "mediacov_commit_done", "u1", CategoryAvatar)
-		svc := NewServiceWithRepoAndProvider(&mediaRepoOverride{InMemoryRepository: repo, completeNoop: true}, &coverageProvider{})
-		got, err := svc.CommitComplete(ctx, "mediacov_commit_done", UploadedMedia{FileID: "file_ignored", FileSize: 1, MimeType: "image/jpeg"})
+		provider := &coverageProvider{}
+		svc := NewServiceWithRepoAndProvider(&mediaRepoOverride{InMemoryRepository: repo, completeNoop: true}, provider)
+		got, err := svc.CommitComplete(ctx, "mediacov_commit_done", preparedComplete{
+			file:         UploadedMedia{FileID: "file_ignored", FileSize: 1, MimeType: "image/jpeg"},
+			uploadKey:    "uploads/u1/upload_mediacov_commit.png",
+			publishedKey: "published/u1/upload_mediacov_commit.png",
+			published:    true,
+		})
 		if err != nil {
 			t.Fatalf("completed upload must stay idempotent, got %v", err)
 		}
 		if got.FileID != "file_mediacov_commit_done" {
 			t.Fatalf("idempotent replay must return stored file, got %#v", got)
+		}
+		// 并发方已完成的发布键与本次不同：本次复制出的对象必须回滚删除。
+		if len(provider.deletedKeys) != 1 || provider.deletedKeys[0] != "published/u1/upload_mediacov_commit.png" {
+			t.Fatalf("unreferenced published key must be rolled back, deleted = %#v", provider.deletedKeys)
+		}
+	})
+
+	t.Run("already completed with same published key keeps object", func(t *testing.T) {
+		repo := NewInMemoryRepository()
+		seedCompletedAvatar(t, repo, "mediacov_commit_same", "u1", CategoryAvatar)
+		provider := &coverageProvider{}
+		svc := NewServiceWithRepoAndProvider(&mediaRepoOverride{InMemoryRepository: repo, completeNoop: true}, provider)
+		if _, err := svc.CommitComplete(ctx, "mediacov_commit_same", preparedComplete{
+			file:         UploadedMedia{FileID: "file_ignored", FileSize: 1, MimeType: "image/png"},
+			publishedKey: "published/u1/mediacov_commit_same.png",
+			published:    true,
+		}); err != nil {
+			t.Fatalf("completed upload must stay idempotent, got %v", err)
+		}
+		if len(provider.deletedKeys) != 0 {
+			t.Fatalf("published key referenced by the completed row must not be deleted, deleted = %#v", provider.deletedKeys)
+		}
+	})
+
+	t.Run("prepare already-completed is a no-op", func(t *testing.T) {
+		provider := &coverageProvider{}
+		svc := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider)
+		got, err := svc.CommitComplete(ctx, "upload_mediacov_commit", preparedComplete{file: file})
+		if err != nil || got.FileID != file.FileID {
+			t.Fatalf("no-op prepared result must return file unchanged, got %#v err=%v", got, err)
+		}
+		if len(provider.deletedKeys) != 0 || len(provider.copiedPairs) != 0 {
+			t.Fatalf("no-op commit must not touch objects, deleted=%#v copied=%#v", provider.deletedKeys, provider.copiedPairs)
 		}
 	})
 }

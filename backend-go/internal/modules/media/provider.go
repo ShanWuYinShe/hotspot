@@ -16,6 +16,9 @@ type Provider interface {
 	Delete(ctx context.Context, storageKey string) error
 	// GetObject 读取完整对象（EXIF 清洗链路用）。
 	GetObject(ctx context.Context, storageKey string) ([]byte, error)
-	// PutObject 以指定 Content-Type 覆写对象（清洗后回写，键不变）。
+	// PutObject 以指定 Content-Type 覆写对象（发布清洗后的图片字节用）。
 	PutObject(ctx context.Context, storageKey, contentType string, data []byte) error
+	// CopyObject 在存储端把 srcKey 复制到 dstKey（copy-on-complete 发布用），
+	// 不把大对象读进应用内存。失败返回错误，调用方不得提交完成态。
+	CopyObject(ctx context.Context, srcKey, dstKey string) error
 }
