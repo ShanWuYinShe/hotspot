@@ -239,7 +239,7 @@ Handler -> Service -> Repository
 路由与协议契约以 `spec/api_spec_base.md` 为权威来源，本节仅列出实现侧约束：
 
 - 仅 POST，RPC + JSON；所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
-- 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按 `$share_crawler` UA 分流（见 docker/nginx*.conf），不属于 `/api` RPC 面；真实用户仍走 SPA `/share/[code]`
+- 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按「爬虫 UA × `?spa=1`」组合分流（`$share_og` map，见 docker/nginx*.conf）：只有爬虫 UA 且未带 `spa=1` 才走后端 OG；OG 页 CTA 带 `?spa=1`，微信/QQ 内嵌浏览器由此进入 SPA `/share/[code]`，不属于 `/api` RPC 面
 - 认证分公开/必须/管理员三档（对应 spec 的 public/api/admin 三节点），每模块按端点的认证要求分组挂载对应中间件
 - 统一中间件链（顺序）：鉴权 → 限流 → 资源守卫 → 幂等
 
@@ -478,7 +478,7 @@ Handler -> Service -> Repository
 路由与协议契约以 `spec/api_spec_base.md` 为权威来源，本节仅列出实现侧约束：
 
 - 仅 POST，RPC + JSON；所有 API 必须是明确动作子路径，禁止裸资源路径（如禁止 `/api/v1/users`，须使用 `/api/v1/users/search` 等动作路径）
-- 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按 `$share_crawler` UA 分流（见 docker/nginx*.conf），不属于 `/api` RPC 面；真实用户仍走 SPA `/share/[code]`
+- 登记例外：`GET /share/{code}`（`share/og.go`）——面向链接预览爬虫的 HTML 落地页（og 标签），nginx 按「爬虫 UA × `?spa=1`」组合分流（`$share_og` map，见 docker/nginx*.conf）：只有爬虫 UA 且未带 `spa=1` 才走后端 OG；OG 页 CTA 带 `?spa=1`，微信/QQ 内嵌浏览器由此进入 SPA `/share/[code]`，不属于 `/api` RPC 面
 - 认证分公开/必须/管理员三档（对应 spec 的 public/api/admin 三节点），每模块按端点的认证要求分组挂载对应中间件
 - 统一中间件链（顺序）：鉴权 → 限流 → 资源守卫 → 幂等
 
