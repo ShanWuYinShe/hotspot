@@ -12,9 +12,9 @@ import (
 	"hotspot/backend-go/internal/platform/testdb"
 )
 
-// authStoreContractSeq 为每个用例生成唯一用户/会话 ID：平台 auth 存储的 PG 实现
-// 直连连接池（不参与 ctx 事务，见 docs/backend-audit.md「事务上下文」残留项），
-// 故契约测试用 pool + 用例级唯一 ID + 显式清理，避免污染共享库。
+// authStoreContractSeq 为每个用例生成唯一用户/会话 ID：契约测试用连接池 +
+// 用例级唯一 ID + 显式清理隔离，避免污染共享库（platform/auth 存储现已感知
+// ctx 事务，事务语义由 postgres_store_tx_it_test.go 单独覆盖）。
 var authStoreContractSeq int64
 
 type authStoreContractState struct {

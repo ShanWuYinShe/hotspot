@@ -10,6 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+// PostgresRefreshStore 是 RefreshTokenStore 的生产实现。与会话存储同口径：
+// 所有读写经 persistence.RepoQueryable 取连接，ctx 携带事务时加入该事务，
+// 保证刷新令牌轮换与调用方事务的原子性（回滚不留下已轮换状态）。
 type PostgresRefreshStore struct {
 	factory  *persistence.Factory
 	fallback RefreshTokenStore
@@ -23,7 +26,7 @@ func NewPostgresRefreshStore(factory *persistence.Factory, fallback RefreshToken
 }
 
 func (s *PostgresRefreshStore) Save(ctx context.Context, session RefreshSession) error {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Save(ctx, session)
 	}
@@ -31,7 +34,7 @@ func (s *PostgresRefreshStore) Save(ctx context.Context, session RefreshSession)
 }
 
 func (s *PostgresRefreshStore) Rotate(ctx context.Context, oldToken string, current RefreshSession, next RefreshSession) error {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Rotate(ctx, oldToken, current, next)
 	}
@@ -49,7 +52,7 @@ func (s *PostgresRefreshStore) Rotate(ctx context.Context, oldToken string, curr
 }
 
 func (s *PostgresRefreshStore) Get(ctx context.Context, token string) (RefreshSession, bool, error) {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return s.fallback.Get(ctx, token)
 	}
@@ -69,14 +72,6 @@ func (s *PostgresRefreshStore) Get(ctx context.Context, token string) (RefreshSe
 		session.GraceUntil = *graceUntil
 	}
 	return session, true, nil
-}
-
-func (s *PostgresRefreshStore) queryable() (persistence.QueryableDB, bool) {
-	if s.factory == nil || s.factory.DB == nil || s.factory.Config.PostgresDSN == "" {
-		return nil, false
-	}
-	queryable, ok := s.factory.DB.(persistence.QueryableDB)
-	return queryable, ok
 }
 
 func zeroTimeToPtr(value time.Time) *time.Time {
@@ -99,7 +94,7 @@ func emptyToNull(value string) *string {
 // and rotated-away tokens whose 30s grace window has long passed. Without it
 // auth_refresh_tokens grows unboundedly (one row per rotation forever).
 func (s *PostgresRefreshStore) Sweep(ctx context.Context, now time.Time) {
-	queryable, ok := s.queryable()
+	queryable, ok := persistence.RepoQueryable(ctx, s.factory)
 	if !ok {
 		return
 	}

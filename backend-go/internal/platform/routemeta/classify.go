@@ -42,9 +42,9 @@ func ClassifyPath(path string) (RouteClass, bool) {
 	case strings.HasPrefix(path, "/api/v1/reports/"):
 		return RouteClass{ReadOnly: strings.HasSuffix(path, "/fetch")}, true
 	case strings.HasPrefix(path, "/api/v1/moments/"):
-		return RouteClass{ReadOnly: !strings.HasSuffix(path, "/create")}, true
+		return RouteClass{ReadOnly: !isMomentWritePath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/comments/"):
-		return RouteClass{ReadOnly: !strings.HasSuffix(path, "/create")}, true
+		return RouteClass{ReadOnly: !isCommentWritePath(path)}, true
 	case strings.HasPrefix(path, "/api/v1/groups/"):
 		return RouteClass{ReadOnly: strings.HasSuffix(path, "/search") || strings.HasSuffix(path, "/open_the_door") || strings.HasSuffix(path, "/fetch_joined") || strings.HasSuffix(path, "/fetch_submitted") || strings.HasSuffix(path, "/fetch_received") || strings.HasSuffix(path, "/fetch_sent") || strings.HasSuffix(path, "/fetch_banned")}, true
 	case strings.HasPrefix(path, "/api/v1/users/"):
@@ -82,6 +82,30 @@ func isAdminReadPath(path string) bool {
 func isUsersReadPath(path string) bool {
 	switch path {
 	case "/api/v1/users/search", "/api/v1/users/open_the_door", "/api/v1/users/account", "/api/v1/users/settings", "/api/v1/users/fetch_blocked":
+		return true
+	default:
+		return false
+	}
+}
+
+// isMomentWritePath moments 写端点显式白名单：此前后缀规则只认 "/create"，
+// 把 update/delete/set_favorite 误判为只读——限流中间件对只读路由跳过
+// write_per_minute 桶（ratelimit.Middleware），写端点等于没有写限流。
+// 其余端点（open_the_door/search/fetch_*）保持只读；新增写端点须同步登记。
+func isMomentWritePath(path string) bool {
+	switch path {
+	case "/api/v1/moments/create", "/api/v1/moments/update", "/api/v1/moments/delete", "/api/v1/moments/set_favorite":
+		return true
+	default:
+		return false
+	}
+}
+
+// isCommentWritePath comments 写端点显式白名单：delete 同样因旧后缀规则
+// 只认 "/create" 被误判只读（fetch/fetch_replies/open_the_door 为只读）。
+func isCommentWritePath(path string) bool {
+	switch path {
+	case "/api/v1/comments/create", "/api/v1/comments/delete":
 		return true
 	default:
 		return false
