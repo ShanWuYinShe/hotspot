@@ -39,8 +39,10 @@ GitHub Actions 承担，CI 全绿为准（流程见根 `AGENTS.md`「CI 门禁�
 （真实库 SQL/参数错误会造成红灯）：
 
 - `-race` 数据竞争 + `internal/modules` 每包覆盖率 **≥70%** 门禁（无 DB 单测口径下限）；
-- `TestPostgresIT` 真实库仓库集成测试（会暴露 SQL 列歧义、参数个数不符等
-  stub 单测无法发现的问题；CI backend-integration job 已覆盖）；
+- 真实库集成测试（会暴露 SQL 列歧义、参数个数不符等 stub 单测无法发现的问题；
+  CI backend-integration job 已覆盖）：`internal/modules` 的 `TestPostgresIT|Contract`
+  仓库/契约测试，以及 `internal/platform` 的 outbox 事务回滚与派发、RunInTransaction
+  aftercommit、WarmPlanner、auth session/refresh token 契约等真实库用例；
 - HTTP 全链路集成（`test/integration`，~100 用例，需 compose dev 栈）。
 
 ```bash
@@ -54,7 +56,7 @@ worktree 内执行时 DB/E2E 阶段自动回落到主工作树 compose（验证�
 
 **覆盖率口径**：无 DB 的默认阶段要求 `internal/modules` 每包 ≥70%（repo 代码在无库时天然不可覆盖）；
 `--with-db` 与 CI backend-integration job 在真实库上跑全部模块测试（含 `TestPostgresIT|Contract`）
-并要求每包 **≥90%**。
+与 `internal/platform` 全部测试（含 platform 层真实库 IT），模块覆盖率要求每包 **≥90%**。
 
 ## 潜在问题审计
 

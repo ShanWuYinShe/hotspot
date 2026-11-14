@@ -68,10 +68,12 @@ func initPool(t *testing.T, dsn string) *pgxpool.Pool {
 	if err != nil {
 		t.Fatalf("parse postgres dsn: %v", err)
 	}
-	// 与生产 persistence.NewFactory 保持同一 QueryExecMode（simple protocol）：
-	// IT 若走 pgx 默认二进制协议，timestamptz 等 OID 无法 Scan 进 string，
-	// 会误报生产不存在的错误（反之亦然），测试结果失去代表性。
-	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	// 与生产 persistence.NewFactory 保持同一 QueryExecMode（extended protocol +
+	// 预编译语句缓存）：IT 必须用生产同一执行协议，否则 Scan 行为、预编译语句
+	// 相关错误等生产差异都会被 simple protocol 掩盖，测试结果失去代表性。
+	// 迁移等需要多语句文本的路径由 persistence.PostgresDB.ExecSimple 单次显式
+	// 指定 simple protocol，不受这里的连接默认值影响。
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		t.Fatalf("create pool: %v", err)
