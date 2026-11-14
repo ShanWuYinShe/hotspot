@@ -97,6 +97,7 @@ func (p *ObjectStorageProvider) Delete(ctx context.Context, storageKey string) e
 	if err != nil {
 		return err
 	}
+	// #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, signedURL, nil)
 	if err != nil {
 		return err
