@@ -31,28 +31,49 @@ function parseColorValue(value) {
 }
 
 function getOrCreateCollection() {
-  var collections = figma.variables.getLocalVariableCollections();
-  for (var i = 0; i < collections.length; i++) if (collections[i].name === 'HotSpot Tokens') return collections[i];
-  return figma.variables.createVariableCollection('HotSpot Tokens');
+  try {
+    var collections = figma.variables.getLocalVariableCollections();
+    for (var i = 0; i < collections.length; i++) if (collections[i].name === 'HotSpot Tokens') return collections[i];
+    return figma.variables.createVariableCollection('HotSpot Tokens');
+  } catch (e) {
+    console.warn('getOrCreateCollection failed:', e);
+    return null;
+  }
 }
 
 function ensureModes() {
   _collection = getOrCreateCollection();
+  if (!_collection) return;
   var modes = SPEC.meta.modes;
   var existing = {};
   for (var i = 0; i < _collection.modes.length; i++) existing[_collection.modes[i].name] = _collection.modes[i].modeId;
-  if (!existing[modes[0]]) {
-    _collection.renameMode(_collection.modes[0].modeId, modes[0]);
-    existing[modes[0]] = _collection.modes[0].modeId;
+  var firstMode = _collection.modes[0];
+  if (firstMode && !existing[modes[0]]) {
+    try {
+      _collection.renameMode(firstMode.modeId, modes[0]);
+      existing[modes[0]] = firstMode.modeId;
+    } catch (e) {}
   }
   for (var j = 0; j < modes.length; j++) {
-    if (!existing[modes[j]]) existing[modes[j]] = _collection.addMode(modes[j]);
-    _modeIds[modes[j]] = existing[modes[j]];
+    var mName = modes[j];
+    if (!existing[mName]) {
+      try {
+        existing[mName] = _collection.addMode(mName);
+      } catch (err) {
+        // Plan limit: Free/Drafts allows 1 mode, Student/Pro allows 4 modes, Org allows 40.
+        console.warn('Mode limit reached for ' + mName + ':', err && err.message ? err.message : err);
+      }
+    }
+    if (existing[mName]) {
+      _modeIds[mName] = existing[mName];
+    }
   }
 }
 
 function ensureVariables() {
-  var all = figma.variables.getLocalVariables('COLOR');
+  if (!_collection) return;
+  var all = [];
+  try { all = figma.variables.getLocalVariables('COLOR'); } catch (e) {}
   var byName = {};
   for (var i = 0; i < all.length; i++) {
     if (all[i].variableCollectionId === _collection.id) byName[all[i].name] = all[i];
@@ -61,12 +82,22 @@ function ensureVariables() {
   for (var k = 0; k < SPEC.variables.length; k++) {
     var def = SPEC.variables[k];
     var variable = byName[def.name];
-    if (!variable) variable = figma.variables.createVariable(def.name, _collection, 'COLOR');
+    if (!variable) {
+      try {
+        variable = figma.variables.createVariable(def.name, _collection, 'COLOR');
+      } catch (e) {
+        continue;
+      }
+    }
     for (var m = 0; m < SPEC.meta.modes.length; m++) {
       var mode = SPEC.meta.modes[m];
+      var mId = _modeIds[mode];
+      if (!mId) continue;
       var value = def.values[mode];
       if (value === undefined) continue;
-      variable.setValueForMode(_modeIds[mode], parseColorValue(value));
+      try {
+        variable.setValueForMode(mId, parseColorValue(value));
+      } catch (e) {}
     }
     _varMap[def.name] = variable;
   }
@@ -76,14 +107,12 @@ function tokenColor(name, alpha) {
   var a = alpha === undefined ? 1 : alpha;
   if (name && name.charAt(0) === '#') return { color: hexToRgb(name), variable: null, alpha: a };
   var variable = _varMap ? _varMap[name] : null;
+  var hex = (SPEC.tokenColors && SPEC.tokenColors[name]) || (SPEC.fallbacks && SPEC.fallbacks[name]) || '#888888';
+  var rgb = hexToRgb(hex);
   if (!variable) {
-    var fallback = { r: 0.6, g: 0.6, b: 0.6 };
-    var hex = SPEC.fallbacks && SPEC.fallbacks[name];
-    if (hex) fallback = hexToRgb(hex);
-    return { color: { r: fallback.r, g: fallback.g, b: fallback.b }, variable: null, alpha: a };
+    return { color: { r: rgb.r, g: rgb.g, b: rgb.b }, variable: null, alpha: a };
   }
-  var base = { r: 0.6, g: 0.6, b: 0.6 };
-  return { color: base, variable: variable, alpha: a };
+  return { color: { r: rgb.r, g: rgb.g, b: rgb.b }, variable: variable, alpha: a };
 }
 
 function solidPaint(name, alpha) {
@@ -148,7 +177,7 @@ function effectsFor(shadowId) {
 
 function applyCommon(node, n) {
   var fills = fillsFor(n);
-  if (fills.length) node.fills = fills;
+  node.fills = fills;
   if (n.bd) {
     node.strokes = [solidPaint(n.bd[1], n.bd[2])];
     node.strokeWeight = n.bd[0];
@@ -165,31 +194,86 @@ function weightStyle(weight) {
   return 'Regular';
 }
 
-function loadFont(family, style) {
+async function loadFont(family, style) {
   var key = family + '|' + style;
   if (_fontsLoaded[key]) return _fontsLoaded[key];
-  _fontsLoaded[key] = figma.loadFontAsync({ family: family, style: style }).then(
-    function () { return { family: family, style: style }; },
-    function () {
-      if (style !== 'Regular') return loadFont(family, 'Regular');
-      if (family !== FAMILY_LATIN) return loadFont(FAMILY_LATIN, 'Regular');
-      return { family: 'Roboto', style: 'Regular' };
+
+  // 1. Try requested font
+  try {
+    await figma.loadFontAsync({ family: family, style: style });
+    _fontsLoaded[key] = { family: family, style: style };
+    return _fontsLoaded[key];
+  } catch (e1) {}
+
+  // 2. Fallback to Regular style of same family
+  if (style !== 'Regular') {
+    try {
+      await figma.loadFontAsync({ family: family, style: 'Regular' });
+      _fontsLoaded[key] = { family: family, style: 'Regular' };
+      return _fontsLoaded[key];
+    } catch (e2) {}
+  }
+
+  // 3. Fallback to Inter Regular (guaranteed in Figma)
+  try {
+    await figma.loadFontAsync({ family: 'Inter', style: 'Regular' });
+    _fontsLoaded[key] = { family: 'Inter', style: 'Regular' };
+    return _fontsLoaded[key];
+  } catch (e3) {}
+
+  // 4. Fallback to Roboto Regular
+  try {
+    await figma.loadFontAsync({ family: 'Roboto', style: 'Regular' });
+    _fontsLoaded[key] = { family: 'Roboto', style: 'Regular' };
+    return _fontsLoaded[key];
+  } catch (e4) {}
+
+  return { family: 'Inter', style: 'Regular' };
+}
+
+async function safeSetCurrentPage(page) {
+  if (!page) return;
+  try {
+    if (typeof figma.setCurrentPageAsync === 'function') {
+      await figma.setCurrentPageAsync(page);
+    } else {
+      figma.currentPage = page;
     }
-  );
-  return _fontsLoaded[key];
+  } catch (e) {
+    try { figma.currentPage = page; } catch (err) {}
+  }
 }
 
 function getOrCreatePage(name) {
   var pages = figma.root.children;
   for (var i = 0; i < pages.length; i++) if (pages[i].name === name) return pages[i];
-  var page = figma.createPage();
-  page.name = name;
-  return page;
+  // If the sole existing page is empty and named default, rename and reuse it
+  if (pages.length === 1 && (pages[0].name === 'Page 1' || pages[0].name === '页面 1') && pages[0].children.length === 0) {
+    pages[0].name = name;
+    return pages[0];
+  }
+  try {
+    var page = figma.createPage();
+    page.name = name;
+    return page;
+  } catch (e) {
+    // If plan limits (e.g. 3-page limit on Free plan) block new page creation, fallback to current page
+    console.warn('Cannot create page ' + name + ' (plan limit):', e.message);
+    return figma.currentPage || pages[0];
+  }
 }
 
-function clearPage(page) {
-  var children = page.children.slice();
-  for (var i = 0; i < children.length; i++) children[i].remove();
+async function clearPage(page) {
+  if (!page) return;
+  try {
+    if (typeof page.loadAsync === 'function') {
+      await page.loadAsync();
+    }
+  } catch (e) {}
+  var children = page.children ? page.children.slice() : [];
+  for (var i = 0; i < children.length; i++) {
+    try { children[i].remove(); } catch (e) {}
+  }
 }
 
 function addSwatch(parent, x, y, name, colorName, size) {
@@ -215,6 +299,9 @@ async function addText(parent, opts) {
   if (opts.letterSpacing) text.letterSpacing = { unit: 'PIXELS', value: opts.letterSpacing };
   if (opts.align === 'center') text.textAlignHorizontal = 'CENTER';
   else if (opts.align === 'right') text.textAlignHorizontal = 'RIGHT';
+  if (opts.align === 'center' || (opts.h > (opts.size || 14) * 1.3 && opts.h <= (opts.size || 14) * 3.5)) {
+    try { text.textAlignVertical = 'CENTER'; } catch (e) {}
+  }
   text.textAutoResize = 'NONE';
   text.resize(Math.max(1, opts.w), Math.max(1, opts.h));
   text.x = opts.x; text.y = opts.y;
@@ -247,6 +334,36 @@ function b64ToBytes(b64) {
   return new Uint8Array(bytes);
 }
 
+function applyRadius(node, radius) {
+  if (!radius) return;
+  if (typeof radius === 'number') {
+    node.cornerRadius = radius;
+    return;
+  }
+  if (Array.isArray(radius)) {
+    if (radius.length === 1) {
+      node.cornerRadius = radius[0];
+      return;
+    }
+    var tl = radius[0] || 0;
+    var tr = radius[1] !== undefined ? radius[1] : tl;
+    var br = radius[2] !== undefined ? radius[2] : tl;
+    var bl = radius[3] !== undefined ? radius[3] : tr;
+    if (tl === tr && tr === br && br === bl) {
+      node.cornerRadius = tl;
+    } else {
+      try {
+        node.topLeftRadius = tl;
+        node.topRightRadius = tr;
+        node.bottomRightRadius = br;
+        node.bottomLeftRadius = bl;
+      } catch (e) {
+        node.cornerRadius = tl;
+      }
+    }
+  }
+}
+
 function createClipFrame(parent, cl, cache) {
   var key = cl.join(',');
   if (cache[key]) return cache[key];
@@ -256,7 +373,9 @@ function createClipFrame(parent, cl, cache) {
   frame.resize(cl[2], cl[3]);
   frame.fills = [];
   frame.clipsContent = true;
-  if (cl[4] || cl[5] || cl[6] || cl[7]) frame.cornerRadius = [cl[4], cl[5], cl[6], cl[7]];
+  if (cl[4] || cl[5] || cl[6] || cl[7]) {
+    applyRadius(frame, [cl[4] || 0, cl[5] || 0, cl[6] || 0, cl[7] || 0]);
+  }
   cache[key] = frame;
   return frame;
 }
@@ -315,17 +434,35 @@ async function addNode(parent, n, clipCache) {
     target.appendChild(rect);
     rect.resize(n.w, n.h);
     rect.x = tx; rect.y = ty;
-    if (n.r) {
-      var same = true;
-      for (var ri = 1; ri < n.r.length; ri++) if (n.r[ri] !== n.r[0]) same = false;
-      rect.cornerRadius = same ? n.r[0] : n.r;
-    }
+    if (n.r) applyRadius(rect, n.r);
     applyCommon(rect, n);
     return;
   }
   if (n.t === 't') {
+    if (n.f || n.g !== undefined || n.bd) {
+      var bgRect = figma.createRectangle();
+      target.appendChild(bgRect);
+      bgRect.resize(Math.max(1, n.w), Math.max(1, n.h));
+      bgRect.x = tx; bgRect.y = ty;
+      if (n.r) applyRadius(bgRect, n.r);
+      applyCommon(bgRect, n);
+    }
+    var adjX = tx;
+    var adjW = n.w;
+    var isSingleLine = !n.tx || (n.tx.indexOf('\n') === -1 && (String(n.tx).trim().length <= 14 || !n.h || n.h <= (n.s || 14) * 3.5));
+    if (n.cl) {
+      if (!n.al || n.al === 'left') {
+        adjX = tx + 14;
+        adjW = Math.max(1, n.w - 14);
+      } else if (n.al === 'right') {
+        adjW = Math.max(1, n.w - 14);
+      }
+    }
+    if (isSingleLine && (!n.al || n.al === 'left')) {
+      adjW = Math.max(adjW, (n.s || 14) * String(n.tx).length * 1.15 + 8);
+    }
     await addText(target, {
-      x: tx, y: ty, w: n.w, h: n.h, text: n.tx, size: n.s, weight: n.fw,
+      x: adjX, y: ty, w: adjW, h: n.h, text: n.tx, size: n.s, weight: n.fw,
       lineHeight: n.lh || undefined, letterSpacing: n.ls || undefined,
       align: n.al || 'left', color: n.c, alpha: n.ca, cjk: !!n.cj, opacity: n.o
     });
@@ -337,7 +474,7 @@ async function addNode(parent, n, clipCache) {
     target.appendChild(box);
     box.resize(n.w, n.h);
     box.x = tx; box.y = ty;
-    if (n.r) box.cornerRadius = n.r[0];
+    if (n.r) applyRadius(box, n.r);
     if (image && image.data) {
       try {
         var raw = String(image.data).split(',');
@@ -372,7 +509,7 @@ async function addNode(parent, n, clipCache) {
     placeholder.resize(n.w, n.h);
     placeholder.x = tx; placeholder.y = ty;
     placeholder.fills = [solidPaint('surface-subtle', 1)];
-    if (n.r) placeholder.cornerRadius = n.r[0];
+    if (n.r) applyRadius(placeholder, n.r);
     return;
   }
 }
@@ -380,7 +517,7 @@ async function addNode(parent, n, clipCache) {
 async function buildScreen(parent, screen, x, y) {
   var frame = figma.createFrame();
   parent.appendChild(frame);
-  frame.name = screen.id + ' · ' + screen.title;
+  frame.name = screen.title + '  ·  ' + screen.route;
   frame.x = x; frame.y = y;
   frame.resize(screen.w, screen.h);
   frame.clipsContent = true;
@@ -394,8 +531,8 @@ async function buildScreen(parent, screen, x, y) {
 }
 
 async function buildScreensPage(page, device) {
-  figma.currentPage = page;
-  clearPage(page);
+  await safeSetCurrentPage(page);
+  await clearPage(page);
   var screens = SPEC.screens.filter(function (s) { return s.device === device; });
   var columns = device === 'desktop' ? 1 : device === 'tablet' ? 2 : 3;
   var gapX = device === 'desktop' ? 80 : 96;
@@ -411,15 +548,6 @@ async function buildScreensPage(page, device) {
     var y = startY + row * (rowH + gapY);
     if (col === 0) rowH = screen.h;
     await buildScreen(page, screen, x, y);
-    var label = await loadFont(FAMILY_LATIN, 'Medium');
-    var labelNode = figma.createText();
-    page.appendChild(labelNode);
-    labelNode.fontName = label;
-    labelNode.fontSize = 28;
-    labelNode.characters = screen.title + '  ·  ' + screen.route;
-    labelNode.x = x;
-    labelNode.y = y - 40;
-    labelNode.fills = [{ type: 'SOLID', color: hexToRgb('#52647f') }];
     if (i % 2 === 1) await new Promise(function (r) { setTimeout(r, 0); });
   }
 }
@@ -430,7 +558,7 @@ function simpleRect(parent, x, y, w, h, fill, radius, border) {
   parent.appendChild(rect);
   rect.x = x; rect.y = y;
   rect.resize(w, h);
-  if (radius) rect.cornerRadius = radius;
+  if (radius) applyRadius(rect, radius);
   rect.fills = fill ? [solidPaint(fill, 1)] : [];
   if (border) {
     rect.strokes = [solidPaint(border, 1)];
@@ -465,8 +593,8 @@ async function buildModePanel(parent, x, y, mode) {
 }
 
 async function buildDesignSystemPage(page) {
-  figma.currentPage = page;
-  clearPage(page);
+  await safeSetCurrentPage(page);
+  await clearPage(page);
   var y = 0;
   await addText(page, { x: 0, y: 0, w: 1800, h: 64, text: 'HotSpot 设计规范 · Design System', size: 44, weight: 700, color: 'text-primary' });
   await addText(page, { x: 0, y: 64, w: 1800, h: 28, text: '由前端代码 token 与实时页面结构生成；主题/明暗通过 Figma Variables 的 6 个模式切换。', size: 14, weight: 400, color: 'text-secondary' });
@@ -504,9 +632,232 @@ async function buildDesignSystemPage(page) {
     await addText(page, { x: r2 * 120, y: y + 80, w: 100, h: 16, text: 'radius ' + radii[r2], size: 11, weight: 500, color: 'text-secondary' });
   }
   y += 130;
+  y = await buildMotionSection(page, y);
+  y += 60;
   await sectionTitle(page, 0, y, '组件 Components');
   y += 50;
   await buildComponents(page, y);
+}
+
+async function buildMotionSection(page, startY) {
+  var y = startY;
+  await sectionTitle(page, 0, y, '动效规范与节奏 Motion & Rhythm');
+  y += 44;
+  await addText(page, {
+    x: 0,
+    y: y,
+    w: 1600,
+    h: 24,
+    text: '基于 HotSpot 全端动效契约（Web + HarmonyOS ArkUI）：统一时间刻度标尺、物理缓动曲线与无障碍降级规范。',
+    size: 13,
+    weight: 400,
+    color: 'text-secondary'
+  });
+  y += 48;
+
+  var leftX = 0;
+  var rightX = 820;
+  var topY = y;
+
+  // 1. 时间刻度标尺 (Duration Scale) - 左列 (x: 0, w: 780)
+  await addText(page, { x: leftX, y: topY, w: 500, h: 26, text: '时间刻度标尺 Duration Tokens', size: 18, weight: 700, color: 'text-primary' });
+  await addText(page, { x: leftX, y: topY + 28, w: 700, h: 18, text: '全端统一 10 档时间节奏（CSS: --cst-motion-*  ·  JS: MOTION.*  ·  ArkUI: MotionUtil）', size: 11, weight: 400, color: 'text-secondary' });
+
+  var motionTokens = [
+    { token: 'instant', ms: 100, desc: '按压微触觉：按钮点按 (active:scale-0.98)、列表项轻量按压' },
+    { token: 'contentFade', ms: 110, desc: '平滑内容过渡：骨架屏到真实内容淡入、分类筛选切换' },
+    { token: 'enter', ms: 120, desc: '页面进场路由：客户端页面平移淡入 (opacity 0.6→1, y 2px→0)' },
+    { token: 'rapid / exit', ms: 150, desc: '快速退场与状态消失：Toast 移除、空态入场、轻量淡出' },
+    { token: 'snappy', ms: 180, desc: '敏捷交互操作：Tab 指示滑块切换、Toggle 开关切态' },
+    { token: 'standard / pop', ms: 220, desc: '标准交互与状态反馈：点赞/收藏弹跳 (pop)、卡片悬停浮起' },
+    { token: 'relaxed', ms: 260, desc: '舒缓结构展开：底部抽屉 (BottomSheet) 自底滑出、模态浮现' },
+    { token: 'spring', ms: 300, desc: '物理弹性回弹：弹性超调 (overshoot) 动画、拖拽回正' },
+    { token: 'slow', ms: 400, desc: '大结构变形：展开折叠复杂容器、大卡片转场展开' },
+    { token: 'skeleton', ms: 1500, desc: '骨架流光循环：加载骨架屏 shimmer 呼吸周期 (4.5s 停在静态)' }
+  ];
+
+  var barStartY = topY + 56;
+  var maxMs = 400;
+  for (var i = 0; i < motionTokens.length; i++) {
+    var item = motionTokens[i];
+    var rowY = barStartY + i * 50;
+    simpleRect(page, leftX, rowY, 780, 42, 'surface-subtle', 10);
+    var barW = Math.max(36, Math.min(240, Math.round((Math.min(item.ms, maxMs) / maxMs) * 210) + 30));
+    simpleRect(page, leftX + 6, rowY + 6, barW, 30, 'accent-soft-bg', 8, 'accent-border');
+    await addText(page, { x: leftX + 16, y: rowY + 13, w: 90, h: 16, text: item.ms + 'ms', size: 12, weight: 700, color: 'text-on-accent' });
+    await addText(page, { x: leftX + 260, y: rowY + 7, w: 200, h: 16, text: '--cst-motion-' + item.token, size: 12, weight: 600, color: 'text-primary' });
+    await addText(page, { x: leftX + 260, y: rowY + 23, w: 500, h: 14, text: item.desc, size: 10, weight: 400, color: 'text-secondary' });
+  }
+  var leftH = barStartY + motionTokens.length * 50 - topY;
+
+  // 2. 物理缓动曲线 (Easing Curves) - 右列 (x: 820, w: 780)
+  await addText(page, { x: rightX, y: topY, w: 500, h: 26, text: '物理缓动曲线 Easing Curves', size: 18, weight: 700, color: 'text-primary' });
+  await addText(page, { x: rightX, y: topY + 28, w: 700, h: 18, text: '统一采用物理拟真贝塞尔曲线，禁止组件内联手写魔法数字', size: 11, weight: 400, color: 'text-secondary' });
+
+  // Card 1: Standard
+  var c1Y = topY + 56;
+  simpleRect(page, rightX, c1Y, 780, 240, 'surface-primary', 16, 'border-default');
+  await addText(page, { x: rightX + 24, y: c1Y + 20, w: 450, h: 22, text: '平滑减速入场 · Standard Curve', size: 15, weight: 700, color: 'text-primary' });
+  await addText(page, { x: rightX + 24, y: c1Y + 46, w: 500, h: 18, text: 'cubic-bezier(0.22, 1, 0.36, 1)  ·  --cst-ease-standard', size: 12, weight: 600, color: 'accent-default' });
+  await addText(page, { x: rightX + 24, y: c1Y + 74, w: 460, h: 64, text: '全端通用的物理平滑曲线。用于页面进场、卡片悬停抬升、底部抽屉滑出等一切位移与淡入交互。\n初始启动轻盈无突兀感，末段柔和减速入泊，完全消除硬停冲击感。', size: 11, weight: 400, color: 'text-secondary' });
+
+  // Standard 曲线预览图
+  simpleRect(page, rightX + 510, c1Y + 24, 240, 190, 'surface-subtle', 12, 'border-subtle');
+  simpleRect(page, rightX + 530, c1Y + 170, 200, 2, 'border-default');
+  simpleRect(page, rightX + 530, c1Y + 50, 2, 120, 'border-default');
+  var standardPts = [0, 0.38, 0.65, 0.82, 0.91, 0.96, 0.98, 0.99, 1.0, 1.0];
+  for (var p = 0; p < standardPts.length - 1; p++) {
+    var px1 = rightX + 530 + p * 22;
+    var py1 = c1Y + 170 - standardPts[p] * 105;
+    var px2 = rightX + 530 + (p + 1) * 22;
+    var py2 = c1Y + 170 - standardPts[p + 1] * 105;
+    simpleRect(page, px1, Math.min(py1, py2), 22, Math.max(3, Math.abs(py1 - py2) + 2), 'accent-default', 1);
+  }
+  await addText(page, { x: rightX + 530, y: c1Y + 174, w: 200, h: 16, text: '0% → 100% 柔和平滑减速', size: 10, weight: 500, align: 'center', color: 'text-secondary' });
+
+  // Card 2: Bounce
+  var c2Y = c1Y + 260;
+  simpleRect(page, rightX, c2Y, 780, 240, 'surface-primary', 16, 'border-default');
+  await addText(page, { x: rightX + 24, y: c2Y + 20, w: 450, h: 22, text: '弹性超调回弹 · Bounce Curve (Overshoot)', size: 15, weight: 700, color: 'text-primary' });
+  await addText(page, { x: rightX + 24, y: c2Y + 46, w: 500, h: 18, text: 'cubic-bezier(0.34, 1.56, 0.64, 1)  ·  --cst-ease-bounce', size: 12, weight: 600, color: 'accent-default' });
+  await addText(page, { x: rightX + 24, y: c2Y + 74, w: 460, h: 64, text: '带有物理超调回弹的弹性曲线。专用于点赞 pop 放大、开关 Toggle 滑块吸附、悬浮按钮 (FAB) 弹出。\n其最高点冲出标准终态 ~18%（Overshoot），随后自然被弹簧拉回，富有动态生命力。', size: 11, weight: 400, color: 'text-secondary' });
+
+  // Bounce 曲线预览图
+  simpleRect(page, rightX + 510, c2Y + 24, 240, 190, 'surface-subtle', 12, 'border-subtle');
+  simpleRect(page, rightX + 530, c2Y + 170, 200, 2, 'border-default');
+  simpleRect(page, rightX + 530, c2Y + 50, 2, 120, 'border-default');
+  simpleRect(page, rightX + 530, c2Y + 80, 200, 1, 'accent-border');
+  var bouncePts = [0, 0.42, 0.88, 1.14, 1.18, 1.12, 1.05, 1.01, 1.0, 1.0];
+  for (var bp = 0; bp < bouncePts.length - 1; bp++) {
+    var bpx1 = rightX + 530 + bp * 22;
+    var bpy1 = c2Y + 170 - bouncePts[bp] * 76;
+    var bpx2 = rightX + 530 + (bp + 1) * 22;
+    var bpy2 = c2Y + 170 - bouncePts[bp + 1] * 76;
+    simpleRect(page, bpx1, Math.min(bpy1, bpy2), 22, Math.max(3, Math.abs(bpy1 - bpy2) + 2), 'status-warning', 1);
+  }
+  await addText(page, { x: rightX + 530, y: c2Y + 174, w: 200, h: 16, text: '过冲 +18% 物理回弹', size: 10, weight: 500, align: 'center', color: 'text-secondary' });
+
+  y = topY + Math.max(leftH, 530) + 60;
+
+  // 3. 核心交互动效模式 (Core Interactive Motion Patterns) - 6 张卡片
+  await addText(page, { x: 0, y: y, w: 800, h: 26, text: '核心交互动效模式 Interactive Patterns', size: 18, weight: 700, color: 'text-primary' });
+  await addText(page, { x: 0, y: y + 28, w: 1000, h: 18, text: '展示 6 组核心交互的起止状态、时间节奏与物理补间逻辑', size: 11, weight: 400, color: 'text-secondary' });
+  y += 56;
+
+  var patterns = [
+    {
+      title: '1. 按压触觉微缩放 Button Tap Press',
+      timing: '100ms instant · ease-out',
+      code: 'active:scale-[0.98] · pressScale',
+      desc: '按下时等比内缩 2%，松手瞬时回正；禁止改变实际布局尺寸，保证点击手感稳健无错位。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 24, by + 16, 110, 36, 'accent-default', 18);
+        await addText(p, { x: bx + 24, y: by + 26, w: 110, h: 16, text: 'Normal 100%', size: 11, weight: 600, align: 'center', color: 'text-on-accent' });
+        await addText(p, { x: bx + 144, y: by + 24, w: 30, h: 20, text: '→', size: 16, weight: 700, align: 'center', color: 'text-secondary' });
+        simpleRect(p, bx + 184, by + 18, 106, 32, 'accent-default', 16);
+        await addText(p, { x: bx + 184, y: by + 26, w: 106, h: 16, text: 'Pressed 98%', size: 11, weight: 600, align: 'center', color: 'text-on-accent' });
+      }
+    },
+    {
+      title: '2. 弹簧开关与滑块 Toggle Switch',
+      timing: '180ms snappy · --cst-ease-bounce',
+      code: 'translateX(22px) · overshoot bounce',
+      desc: '开关激活时滑块横移并在泊位产生微弹回弹；背景底色同时由中性灰向 accent 品牌色平滑过渡。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 36, by + 18, 52, 32, 'surface-subtle', 16, 'border-default');
+        var thumb1 = figma.createEllipse(); p.appendChild(thumb1); thumb1.x = bx + 40; thumb1.y = by + 22; thumb1.resize(24, 24); thumb1.fills = [solidPaint('surface-primary', 1)];
+        await addText(p, { x: bx + 116, y: by + 24, w: 30, h: 20, text: '→', size: 16, weight: 700, align: 'center', color: 'text-secondary' });
+        simpleRect(p, bx + 176, by + 18, 52, 32, 'accent-default', 16);
+        var thumb2 = figma.createEllipse(); p.appendChild(thumb2); thumb2.x = bx + 200; thumb2.y = by + 22; thumb2.resize(24, 24); thumb2.fills = [solidPaint('surface-primary', 1)];
+      }
+    },
+    {
+      title: '3. 分段选项指示器 Tabs Indicator',
+      timing: '180ms snappy · --cst-ease-standard',
+      code: 'transform: translateX(...) · pill slider',
+      desc: '选项卡激活底胶囊平滑滑移至新激活项；文字颜色在滑移过程中平滑互换，无视觉闪烁。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 16, by + 18, 270, 32, 'surface-subtle', 16);
+        simpleRect(p, bx + 20, by + 21, 84, 26, 'accent-default', 13);
+        await addText(p, { x: bx + 20, y: by + 26, w: 84, h: 16, text: '全部', size: 11, weight: 600, align: 'center', color: 'text-on-accent' });
+        await addText(p, { x: bx + 108, y: by + 26, w: 84, h: 16, text: '附近', size: 11, weight: 500, align: 'center', color: 'text-secondary' });
+        await addText(p, { x: bx + 196, y: by + 26, w: 84, h: 16, text: '关注', size: 11, weight: 500, align: 'center', color: 'text-secondary' });
+      }
+    },
+    {
+      title: '4. 状态激活弹跳 State Pop (点赞/收藏)',
+      timing: '220ms standard · --cst-ease-bounce',
+      code: 'scale(1) → scale(1.18) → scale(1)',
+      desc: '状态由未激活变为激活时播放两段超调弹跳；仅在点击时触发一次，数据同步或初次加载不播。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 50, by + 20, 30, 30, 'surface-subtle', 15, 'border-default');
+        await addText(p, { x: bx + 50, y: by + 24, w: 30, h: 22, text: '♡', size: 18, weight: 700, align: 'center', color: 'text-secondary' });
+        await addText(p, { x: bx + 120, y: by + 24, w: 30, h: 20, text: '→', size: 16, weight: 700, align: 'center', color: 'text-secondary' });
+        simpleRect(p, bx + 180, by + 16, 38, 38, 'status-danger-bg', 19);
+        await addText(p, { x: bx + 180, y: by + 22, w: 38, h: 26, text: '♥', size: 22, weight: 700, align: 'center', color: 'status-danger' });
+      }
+    },
+    {
+      title: '5. 卡片桌面悬浮微抬升 Card Hover Lift',
+      timing: '220ms standard · --cst-ease-standard',
+      code: 'translateY(-2px) + shadow-raised-md',
+      desc: '鼠标悬停在内容卡片上时，卡片上浮 2px 并投下柔和中档阴影；指针离开平滑复位，提供触手可及的深度反馈。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 24, by + 20, 110, 36, 'surface-primary', 10, 'border-default');
+        await addText(p, { x: bx + 24, y: by + 30, w: 110, h: 16, text: 'Default (y=0)', size: 10, weight: 500, align: 'center', color: 'text-secondary' });
+        await addText(p, { x: bx + 144, y: by + 26, w: 30, h: 20, text: '→', size: 16, weight: 700, align: 'center', color: 'text-secondary' });
+        simpleRect(p, bx + 184, by + 16, 110, 36, 'surface-primary', 10, 'accent-border');
+        await addText(p, { x: bx + 184, y: by + 26, w: 110, h: 16, text: 'Lifted (y=-2px)', size: 10, weight: 600, align: 'center', color: 'accent-default' });
+      }
+    },
+    {
+      title: '6. 底部抽屉滑出 Bottom Sheet Transition',
+      timing: '260ms relaxed · --cst-ease-standard',
+      code: 'translateY(100% → 0%) + scrim fade',
+      desc: '抽屉自视口底部顺滑升起，半透明遮罩同步淡入；关闭时反向滑出视口，手势拖拽具备物理阻尼。',
+      renderMini: async function(p, bx, by) {
+        simpleRect(p, bx + 70, by + 12, 160, 52, 'surface-subtle', [14, 14, 0, 0], 'border-default');
+        simpleRect(p, bx + 130, by + 18, 40, 4, 'border-default', 2);
+        await addText(p, { x: bx + 70, y: by + 30, w: 160, h: 18, text: 'BottomSheet 260ms', size: 11, weight: 600, align: 'center', color: 'text-primary' });
+      }
+    }
+  ];
+
+  var patCols = 3, patW = 510, patH = 220;
+  for (var pi = 0; pi < patterns.length; pi++) {
+    var pItem = patterns[pi];
+    var col = pi % patCols;
+    var row = Math.floor(pi / patCols);
+    var px = col * (patW + 35);
+    var py = y + row * (patH + 25);
+
+    simpleRect(page, px, py, patW, patH, 'surface-primary', 16, 'border-default');
+    await addText(page, { x: px + 20, y: py + 16, w: patW - 40, h: 20, text: pItem.title, size: 13, weight: 700, color: 'text-primary' });
+    await addText(page, { x: px + 20, y: py + 38, w: patW - 40, h: 16, text: pItem.timing + '  ·  ' + pItem.code, size: 11, weight: 600, color: 'accent-default' });
+    await addText(page, { x: px + 20, y: py + 58, w: patW - 40, h: 42, text: pItem.desc, size: 11, weight: 400, color: 'text-secondary' });
+
+    simpleRect(page, px + 20, py + 112, patW - 40, 84, 'surface-subtle', 10);
+    await pItem.renderMini(page, px + 20, py + 112);
+  }
+
+  y += Math.ceil(patterns.length / patCols) * (patH + 25) + 36;
+
+  // 4. 无障碍与减弱动态规范 Accessibility & Reduced Motion
+  simpleRect(page, 0, y, 1600, 115, 'surface-island', 16, 'border-default');
+  await addText(page, { x: 24, y: y + 16, w: 1550, h: 22, text: '无障碍与减弱动态契约 · Accessibility & Reduced Motion (prefers-reduced-motion: reduce)', size: 14, weight: 700, color: 'text-primary' });
+  await addText(page, {
+    x: 24,
+    y: y + 42,
+    w: 1550,
+    h: 56,
+    text: '当系统偏好或无障碍设置开启「减少动态」时，全端严格执行以下契约：\n1. 位移 (translateY)、几何缩放 (scale) 与装饰性脉冲 (pulse) 强制置 0（duration = 0ms），直接以终态形态呈现，杜绝视觉晃动；\n2. 仅保留轻量淡入 (opacity fade) 或瞬时直出；骨架屏停留在静态微灰填充；\n3. Web 端由 lib/motion.ts 的 prefersReducedMotion() 统一守卫，HarmonyOS 端由 MotionUtil.ets 统一拦截。',
+    size: 11,
+    weight: 400,
+    color: 'text-secondary'
+  });
+
+  y += 140;
+  return y;
 }
 
 async function makeComponent(parent, name, w, h, x, y) {
@@ -524,9 +875,9 @@ async function buildComponents(page, startY) {
   var tones = [
     ['primary', 'accent-default', 'text-on-accent', null],
     ['secondary', 'surface-primary', 'text-primary', 'border-default'],
-    ['soft', 'accent-soft', 'text-accent-on-soft', null],
+    ['soft', 'surface-subtle', 'text-primary', null],
     ['ghost', null, 'text-secondary', null],
-    ['danger', 'status-danger', 'text-on-status', null]
+    ['danger', 'status-danger', 'text-on-accent', null]
   ];
   var sizes = [['SM', 32, 12], ['MD', 42, 13], ['LG', 48, 14]];
   for (var ti = 0; ti < tones.length; ti++) {
@@ -545,7 +896,7 @@ async function buildComponents(page, startY) {
     await addText(inp, { x: 14, y: 12, w: 190, h: 20, text: states[ii][2], size: 13, weight: 400, color: 'text-secondary' });
   }
   y += 90;
-  var badges = [['accent', 'accent-bg', 'text-accent-on-soft'], ['online', 'status-online-bg', 'text-status-online-on-soft'], ['warning', 'status-warning-bg', 'text-status-warning-on-soft'], ['danger', 'status-danger-bg', 'text-status-danger-on-soft']];
+  var badges = [['accent', 'accent-soft-bg', 'text-accent-on-soft'], ['online', 'status-online-bg', 'text-status-online-on-soft'], ['warning', 'status-warning-bg', 'text-status-warning-on-soft'], ['danger', 'status-danger-bg', 'text-status-danger-on-soft']];
   for (var bi = 0; bi < badges.length; bi++) {
     var badge = await makeComponent(page, 'Badge/' + badges[bi][0], 88, 24, bi * 110, y);
     simpleRect(badge, 0, 0, 88, 24, badges[bi][1], 999);
@@ -631,14 +982,16 @@ async function buildComponents(page, startY) {
         var device = devices[di];
         var page = getOrCreatePage(labels[device] || device);
         await buildScreensPage(page, device);
-        figma.currentPage = page;
+        await safeSetCurrentPage(page);
         log('HotSpot：' + labels[device] + ' 已生成');
         await new Promise(function (r) { setTimeout(r, 0); });
       }
       log('HotSpot：全部页面生成完成，用时 ' + Math.round((Date.now() - started) / 1000) + 's');
     } catch (e) {
-      figma.notify('HotSpot 设计稿生成失败：' + e.message, { error: true, timeout: 15000 });
+      var errMsg = e && e.message ? e.message : String(e);
+      figma.notify('HotSpot 设计稿生成异常：' + errMsg, { error: true, timeout: 30000 });
       try { console.error('HOTSPOT-PLUGIN-ERROR', e && e.stack ? e.stack : e); } catch (err) {}
+      return;
     }
     figma.closePlugin();
   })();
