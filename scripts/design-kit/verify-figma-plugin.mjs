@@ -20,7 +20,14 @@ function makeNode(type, extra) {
     name: type,
     x: 0, y: 0, width: 100, height: 100,
     fills: [], strokes: [], effects: [], children: [],
-    opacity: 1, cornerRadius: 0, clipsContent: false,
+    opacity: 1, clipsContent: false,
+    _cornerRadius: 0,
+    get cornerRadius() { return this._cornerRadius; },
+    set cornerRadius(v) {
+      if (typeof v !== 'number') throw new Error('Property "cornerRadius" failed validation: Expected number, received ' + (Array.isArray(v) ? 'array' : typeof v));
+      this._cornerRadius = v;
+    },
+    topLeftRadius: 0, topRightRadius: 0, bottomLeftRadius: 0, bottomRightRadius: 0,
     resize(w, h) { node.width = w; node.height = h; },
     appendChild(child) { node.children.push(child); child.parent = node; stats.nodes++; },
     remove() { if (node.parent) { const i = node.parent.children.indexOf(node); if (i >= 0) node.parent.children.splice(i, 1); } },
@@ -31,6 +38,7 @@ function makeNode(type, extra) {
       return out;
     },
     setExplicitVariableModeForCollection() {},
+    loadAsync() { return Promise.resolve(); },
     setPluginData() {}
   }, extra || {});
   return node;
@@ -56,7 +64,7 @@ const figma = {
   createComponent() { stats.components++; return makeNode('COMPONENT'); },
   createRectangle() { return makeNode('RECTANGLE'); },
   createEllipse() { return makeNode('ELLIPSE'); },
-  createText() { stats.texts++; const t = makeNode('TEXT'); t.characters = ''; t.fontName = null; t.fontSize = 12; t.lineHeight = null; t.letterSpacing = null; t.textAlignHorizontal = 'LEFT'; t.textAutoResize = 'NONE'; return t; },
+  createText() { stats.texts++; const t = makeNode('TEXT'); t.characters = ''; t.fontName = null; t.fontSize = 12; t.lineHeight = null; t.letterSpacing = null; t.textAlignHorizontal = 'LEFT'; t.textAlignVertical = 'TOP'; t.textAutoResize = 'NONE'; return t; },
   createNodeFromSvg() { stats.svgs++; const f = makeNode('FRAME'); f.children = [makeNode('VECTOR')]; return f; },
   createImage() { stats.images++; return { hash: 'image-' + stats.images }; },
   loadFontAsync() { return Promise.resolve(); },
