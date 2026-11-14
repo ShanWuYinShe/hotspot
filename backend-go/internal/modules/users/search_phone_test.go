@@ -84,3 +84,37 @@ func TestBuildSearchUsersQueryPhoneBranch(t *testing.T) {
 		t.Fatalf("expected raw-keyword + limit args, got %#v", args)
 	}
 }
+
+// TestBuildRankedSearchUsersQueryPhoneBranch：ranked 路径（keyword 非空 + 无
+// radius + relevance/newest 排序）的 SQL 同样要带 auth_accounts 手机号精确匹配
+// 分支（受 phone_searchable 控制），否则该路径会丢失手机号搜索能力；非手机号
+// keyword 不追加该分支。
+func TestBuildRankedSearchUsersQueryPhoneBranch(t *testing.T) {
+	sql, args := buildRankedSearchUsersQuery("13800138000", "", "relevance", searchCursor{}, false, 21)
+	if !strings.Contains(sql, "auth_accounts") || !strings.Contains(sql, "phone_searchable") {
+		t.Fatalf("expected phone exact-match branch in ranked sql: %s", sql)
+	}
+	// 原有 PGroonga 昵称/bio 匹配必须保留（手机号命中与模糊匹配并集）。
+	if !strings.Contains(sql, "&@") {
+		t.Fatalf("ranked sql must keep pgroonga prefilter: %s", sql)
+	}
+	// 参数顺序：keyword、手机号精确匹配 keyword、limit。
+	if len(args) != 3 {
+		t.Fatalf("expected keyword + phone + limit args, got %#v", args)
+	}
+	if args[0] != "13800138000" || args[1] != "13800138000" {
+		t.Fatalf("expected keyword + phone args, got %#v", args)
+	}
+	if !strings.Contains(sql, "aa.login_id = $2") {
+		t.Fatalf("phone branch placeholder mismatch: %s", sql)
+	}
+
+	// 非手机号 keyword：无 auth_accounts 分支，参数只有 keyword + limit。
+	sql, args = buildRankedSearchUsersQuery("alice", "", "relevance", searchCursor{}, false, 21)
+	if strings.Contains(sql, "auth_accounts") {
+		t.Fatalf("non-numeric keyword must not include phone branch: %s", sql)
+	}
+	if len(args) != 2 {
+		t.Fatalf("expected keyword + limit args, got %#v", args)
+	}
+}

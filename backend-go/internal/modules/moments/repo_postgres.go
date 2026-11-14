@@ -158,20 +158,27 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	defer rows.Close()
 	items := make([]MomentItem, 0)
 	momentIDs := make([]string, 0)
+	sortScores := make([]float64, 0, limit+1)
+	rawCreatedAts := make([]time.Time, 0, limit+1)
 	for rows.Next() {
 		var item MomentItem
+		var rawCreatedAt time.Time
+		var sortScore float64
 		if viewerID != "" {
-			// 登录查看者：SQL 尾列 EXISTS(moment_favorites) → is_favorited
+			// 登录查看者：SELECT 尾列依次为 is_favorited、sort_score
 			//（spec api_spec_types.md MomentItem 查看者布尔恒定）。
-			item, err = scanSearchMomentRow(rows)
+			item, rawCreatedAt, err = scanSearchMomentRow(rows, &sortScore)
 		} else {
-			item, err = scanMomentRow(rows)
+			// 匿名：SELECT 尾列只有 sort_score。
+			item, rawCreatedAt, _, err = scanMomentRowParts(rows, false, &sortScore)
 		}
 		if err != nil {
 			return PaginatedMoments{}, err
 		}
 		items = append(items, item)
 		momentIDs = append(momentIDs, item.MomentID)
+		sortScores = append(sortScores, sortScore)
+		rawCreatedAts = append(rawCreatedAts, rawCreatedAt)
 	}
 	if err := rows.Err(); err != nil {
 		return PaginatedMoments{}, err
@@ -186,19 +193,11 @@ func (r *PostgresRepository) Search(ctx context.Context, req SearchMomentsReques
 	// SQL 已按最终排序返回 keyset 页；多取的第 limit+1 行仅用于探测是否有下一页。
 	var nextCursor *string
 	if len(items) > limit {
-		keyword := ""
-		if req.Keyword != nil {
-			keyword = *req.Keyword
-		}
-		tag := ""
-		if req.Tag != nil {
-			tag = *req.Tag
-		}
-		// popular 模式：游标分值按 Go 侧同公式衰减计算（与 searchScoreSQL 逐项
-		// 对应），时钟量化到同一衰减桶（SearchDecayClock）。游标编码本页最后一项
-		// （排他 keyset：下一页谓词严格 <，从页尾项的后继开始）——编码下页首项
-		// 会让严格 < 把它自身排除造成丢项（量化时钟前被实时衰减漂移偶然遮掩）。
-		c := encodeMomentSearchCursor(sortBy, items[limit-1], keyword, tag, decayClock)
+		// 游标必须使用 SQL 实际参与排序的 sort_score 与全精度 created_at：
+		// Go 侧重算分值（不同 IEEE-754 运算路径）或使用秒级展示时间都会与
+		// SQL 排序值产生 ulp/截断级差异，跨页时元组首分量不等 → 边界行重复
+		// 或整段数据被跳过（审计 R65 实测：popular/relevance 翻页丢失）。
+		c := encodeMomentSearchCursorSQL(sortBy, sortScores[limit-1], rawCreatedAts[limit-1], items[limit-1].MomentID)
 		nextCursor = &c
 		items = items[:limit]
 	}
@@ -226,50 +225,64 @@ func paginationCursor(p *PaginationParams) string {
 //
 // SQL 直接输出最终序，游标按最终序继续，翻页不重不漏。
 func buildSearchMomentsQuery(keyword *string, tag *string, sortBy string, limit int, after *momentSearchCursor, viewerID string, decayClock time.Time) (string, []any) {
-	args := make([]any, 0, 8)
-	var builder strings.Builder
-	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.created_at, ` + momentCountSelectColumns + `, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
+	args := make([]any, 0, 10)
+	// 参数按 SELECT/WHERE 实际引用顺序预登记：查看者收藏态、查看者拉黑过滤、
+	// keyword、tag、popular 衰减时钟，随后是游标与 LIMIT。
+	viewerExistsArg := 0
+	viewerBlockArg := 0
 	if viewerID != "" {
-		// 查看者收藏态：参数化 EXISTS 子查询（$N 占位符），匿名时不追加该列。
 		args = append(args, viewerID)
-		builder.WriteString(fmt.Sprintf(", EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $%d)", len(args)))
-	}
-	builder.WriteString(` FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
-	if viewerID != "" {
-		// 双向拉黑过滤（对齐 fetch_following/fetch_nearby 口径）：搜索是发现面，
-		// 被拉黑/拉黑对方作者的瞬间不应出现在结果里。
+		viewerExistsArg = len(args)
 		args = append(args, viewerID)
-		v := len(args)
-		builder.WriteString(fmt.Sprintf(
-			" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $%d AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)"+
-				" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $%d AND blk.is_blocked = TRUE)",
-			v, v))
+		viewerBlockArg = len(args)
 	}
 	kwArg := 0
-	tagArg := 0
 	if keyword != nil && *keyword != "" {
-		// PGroonga &@ 子串匹配（大小写/宽度归一 + 字面 %/_，1 字符起走 GIN
-		// 索引）：ILIKE 复核会被规划成同一谓词的第二次 PGroonga index scan
-		// （BitmapAnd），已由真实库语义测试证明与 &@ 等价，故只保留 &@。
 		args = append(args, *keyword)
-		rawArg := len(args)
-		kwArg = rawArg
-		builder.WriteString(fmt.Sprintf(" AND m.description &@ $%d", rawArg))
+		kwArg = len(args)
 	}
+	tagArg := 0
 	if tag != nil && *tag != "" {
 		args = append(args, *tag)
 		tagArg = len(args)
-		builder.WriteString(fmt.Sprintf(" AND m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", len(args)))
 	}
-
 	// popular 的衰减时钟作为参数绑定（而非 SQL 内 now()）：保证同一次查询的
-	// ORDER BY 与 keyset 谓词使用同一时钟，且与 Go 侧游标分值完全同源。
+	// ORDER BY、keyset 谓词与 SELECT 输出的 sort_score 使用同一个时钟值。
 	clockArg := 0
 	if normalizeMomentSearchSort(sortBy) == "popular" {
 		args = append(args, decayClock.Unix())
 		clockArg = len(args)
 	}
+	// 排序分值由 SQL 产出并作为 sort_score 列返回：keyset 游标必须携带数据库
+	// 实际参与排序的同一个 float8 值，禁止 Go 侧重算近似公式——不同 IEEE-754
+	// 运算路径（或秒级展示时间）会让浮点首分量不等，页边界重复/丢行。
 	scoreExpr := searchScoreSQL(sortBy, kwArg, tagArg, clockArg)
+
+	var builder strings.Builder
+	builder.WriteString(`SELECT m.moment_id, m.user_id, COALESCE(u.nickname, ''), COALESCE(u.avatar_url, ''), m.description, m.created_at, ` + momentCountSelectColumns + `, m.location_name, m.latitude, m.longitude, m.privacy_level, m.is_deleted`)
+	if viewerExistsArg > 0 {
+		// 查看者收藏态：参数化 EXISTS 子查询（$N 占位符），匿名时不追加该列。
+		builder.WriteString(fmt.Sprintf(", EXISTS(SELECT 1 FROM moment_favorites mf WHERE mf.moment_id = m.moment_id AND mf.user_id = $%d)", viewerExistsArg))
+	}
+	builder.WriteString(fmt.Sprintf(", (%s) AS sort_score", scoreExpr))
+	builder.WriteString(` FROM moments m LEFT JOIN users u ON u.user_id = m.user_id WHERE m.privacy_level = 'public' AND m.is_deleted = FALSE`)
+	if viewerBlockArg > 0 {
+		// 双向拉黑过滤（对齐 fetch_following/fetch_nearby 口径）：搜索是发现面，
+		// 被拉黑/拉黑对方作者的瞬间不应出现在结果里。
+		builder.WriteString(fmt.Sprintf(
+			" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = $%d AND blk.target_user_id = m.user_id AND blk.is_blocked = TRUE)"+
+				" AND NOT EXISTS(SELECT 1 FROM user_relations blk WHERE blk.user_id = m.user_id AND blk.target_user_id = $%d AND blk.is_blocked = TRUE)",
+			viewerBlockArg, viewerBlockArg))
+	}
+	if kwArg > 0 {
+		// PGroonga &@ 子串匹配（大小写/宽度归一 + 字面 %/_，1 字符起走 GIN
+		// 索引）：ILIKE 复核会被规划成同一谓词的第二次 PGroonga index scan
+		// （BitmapAnd），已由真实库语义测试证明与 &@ 等价，故只保留 &@。
+		builder.WriteString(fmt.Sprintf(" AND m.description &@ $%d", kwArg))
+	}
+	if tagArg > 0 {
+		builder.WriteString(fmt.Sprintf(" AND m.moment_id IN (SELECT moment_id FROM moment_tags WHERE tag_name = $%d)", tagArg))
+	}
 	if after != nil {
 		args = append(args, after.Score, after.At, after.ID)
 		n := len(args)

@@ -568,8 +568,9 @@ func TestPostgresRepositorySearchBranches(t *testing.T) {
 
 	dynamic := &pathsDynamicBackend{
 		searchViewerRows: [][]any{
-			{"m1", "u1", "n", "", "hello", base, 0, 0, 0, "南天门", 35.0, 112.0, "public", false, true},
-			{"m2", "u1", "n", "", "hello2", base.Add(-time.Minute), 0, 0, 0, "南天门", 35.0, 112.0, "public", false, false},
+			// 尾列依次为 is_favorited、SQL 输出的 sort_score。
+			{"m1", "u1", "n", "", "hello", base, 0, 0, 0, "南天门", 35.0, 112.0, "public", false, true, 0.0},
+			{"m2", "u1", "n", "", "hello2", base.Add(-time.Minute), 0, 0, 0, "南天门", 35.0, 112.0, "public", false, false, 0.0},
 		},
 		tagsRows: [][]any{{"m1", "tag"}},
 	}
@@ -593,9 +594,9 @@ func TestPostgresRepositorySearchBranches(t *testing.T) {
 		t.Fatalf("viewer query must resolve favorite state: %s", dynamic.queries[0])
 	}
 
-	// 匿名搜索（无查看者列）走 scanMomentRow 分支。
+	// 匿名搜索（无查看者列，尾列只有 sort_score）走匿名扫描分支。
 	dynamic.searchAnonRows = [][]any{
-		{"m3", "u1", "n", "", "hello3", base, 0, 0, 0, "南天门", 35.0, 112.0, "public", false},
+		{"m3", "u1", "n", "", "hello3", base, 0, 0, 0, "南天门", 35.0, 112.0, "public", false, 0.0},
 	}
 	anonPage, err := repo.Search(ctx, SearchMomentsRequest{Keyword: &keyword, Pagination: &PaginationParams{Limit: 5}}, "")
 	if err != nil {

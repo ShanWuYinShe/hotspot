@@ -160,25 +160,25 @@ func scanMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) 
 	return item, err
 }
 
-// scanSearchMomentRow 扫描 moments/search 查询行：基础列 + 尾部 is_favorited。
-// 登录查看者时 buildSearchMomentsQuery 在 SELECT 尾部追加
-// EXISTS(moment_favorites) 列（spec api_spec_types.md MomentItem 查看者布尔恒定），
-// 匿名查询不产生该列、不走本函数。
-func scanSearchMomentRow(scanner interface{ Scan(...any) error }) (MomentItem, error) {
-	item, _, isFavorited, err := scanMomentRowParts(scanner, true)
+// scanSearchMomentRow 扫描 moments/search 查询行：基础列 + is_favorited +
+// 尾部 sort_score（搜索排序分值，由 buildSearchMomentsQuery 的 SELECT 输出）。
+// 登录查看者时 SELECT 依次追加 EXISTS(moment_favorites) 与 sort_score 两列；
+// extra 用于追加 sort_score 的扫描目标。匿名查询不产生收藏态列、不走本函数。
+func scanSearchMomentRow(scanner interface{ Scan(...any) error }, extra ...any) (MomentItem, time.Time, error) {
+	item, rawCreatedAt, isFavorited, err := scanMomentRowParts(scanner, true, extra...)
 	if err != nil {
-		return MomentItem{}, err
+		return MomentItem{}, time.Time{}, err
 	}
 	item.IsFavorited = isFavorited
-	return item, nil
+	return item, rawCreatedAt, nil
 }
 
 // scanMomentRowParts 扫描 moment 基础列；额外返回全精度 createdAt（time.Time，
 // 列写入精度），供时间 keyset 游标以 RFC3339Nano 编码——item.CreatedAt 是
 // 截断到秒的展示格式，不得用于游标（秒截断丢同秒行，见 ListMine 注释）。
 // withViewerState 时额外扫描尾部 is_favorited 布尔并原样返回（不写入 item，
-// 由调用方决定用途）。
-func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState bool) (MomentItem, time.Time, bool, error) {
+// 由调用方决定用途）。extra 列（如 moments/search 的 sort_score）追加在尾部。
+func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState bool, extra ...any) (MomentItem, time.Time, bool, error) {
 	var item MomentItem
 	var userID, nickname, avatarURL, locationName, privacyLevel string
 	var createdAt time.Time
@@ -188,6 +188,7 @@ func scanMomentRowParts(scanner interface{ Scan(...any) error }, withViewerState
 	if withViewerState {
 		dest = append(dest, &isFavorited)
 	}
+	dest = append(dest, extra...)
 	if err := scanner.Scan(dest...); err != nil {
 		return MomentItem{}, time.Time{}, false, fmt.Errorf("moments.scanMomentRow scan: %w", err)
 	}

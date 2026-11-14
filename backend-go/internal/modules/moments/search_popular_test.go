@@ -127,6 +127,10 @@ func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 		t.Fatalf("viewer must be bound as first query arg, got %#v", args)
 	}
 
+	if !strings.Contains(sql, "AS sort_score") {
+		t.Fatalf("search must return the SQL-computed sort score as sort_score column (keyset cursor source): %s", sql)
+	}
+
 	// 带游标：谓词首元素按 float8 比较（衰减分值为浮点）
 	decoded := &momentSearchCursor{Sort: "popular", Score: 1.25, At: "2026-01-01T00:00:00Z", ID: "moment_9"}
 	sqlCursor, _ := buildSearchMomentsQuery(nil, nil, "popular", 21, decoded, "", decayClock)
@@ -141,22 +145,34 @@ func TestBuildSearchMomentsQueryPopularDecayAndViewerState(t *testing.T) {
 	}
 }
 
-// TestScanSearchMomentRowReadsViewerFavoriteFlag：搜索行扫描读取尾列收藏态。
-func TestScanSearchMomentRowReadsViewerFavoriteFlag(t *testing.T) {
-	base := []any{"moment_1", "user_a", "user_a", "", "desc", "2026-01-01T00:00:00Z", 0, 2, 0, "somewhere", 35.0, 112.0, "public", false}
-	item, err := scanSearchMomentRow(rowValues{values: append(append([]any{}, base...), true)})
+// TestScanSearchMomentRowReadsViewerFavoriteFlagAndSortScore：搜索行扫描读取
+// 尾列收藏态与 SQL 输出的 sort_score（keyset 游标分值来源）。
+func TestScanSearchMomentRowReadsViewerFavoriteFlagAndSortScore(t *testing.T) {
+	base := []any{"moment_1", "user_a", "user_a", "", "desc", "2026-01-01T00:00:00.123456Z", 0, 2, 0, "somewhere", 35.0, 112.0, "public", false}
+	var sortScore float64
+	item, rawCreatedAt, err := scanSearchMomentRow(rowValues{values: append(append([]any{}, base...), true, 7.25)}, &sortScore)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
 	if !item.IsFavorited {
 		t.Fatalf("expected viewer is_favorited=true, got %#v", item)
 	}
-	item, err = scanSearchMomentRow(rowValues{values: append(append([]any{}, base...), false)})
+	if sortScore != 7.25 {
+		t.Fatalf("expected sort_score=7.25, got %v", sortScore)
+	}
+	// 游标时间必须保留列写入精度（微秒），不能用秒级展示字段。
+	if got := rawCreatedAt.UTC().Format(time.RFC3339Nano); got != "2026-01-01T00:00:00.123456Z" {
+		t.Fatalf("raw created_at precision lost: %s", got)
+	}
+	item, _, err = scanSearchMomentRow(rowValues{values: append(append([]any{}, base...), false, 0.5)}, &sortScore)
 	if err != nil {
 		t.Fatalf("scan: %v", err)
 	}
 	if item.IsFavorited {
 		t.Fatalf("expected viewer is_favorited=false, got %#v", item)
+	}
+	if sortScore != 0.5 {
+		t.Fatalf("expected sort_score=0.5, got %v", sortScore)
 	}
 }
 
@@ -199,3 +215,25 @@ func TestMemorySearchFillsViewerFavoriteState(t *testing.T) {
 }
 
 func strPtrMoments(s string) *string { return &s }
+
+// TestEncodeMomentSearchCursorSQLKeepsExactScoreAndNanosecondAnchor：SQL 产出
+// 的排序分值与全精度时间必须原样进入游标（浮点精确、纳秒锚点），否则
+// keyset 下一页的元组比较会与排序值不等。
+func TestEncodeMomentSearchCursorSQLKeepsExactScoreAndNanosecondAnchor(t *testing.T) {
+	score := 1.0 / 3.0
+	at := time.Date(2026, 2, 3, 4, 5, 6, 789012000, time.UTC)
+	encoded := encodeMomentSearchCursorSQL("popular", score, at, "moment_42")
+	decoded, err := decodeMomentSearchCursor(encoded)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if decoded.Score != score {
+		t.Fatalf("score must round-trip exactly: want %v got %v", score, decoded.Score)
+	}
+	if decoded.At != "2026-02-03T04:05:06.789012Z" {
+		t.Fatalf("cursor anchor must keep microsecond precision: %s", decoded.At)
+	}
+	if decoded.Sort != "popular" || decoded.ID != "moment_42" {
+		t.Fatalf("unexpected cursor payload: %#v", decoded)
+	}
+}

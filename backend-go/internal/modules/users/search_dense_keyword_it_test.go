@@ -134,3 +134,56 @@ FROM generate_series(1, 650) i`); err != nil {
 		}
 	})
 }
+
+// TestPostgresITRankedPhoneExactMatch：ranked 路径（keyword 非空 + 无 radius +
+// sort_by 缺省 relevance）此前只做昵称/bio 的 PGroonga 子串匹配，丢失候选路径
+// 的手机号精确匹配分支。锁定：登录手机号（auth_accounts.login_id）精确匹配在
+// ranked SQL 中生效，且受 us.phone_searchable 控制。
+func TestPostgresITRankedPhoneExactMatch(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		qdb, ok := txFactory.DB.(persistence.QueryableDB)
+		if !ok {
+			t.Fatal("factory.DB is not QueryableDB")
+		}
+		seedPhoneUser := func(userID, nickname, loginID string, phoneSearchable bool) {
+			t.Helper()
+			testdb.InsertUser(t, txFactory, userID, nickname)
+			if err := qdb.Exec(ctx, "INSERT INTO auth_accounts (login_id, user_id, password_hash) VALUES ($1, $2, 'x')", loginID, userID); err != nil {
+				t.Fatalf("insert auth account %s: %v", userID, err)
+			}
+			if err := qdb.Exec(ctx, "INSERT INTO user_settings (user_id, phone_searchable) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET phone_searchable = EXCLUDED.phone_searchable", userID, phoneSearchable); err != nil {
+				t.Fatalf("insert settings %s: %v", userID, err)
+			}
+		}
+		seedPhoneUser("it_ranked_phone_on", "手机号可搜", "13900001111", true)
+		seedPhoneUser("it_ranked_phone_off", "手机号不可搜", "13900002222", false)
+
+		repo := NewPostgresRepository(txFactory)
+		searchIDs := func(keyword string) []string {
+			t.Helper()
+			// 不传 radius、sort_by 缺省：命中 ranked SQL 路径。
+			page, err := repo.SearchProfiles(ctx, SearchUsersRequest{Keyword: keyword})
+			if err != nil {
+				t.Fatalf("search %q: %v", keyword, err)
+			}
+			ids := make([]string, 0, len(page.Items))
+			for _, item := range page.Items {
+				ids = append(ids, item.UserID)
+			}
+			return ids
+		}
+
+		if ids := searchIDs("13900001111"); len(ids) != 1 || ids[0] != "it_ranked_phone_on" {
+			t.Fatalf("phone_searchable=true should hit by exact phone, got %#v", ids)
+		}
+		if ids := searchIDs("13900002222"); len(ids) != 0 {
+			t.Fatalf("phone_searchable=false must not hit by phone, got %#v", ids)
+		}
+		// 手机号匹配为精确语义：前缀不命中（昵称不含数字，PGroonga 子串亦不命中）。
+		if ids := searchIDs("1390000111"); len(ids) != 0 {
+			t.Fatalf("phone match must be exact, got %#v", ids)
+		}
+	})
+}
