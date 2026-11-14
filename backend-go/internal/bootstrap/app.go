@@ -3,10 +3,13 @@ package bootstrap
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/v9"
 
 	adminmodule "hotspot/backend-go/internal/modules/admin"
@@ -49,8 +52,12 @@ type App struct {
 	realtime    *realtime.Handler
 	hub         *realtime.Hub
 	hotCache    *hotcache.Cache
-	rootCtx     context.Context
-	rootCancel  context.CancelFunc
+	// redis 是幂等/限流/热缓存/跨实例广播共享的 client。bridge.Close 只退订阅、
+	// 明确不关共享 client（resume/health/缓存仍在用），生命周期归 App：Shutdown
+	// 中在 bridge/realtime/hotCache 之后、DB 之前关闭。
+	redis      *redis.Client
+	rootCtx    context.Context
+	rootCancel context.CancelFunc
 }
 
 func NewApp(cfg config.Config) (*App, error) {
@@ -82,7 +89,10 @@ func NewApp(cfg config.Config) (*App, error) {
 	// Create the redis client (if configured) before building modules so the
 	// system health endpoint can probe it. The same client is handed to the
 	// realtime bridge below.
-	redisClient := newRedisClient(cfg, logger)
+	// newRedisClient 只返回三态（未配置/不可用/可用），日志与指标由这里统一打：
+	// 「未配置」是显式支持的单实例模式（Info），「配置了但不可用」是降级（Error），
+	// 两者必须在日志里可区分（旧实现把后者也打成 Info「redis not configured」）。
+	redisClient, redisStartupErr := newRedisClient(cfg)
 	// Root context governs long-lived goroutines started by platform packages
 	// and modules (the realtime typing-throttle sweeper, the ratelimit store
 	// sweeper, the in-memory auth session/refresh store sweeper, the idempotency
@@ -107,9 +117,22 @@ func NewApp(cfg config.Config) (*App, error) {
 		idemStore = idempotency.NewRedisStore(redisClient)
 		ratelimit.SetRedisStore(redisClient)
 		logger.Info("redis shared stores enabled", "idempotency", "redis", "ratelimit", "redis")
+	} else if redisStartupErr != nil {
+		// 显式配置了 REDIS_URL 却连不上：幂等/限流退化为单实例、WS 跨实例广播
+		// 与热缓存共享失效。这是**降级**而非可选默认模式，必须 Error 级并说明
+		// 影响面——否则多实例部署下会悄悄出现「同一请求在 N 个实例各执行一次」
+		// （幂等失效）与「限流阈值放大 N 倍」，线上无人察觉。
+		logger.Error("redis configured but unavailable, degraded to single-instance mode",
+			"err", redisStartupErr,
+			"endpoint", redisEndpoint(cfg.RedisURL),
+			"degraded", []string{"idempotency", "ratelimit", "realtime-fanout", "hotcache"},
+		)
 	} else {
-		logger.Info("redis not configured, idempotency running in single-instance mode")
+		// 未配置 Redis 是显式支持的单实例模式（dev/单机部署），Info 级即可。
+		logger.Info("redis not configured, idempotency, rate limiting and realtime fanout running in single-instance mode")
 	}
+	// 启动期降级状态指标（Gauge：持续状态，见 registerRedisStartupMetric）。
+	registerRedisStartupMetric(redisStartupErr != nil)
 	idempotency.StartSweeper(rootCtx, idemStore)
 	// 热数据缓存（读穿 + 写失效）：users 设置与群成员关系；单一实例贯穿模块与
 	// realtime 适配器（本地模式下失效才互通；配了 Redis 则多实例共享键）。
@@ -120,8 +143,10 @@ func NewApp(cfg config.Config) (*App, error) {
 	readiness := newReadinessProbe(
 		// DB 是硬依赖：不可达则摘流量（compose healthcheck/LB 依赖该信号）。
 		readinessCheck{name: "database", required: true, ping: persistenceFactory.DB.Ping},
-		// Redis 未配置时 check.ping 为 nil（视为 ok）；配置后故障只降级。
-		readinessCheck{name: "redis", required: false, ping: redisReadinessPing(redisClient)},
+		// Redis 未配置时 ping 为 nil（视为 ok）；配置后故障只降级。启动探测失败
+		// 时 client 已丢弃且不会重连，探针固定报 down（degraded），避免就绪面把
+		// 「配置了但宕机」误报成全绿。
+		readinessCheck{name: "redis", required: false, ping: redisReadinessProbe(redisClient, redisStartupErr)},
 	)
 	// 应用级实时 Hub：本 App 独占实例，经根中间件注入请求 context；
 	// 不再依赖模块隐式读取进程级 DefaultHub。
@@ -186,6 +211,7 @@ func NewApp(cfg config.Config) (*App, error) {
 		hub:         hub,
 		rootCtx:     rootCtx,
 		hotCache:    hotCache,
+		redis:       redisClient,
 		rootCancel:  rootCancel,
 	}, nil
 }
@@ -276,6 +302,14 @@ func (a *App) Shutdown() {
 	if a.hotCache != nil {
 		a.hotCache.Close()
 	}
+	// 共享 Redis client 最后关闭（必须在 bridge/realtime/hotCache 之后、DB 之前）：
+	// bridge.Close 只退订阅、明确不关共享 client（resume/健康探针/缓存仍在用），
+	// 生命周期归组合根；放在 DB 之前，保证数据库池是最后一个回收的资源。
+	if a.redis != nil {
+		if err := a.redis.Close(); err != nil {
+			a.logger.Warn("close redis client failed", "err", err)
+		}
+	}
 	// Close the Postgres pool too — otherwise a graceful shutdown leaks the
 	// pool and its connections until process exit.
 	if a.persistence != nil && a.persistence.DB != nil {
@@ -310,29 +344,23 @@ func newResourceGuardChecker(factory *persistence.Factory) resourceguard.Checker
 	return resourceguard.NewDBChecker(queryable)
 }
 
-// newRedisClient creates and ping-verifies a redis client from cfg.RedisURL.
-// Returns nil when redis is not configured or unreachable, in which case the
-// realtime hub runs in single-instance mode and the health endpoint skips the
-// redis probe.
-// redisReadinessPing 返回就绪探针用的 Redis ping；未配置 Redis 时返回 nil
-// （探针按 ok 处理）。失败路径由探针计入 degraded，不阻塞接流量——限流/幂等
-// 在 Redis 故障时 fail-open（审计 ops P0-2）。
-func redisReadinessPing(client *redis.Client) func(context.Context) error {
-	if client == nil {
-		return nil
-	}
-	return func(ctx context.Context) error { return client.Ping(ctx).Err() }
-}
-
-func newRedisClient(cfg config.Config, logger *observability.Logger) *redis.Client {
+// newRedisClient 根据 REDIS_URL 创建并 ping 校验 Redis client。
+//
+// 返回值语义（三态，日志由调用方统一打，便于单测）：
+//   - (nil, nil)：未配置 Redis——单实例是显式支持的默认模式，Info 级说明即可；
+//   - (nil, err)：**显式配置了但不可用**（URL 解析失败 / ping 失败）：幂等、限流、
+//     热缓存与跨实例广播整体退化为单实例，调用方必须打 Error 级降级日志；
+//   - (client, nil)：可用。
+//
+// 失败时丢弃 client（fail-fast 降级）：半死连接只会让每条热路径命令各自等超时。
+// err 已脱敏（见 sanitizeRedisStartupErr），可直接落日志。
+func newRedisClient(cfg config.Config) (*redis.Client, error) {
 	if cfg.RedisURL == "" {
-		logger.Info("redis not configured, realtime hub running in single-instance mode")
-		return nil
+		return nil, nil
 	}
 	opts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {
-		logger.Error("invalid redis url, falling back to single-instance mode", "err", err)
-		return nil
+		return nil, fmt.Errorf("parse REDIS_URL: %w", sanitizeRedisStartupErr(err))
 	}
 	// fail-slow（审计 perf P2-5）：Redis 故障/网络分区时命令必须在秒级失败并
 	// 降级，而不是挂到调用方 ctx 超时（resume 2s / ratelimit 2s）甚至无限阻塞，
@@ -345,11 +373,74 @@ func newRedisClient(cfg config.Config, logger *observability.Logger) *redis.Clie
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		logger.Error("redis connection failed, falling back to single-instance mode", "err", err)
-		rdb.Close()
-		return nil
+		_ = rdb.Close()
+		return nil, fmt.Errorf("ping redis %s: %w", opts.Addr, sanitizeRedisStartupErr(err))
 	}
-	return rdb
+	return rdb, nil
+}
+
+// sanitizeRedisStartupErr 脱敏 Redis 启动错误：net/url 的 *url.Error 会把
+// **完整 URL（含口令）**拼进 Error()，直接落日志/告警即泄露凭据。这里只保留
+// 底层原因（如 invalid port / missing port），其余错误原样返回——go-redis 的
+// 连接错误只含 host:port，不含 userinfo。
+func sanitizeRedisStartupErr(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) && urlErr.Err != nil {
+		return urlErr.Err
+	}
+	return err
+}
+
+// redisEndpoint 返回脱敏后的 Redis 端点（scheme://host[:port][/db]）用于日志
+// 关联：运维需要知道连的是哪个实例，但 userinfo（用户名/口令）绝不能进日志。
+// 解析失败时不回显原值，返回占位串。
+func redisEndpoint(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return "<invalid redis endpoint>"
+	}
+	endpoint := u.Scheme + "://" + u.Host
+	if u.Path != "" && u.Path != "/" {
+		endpoint += u.Path
+	}
+	return endpoint
+}
+
+// redisReadinessProbe 返回就绪探针用的 Redis 检查函数：
+//   - 未配置（无 client 且无启动错误）→ nil，探针按 ok 处理（单实例是支持的模式）；
+//   - 已配置且可用 → 每次探测实时 Ping，失败计入 degraded 但不阻塞接流量——限流/
+//     幂等在 Redis 故障时 fail-open（审计 ops P0-2）；
+//   - 已配置但启动探测失败 → 固定返回启动错误：client 已丢弃且进程内不会重连，
+//     就绪面必须持续显示 degraded，而不是误报全绿。
+func redisReadinessProbe(client *redis.Client, startupErr error) func(context.Context) error {
+	if client != nil {
+		return func(ctx context.Context) error { return client.Ping(ctx).Err() }
+	}
+	if startupErr != nil {
+		return func(context.Context) error { return startupErr }
+	}
+	return nil
+}
+
+// registerRedisStartupMetric 暴露启动期 Redis 降级状态（1=显式配置但不可达）。
+// 用 Gauge 而非计数器：启动 ping 失败后 client 被丢弃、进程内不会重连，降级是
+// 持续状态（恢复需重启），hotspot_redis_startup_degraded == 1 才能被告警规则
+// 稳定捕获；计数器只在重启瞬间 +1，容易被 5 分钟速率窗口与 for 时长吃掉。
+// 未配置 Redis 时同样暴露 0，保持指标序列连续（生产 Validate 强制要求配置）。
+func registerRedisStartupMetric(degraded bool) {
+	observability.Register(newRedisStartupDegradedGauge(degraded))
+}
+
+// newRedisStartupDegradedGauge 构造降级状态 gauge（拆分出来便于单测断言取值）。
+func newRedisStartupDegradedGauge(degraded bool) prometheus.Collector {
+	value := 0.0
+	if degraded {
+		value = 1
+	}
+	return prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "hotspot_redis_startup_degraded",
+		Help: "启动时显式配置了 Redis 但不可达（1=已降级为单实例幂等/限流/跨实例广播；恢复需重启）",
+	}, func() float64 { return value })
 }
 
 // redisPinger adapts a redis client into the health-probe function signature
@@ -364,9 +455,8 @@ func redisPinger(rdb *redis.Client) func(context.Context) error {
 // initRedisBridgeFromClient starts the realtime pub/sub bridge using rdb.
 // instanceID 必须与注入 RedisResumeStore 的 origin 同源（组合脚本发布的信封
 // 靠它跳过自收消息，见 NewApp 内的创建顺序）。
-// Takes ownership of rdb: when no bridge is created (nil client or init
-// failure) the caller is responsible for closing rdb; when a bridge is created
-// its Close() closes the underlying client.
+// 不接管 rdb 生命周期：RedisBridge.Close 只退订阅、不关闭共享 client（resume/
+// 健康探针/缓存仍在用），client 统一由 App.Shutdown 关闭（见 App.redis）。
 func initRedisBridgeFromClient(cfg config.Config, logger *observability.Logger, rdb *redis.Client, instanceID string, hub *realtime.Hub) *realtime.RedisBridge {
 	if rdb == nil {
 		return nil

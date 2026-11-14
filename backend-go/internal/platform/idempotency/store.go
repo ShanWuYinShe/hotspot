@@ -1,6 +1,7 @@
 package idempotency
 
 import (
+	"container/list"
 	"context"
 	"sync"
 	"time"
@@ -21,6 +22,15 @@ const (
 // expiry (callers see expired as StatusExpired → 22001), but without sweeping
 // the map grows unboundedly in long-lived processes.
 const sweepCadence = 5 * time.Minute
+
+// maxInMemoryRecords 是无 Redis 时进程内幂等存储的容量上限。记录本身带 TTL 且
+// 有后台 sweeper，但「每次请求都换新 Idempotency-Key 的重试/扫描流量」能在一次
+// 清扫周期内把 map 撑到任意大；有上限才能保证长跑进程内存有界。
+const maxInMemoryRecords = 10_000
+
+// capacitySweepInterval 是「容量已满时先物理清理过期记录」的冷却窗口：容量满后
+// 每条新写入都会触发容量检查，若每次都做 O(n) 过期扫描，插入路径会退化为 O(n)。
+const capacitySweepInterval = time.Minute
 
 type Record struct {
 	Key       string
@@ -52,12 +62,39 @@ type Store interface {
 	Delete(scope, key string)
 }
 
+// InMemoryStore 是单实例部署下的幂等存储：record 按 key 存 map，有效期由调用方
+// 传入的 ExpiresAt 决定（惰性过期 + 后台 Sweep 清理），并带容量上限防止长跑进程
+// 无界增长。
+//
+// 容量策略（records 与 order 双结构，均受 maxEntries 约束）：
+//   - 正常路径：写入时若已满，先按冷却窗口物理清理过期记录（过期优先）；
+//   - 仍满：按「最早写入」FIFO 淘汰（order 链表头部），最老的 key 最可能已过期，
+//     也最不可能再被客户端重试命中；被淘汰的 key 退化为「从未存在」（可重新占用），
+//     即容量压力下幂等保证让位于有界内存，仅在「短时间内新 key 数逼近上限」时发生。
 type InMemoryStore struct {
 	mu      sync.RWMutex
 	records map[string]Record
+	// order 记录写入先后（FIFO 淘汰顺序），elems 提供 O(1) 定位，避免记录被
+	// Delete/Sweep 删除后 order 里残留 key 造成第二份无界内存。
+	order             *list.List
+	elems             map[string]*list.Element
+	maxEntries        int
+	lastCapacitySweep time.Time
 }
 
-func NewInMemoryStore() *InMemoryStore { return &InMemoryStore{records: make(map[string]Record)} }
+// NewInMemoryStore 返回容量上限为 maxInMemoryRecords 的内存存储。
+func NewInMemoryStore() *InMemoryStore { return newInMemoryStore(maxInMemoryRecords) }
+
+// newInMemoryStore 允许自定义容量（maxEntries <= 0 表示不限制，仅供测试对比
+// 旧行为）；生产构造统一走 NewInMemoryStore。
+func newInMemoryStore(maxEntries int) *InMemoryStore {
+	return &InMemoryStore{
+		records:    make(map[string]Record),
+		order:      list.New(),
+		elems:      make(map[string]*list.Element),
+		maxEntries: maxEntries,
+	}
+}
 
 func composite(scope, key string) string { return scope + "::" + key }
 
@@ -106,14 +143,21 @@ func (s *InMemoryStore) Reserve(scope, key string, expiresAt time.Time) (Record,
 		return existing, false
 	}
 	rec := Record{Key: key, Scope: scope, Status: StatusProcessing, ExpiresAt: expiresAt}
-	s.records[k] = rec
+	s.addLocked(k, rec, now)
 	return rec, true
 }
 
 func (s *InMemoryStore) Save(record Record) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.records[composite(record.Scope, record.Key)] = record
+	k := composite(record.Scope, record.Key)
+	if _, ok := s.records[k]; !ok {
+		// 新 key 才受容量约束；覆写已有记录保持原有淘汰位置（completed 覆写
+		// processing 不应让记录「变成新写入」，否则 hot key 会因反复 Save 被误淘汰）。
+		s.addLocked(k, record, time.Now())
+		return
+	}
+	s.records[k] = record
 }
 
 // Delete removes the record immediately (no lazy expiry), so a retried
@@ -121,7 +165,7 @@ func (s *InMemoryStore) Save(record Record) {
 func (s *InMemoryStore) Delete(scope, key string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.records, composite(scope, key))
+	s.removeLocked(composite(scope, key))
 }
 
 // Sweep physically removes records whose ExpiresAt is in the past. Intended
@@ -129,10 +173,54 @@ func (s *InMemoryStore) Delete(scope, key string) {
 func (s *InMemoryStore) Sweep(now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.sweepExpiredLocked(now)
+	s.lastCapacitySweep = now
+}
+
+// addLocked 插入一条新记录并维护 FIFO 顺序；调用方必须持有写锁。
+func (s *InMemoryStore) addLocked(key string, record Record, now time.Time) {
+	s.ensureCapacityLocked(now)
+	s.records[key] = record
+	s.elems[key] = s.order.PushBack(key)
+}
+
+// removeLocked 同步删除 map 与 FIFO 链表（保持 order/elems 与 records 一致，
+// 否则内存上限只约束了 map，残留的链表节点会继续增长）。
+func (s *InMemoryStore) removeLocked(key string) {
+	delete(s.records, key)
+	if el, ok := s.elems[key]; ok {
+		s.order.Remove(el)
+		delete(s.elems, key)
+	}
+}
+
+// sweepExpiredLocked 物理清理过期记录；调用方必须持有写锁。
+func (s *InMemoryStore) sweepExpiredLocked(now time.Time) {
 	for k, rec := range s.records {
 		if now.After(rec.ExpiresAt) {
-			delete(s.records, k)
+			s.removeLocked(k)
 		}
+	}
+}
+
+// ensureCapacityLocked 在插入新 key 前腾出空间：先按冷却窗口清理过期记录
+// （过期优先，尊重不同端点的 TTL 差异），仍满则按最早写入淘汰。调用方必须持有
+// 写锁。
+func (s *InMemoryStore) ensureCapacityLocked(now time.Time) {
+	if s.maxEntries <= 0 || len(s.records) < s.maxEntries {
+		return
+	}
+	if now.Sub(s.lastCapacitySweep) >= capacitySweepInterval {
+		s.sweepExpiredLocked(now)
+		s.lastCapacitySweep = now
+	}
+	for len(s.records) >= s.maxEntries {
+		front := s.order.Front()
+		if front == nil {
+			// 理论不可达（records 与 order 同步维护）；兜底避免死循环。
+			return
+		}
+		s.removeLocked(front.Value.(string))
 	}
 }
 
