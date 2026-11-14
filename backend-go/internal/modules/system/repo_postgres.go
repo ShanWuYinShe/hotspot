@@ -219,24 +219,40 @@ func (r *PostgresRepository) UpdateAnnouncement(ctx context.Context, input Annou
 }
 
 func (r *PostgresRepository) DeleteAnnouncement(ctx context.Context, announcementID string) error {
-	queryable, err := r.queryable(ctx)
-	if err != nil {
-		return err
-	}
-	current, found, err := r.getAnnouncementByID(ctx, queryable, announcementID)
-	if err != nil {
-		return err
-	}
-	if !found {
-		return errAnnouncementNotFound
-	}
-	if current.IsDeleted() {
+	// 软删除公告与清理其稀疏已读行（announcement_reads）必须同事务：公告删除是
+	// 软删（deleted_at），不触发 067 迁移的外键 ON DELETE CASCADE；不同事务时
+	// 公告已不可见而 reads 行永久残留（无任何读路径能再删它们）。
+	deleted := false
+	err := persistence.RunInTransaction(ctx, r.factory, func(txCtx context.Context) error {
+		queryable, err := r.queryable(txCtx)
+		if err != nil {
+			return err
+		}
+		current, found, err := r.getAnnouncementByID(txCtx, queryable, announcementID)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return errAnnouncementNotFound
+		}
+		if current.IsDeleted() {
+			return nil
+		}
+		if err := queryable.Exec(txCtx, queryDeleteAnnouncement, announcementID, time.Now().UTC()); err != nil {
+			return err
+		}
+		if err := queryable.Exec(txCtx, queryDeleteAnnouncementReads, announcementID); err != nil {
+			return err
+		}
+		deleted = true
 		return nil
-	}
-	if err := queryable.Exec(ctx, queryDeleteAnnouncement, announcementID, time.Now().UTC()); err != nil {
+	})
+	if err != nil {
 		return err
 	}
-	r.InvalidateAnnouncementsVersion()
+	if deleted {
+		r.InvalidateAnnouncementsVersion()
+	}
 	return nil
 }
 

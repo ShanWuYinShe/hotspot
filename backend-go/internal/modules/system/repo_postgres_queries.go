@@ -87,4 +87,11 @@ UPDATE system_announcements
 SET deleted_at = $2,
     updated_at = $2
 WHERE announcement_id = $1 AND deleted_at IS NULL`
+
+	// queryDeleteAnnouncementReads 清理公告的稀疏已读行（announcement_reads）。
+	// 公告删除是软删（deleted_at），不会触发 067 迁移的外键 ON DELETE CASCADE，
+	// 不显式清理这些行会永久泄漏；与软删同事务执行（见 DeleteAnnouncement）。
+	queryDeleteAnnouncementReads = `
+DELETE FROM announcement_reads
+WHERE announcement_id = $1`
 )
