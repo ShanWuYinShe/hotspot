@@ -35,29 +35,67 @@ func buildTestJPEG(withEXIF bool) []byte {
 	return out
 }
 
-// buildTestWebP 构造最小 RIFF/WebP 容器：VP8L 图像 chunk + 可选的
-// EXIF chunk（奇数长度，验证 pad 处理）与 XMP chunk。
-func buildTestWebP(withMetadata bool) []byte {
-	chunk := func(fourCC string, payload []byte) []byte {
-		head := make([]byte, 8)
-		copy(head[0:4], fourCC)
-		binary.LittleEndian.PutUint32(head[4:8], uint32(len(payload)))
-		out := append(head, payload...)
-		if len(payload)%2 == 1 {
-			out = append(out, 0) // RIFF 奇数字节 pad
-		}
-		return out
+// webpChunk 构造一个 RIFF chunk：4 字节 FourCC + 4 字节小端 payload 长度 +
+// payload；payload 长度为奇数时补 1 字节 pad（pad 不计入长度，属容器布局）。
+func webpChunk(fourCC string, payload []byte) []byte {
+	head := make([]byte, 8)
+	copy(head[0:4], fourCC)
+	binary.LittleEndian.PutUint32(head[4:8], uint32(len(payload)))
+	out := append(head, payload...)
+	if len(payload)%2 == 1 {
+		out = append(out, 0) // RIFF 奇数字节 pad
 	}
-	body := chunk("VP8L", []byte("\x2f\x00\x00\x00\x00-image-bytes"))
-	if withMetadata {
-		body = append(body, chunk("EXIF", []byte("Exif-GPS-GPS"))...) // 奇数长度 → 带 pad
-		body = append(body, chunk("XMP ", []byte("<x:xmpmeta/>"))...)
-	}
+	return out
+}
+
+// appendWebPHeader 给 chunk 序列加 RIFF 头（size 字段 = body 长度 + 'WEBP'
+// 四字节自身，即文件总长 - 8）。
+func appendWebPHeader(body []byte) []byte {
 	header := make([]byte, 12)
 	copy(header[0:4], "RIFF")
 	binary.LittleEndian.PutUint32(header[4:8], uint32(len(body)+4))
 	copy(header[8:12], "WEBP")
 	return append(header, body...)
+}
+
+// buildTestWebP 构造最小 RIFF/WebP 容器：VP8L 图像 chunk + 可选的
+// EXIF chunk（奇数长度，验证 pad 处理）与 XMP chunk。
+func buildTestWebP(withMetadata bool) []byte {
+	body := webpChunk("VP8L", []byte("\x2f\x00\x00\x00\x00-image-bytes"))
+	if withMetadata {
+		body = append(body, webpChunk("EXIF", []byte("Exif-GPS-GPS"))...) // 奇数长度 → 带 pad
+		body = append(body, webpChunk("XMP ", []byte("<x:xmpmeta/>"))...)
+	}
+	return appendWebPHeader(body)
+}
+
+// vp8xPayload 返回 VP8X 的 10 字节 payload（RFC 9649 §2.5）：标志字节 + 3 字节
+// 保留 + 3 字节画布宽减一 + 3 字节画布高减一。本测试只关心标志字节。
+func vp8xPayload(flags byte) []byte {
+	return []byte{flags, 0, 0, 0, 0x03, 0x00, 0x00, 0x03, 0x00, 0x00}
+}
+
+// buildTestWebPWithVP8X 构造带 VP8X chunk 的 WebP：VP8X 必须是 RIFF 头后的
+// 第一个 chunk（容器规范），随后是图像 chunk 与可选的 EXIF（奇数长度，覆盖
+// pad）/XMP chunk。
+func buildTestWebPWithVP8X(flags byte, withMetadata bool) []byte {
+	body := webpChunk("VP8X", vp8xPayload(flags))
+	body = append(body, webpChunk("VP8L", []byte("\x2f\x00\x00\x00\x00-image-bytes"))...)
+	if withMetadata {
+		body = append(body, webpChunk("EXIF", []byte("Exif-GPS-GPS"))...)
+		body = append(body, webpChunk("XMP ", []byte("<x:xmpmeta/>"))...)
+	}
+	return appendWebPHeader(body)
+}
+
+// webpVP8XFlags 从容器里取出第一个 VP8X chunk 的标志字节（定位断言用：
+// RIFF 头 12 字节 + chunk 头 8 字节 = payload 起始偏移 20）。
+func webpVP8XFlags(t *testing.T, data []byte) byte {
+	t.Helper()
+	if len(data) < 20 || string(data[12:16]) != "VP8X" {
+		t.Fatalf("first chunk is not VP8X: % x", data[:min(32, len(data))])
+	}
+	return data[20]
 }
 
 // 防回归（P2-13）：WebP 的 EXIF/XMP chunk 必须被清洗（GPS 载体），图像
@@ -89,6 +127,73 @@ func TestStripWebPMetadataRemovesEXIFAndXMP(t *testing.T) {
 	// 截断容器（chunk 头越界）→ 解析错误（fail-open 由调用方处理）。
 	if _, _, err := stripImageMetadata(withMeta[:len(withMeta)-6]); err == nil {
 		t.Fatal("truncated webp should fail parsing")
+	}
+}
+
+// 第 81 轮审计残留：删除 EXIF/XMP chunk 后，VP8X 标志字节的 E/X 位必须同步
+// 清零（否则文件元数据「自述」仍声称含 EXIF/XMP，与实际内容不符）；其余标志
+// 位（I/L/A）不得被误清。
+func TestStripWebPMetadataClearsVP8XFlags(t *testing.T) {
+	const flags = webpVP8XFlagEXIF | webpVP8XFlagXMP | 0x02 // E + X + 动画位
+	src := buildTestWebPWithVP8X(flags, true)
+	cleaned, changed, err := stripImageMetadata(src)
+	if err != nil {
+		t.Fatalf("strip webp: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected EXIF/XMP chunks to be removed")
+	}
+	if bytes.Contains(cleaned, []byte("Exif-GPS-GPS")) || bytes.Contains(cleaned, []byte("x:xmpmeta")) {
+		t.Fatal("metadata payload still present after scrub")
+	}
+	if !bytes.Contains(cleaned, []byte("image-bytes")) {
+		t.Fatal("image chunk must be preserved")
+	}
+	if got := webpVP8XFlags(t, cleaned); got != 0x02 {
+		t.Fatalf("VP8X flags = %#x after scrub, want 0x02 (E/X cleared, animation kept)", got)
+	}
+	if got := binary.LittleEndian.Uint32(cleaned[4:8]); got != uint32(len(cleaned)-8) {
+		t.Fatalf("RIFF header size must be rewritten: got %d want %d", got, len(cleaned)-8)
+	}
+	// 清洗结果幂等：再清洗一次无改动、逐字节一致（fuzz 不变量同口径）。
+	again, changedAgain, err := stripImageMetadata(cleaned)
+	if err != nil || changedAgain || !bytes.Equal(again, cleaned) {
+		t.Fatalf("second scrub must be noop: changed=%v err=%v", changedAgain, err)
+	}
+}
+
+// 只删 EXIF（文件本就没有 XMP chunk）时只清 E 位、X 位保留——清洗只对本次
+// 删除的 chunk 负责，不猜测文件原有的不一致；标志位未置位时也不得凭空置位。
+func TestStripWebPMetadataClearsOnlyRemovedFlags(t *testing.T) {
+	const flags = webpVP8XFlagEXIF | webpVP8XFlagXMP
+	body := webpChunk("VP8X", vp8xPayload(flags))
+	body = append(body, webpChunk("VP8L", []byte("\x2f\x00\x00\x00\x00-image-bytes"))...)
+	body = append(body, webpChunk("EXIF", []byte("Exif-GPS-GPS"))...)
+	cleaned, changed, err := stripImageMetadata(appendWebPHeader(body))
+	if err != nil || !changed {
+		t.Fatalf("strip: changed=%v err=%v", changed, err)
+	}
+	if got := webpVP8XFlags(t, cleaned); got != webpVP8XFlagXMP {
+		t.Fatalf("VP8X flags = %#x, want X bit only (0x%x)", got, webpVP8XFlagXMP)
+	}
+
+	// 标志位为 0 但存在元数据 chunk：删除 chunk 后标志仍为 0（不凭空置位）。
+	zeroCleaned, changed, err := stripImageMetadata(buildTestWebPWithVP8X(0x00, true))
+	if err != nil || !changed {
+		t.Fatalf("strip zero flags: changed=%v err=%v", changed, err)
+	}
+	if got := webpVP8XFlags(t, zeroCleaned); got != 0x00 {
+		t.Fatalf("VP8X flags = %#x, want 0x00", got)
+	}
+}
+
+// 无 EXIF/XMP chunk 时即使 VP8X 标志位声称有元数据，清洗也不得改写（无修改
+// 即逐字节一致，fuzz 依赖该不变量判幂等）。
+func TestStripWebPMetadataNoopKeepsVP8XFlags(t *testing.T) {
+	src := buildTestWebPWithVP8X(webpVP8XFlagEXIF|webpVP8XFlagXMP, false)
+	cleaned, changed, err := stripImageMetadata(src)
+	if err != nil || changed || !bytes.Equal(cleaned, src) {
+		t.Fatalf("clean webp must be byte-identical: changed=%v err=%v", changed, err)
 	}
 }
 

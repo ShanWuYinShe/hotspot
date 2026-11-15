@@ -83,6 +83,7 @@ type mediaRepoOverride struct {
 	listErr      error
 	deleteRowErr error
 	getErr       error
+	usageErr     error
 }
 
 func (r *mediaRepoOverride) Get(ctx context.Context, uploadID string) (pendingUpload, bool, error) {
@@ -114,6 +115,13 @@ func (r *mediaRepoOverride) CompletedFileMetaByID(ctx context.Context, fileID st
 		return FileMeta{}, false, r.metaErr
 	}
 	return r.InMemoryRepository.CompletedFileMetaByID(ctx, fileID)
+}
+
+func (r *mediaRepoOverride) PendingUploadUsage(ctx context.Context, userID string) (PendingUploadUsage, error) {
+	if r.usageErr != nil {
+		return PendingUploadUsage{}, r.usageErr
+	}
+	return r.InMemoryRepository.PendingUploadUsage(ctx, userID)
 }
 
 func (r *mediaRepoOverride) ListStaleUploads(ctx context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {

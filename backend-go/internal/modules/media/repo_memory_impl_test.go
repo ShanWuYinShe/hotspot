@@ -113,6 +113,23 @@ func (r *InMemoryRepository) CompletedFileMetaByID(_ context.Context, fileID str
 	return FileMeta{}, false, nil
 }
 
+// PendingUploadUsage 与 PG 的 queryPendingUploadUsage 同口径：只统计该用户
+// status <> 'completed' 的会话；声明字节按 declared_file_size 求和（不可信，
+// 仅作预签名配额的粗闸门）。
+func (r *InMemoryRepository) PendingUploadUsage(_ context.Context, userID string) (PendingUploadUsage, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var usage PendingUploadUsage
+	for _, item := range r.uploads {
+		if item.Completed || item.UserID != userID {
+			continue
+		}
+		usage.Count++
+		usage.DeclaredBytes += int64(item.DeclaredFileSize)
+	}
+	return usage, nil
+}
+
 func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

@@ -15,9 +15,10 @@ import (
 )
 
 type mediaErrorRepo struct {
-	saveErr     error
-	getErr      error
-	completeErr error
+	saveErr         error
+	getErr          error
+	completeErr     error
+	pendingUsageErr error
 }
 
 func (r *mediaErrorRepo) Save(context.Context, pendingUpload) error { return r.saveErr }
@@ -27,6 +28,12 @@ func (r *mediaErrorRepo) Get(context.Context, string) (pendingUpload, bool, erro
 
 func (r *mediaErrorRepo) ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error) {
 	return nil, nil
+}
+
+// 预签名配额聚合：默认零用量（不占配额），pendingUsageErr 用于触发聚合查询
+// 失败分支（应映射 10600，而非业务拒绝）。
+func (r *mediaErrorRepo) PendingUploadUsage(context.Context, string) (PendingUploadUsage, error) {
+	return PendingUploadUsage{}, r.pendingUsageErr
 }
 func (r *mediaErrorRepo) DeleteUploadRow(context.Context, string) error { return nil }
 

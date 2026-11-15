@@ -118,6 +118,38 @@ func TestSweepStaleUploadsDeletesObjectAndRow(t *testing.T) {
 	}
 }
 
+// 保留期策略取值锁定（第 81 轮审计 DoS 残留）：7 天 / 100 条每轮的窗口过长，
+// 收紧为 2 天 / 500 条每轮。常量为编译期值，用断言防止后续调参悄悄回退。
+func TestRetentionPolicyValues(t *testing.T) {
+	if staleUploadRetentionDays != 2 {
+		t.Fatalf("staleUploadRetentionDays = %d, want 2", staleUploadRetentionDays)
+	}
+	if staleUploadBatchLimit != 500 {
+		t.Fatalf("staleUploadBatchLimit = %d, want 500", staleUploadBatchLimit)
+	}
+}
+
+// 保留期边界：1 天前的会话仍在重试窗口内不得清理；2 天 + 1 小时前的算超期。
+func TestSweepStaleUploadsUsesTwoDayCutoff(t *testing.T) {
+	svc, repo, provider := newRetentionService(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	seedPendingUpload(t, repo, "upload_within_retention", now.Add(-24*time.Hour))
+	seedPendingUpload(t, repo, "upload_past_retention", now.Add(-(2*24+1)*time.Hour))
+
+	svc.sweepStaleUploads(ctx)
+
+	if _, found, _ := repo.Get(ctx, "upload_within_retention"); !found {
+		t.Fatal("upload within 2-day retention window must be kept")
+	}
+	if _, found, _ := repo.Get(ctx, "upload_past_retention"); found {
+		t.Fatal("upload past 2-day retention window must be swept")
+	}
+	if keys := provider.deletedKeys(); len(keys) != 1 || keys[0] != "uploads/upload_past_retention" {
+		t.Fatalf("deleted objects = %v, want [uploads/upload_past_retention]", keys)
+	}
+}
+
 func TestSweepStaleUploadsKeepsRowWhenObjectDeleteFails(t *testing.T) {
 	svc, repo, provider := newRetentionService(t)
 	ctx := context.Background()

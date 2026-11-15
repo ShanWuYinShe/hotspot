@@ -246,6 +246,20 @@ WHERE file_id = $1 AND status = 'completed'`
 	return meta, true, nil
 }
 
+// PendingUploadUsage 按 user_id 聚合未完成上传会话数与声明字节总量
+// （预签名配额判定，见 queryPendingUploadUsage）。空集返回零值 (0, 0)。
+func (r *PostgresRepository) PendingUploadUsage(ctx context.Context, userID string) (PendingUploadUsage, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return PendingUploadUsage{}, err
+	}
+	var usage PendingUploadUsage
+	if err := queryable.QueryRow(ctx, queryPendingUploadUsage, userID).Scan(&usage.Count, &usage.DeclaredBytes); err != nil {
+		return PendingUploadUsage{}, err
+	}
+	return usage, nil
+}
+
 // ListStaleUploads 返回超过保留期仍未完成的会话（按 created_at 升序，
 // 旧行优先处理），供保留期 GC 逐条删对象+删行。
 func (r *PostgresRepository) ListStaleUploads(ctx context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {

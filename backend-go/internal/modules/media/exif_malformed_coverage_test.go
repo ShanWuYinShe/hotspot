@@ -82,6 +82,9 @@ func FuzzStripImageMetadata(f *testing.F) {
 		buildTestJPEGWithFillBytes(2),
 		buildTestWebP(true),
 		buildTestWebP(false),
+		// 带 VP8X 的容器（含 E/X 标志位）：覆盖「删 chunk 后清标志」路径。
+		buildTestWebPWithVP8X(webpVP8XFlagEXIF|webpVP8XFlagXMP|0x02, true),
+		buildTestWebPWithVP8X(webpVP8XFlagEXIF, false),
 		pngSeed,
 		{0xFF, 0xD8, 0xFF, 0xE1, 0x7F, 0xFF, 0x01, 0x02},                     // JPEG 段长越界
 		{0xFF, 0xD8, 0xFF, 0xFF, 0xFF},                                       // 纯填充后截断

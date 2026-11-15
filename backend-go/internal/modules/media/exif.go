@@ -17,8 +17,10 @@ import (
 // "Raw profile type exif"、"Raw profile type xmp"）。
 // WebP（RIFF 容器）删除 EXIF 与 XMP chunk（P2-13：此前走 default 原样
 // 放行，WebP 的 EXIF chunk 同样携带 GPS，魔数校验放行 webp 而清洗跳过
-// 属覆盖缺口）。其余格式原样返回。解析失败返回错误——调用方按
-// fail-open 处理（保留原文件并告警），不能因清洗失败阻塞合法上传。
+// 属覆盖缺口），并同步清 VP8X 标志字节的 EXIF/XMP 位（第 81 轮审计残留：
+// 只删 chunk 不清标志会让文件「自述」与实际不一致）。其余格式原样返回。
+// 解析失败返回错误——调用方按 fail-open 处理（保留原文件并告警），不能因
+// 清洗失败阻塞合法上传。
 
 var errMalformedJPEG = errors.New("exif: malformed jpeg")
 var errMalformedPNG = errors.New("exif: malformed png")
@@ -177,18 +179,33 @@ func isWebP(data []byte) bool {
 	return len(data) >= 12 && string(data[0:4]) == "RIFF" && string(data[8:12]) == "WEBP"
 }
 
+// VP8X 标志字节（WebP 容器规范 RFC 9649 §2.5）：标志位于 10 字节 payload
+// 的首字节，I=0x20/L=0x10/E(EXIF)=0x08/X(XMP)=0x04/A(动画)=0x02。
+const (
+	webpVP8XFlagEXIF = 0x08
+	webpVP8XFlagXMP  = 0x04
+)
+
 // stripWebPMetadata 按 RIFF chunk 遍历删除 WebP 的元数据 chunk：
 // "EXIF"（EXIF/GPS 载体）与 "XMP "（XMP 元数据，与 JPEG 删全部 APPn
 // 的口径对齐）。VP8/VP8L/VP8X/ANMF/ALPH 等图像数据 chunk 原样保留，
 // 不解码重编码（无质量损失、无新增依赖）。删除 chunk 后同步改写 RIFF
-// 头的大小字段（文件总长-8）。chunk 边界按 RIFF 规范处理奇数字节的
-// pad 字节（pad 不计入 chunk size，但属于容器布局，原样随邻块拷贝）。
+// 头的大小字段（文件总长-8），并把 VP8X 标志字节中已无对应 chunk 的
+// E/X 位清零（第 81 轮审计：只删 chunk 不清标志时，文件元数据「自述」
+// 仍声称含 EXIF/XMP，与容器实际内容不符）。chunk 边界按 RIFF 规范处理
+// 奇数字节的 pad 字节（pad 不计入 chunk size，但属于容器布局，原样随邻块
+// 拷贝）。
 func stripWebPMetadata(data []byte) ([]byte, bool, error) {
 	var out bytes.Buffer
 	out.Grow(len(data))
 	out.Write(data[:12])
 	pos := 12
 	changed := false
+	removedEXIF, removedXMP := false, false
+	// VP8X 在遍历中记录标志字节位于输出缓冲的偏移，待确定删除了哪些元数据
+	// chunk 后统一清位（VP8X 规范上是第一个 chunk，但畸形文件可能出现在后面，
+	// 按出现位置记录即可）。size < 1 的畸形 VP8X 没有标志字节，不处理。
+	var vp8xFlagOffsets []int
 	for pos+8 <= len(data) {
 		chunkType := string(data[pos : pos+4])
 		size := int(binary.LittleEndian.Uint32(data[pos+4 : pos+8]))
@@ -199,9 +216,18 @@ func stripWebPMetadata(data []byte) ([]byte, bool, error) {
 		if paddedEnd > len(data) {
 			return nil, false, errMalformedWebP
 		}
-		if chunkType == "EXIF" || chunkType == "XMP " {
+		switch chunkType {
+		case "EXIF":
 			changed = true
-		} else {
+			removedEXIF = true
+		case "XMP ":
+			changed = true
+			removedXMP = true
+		default:
+			if chunkType == "VP8X" && size >= 1 {
+				// payload 起始 = 当前输出长度 + 8 字节 chunk 头。
+				vp8xFlagOffsets = append(vp8xFlagOffsets, out.Len()+8)
+			}
 			out.Write(data[pos:paddedEnd])
 		}
 		pos = paddedEnd
@@ -210,11 +236,23 @@ func stripWebPMetadata(data []byte) ([]byte, bool, error) {
 		return nil, false, errMalformedWebP
 	}
 	result := out.Bytes()
-	if changed {
-		// RIFF 头 size 字段 = 文件总长 - 8（'RIFF' 四字节自身不计）；删除
-		// chunk 后必须改写，否则容器声明长度与实际不符。未删除时保留原字节，
-		// 维持「无修改即逐字节一致」的约定（畸形容器也不静默改写）。
-		binary.LittleEndian.PutUint32(result[4:8], uint32(len(result)-8))
+	if !changed {
+		// 无元数据 chunk 时逐字节原样返回：VP8X 标志位即使与实际不符也不能
+		// 借清洗之名改写（无修改即一致的约定，fuzz 也依赖它判幂等）。
+		return result, false, nil
 	}
-	return result, changed, nil
+	// RIFF 头 size 字段 = 文件总长 - 8（'RIFF' 四字节自身不计）；删除
+	// chunk 后必须改写，否则容器声明长度与实际不符。
+	binary.LittleEndian.PutUint32(result[4:8], uint32(len(result)-8))
+	var clearFlags byte
+	if removedEXIF {
+		clearFlags |= webpVP8XFlagEXIF
+	}
+	if removedXMP {
+		clearFlags |= webpVP8XFlagXMP
+	}
+	for _, offset := range vp8xFlagOffsets {
+		result[offset] &^= clearFlags
+	}
+	return result, true, nil
 }

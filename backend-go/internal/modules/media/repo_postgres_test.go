@@ -27,6 +27,8 @@ func (r mediaRowValues) Scan(dest ...any) error {
 			*d = r.values[i].(string)
 		case *int:
 			*d = r.values[i].(int)
+		case *int64:
+			*d = r.values[i].(int64)
 		case *MediaCategory:
 			*d = r.values[i].(MediaCategory)
 		case *time.Time:

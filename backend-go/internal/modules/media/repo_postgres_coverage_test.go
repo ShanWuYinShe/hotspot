@@ -86,6 +86,9 @@ func TestPostgresRepositoryWithoutQueryableReturnsNotImplemented(t *testing.T) {
 	if err := repo.DeleteUploadRow(ctx, "upload_mediacov"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("DeleteUploadRow = %v, want ErrNotImplemented", err)
 	}
+	if _, err := repo.PendingUploadUsage(ctx, "u_mediacov"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("PendingUploadUsage = %v, want ErrNotImplemented", err)
+	}
 }
 
 func TestPostgresRepositoryPropagatesScanErrors(t *testing.T) {
@@ -192,6 +195,35 @@ func TestPostgresRepositoryListStaleUploadsPaths(t *testing.T) {
 	}
 	if items[0].UploadID != "upload_mediacov" || items[0].StorageKey != "uploads/u1/upload_mediacov.png" || items[0].UserID != "u1" {
 		t.Fatalf("stale item = %#v", items[0])
+	}
+}
+
+// 预签名配额聚合的仓库分支：查询错误透传、空集零值、行值映射正确。
+func TestPostgresRepositoryPendingUploadUsagePaths(t *testing.T) {
+	ctx := context.Background()
+
+	scanErr := errors.New("scan boom")
+	errBackend := &mediaScriptedBackend{rowByQuery: map[string]persistence.Row{
+		queryPendingUploadUsage: mediaRowValues{err: scanErr},
+	}}
+	if _, err := NewPostgresRepository(newMediaFactory(errBackend)).PendingUploadUsage(ctx, "u_mediacov"); !errors.Is(err, scanErr) {
+		t.Fatalf("scan error = %v, want %v", err, scanErr)
+	}
+
+	emptyBackend := &mediaScriptedBackend{rowByQuery: map[string]persistence.Row{
+		queryPendingUploadUsage: mediaRowValues{values: []any{int64(0), int64(0)}},
+	}}
+	usage, err := NewPostgresRepository(newMediaFactory(emptyBackend)).PendingUploadUsage(ctx, "u_mediacov")
+	if err != nil || usage.Count != 0 || usage.DeclaredBytes != 0 {
+		t.Fatalf("empty usage = %#v err=%v", usage, err)
+	}
+
+	okBackend := &mediaScriptedBackend{rowByQuery: map[string]persistence.Row{
+		queryPendingUploadUsage: mediaRowValues{values: []any{int64(3), int64(2048)}},
+	}}
+	usage, err = NewPostgresRepository(newMediaFactory(okBackend)).PendingUploadUsage(ctx, "u_mediacov")
+	if err != nil || usage.Count != 3 || usage.DeclaredBytes != 2048 {
+		t.Fatalf("usage = %#v err=%v", usage, err)
 	}
 }
 

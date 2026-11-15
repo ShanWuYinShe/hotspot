@@ -92,6 +92,17 @@ WHERE file_id = ANY($1)
   AND user_id = $2
   AND category = $3
   AND status = 'completed'`
+
+	// queryPendingUploadUsage 预签名配额的用户级聚合：只统计未完成会话
+	// （status <> 'completed'）。user_id 命中 idx_media_upload_sessions_user_created_at
+	// 的前缀，单用户行数很少（配额的 purpose 正是把它压在个位数）。COUNT 返回
+	// int8、SUM(integer) 返回 int8，统一 cast ::bigint 避免驱动层整数宽度差异；
+	// 空集由 COALESCE 保证返回 0（SUM 空集为 NULL）。
+	queryPendingUploadUsage = `
+SELECT COUNT(*)::bigint,
+       COALESCE(SUM(declared_file_size), 0)::bigint
+FROM media_upload_sessions
+WHERE user_id = $1 AND status <> 'completed'`
 )
 
 // 账户注销级联（user_purge.go）：Service 层在删除会话行之前先取出该用户全部

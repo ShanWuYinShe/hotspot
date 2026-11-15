@@ -25,6 +25,10 @@ var (
 	ErrUploadNotReady      = errors.New("media: upload not ready")
 	ErrUploadConflict      = errors.New("media: upload conflict")
 	ErrMediaNotOwned       = errors.New("media: file not owned by user or not ready")
+	// ErrUploadQuotaExceeded 该用户未完成上传会话数/声明字节总量已达配额
+	// （见 checkPresignQuota）：拒绝签发新上传 URL，客户端应完成已有上传或
+	// 等待弃置会话过期（handler 映射 spec 10400 业务冲突）。
+	ErrUploadQuotaExceeded = errors.New("media: pending upload quota exceeded")
 )
 
 type Service struct {
@@ -75,6 +79,12 @@ func (s *Service) Presign(ctx context.Context, req PresignFileInput) (PresignedU
 	if err := validatePresignUploadRequest(req, s.maxFileSize(req.Category)); err != nil {
 		return PresignedUpload{}, err
 	}
+	if err := s.checkPresignQuota(ctx, principal.UserID, []PresignFileInput{req}); err != nil {
+		if !errors.Is(err, ErrUploadQuotaExceeded) {
+			observability.FromContext(ctx).Error("media.presign quota check failed", "error", err)
+		}
+		return PresignedUpload{}, err
+	}
 	upload, err := s.provider.Presign(ctx, req, principal.UserID)
 	if err != nil {
 		observability.FromContext(ctx).Error("media.presign provider failed", "error", err)
@@ -107,6 +117,14 @@ func (s *Service) BatchPresign(ctx context.Context, files []PresignFileInput) (P
 		if err := validatePresignUploadRequest(file, s.maxFileSize(file.Category)); err != nil {
 			return PresignedUploads{}, err
 		}
+	}
+	// 预签名配额：按用户聚合未完成会话数与声明字节总量，超限整批拒绝（与
+	// spec「任一文件校验失败则整批失败、不部分预签名」的原子语义一致）。
+	if err := s.checkPresignQuota(ctx, principal.UserID, files); err != nil {
+		if !errors.Is(err, ErrUploadQuotaExceeded) {
+			observability.FromContext(ctx).Error("media.batch_presign quota check failed", "error", err)
+		}
+		return PresignedUploads{}, err
 	}
 	uploads := make([]PresignedUpload, 0, len(files))
 	for _, file := range files {
@@ -163,6 +181,45 @@ func (s *Service) publishImageObject(ctx context.Context, uploadKey, publishedKe
 	}
 	observability.FromContext(ctx).Info("image metadata scrubbed", "upload_key", uploadKey, "published_key", publishedKey, "bytes_before", len(data), "bytes_after", len(cleaned))
 	return nil
+}
+
+// 预签名配额（第 81 轮审计残留：预签名 PUT 的 body 大小不受签名约束——
+// 声明 1 字节仍可 PUT 到 nginx client_max_body_size 100m；未完成会话在保留期
+// 内持续占用存储/带宽，连续 presign 弃置即是存储放大面）。阈值只是抑制
+// 「海量 presign 弃置」的粗闸门：declared_file_size 由客户端声明、不可信，
+// 真实 body 由网关 100m 上限兜底，弃置会话由保留期 GC（2 天）兜底清理。
+const (
+	// pendingUploadSessionLimit 单用户未完成上传会话数上限（正常单次业务
+	// 上传 1~9 个文件且立即 complete，20 留足慢网/多业务并行余量）。
+	pendingUploadSessionLimit = 20
+	// pendingUploadBytesLimit 单用户未完成会话声明字节总量上限（200MB）。
+	pendingUploadBytesLimit = 200 * 1024 * 1024
+)
+
+// checkPresignQuota 按用户校验「未完成上传」配额：会话数或声明字节总量
+// （已有 + 本次批量）超限时返回 ErrUploadQuotaExceeded，调用方整批拒绝。
+// 限额判断包含本次批量，避免「先签满再逐次追加」绕过单文件上限。
+// 配额是粗粒度闸门而非精确计费：检查与 Save 非原子，并发请求可小幅超限，
+// 目标是抑制单账号无限放大，不是保证严格上限。
+func (s *Service) checkPresignQuota(ctx context.Context, userID string, files []PresignFileInput) error {
+	usage, err := s.repo.PendingUploadUsage(ctx, userID)
+	if err != nil {
+		return err
+	}
+	batchSessions := int64(len(files))
+	var batchBytes int64
+	for _, file := range files {
+		batchBytes += int64(file.FileSize)
+	}
+	if usage.Count+batchSessions <= pendingUploadSessionLimit && usage.DeclaredBytes+batchBytes <= pendingUploadBytesLimit {
+		return nil
+	}
+	observability.FromContext(ctx).Warn("media.presign quota exceeded",
+		"pending_sessions", usage.Count,
+		"pending_declared_bytes", usage.DeclaredBytes,
+		"batch_sessions", batchSessions,
+		"batch_declared_bytes", batchBytes)
+	return ErrUploadQuotaExceeded
 }
 
 func (s *Service) Complete(ctx context.Context, uploadID string) (UploadedMedia, error) {
