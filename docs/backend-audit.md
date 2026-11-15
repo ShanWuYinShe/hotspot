@@ -3932,10 +3932,10 @@ staticcheck U1000（-tests=false）清零。
   同款，即使 PUT 正确长度也 403 SignatureDoesNotMatch），该路线排除。批次 5 加粗闸门（≤20 条 /
   ≤200MB / 保留期 2 天 / GC 500 条每轮），批次 8 追加失败重试释放与 15 分钟弃置清理，避免失败重试
   被锁 2 天。
-- **媒体存储回收边界（部分收敛）**：批次 9 已加账号级完成态媒体配额（2GiB/账号粗闸门，检查与
-  提交非原子）与 uploads/ 前缀孤儿对象清理（S3 ListObjectsV2 + DB 引用判定、2 天保留期、单轮
-  有界）。剩余：published/ 前缀孤儿（批量 complete 中途失败留下的发布副本，可同构后续实现）；
-  完成态媒体无「未被业务引用」回收（无媒体删除 API，上传后不挂载也计入配额，命中上限持续
+- **媒体存储回收边界（已基本收敛）**：账号级完成态媒体配额（2GiB/账号粗闸门，检查与提交非
+  原子）、uploads/ 与 published/ 前缀孤儿对象清理（S3 ListObjectsV2 + DB 引用判定、2 天保留期、
+  单轮有界；published/ 跨轮 continuation 游标，多环境共享同一 bucket 时不得开启）均已上线。
+  剩余：完成态媒体无「未被业务引用」回收（无媒体删除 API，上传后不挂载也计入配额，命中上限持续
   10400）——需产品/契约决定；配额为常量（spec AppLimits 无账号存储配额字段，运营可调需先扩 spec）。
 - **扩展名×MIME 严格一致兼容风险（残留）**：浏览器对未知类型回落 `application/octet-stream` 的已
   登记扩展名会被拒；如线上客诉应按真实客户端 MIME 补表，而不是放宽契约。
@@ -4152,3 +4152,25 @@ P1=6、P2=8），批次 8 修复全部 P1 与可快速闭环的 P2：
 验证：gofmt/build/vet 全绿；media/outbox/bootstrap 单测与 `-race` 全绿；真实库临时库 IT（media
 97.5% 覆盖、outbox 领取计划回归、迁移 072 verify、media 存储治理 5/5）通过；全模块 IT 17 包 +
 platform + bootstrap + archtest 全绿；`check-migrations.sh`/manifest 一致；gosec 0 issue；PR CI 全绿。
+
+### 十三、批次 10 修复（2026-11-15）
+
+- **published/ 前缀孤儿清理**：孤儿清理泛化为 uploads/ + published/ 两前缀共用逻辑（每前缀独立
+  预算、uploads 先跑，60s/30s、各 20 页/500 删）；published/ 只删「早于 2 天且 DB 无任何行引用」
+  对象，并把同 upload 兄弟键（uploads/<userID>/<uploadID>.<ext>）纳入引用判定，关闭「超期
+  pending 会话重试 complete 与删除」的窄 TOCTOU；2 天远大于 Prepare→Commit 在途窗口，完成态
+  媒体不会误删；published/ 跨轮推进 continuation token（进程内游标、最终覆盖），解决完成态媒体
+  无界增长下「每轮首页窗口永远扫不到」的问题；同一 bucket 仅服务同一环境/DB 时才可开启（代码
+  注释与文档注明）。
+- 验证：media 包 97.8% 覆盖、真实库 published 孤儿清理 IT 4/4（引用保留/在途兄弟键保留/未过期
+  保留/孤儿删除）、dev SeaweedFS 手工冒烟（临时 published 前缀删 2 留 1、二次列举 0 残留）、
+  gosec 0 issue、全模块 IT + platform + bootstrap + archtest 全绿；未新增迁移。
+
+### 十四、本轮结论（第 81-82 轮审计可执行项收口）
+
+第 81 轮审计（批次 1-6）与第 82 轮审计（批次 8）及其后续批次 9、10 已把「纯后端可闭环」的审计
+项全部完成；剩余三类的处理依赖产品/客户端/存储侧决策，已记录在「三、已复核、本轮未修」：
+
+1. 完成态媒体无「业务引用」回收与账号存储配额运营化（需 spec/产品定义媒体删除语义与配额字段）；
+2. 未完成上传 body 大小精确约束（需 S3 POST policy（客户端协议）或存储侧配额）；
+3. moment 分享封面口径（产品确认）。
