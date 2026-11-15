@@ -99,7 +99,7 @@ updated_at = NOW()`
 	updated_at = NOW()`
 
 	// queryCountUnreadPrivateMessagesForUser 当前用户全部私聊会话的未读消息
-	// 总数（冷启动 unread_summary 聚合，一条 COUNT 汇总）。逐会话口径与
+	// 总数（冷启动 unread_summary 聚合，一条 SQL 汇总）。逐会话口径与
 	// privatemessages 的 queryUnreadPrivateMessageCount /
 	// queryUnreadPrivateMessageCountsByChatKeys 逐字一致（已读游标含同一
 	// sent_at 下 message_id 的边界处理、排除本人发送与已撤回消息），外层再叠加
@@ -108,28 +108,42 @@ updated_at = NOW()`
 	//     同 buildChats 的 visibleBoundary，SQL 用 COALESCE 兜底旧行）；
 	//   - JOIN users peer ... is_deleted = FALSE：对方注销后会话在列表中不可达
 	//     （queryListPrivateChats 同样过滤），此处计入会形成无法清除的角标。
-	// 驱动表为 private_chats（idx_private_chats_user_a/b），消息侧走
-	// idx_private_messages_chat_key_sent_at。
+	//
+	// 性能（第 82 轮审计 C-P1-1）：此前的写法把 private_messages 与私聊/已读
+	// 状态整表 JOIN 后 COUNT，未读游标的 OR 谓词无法下推成索引范围条件，规划器
+	// 实测退化为对全库消息表的 Seq Scan（167 万行 ≈ 230ms / 20000+ buffers，
+	// 且随全站聊天历史线性增长）。改为「每个会话一个 LATERAL 子查询」后，未读
+	// 区间写成单次比较 sent_at >= COALESCE(last_read_sent_at, '-infinity')，
+	// 可下推为 idx_private_messages_chat_key_sent_at 的 Index Cond，只扫未读
+	// 区间；边界行（sent_at = last_read_sent_at）仍保留原 OR 语义在 LATERAL 内
+	// 过滤，故结果与改写前逐行一致——包括 last_read_message_id 为 NULL 的边界：
+	// 该列 ON DELETE SET NULL，被指向的消息删除后只剩 last_read_sent_at，同刻
+	// 消息仍按「已读」排除（不能简化成 NOT(... = last_read_message_id)）。
+	// 驱动表为 private_chats（idx_private_chats_user_a/b），LATERAL 每会话一次
+	// 索引计数。SUM(bigint) 为 numeric，显式 ::bigint 与单条 COUNT 的类型对齐。
 	queryCountUnreadPrivateMessagesForUser = `
-	SELECT COUNT(*)
+	SELECT COALESCE(SUM(unread.cnt), 0)::bigint
 	FROM private_chats pc
 	LEFT JOIN private_chat_user_state pcs
 	  ON pcs.chat_key = pc.chat_key AND pcs.user_id = $1
 	JOIN users peer
 	  ON peer.user_id = (CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END)
 	 AND peer.is_deleted = FALSE
-	JOIN private_messages pm
-	  ON pm.chat_key = pc.chat_key
-	 AND pm.sender_user_id <> $1
-	 AND pm.is_recalled = FALSE
-	 AND (COALESCE(pcs.visible_since, pcs.deleted_at) IS NULL
-	      OR pm.sent_at > COALESCE(pcs.visible_since, pcs.deleted_at))
 	LEFT JOIN private_chat_read_state prs
 	  ON prs.chat_key = pc.chat_key AND prs.user_id = $1
-	WHERE (pc.user_a_id = $1 OR pc.user_b_id = $1)
-	  AND (prs.last_read_sent_at IS NULL
-	       OR pm.sent_at > prs.last_read_sent_at
-	       OR (pm.sent_at = prs.last_read_sent_at
-	           AND prs.last_read_message_id IS NOT NULL
-	           AND pm.message_id <> prs.last_read_message_id))`
+	LEFT JOIN LATERAL (
+	    SELECT COUNT(*) AS cnt
+	    FROM private_messages pm
+	    WHERE pm.chat_key = pc.chat_key
+	      AND pm.sender_user_id <> $1
+	      AND pm.is_recalled = FALSE
+	      AND pm.sent_at >= COALESCE(prs.last_read_sent_at, '-infinity'::timestamptz)
+	      AND (COALESCE(pcs.visible_since, pcs.deleted_at) IS NULL
+	           OR pm.sent_at > COALESCE(pcs.visible_since, pcs.deleted_at))
+	      AND (prs.last_read_sent_at IS NULL
+	           OR pm.sent_at > prs.last_read_sent_at
+	           OR (prs.last_read_message_id IS NOT NULL
+	               AND pm.message_id <> prs.last_read_message_id))
+	) unread ON TRUE
+	WHERE (pc.user_a_id = $1 OR pc.user_b_id = $1)`
 )

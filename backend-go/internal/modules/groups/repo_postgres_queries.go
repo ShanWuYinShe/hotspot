@@ -482,22 +482,37 @@ FROM (
 )`
 
 	// queryCountUnreadGroupMessagesForUser 当前用户已加入且未解散群的未读消息
-	// 总数（冷启动 unread_summary 聚合：一条 COUNT 汇总，无需逐群往返）。
+	// 总数（冷启动 unread_summary 聚合：一条 SQL 汇总，无需逐群往返）。
 	// 口径与 queryListMyGroupsBase 的 per-group unread_count 子查询一致：
 	// 只统计未撤回且晚于 group_message_read_state.last_read_sent_at 的消息
 	// （含本人发送的消息——列表徽标同口径，见该子查询注释）；已退群/被移出
 	// 群（封禁同样删除成员行）因 JOIN group_members 自动排除，已解散群由
-	// g.deleted_at IS NULL 排除。驱动表为 group_members，消息侧走
-	// idx_group_messages_group_id_sent_at。
+	// g.deleted_at IS NULL 排除。
+	//
+	// 性能（第 82 轮审计 C-P1-1/B-P2-2）：此前把 group_messages 与成员/已读
+	// 状态整表 JOIN 后 COUNT，LEFT JOIN 别名上的 NULL 容忍谓词
+	// （last_read_sent_at IS NULL OR sent_at > ...）无法下推成索引范围条件，
+	// 规划器实测对整张 group_messages 做 Seq Scan（60 万行约 20~107ms，
+	// 已读历史全部被读出后丢弃）。改为「每个群一个 LATERAL 子查询」后，未读
+	// 区间写成单次比较 sent_at > COALESCE(last_read_sent_at, '-infinity')，
+	// 可下推为 idx_group_messages_group_id_sent_at 的 Index Cond，只扫未读
+	// 区间（群聊无同刻 message_id 边界语义，故用严格 >，结果与改写前逐行
+	// 一致）。驱动表为 group_members；SUM(bigint) 为 numeric，显式 ::bigint
+	// 与单条 COUNT 的类型对齐。
 	queryCountUnreadGroupMessagesForUser = `
-SELECT COUNT(*)
+SELECT COALESCE(SUM(unread.cnt), 0)::bigint
 FROM group_members gm
 JOIN groups g ON g.group_id = gm.group_id AND g.deleted_at IS NULL
-JOIN group_messages m ON m.group_id = gm.group_id AND m.is_recalled = FALSE
 LEFT JOIN group_message_read_state grs
   ON grs.group_id = gm.group_id AND grs.user_id = $1
-WHERE gm.user_id = $1
-  AND (grs.last_read_sent_at IS NULL OR m.sent_at > grs.last_read_sent_at)`
+LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS cnt
+    FROM group_messages m
+    WHERE m.group_id = gm.group_id
+      AND m.is_recalled = FALSE
+      AND m.sent_at > COALESCE(grs.last_read_sent_at, '-infinity'::timestamptz)
+) unread ON TRUE
+WHERE gm.user_id = $1`
 )
 
 // 平台审核解散（repo.DismissAsAdmin，spec api_spec_admin.md groups/dismiss）：
