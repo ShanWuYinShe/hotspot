@@ -10,8 +10,8 @@ import (
 )
 
 // 真实库 IT（testdb.BeginScope：事务内写入、结束回滚，不提交/不污染测试库）：
-// 账号级完成态媒体配额与 uploads/ 孤儿清理的引用判定必须走 PG 仓储真实 SQL
-//（列歧义、参数个数、类型转换只有真实库能暴露；stub 单测无法覆盖）。
+// 账号级完成态媒体配额与 uploads/、published/ 孤儿清理的引用判定必须走 PG 仓储真实
+// SQL（列歧义、参数个数、类型转换只有真实库能暴露；stub 单测无法覆盖）。
 
 func saveITUploadRow(t *testing.T, repo Repository, upload pendingUpload) {
 	t.Helper()
@@ -168,15 +168,20 @@ func TestMediaStorageGovernancePostgresIT(t *testing.T) {
 		old := staleUploadRetentionDays*24*time.Hour + time.Hour
 		orphanKey := "uploads/" + userID + "/upload_it_orphan_replayed.bin"
 		freshKey := "uploads/" + userID + "/upload_it_orphan_fresh.bin"
-		provider := &coverageProvider{listPages: []ObjectListPage{{
-			Objects: []ObjectSummary{
-				{Key: referencedKey, LastModified: time.Now().UTC().Add(-old)},
-				{Key: orphanKey, LastModified: time.Now().UTC().Add(-old)},
-				{Key: freshKey, LastModified: time.Now().UTC().Add(-time.Minute)},
+		provider := &coverageProvider{
+			listPagesByPrefix: map[string][]ObjectListPage{
+				orphanUploadObjectPrefix: {{
+					Objects: []ObjectSummary{
+						{Key: referencedKey, LastModified: time.Now().UTC().Add(-old)},
+						{Key: orphanKey, LastModified: time.Now().UTC().Add(-old)},
+						{Key: freshKey, LastModified: time.Now().UTC().Add(-time.Minute)},
+					},
+				}},
 			},
-		}}}
+			listTokensByPrefix: map[string][]string{},
+		}
 		svc := NewServiceWithRepoAndProvider(repo, provider)
-		svc.sweepOrphanUploadObjects(ctx)
+		svc.sweepOrphanObjects(ctx)
 		if len(provider.deletedKeys) != 1 || provider.deletedKeys[0] != orphanKey {
 			t.Fatalf("deleted = %v, want only %q (referenced row kept, fresh kept)", provider.deletedKeys, orphanKey)
 		}
@@ -184,4 +189,89 @@ func TestMediaStorageGovernancePostgresIT(t *testing.T) {
 			t.Fatalf("referenced row must be kept: found=%v err=%v", found, err)
 		}
 	})
+}
+
+// published/ 前缀孤儿清理（批次 10）：真实库引用判定下，无任何行引用的旧发布副本被删，
+// 完成态行引用的发布键、未过期副本、被未完成会话行「兄弟上传键」间接触发的发布副本、
+// 以及 uploads/ 前缀孤儿在同一轮各自按判定处理。真实库用于确认 ExistingStorageKeys 对
+// published/ 键与 2N 批量键（发布键 + 同 upload 上传键）的 SQL 口径，存储侧用 fake
+// provider 注入对象年龄与分页。
+func TestMediaPublishedOrphanSweepPostgresIT(t *testing.T) {
+	testdb.SkipIfShort(t)
+	testdb.Open(t)
+	ctx := context.Background()
+	factory, cleanup := testdb.BeginScope(t)
+	defer cleanup()
+	repo := NewPostgresRepository(factory)
+	const userID = "it_media_published_orphan"
+	publishedKeptKey := "published/" + userID + "/upload_it_pub_kept.png"
+	uploadPendingKey := "uploads/" + userID + "/upload_it_pub_pending.png"
+	saveITUploadRow(t, repo, pendingUpload{
+		UploadID: "upload_it_pub_kept", UserID: userID, StorageKey: publishedKeptKey,
+		FileName: "kept.png", DeclaredFileSize: 10, DeclaredMimeType: "image/png",
+		Category: CategoryMomentImage, Completed: true,
+		File: UploadedMedia{FileID: "file_it_pub_kept", FileSize: 10, MimeType: "image/png"},
+	})
+	saveITUploadRow(t, repo, pendingUpload{
+		UploadID: "upload_it_pub_pending", UserID: userID, StorageKey: uploadPendingKey,
+		FileName: "pending.png", DeclaredFileSize: 10, DeclaredMimeType: "image/png",
+		Category: CategoryMomentImage,
+	})
+	// 在途（未完成）会话行引用的是 uploads/ 兄弟键：其发布副本可能被重试的 complete
+	// 重新发布并提交，published/ 阶段必须把兄弟键算作引用而保留该发布副本。
+	inFlightPublishedKey := "published/" + userID + "/upload_it_pub_in_flight.png"
+	inFlightUploadKey := "uploads/" + userID + "/upload_it_pub_in_flight.png"
+	saveITUploadRow(t, repo, pendingUpload{
+		UploadID: "upload_it_pub_in_flight", UserID: userID, StorageKey: inFlightUploadKey,
+		FileName: "in_flight.png", DeclaredFileSize: 10, DeclaredMimeType: "image/png",
+		Category: CategoryMomentImage,
+	})
+
+	old := staleUploadRetentionDays*24*time.Hour + time.Hour
+	publishedOrphanKey := "published/" + userID + "/upload_it_pub_crashed.png"
+	publishedFreshKey := "published/" + userID + "/upload_it_pub_fresh.png"
+	uploadsOrphanKey := "uploads/" + userID + "/upload_it_pub_replayed.png"
+	provider := &coverageProvider{
+		listPagesByPrefix: map[string][]ObjectListPage{
+			orphanUploadObjectPrefix: {{
+				Objects: []ObjectSummary{
+					{Key: uploadsOrphanKey, LastModified: time.Now().UTC().Add(-old)},
+					{Key: uploadPendingKey, LastModified: time.Now().UTC().Add(-old)},
+				},
+			}},
+			orphanPublishedObjectPrefix: {{
+				Objects: []ObjectSummary{
+					{Key: publishedOrphanKey, LastModified: time.Now().UTC().Add(-old)},
+					{Key: publishedKeptKey, LastModified: time.Now().UTC().Add(-old)},
+					{Key: publishedFreshKey, LastModified: time.Now().UTC().Add(-time.Minute)},
+					{Key: inFlightPublishedKey, LastModified: time.Now().UTC().Add(-old)},
+				},
+			}},
+		},
+		listTokensByPrefix: map[string][]string{},
+	}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.sweepOrphanObjects(ctx)
+
+	deleted := map[string]int{}
+	for _, key := range provider.deletedKeys {
+		deleted[key]++
+	}
+	if len(provider.deletedKeys) != 2 || deleted[publishedOrphanKey] != 1 || deleted[uploadsOrphanKey] != 1 {
+		t.Fatalf("deleted = %v, want exactly [%q %q]", provider.deletedKeys, publishedOrphanKey, uploadsOrphanKey)
+	}
+	// 完成态行引用的发布键与未过期副本都必须保留；行本身不受孤儿阶段影响。
+	if _, found, err := repo.Get(ctx, "upload_it_pub_kept"); err != nil || !found {
+		t.Fatalf("completed row referenced by published key must be kept: found=%v err=%v", found, err)
+	}
+	if deleted[publishedKeptKey] != 0 || deleted[publishedFreshKey] != 0 {
+		t.Fatalf("referenced/fresh published objects must not be deleted: %v", provider.deletedKeys)
+	}
+	// 未完成会话行引用 uploads/ 兄弟键：该发布副本必须保留（真实库 SQL 一次查询 2N 键）
+	if deleted[inFlightPublishedKey] != 0 {
+		t.Fatalf("published copy with pending upload sibling must not be deleted: %v", provider.deletedKeys)
+	}
+	if _, found, err := repo.Get(ctx, "upload_it_pub_in_flight"); err != nil || !found {
+		t.Fatalf("in-flight pending row must be kept: found=%v err=%v", found, err)
+	}
 }

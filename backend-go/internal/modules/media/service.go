@@ -45,6 +45,11 @@ type Service struct {
 	// writer）：账户注销级联的媒体对象清理由请求生命周期内改为入队投递；nil
 	// （单测/内存装配）或入队失败时回退同步删除，见 user_purge.go。
 	eventOutbox outboxWriter
+	// orphanPublishedCursor 是 published/ 前缀孤儿清理跨轮推进的 ListObjectsV2
+	// continuation token：published/ 含全部完成态媒体、随业务单调增长，保留期
+	// sweeper 若每轮都从首页开始在固定页数内扫描，窗口外对象永远扫不到。仅保留期
+	// sweeper goroutine 读写；进程内状态，重启后从首页重新开始（见 retention.go）。
+	orphanPublishedCursor string
 }
 
 func NewService() *Service {
@@ -269,10 +274,10 @@ func (s *Service) publishImageObject(ctx context.Context, uploadKey, publishedKe
 //     第 82 轮审计 P2-3）；现在上界收敛为「账号数 × 2GiB」。仍无「完成后未被
 //     业务引用」的回收策略（上传后不挂载到任何实体也计入配额）——那需要业务侧
 //     引用登记，属后续工作，但与账号总配额叠加后存储上界已可预测；
-//   - uploads/ 孤儿对象（complete 后旧上传键被重 PUT，第 82 轮审计 P2-2）：
-//     保留期 sweeper 每轮的孤儿清理阶段按「对象早于保留期且 DB 无对应
-//     storage_key 行」删除（见 retention.go sweepOrphanUploadObjects），不再
-//     是永久孤儿。
+//   - uploads/ 与 published/ 孤儿对象（complete 后旧上传键被重 PUT / 批量 complete
+//     中途失败留下的发布副本，第 82 轮审计 P2-2 + 批次 10）：保留期 sweeper 每轮的
+//     孤儿清理阶段按「对象早于保留期且 DB 无对应 storage_key 行」删除（见
+//     retention.go sweepOrphanObjects），不再是永久孤儿。
 const (
 	// pendingUploadSessionLimit 单用户未完成上传会话数上限（正常单次业务
 	// 上传 1~9 个文件且立即 complete，20 留足慢网/多业务并行余量）。

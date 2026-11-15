@@ -33,15 +33,19 @@ type coverageProvider struct {
 	putContentType string
 	putData        []byte
 	copiedPairs    [][2]string
-	// ListObjects 注入（保留期 uploads/ 孤儿清理用例）：listPages 按顺序出页，
-	// listErr 优先返回错误；listCalls/listPrefixes/listTokens/listMaxKeys 记录调用
-	// 形态，断言按前缀翻页与单页上限。
-	listPages    []ObjectListPage
-	listErr      error
-	listCalls    int
-	listPrefixes []string
-	listTokens   []string
-	listMaxKeys  []int
+	// ListObjects 注入（保留期 uploads/ published/ 孤儿清理用例）：listPages 按顺序
+	// 出页，listErr 优先返回错误；listCalls/listPrefixes/listTokens/listMaxKeys 记录
+	// 调用形态，断言按前缀翻页与单页上限。listPagesByPrefix / listErrByPrefix /
+	// listTokensByPrefix 按前缀隔离（两个前缀同轮清理时各自出页、各自断言 token）。
+	listPages          []ObjectListPage
+	listPagesByPrefix  map[string][]ObjectListPage
+	listErr            error
+	listErrByPrefix    map[string]error
+	listCalls          int
+	listPrefixes       []string
+	listTokens         []string
+	listMaxKeys        []int
+	listTokensByPrefix map[string][]string
 }
 
 func (p *coverageProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
@@ -81,15 +85,31 @@ func (p *coverageProvider) CopyObject(_ context.Context, srcKey, dstKey string) 
 	return p.copyErr
 }
 
-// ListObjects 按 listPages 顺序逐页返回（用完后返回空页），供保留期 uploads/
-// 孤儿清理用例注入分页结果与错误。
+// ListObjects 按注入的页序列逐页返回（用完后返回空页），供保留期 uploads/ 与
+// published/ 孤儿清理用例注入分页结果与错误：配置了 *ByPrefix 字段时按前缀隔离
+// 出页/报错/记录 token，否则回落到共用的 listPages/listErr 序列。
 func (p *coverageProvider) ListObjects(_ context.Context, prefix, continuationToken string, maxKeys int) (ObjectListPage, error) {
 	p.listCalls++
 	p.listPrefixes = append(p.listPrefixes, prefix)
 	p.listTokens = append(p.listTokens, continuationToken)
 	p.listMaxKeys = append(p.listMaxKeys, maxKeys)
+	if p.listTokensByPrefix != nil {
+		p.listTokensByPrefix[prefix] = append(p.listTokensByPrefix[prefix], continuationToken)
+	}
+	if err := p.listErrByPrefix[prefix]; err != nil {
+		return ObjectListPage{}, err
+	}
 	if p.listErr != nil {
 		return ObjectListPage{}, p.listErr
+	}
+	if p.listPagesByPrefix != nil {
+		pages := p.listPagesByPrefix[prefix]
+		if len(pages) == 0 {
+			return ObjectListPage{}, nil
+		}
+		page := pages[0]
+		p.listPagesByPrefix[prefix] = pages[1:]
+		return page, nil
 	}
 	if len(p.listPages) == 0 {
 		return ObjectListPage{}, nil

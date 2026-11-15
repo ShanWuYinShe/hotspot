@@ -2,6 +2,7 @@ package media
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,37 +26,114 @@ const (
 	staleUploadBatchLimit = 500
 )
 
-// uploads/ 前缀孤儿对象清理（第 82 轮审计 P2-2）：complete 成功后服务端尽力
-// 删除旧上传键，但预签名 PUT URL 在 TTL（mediaPresignTTL，15 分钟）内仍然有效，
-// 客户端凭原 URL 重 PUT 即可把 uploads/ 键写回来——完成态行的 storage_key 已改
-// 写为 published/ 键、保留期 GC 只扫未完成行、注销级联只删当前 storage_key，
-// 该对象因此永远无人回收。这里按「对象早于保留期（2 天）且 DB 无对应
-// storage_key 行」判定孤儿并删除：2 天与未完成会话保留期同口径，覆盖「已直传、
-// complete 尚未提交」的正常在途窗口；引用判定覆盖任意状态的行（含 copy-on-
-// complete 之前的历史完成态行，其 storage_key 仍是 uploads/ 键，有行时必须保留）。
+// uploads/ 与 published/ 前缀孤儿对象清理（第 82 轮审计 P2-2；批次 10 泛化到
+// published/）。两个前缀共用同一套「列举 → 过滤早于保留期 → 批量引用判定 → 删除
+// 无行引用对象」逻辑：
 //
-// 单轮有界：最多翻 orphanUploadListMaxPages 页（每页 orphanUploadListPageSize
-// 条）、最多删 orphanUploadDeleteLimit 条；删除失败只告警，下一轮重试（对象仍
-// 满足「无行 + 旧」条件）。已知限制：列举按对象键字典序分页、每轮从首页开始，
-// 若前缀对象数超过扫描窗口且窗口内全是仍有引用的键，窗口外对象要等窗口内对象
-// 被回收后才会进入扫描；uploads/ 前缀的稳态规模（未完成会话 ≤20/账号 + 2 天内
-// 孤儿）远小于窗口上界，当前无需持久化游标（会引入迁移/状态面）。
+//   - uploads/：complete 成功后服务端尽力删除旧上传键，但预签名 PUT URL 在 TTL
+//     （mediaPresignTTL，15 分钟）内仍然有效，客户端凭原 URL 重 PUT 即可把 uploads/
+//     键写回来——完成态行的 storage_key 已改写为 published/ 键、保留期 GC 只扫未完成
+//     行、注销级联只删当前 storage_key，该对象因此永远无人回收。
+//   - published/：PrepareComplete 先把对象复制/清洗落盘到不可写发布键
+//     published/<userID>/<uploadID>.<ext>，随后 CommitComplete 的条件 UPDATE 才把
+//     该键写入 media_upload_sessions。两步之间 DB 失败/进程崩溃时，发布副本没有任何
+//     行引用，而会话阶段只删未完成会话的 uploads/ 键，该副本同样永不回收。
+//
+// 判定：对象早于保留期（staleUploadRetentionDays，2 天）且 DB 无任何
+// media_upload_sessions 行引用该 storage_key（任意状态的行都算引用，见
+// Repository.ExistingStorageKeys）。published/ 阶段额外把每个发布键的「同 upload 上传
+// 键」（uploads/<userID>/<uploadID>.<ext>）并入引用查询：未完成会话行引用的是上传键
+// （complete 尚未提交），这类行存在时客户端仍可能重试 complete 并重新发布到该键，
+// 此时删发布副本会与在途 complete 竞态（行提交后引用一个已被删的对象）；把兄弟键算作
+// 引用即可排除。上传键与发布键由同一 uploadID 唯一派生，行不存在时 complete 永远无法
+// 再成功（uploadID 不会重建），因此该判定仍是精确的「无行引用」。
+//
+// published/ 的安全性：Prepare→Commit 的正常在途窗口只是「一次 DB 条件 UPDATE」，秒级；
+// 2 天保留期远大于它。崩溃后客户端重试 complete 会覆盖同一发布键
+// （publishedStorageKeyFor 由 userID/uploadID/fileName 确定，幂等），若在保留期内
+// 重试成功，该键随 UPDATE 入库、被行引用，即不会被删除；超过保留期后该 upload 会话行
+// 通常已被会话阶段 GC 删除（此时 complete 不可能再成功），「旧 + 无行/兄弟键引用」的
+// 发布副本只可能是永久孤儿；若 GC 因积压尚未删除该行，兄弟键引用会使其继续保留，直到
+// 行被 GC 后下一轮再判定。LastModified 缺失（零值，年龄未知）的对象一律保守跳过并告警。
+//
+// 单轮有界：每个前缀最多翻 orphanSweepListMaxPages 页（每页 orphanSweepPageSize 条）、
+// 最多删 orphanSweepDeleteLimit 条、各自独立的时长预算（见 orphanSweepPlan）；删除失败
+// 只告警，下一轮重试（对象仍满足「无行 + 旧」条件）。
+//
+// 已知限制：uploads/ 阶段按对象键字典序分页、每轮从首页开始（保持批次 9 语义），若前缀
+// 对象数超过扫描窗口且窗口内全是仍有引用的键，窗口外对象要等窗口内对象被回收后才会进入
+// 扫描；uploads/ 前缀的稳态规模（未完成会话 ≤20/账号 + 2 天内孤儿）远小于窗口上界，当前
+// 无需持久化游标。published/ 前缀包含全部完成态媒体、随业务单调增长，固定从首页开始的
+// 窗口必然扫不到窗口外，因此该阶段跨轮推进 continuation token（见
+// orphanPublishedSweepPlan）；游标只存在进程内、进程重启后从首页重来，属「最终覆盖」
+// 而非「每轮全量」。另：删除判定以「本进程所连 DB 的引用」为准，因此同一 bucket 必须
+// 只服务同一环境/DB——若多个环境（或多个 DB）共享同一 bucket，published/ 清理会删掉
+// 其它环境仍被引用的发布对象，多环境共享存储时不得开启本清理。
 const (
 	// orphanUploadObjectPrefix 是客户端直传对象键前缀（storageKeyFor 生成
-	// uploads/<userID>/<uploadID>.<ext>），只清这个前缀，不碰 published/ 业务数据。
+	// uploads/<userID>/<uploadID>.<ext>）。
 	orphanUploadObjectPrefix = "uploads/"
-	// orphanUploadListPageSize 是单次 ListObjectsV2 请求的 max-keys：500 条/页
-	// 让单页响应体与 DB 批量引用查询（ANY 500 键）都保持轻量。
-	orphanUploadListPageSize = 500
-	// orphanUploadListMaxPages 是单轮翻页上限：20 页 = 每轮最多扫描 1 万个对象。
-	orphanUploadListMaxPages = 20
-	// orphanUploadDeleteLimit 是单轮删除上限（与 staleUploadBatchLimit 同量级）：
-	// 保证单轮时长有界，剩余对象下一轮继续。
-	orphanUploadDeleteLimit = 500
-	// orphanUploadSweepTimeout 是孤儿清理阶段的整体预算（含列举、引用查询、删除）：
+	// orphanPublishedObjectPrefix 是 copy-on-complete 的不可写发布键前缀
+	// （publishedStorageKeyFor 生成 published/<userID>/<uploadID>.<ext>）。
+	orphanPublishedObjectPrefix = "published/"
+	// orphanSweepPageSize 是单次 ListObjectsV2 请求的 max-keys：500 条/页让单页响应体
+	// 与 DB 批量引用查询（ANY 500 键）都保持轻量。
+	orphanSweepPageSize = 500
+	// orphanSweepListMaxPages 是单轮、单前缀的翻页上限：20 页 = 每轮每前缀最多扫描
+	// 1 万个对象。
+	orphanSweepListMaxPages = 20
+	// orphanSweepDeleteLimit 是单轮、单前缀的删除上限（与单页上限同值：正常页只有整页
+	// 候选都可删时才会触顶，见 sweepOrphanPrefix 的游标说明）：保证单轮时长有界，剩余
+	// 对象下一轮继续。
+	orphanSweepDeleteLimit = 500
+	// orphanUploadSweepTimeout 是 uploads/ 阶段的整体预算（含列举、引用查询、删除）：
 	// 超出后剩余对象留待下一轮，避免拖住 sweeper 循环。
 	orphanUploadSweepTimeout = 60 * time.Second
+	// orphanPublishedSweepTimeout 是 published/ 阶段的整体预算：该阶段绝大多数页只有
+	// 列举 + 一次批量引用查询（真正待删除的只有崩溃残留），30s 足够；它与 uploads/
+	// 阶段各自独立计时，单轮最坏总时长上界 60+30=90s，远小于 1 小时的清扫节奏。
+	orphanPublishedSweepTimeout = 30 * time.Second
 )
+
+// orphanSweepPlan 描述单个前缀的单轮清理计划：两个前缀共用同一套列举/判定/删除逻辑，
+// 差异只有前缀、时长预算和扫描推进方式（见上方已知限制）。
+type orphanSweepPlan struct {
+	prefix  string
+	timeout time.Duration
+	// rotateCursor 为 true 时跨轮推进 continuation token（见 Service.
+	// orphanPublishedCursor）；uploads/ 前缀保持批次 9 的「每轮从首页开始」语义。
+	rotateCursor bool
+	// siblingKey 非空时把每个候选键的「同 upload 兄弟键」一并纳入引用判定
+	// （published/ 阶段用，见上方安全性注释）；返回空串表示该键没有兄弟键。
+	siblingKey func(storageKey string) string
+}
+
+var (
+	// orphanUploadSweepPlan：uploads/ 先跑、独立预算，published/ 的扫描量不会挤占它
+	// 的页数/删除/时长额度（避免 uploads 饥饿）。
+	orphanUploadSweepPlan = orphanSweepPlan{
+		prefix:  orphanUploadObjectPrefix,
+		timeout: orphanUploadSweepTimeout,
+	}
+	orphanPublishedSweepPlan = orphanSweepPlan{
+		prefix:       orphanPublishedObjectPrefix,
+		timeout:      orphanPublishedSweepTimeout,
+		rotateCursor: true,
+		siblingKey:   uploadsSiblingKeyForPublished,
+	}
+)
+
+// uploadsSiblingKeyForPublished 返回发布键对应的同 upload 上传键
+// （published/<userID>/<uploadID>.<ext> → uploads/<userID>/<uploadID>.<ext>）。
+// 非 published/ 前缀返回空串。发布键与上传键由同一 uploadID 唯一派生
+// （publishedStorageKeyFor），未完成会话行引用上传键，见上方安全性注释。
+func uploadsSiblingKeyForPublished(publishedKey string) string {
+	trimmed := strings.TrimPrefix(publishedKey, orphanPublishedObjectPrefix)
+	if trimmed == publishedKey {
+		return ""
+	}
+	return orphanUploadObjectPrefix + trimmed
+}
 
 var (
 	retentionSweepMu      sync.Mutex
@@ -65,8 +143,8 @@ var (
 // StartRetentionSweeper 启动保留期清理，每轮两个阶段：
 //  1. 超期未完成会话：先删其可能已部分上传的存储对象（幂等，404 视为已删），
 //     再删会话行；
-//  2. uploads/ 前缀孤儿对象：无会话行引用且超过保留期的对象（见
-//     sweepOrphanUploadObjects）。
+//  2. uploads/ 与 published/ 前缀孤儿对象：无会话行引用且超过保留期的对象（见
+//     sweepOrphanObjects）。
 //
 // goroutine 绑定 ctx 随优雅停机退出；重复调用 no-op。
 //
@@ -117,13 +195,13 @@ func (s *Service) runRetentionSweeper(ctx context.Context) {
 	}
 }
 
-// runRetentionSweep 执行一轮保留期清理：先回收超期未完成会话（对象+行），再
-// 清理 uploads/ 前缀下已无会话引用的孤儿对象（第 82 轮审计 P2-2）。两阶段互相
-// 独立：会话阶段失败只影响自身，「行已删对象未删」的残留由孤儿阶段按保留期
-// 兜底；孤儿阶段失败也只告警，下一轮重试。
+// runRetentionSweep 执行一轮保留期清理：先回收超期未完成会话（对象+行），再清理
+// uploads/ 与 published/ 前缀下已无会话引用的孤儿对象（第 82 轮审计 P2-2，批次 10
+// 泛化）。两阶段互相独立：会话阶段失败只影响自身，「行已删对象未删」的残留由孤儿
+// 阶段按保留期兜底；孤儿阶段失败也只告警，下一轮重试。
 func (s *Service) runRetentionSweep(ctx context.Context) {
 	s.sweepStaleUploads(ctx)
-	s.sweepOrphanUploadObjects(ctx)
+	s.sweepOrphanObjects(ctx)
 }
 
 func (s *Service) sweepStaleUploads(ctx context.Context) {
@@ -157,23 +235,52 @@ func (s *Service) sweepStaleUploads(ctx context.Context) {
 	}
 }
 
-// sweepOrphanUploadObjects 清理 uploads/ 前缀下已无会话行引用且超过保留期的
-// 孤儿对象（判定与窗口约束见上方孤儿清理常量注释）。逐页列举 → 过滤未过期
-// 对象 → 批量查引用 → 删除无引用对象；任一环节失败只告警，下一轮重试。
-func (s *Service) sweepOrphanUploadObjects(ctx context.Context) {
-	sweepCtx, cancel := context.WithTimeout(ctx, orphanUploadSweepTimeout)
+// sweepOrphanObjects 依次清理 uploads/ 与 published/ 两个前缀的孤儿对象。两阶段各自
+// 持有独立的页数/删除/时长预算，且按固定顺序执行（uploads/ 先跑）：published/ 前缀
+// （全部完成态媒体）比 uploads/ 大几个数量级，若共享单一预算或让 published/ 先跑，
+// uploads/ 可能整轮得不到扫描/删除额度（饥饿）；独立预算让两个前缀的推进互不影响。
+func (s *Service) sweepOrphanObjects(ctx context.Context) {
+	cutoff := time.Now().UTC().AddDate(0, 0, -staleUploadRetentionDays)
+	s.sweepOrphanPrefix(ctx, orphanUploadSweepPlan, cutoff)
+	s.sweepOrphanPrefix(ctx, orphanPublishedSweepPlan, cutoff)
+}
+
+// sweepOrphanPrefix 清理单个前缀下的孤儿对象：逐页列举 → 过滤早于 cutoff（保留期）
+// 的对象 → 批量查 DB 引用 → 删除无任何行引用的对象；任一环节失败只告警，下一轮重试。
+// 引用状态不可确认时不得删除任何对象（可能误删在途上传/在途发布副本）。
+//
+// rotateCursor 前缀的游标规则：成功列举后先把游标钉在本页起点，整页处理完再推进到
+// NextContinuationToken；这样「引用查询失败 / 单轮预算耗尽 / 删除上限触顶」导致本页
+// 提前返回时，下一轮会从本页重扫（已删对象不会重复出现），不会用 nextToken 跳过本页
+// 尾部候选造成漏扫。列举失败（可能是保存的 token 已失效）时复位到首页，避免坏 token
+// 让该前缀清理永久停摆。
+func (s *Service) sweepOrphanPrefix(ctx context.Context, plan orphanSweepPlan, cutoff time.Time) {
+	sweepCtx, cancel := context.WithTimeout(ctx, plan.timeout)
 	defer cancel()
 	logger := observability.FromContext(ctx)
-	cutoff := time.Now().UTC().AddDate(0, 0, -staleUploadRetentionDays)
 	var scanned, candidates, deleted, failed int
 	limitReached := false
 	token := ""
+	if plan.rotateCursor {
+		token = s.orphanPublishedCursor
+	}
 scanPages:
-	for page := 0; page < orphanUploadListMaxPages; page++ {
-		listing, err := s.provider.ListObjects(sweepCtx, orphanUploadObjectPrefix, token, orphanUploadListPageSize)
+	for page := 0; page < orphanSweepListMaxPages; page++ {
+		pageToken := token
+		listing, err := s.provider.ListObjects(sweepCtx, plan.prefix, pageToken, orphanSweepPageSize)
 		if err != nil {
-			logger.Warn("media retention orphan list failed", "error", err, "scanned", scanned, "deleted", deleted)
+			logger.Warn("media retention orphan list failed",
+				"error", err, "prefix", plan.prefix, "scanned", scanned, "deleted", deleted)
+			if plan.rotateCursor {
+				// 保存的 continuation token 可能已失效（对象被批量删除/存储侧翻页
+				// 状态过期）：复位到首页，避免坏 token 让该前缀清理永久停摆。
+				s.orphanPublishedCursor = ""
+			}
 			return
+		}
+		if plan.rotateCursor {
+			// 处理本页前先钉住游标（见函数注释的游标规则）。
+			s.orphanPublishedCursor = pageToken
 		}
 		scanned += len(listing.Objects)
 		expiredKeys := make([]string, 0, len(listing.Objects))
@@ -183,7 +290,8 @@ scanPages:
 			}
 			if object.LastModified.IsZero() {
 				// 无法判断对象年龄：保守跳过（可能是刚上传的对象），告警供排查。
-				logger.Warn("media retention orphan object missing last-modified, skipped", "storage_key", object.Key)
+				logger.Warn("media retention orphan object missing last-modified, skipped",
+					"prefix", plan.prefix, "storage_key", object.Key)
 				continue
 			}
 			if !object.LastModified.Before(cutoff) {
@@ -193,43 +301,76 @@ scanPages:
 		}
 		candidates += len(expiredKeys)
 		if len(expiredKeys) > 0 {
-			referenced, err := s.repo.ExistingStorageKeys(sweepCtx, expiredKeys)
+			// published/ 阶段把每个候选发布键的同 upload 上传键一并查引用：未完成
+			// 会话行引用上传键，存在时客户端仍可能重试 complete 发布到该键（见上方
+			// 安全性注释）。uploads/ 阶段 plan.siblingKey 为 nil，查询集合不变。
+			referenceKeys := expiredKeys
+			if plan.siblingKey != nil {
+				referenceKeys = make([]string, 0, 2*len(expiredKeys))
+				for _, storageKey := range expiredKeys {
+					referenceKeys = append(referenceKeys, storageKey)
+					if sibling := plan.siblingKey(storageKey); sibling != "" {
+						referenceKeys = append(referenceKeys, sibling)
+					}
+				}
+			}
+			referenced, err := s.repo.ExistingStorageKeys(sweepCtx, referenceKeys)
 			if err != nil {
 				// 引用状态不可确认时不得删除任何对象：可能误删在途上传的对象。
-				logger.Warn("media retention orphan reference check failed", "error", err, "candidates", len(expiredKeys))
+				logger.Warn("media retention orphan reference check failed",
+					"error", err, "prefix", plan.prefix, "candidates", len(expiredKeys))
 				return
 			}
 			for _, storageKey := range expiredKeys {
 				if _, ok := referenced[storageKey]; ok {
 					continue
 				}
+				if plan.siblingKey != nil {
+					if sibling := plan.siblingKey(storageKey); sibling != "" {
+						if _, ok := referenced[sibling]; ok {
+							continue
+						}
+					}
+				}
 				if err := sweepCtx.Err(); err != nil {
 					// 单轮预算耗尽（超时/停机）：剩余对象留给下一轮，避免继续向已取消
-					// 的 ctx 发删除请求刷告警。
+					// 的 ctx 发删除请求刷告警；游标已钉在本页起点，本页剩余候选下轮重扫。
 					logger.Warn("media retention orphan sweep budget exhausted",
-						"error", err, "scanned", scanned, "deleted", deleted, "failed", failed)
+						"error", err, "prefix", plan.prefix, "scanned", scanned,
+						"deleted", deleted, "failed", failed)
 					return
 				}
-				if deleted >= orphanUploadDeleteLimit {
+				if deleted >= orphanSweepDeleteLimit {
 					limitReached = true
-					break scanPages
+					break
 				}
 				if err := s.provider.Delete(sweepCtx, storageKey); err != nil {
 					failed++
-					logger.Warn("media retention orphan object delete failed", "error", err, "storage_key", storageKey)
+					logger.Warn("media retention orphan object delete failed",
+						"error", err, "prefix", plan.prefix, "storage_key", storageKey)
 					continue
 				}
 				deleted++
 			}
 		}
-		if !listing.IsTruncated || listing.NextContinuationToken == "" {
+		if limitReached {
+			break scanPages
+		}
+		nextToken := ""
+		if listing.IsTruncated {
+			nextToken = listing.NextContinuationToken
+		}
+		if plan.rotateCursor {
+			s.orphanPublishedCursor = nextToken
+		}
+		if nextToken == "" {
 			break
 		}
-		token = listing.NextContinuationToken
+		token = nextToken
 	}
 	if scanned > 0 || deleted > 0 {
 		logger.Info("media retention orphan sweep",
-			"scanned", scanned, "candidates", candidates, "objects_deleted", deleted,
-			"failed", failed, "delete_limit_reached", limitReached)
+			"prefix", plan.prefix, "scanned", scanned, "candidates", candidates,
+			"objects_deleted", deleted, "failed", failed, "delete_limit_reached", limitReached)
 	}
 }
