@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"hotspot/backend-go/internal/platform/httpx"
@@ -57,6 +58,10 @@ func (s *Service) ListRoles(ctx context.Context) (AdminRoleList, *httpx.APIError
 	return AdminRoleList{Items: items}, nil, nil
 }
 
+// CreateRole 创建角色并写 role.create 审计（spec api_spec_admin.md 审计动作
+// 清单要求 role.* 可追溯）：角色落库与审计同一事务，审计写失败整体回滚，
+// 管理员可安全重试；此前审计失败仅记日志，会出现「角色已创建但无审计」。
+// 未装配 TxRunner（单测/内存装配）时退化为直跑，该回退路径无法回滚。
 func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest) (AdminRoleItem, *httpx.APIError, error) {
 	op := observability.Begin("admin.create_role", "role_name", req.Name)
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
@@ -67,32 +72,42 @@ func (s *Service) CreateRole(ctx context.Context, req AdminRbacRoleCreateRequest
 	if strings.TrimSpace(req.Name) == "" {
 		return AdminRoleItem{}, httpx.InvalidRequest("参数错误"), nil
 	}
-	item, err := s.repo.CreateRole(ctx, req)
-	if err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			op.Warn("business error", "error", apiErr)
-			return AdminRoleItem{}, apiErr, nil
+	var item AdminRoleItem
+	apiErr, err = s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		created, createErr := s.repo.CreateRole(txCtx, req)
+		if createErr != nil {
+			if apiErr := asAPIError(createErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, createErr
 		}
+		item = created
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
+			Action:     AuditActionRoleCreate,
+			TargetType: AuditTargetTypeRole,
+			TargetID:   item.RoleID,
+			TargetName: item.Name,
+			Details: AuditDetails{
+				"type":        string(AuditActionRoleCreate),
+				"role_name":   item.Name,
+				"permissions": item.Permissions,
+			},
+		}))
+	})
+	if apiErr != nil {
+		op.Warn("business error", "error", apiErr)
+		return AdminRoleItem{}, apiErr, nil
+	}
+	if err != nil {
 		op.Fail(err)
 		return AdminRoleItem{}, nil, err
-	}
-	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionRoleCreate,
-		TargetType: AuditTargetTypeRole,
-		TargetID:   item.RoleID,
-		TargetName: item.Name,
-		Details: AuditDetails{
-			"type":        string(AuditActionRoleCreate),
-			"role_name":   item.Name,
-			"permissions": item.Permissions,
-		},
-	})); err != nil {
-		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
 	}
 	return item, nil, nil
 }
 
+// UpdateRole 更新角色名称/描述并写 role.update 审计：读前态、更新、读后态与
+// 审计同一事务（审计快照与库内实际变更一致），审计写失败整体回滚（角色未变），
+// 管理员可安全重试；此前审计失败仅记日志。未装配 TxRunner 时退化为直跑。
 func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
@@ -104,22 +119,30 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 	if req.Name != nil && strings.TrimSpace(*req.Name) == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	before, found, err := s.findRole(ctx, req.RoleID)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
-	}
-	if err := s.repo.UpdateRole(ctx, req); err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		before, found, findErr := s.findRole(txCtx, req.RoleID)
+		if findErr != nil {
+			return nil, findErr
 		}
-		return nil, err
-	}
-	after, _, err := s.findRole(ctx, req.RoleID)
-	if err == nil {
-		if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
+		if !found {
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
+		}
+		if updateErr := s.repo.UpdateRole(txCtx, req); updateErr != nil {
+			if apiErr := asAPIError(updateErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, updateErr
+		}
+		after, found, findErr := s.findRole(txCtx, req.RoleID)
+		if findErr != nil {
+			return nil, findErr
+		}
+		if !found {
+			// 同事务内刚更新成功却查不到（数据异常）：宁可回滚也不写与库内状态
+			// 不一致的审计。
+			return nil, errors.New("admin: role disappeared after update")
+		}
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
 			Action:     AuditActionRoleUpdate,
 			TargetType: AuditTargetTypeRole,
 			TargetID:   after.RoleID,
@@ -130,14 +153,13 @@ func (s *Service) UpdateRole(ctx context.Context, req AdminRbacRoleUpdateRequest
 				"added_permissions":   diffStrings(after.Permissions, before.Permissions),
 				"removed_permissions": diffStrings(before.Permissions, after.Permissions),
 			},
-		})); err != nil {
-			// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-			observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
-		}
-	}
-	return nil, nil
+		}))
+	})
 }
 
+// DeleteRole 删除（软删）角色并写 role.delete 审计：读前态、删除与审计同一
+// 事务，审计写失败整体回滚（角色未删），管理员可安全重试；此前审计失败仅记
+// 日志。未装配 TxRunner 时退化为直跑。
 func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
@@ -146,35 +168,36 @@ func (s *Service) DeleteRole(ctx context.Context, roleID string) (*httpx.APIErro
 	if roleID == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	before, found, err := s.findRole(ctx, roleID)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
-	}
-	if err := s.repo.DeleteRole(ctx, roleID); err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		before, found, findErr := s.findRole(txCtx, roleID)
+		if findErr != nil {
+			return nil, findErr
 		}
-		return nil, err
-	}
-	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionRoleDelete,
-		TargetType: AuditTargetTypeRole,
-		TargetID:   before.RoleID,
-		TargetName: before.Name,
-		Details: AuditDetails{
-			"type":      string(AuditActionRoleDelete),
-			"role_name": before.Name,
-		},
-	})); err != nil {
-		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
-	}
-	return nil, nil
+		if !found {
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
+		}
+		if deleteErr := s.repo.DeleteRole(txCtx, roleID); deleteErr != nil {
+			if apiErr := asAPIError(deleteErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, deleteErr
+		}
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
+			Action:     AuditActionRoleDelete,
+			TargetType: AuditTargetTypeRole,
+			TargetID:   before.RoleID,
+			TargetName: before.Name,
+			Details: AuditDetails{
+				"type":      string(AuditActionRoleDelete),
+				"role_name": before.Name,
+			},
+		}))
+	})
 }
 
+// SetRolePermissions 替换角色权限并写 role.set_permissions 审计：读前态、权限
+// 替换与审计同一事务，审计写失败整体回滚（权限未变），管理员可安全重试；此前
+// 审计失败仅记日志。未装配 TxRunner 时退化为直跑。
 func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPermissionsRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
@@ -190,34 +213,32 @@ func (s *Service) SetRolePermissions(ctx context.Context, req AdminRbacRoleSetPe
 	if containsString(permissionKeys, wildcardPermission) && !actor.IsSuperAdmin() {
 		return httpx.Forbidden(httpx.ReasonInsufficientAdminPermission, "平台管理员权限不足: "+permissionRbacManage), nil
 	}
-	before, found, err := s.findRole(ctx, req.RoleID)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
-	}
-	if err := s.repo.SetRolePermissions(ctx, req.RoleID, permissionKeys); err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		before, found, findErr := s.findRole(txCtx, req.RoleID)
+		if findErr != nil {
+			return nil, findErr
 		}
-		return nil, err
-	}
-	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionRoleSetPermissions,
-		TargetType: AuditTargetTypeRole,
-		TargetID:   before.RoleID,
-		TargetName: before.Name,
-		Details: AuditDetails{
-			"type":        string(AuditActionRoleSetPermissions),
-			"role_name":   before.Name,
-			"permissions": permissionKeys,
-		},
-	})); err != nil {
-		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
-	}
-	return nil, nil
+		if !found {
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "角色不存在"}, nil
+		}
+		if setErr := s.repo.SetRolePermissions(txCtx, req.RoleID, permissionKeys); setErr != nil {
+			if apiErr := asAPIError(setErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, setErr
+		}
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
+			Action:     AuditActionRoleSetPermissions,
+			TargetType: AuditTargetTypeRole,
+			TargetID:   before.RoleID,
+			TargetName: before.Name,
+			Details: AuditDetails{
+				"type":        string(AuditActionRoleSetPermissions),
+				"role_name":   before.Name,
+				"permissions": permissionKeys,
+			},
+		}))
+	})
 }
 
 func (s *Service) ListAdmins(ctx context.Context, req AdminRbacAdminsListRequest) (PaginatedAdminOperators, *httpx.APIError, error) {
@@ -243,6 +264,9 @@ func (s *Service) ListAdmins(ctx context.Context, req AdminRbacAdminsListRequest
 	return resp, nil, nil
 }
 
+// GrantAdmin 授予平台管理员并写 admin.award 审计：授权落库与审计同一事务，
+// 审计写失败整体回滚（授权未生效），管理员可安全重试；此前审计失败仅记日志，
+// 会出现「已授权但无审计」。未装配 TxRunner 时退化为直跑。
 func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
@@ -261,30 +285,31 @@ func (s *Service) GrantAdmin(ctx context.Context, req AdminRbacGrantAdminRequest
 	if !req.AwardAllPermissions && len(roleIDs) == 0 {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if err := s.repo.GrantAdmin(ctx, AdminGrantUpsert{UserID: req.UserID, GrantAllPermissions: req.AwardAllPermissions, RoleIDs: roleIDs}); err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		if grantErr := s.repo.GrantAdmin(txCtx, AdminGrantUpsert{UserID: req.UserID, GrantAllPermissions: req.AwardAllPermissions, RoleIDs: roleIDs}); grantErr != nil {
+			if apiErr := asAPIError(grantErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, grantErr
 		}
-		return nil, err
-	}
-	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionAdminAward,
-		TargetType: AuditTargetTypeAdmin,
-		TargetID:   req.UserID,
-		TargetName: req.UserID,
-		Details: AuditDetails{
-			"type":                  string(AuditActionAdminAward),
-			"target_user_id":        req.UserID,
-			"role_ids":              roleIDs,
-			"award_all_permissions": req.AwardAllPermissions,
-		},
-	})); err != nil {
-		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
-	}
-	return nil, nil
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
+			Action:     AuditActionAdminAward,
+			TargetType: AuditTargetTypeAdmin,
+			TargetID:   req.UserID,
+			TargetName: req.UserID,
+			Details: AuditDetails{
+				"type":                  string(AuditActionAdminAward),
+				"target_user_id":        req.UserID,
+				"role_ids":              roleIDs,
+				"award_all_permissions": req.AwardAllPermissions,
+			},
+		}))
+	})
 }
 
+// RevokeAdmin 撤销平台管理员并写 admin.revoke 审计：撤销与审计同一事务，审计
+// 写失败整体回滚（管理员未被撤销），管理员可安全重试；此前审计失败仅记日志。
+// 未装配 TxRunner 时退化为直跑。
 func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionRbacManage)
 	if apiErr != nil || err != nil {
@@ -308,26 +333,24 @@ func (s *Service) RevokeAdmin(ctx context.Context, userID string) (*httpx.APIErr
 	if actor.UserID == userID {
 		return httpx.Forbidden(httpx.ReasonAdminProtectedTarget, "不能撤销自己的管理员权限"), nil
 	}
-	if err := s.repo.RevokeAdmin(ctx, userID); err != nil {
-		if apiErr := asAPIError(err); apiErr != nil {
-			return apiErr, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		if revokeErr := s.repo.RevokeAdmin(txCtx, userID); revokeErr != nil {
+			if apiErr := asAPIError(revokeErr); apiErr != nil {
+				return apiErr, nil
+			}
+			return nil, revokeErr
 		}
-		return nil, err
-	}
-	if err := s.repo.AppendAuditLog(ctx, newAuditEntry(ctx, actor, AuditLogEntry{
-		Action:     AuditActionAdminRevoke,
-		TargetType: AuditTargetTypeAdmin,
-		TargetID:   userID,
-		TargetName: userID,
-		Details: AuditDetails{
-			"type":           string(AuditActionAdminRevoke),
-			"target_user_id": userID,
-		},
-	})); err != nil {
-		// RBAC 授权/撤权是高敏操作：审计写入失败必须留痕（此前静默丢弃）。
-		observability.FromContext(ctx).Error("admin: rbac audit log append failed", "error", err)
-	}
-	return nil, nil
+		return nil, s.repo.AppendAuditLog(txCtx, newAuditEntry(txCtx, actor, AuditLogEntry{
+			Action:     AuditActionAdminRevoke,
+			TargetType: AuditTargetTypeAdmin,
+			TargetID:   userID,
+			TargetName: userID,
+			Details: AuditDetails{
+				"type":           string(AuditActionAdminRevoke),
+				"target_user_id": userID,
+			},
+		}))
+	})
 }
 
 // findRole 按 role_id 直查（审查 P2-23）：此前 ListRoles 全量扫描 + 线性

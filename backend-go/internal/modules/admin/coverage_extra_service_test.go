@@ -431,9 +431,11 @@ func TestServiceRBACRepositoryErrors(t *testing.T) {
 	}
 	repo.listRolesErr = nil
 
-	// CreateRole 成功但审计写失败：角色仍创建成功（审计失败仅留痕）。
+	// CreateRole 审计写失败必须上抛错误（未装配 TxRunner 的回退路径无法回滚已
+	// 创建的角色；生产注入 TxRunner 时角色创建与审计同事务回滚，见
+	// audit_tx_consistency_test.go 的 RBAC 回滚用例）。
 	repo.auditErr = errCovAdmin
-	if _, apiErr, err := svc.CreateRole(ctx, AdminRbacRoleCreateRequest{Name: "cov_audit_role"}); apiErr != nil || err != nil {
+	if _, apiErr, err := svc.CreateRole(ctx, AdminRbacRoleCreateRequest{Name: "cov_audit_role"}); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("CreateRole with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 	repo.auditErr = nil
@@ -490,8 +492,9 @@ func TestServiceUpdateRoleErrorBranches(t *testing.T) {
 	}
 	repo.updateRoleErr = nil
 
+	// 审计写失败必须上抛错误（回退路径无回滚；生产注入 TxRunner 时整体回滚）。
 	repo.auditErr = errCovAdmin
-	if apiErr, err := svc.UpdateRole(ctx, AdminRbacRoleUpdateRequest{RoleID: role.RoleID, Name: &name}); apiErr != nil || err != nil {
+	if apiErr, err := svc.UpdateRole(ctx, AdminRbacRoleUpdateRequest{RoleID: role.RoleID, Name: &name}); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("update with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 }
@@ -521,8 +524,9 @@ func TestServiceDeleteRoleErrorBranches(t *testing.T) {
 	}
 	repo.deleteRoleErr = nil
 
+	// 审计写失败必须上抛错误（回退路径无回滚；生产注入 TxRunner 时整体回滚）。
 	repo.auditErr = errCovAdmin
-	if apiErr, err := svc.DeleteRole(ctx, role.RoleID); apiErr != nil || err != nil {
+	if apiErr, err := svc.DeleteRole(ctx, role.RoleID); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("delete with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 }
@@ -564,8 +568,9 @@ func TestServiceSetRolePermissionsErrorBranches(t *testing.T) {
 	}
 	repo.setRolePermissionsErr = nil
 
+	// 审计写失败必须上抛错误（回退路径无回滚；生产注入 TxRunner 时整体回滚）。
 	repo.auditErr = errCovAdmin
-	if apiErr, err := svc.SetRolePermissions(ctx, AdminRbacRoleSetPermissionsRequest{RoleID: role.RoleID, PermissionKeys: []string{permissionTagsRead}}); apiErr != nil || err != nil {
+	if apiErr, err := svc.SetRolePermissions(ctx, AdminRbacRoleSetPermissionsRequest{RoleID: role.RoleID, PermissionKeys: []string{permissionTagsRead}}); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("set permissions with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 }
@@ -599,8 +604,9 @@ func TestServiceGrantAdminErrorBranches(t *testing.T) {
 	}
 	repo.grantAdminErr = nil
 
+	// 审计写失败必须上抛错误（回退路径无回滚；生产注入 TxRunner 时整体回滚）。
 	repo.auditErr = errCovAdmin
-	if apiErr, err := svc.GrantAdmin(ctx, AdminRbacGrantAdminRequest{UserID: "user_bob", RoleIDs: []string{role.RoleID}}); apiErr != nil || err != nil {
+	if apiErr, err := svc.GrantAdmin(ctx, AdminRbacGrantAdminRequest{UserID: "user_bob", RoleIDs: []string{role.RoleID}}); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("grant with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 }
@@ -648,8 +654,9 @@ func TestServiceRevokeAdminErrorBranches(t *testing.T) {
 	}
 	repo.revokeAdminErr = nil
 
+	// 审计写失败必须上抛错误（回退路径无回滚；生产注入 TxRunner 时整体回滚）。
 	repo.auditErr = errCovAdmin
-	if apiErr, err := svc.RevokeAdmin(ctx, "user_bob"); apiErr != nil || err != nil {
+	if apiErr, err := svc.RevokeAdmin(ctx, "user_bob"); apiErr != nil || !errors.Is(err, errCovAdmin) {
 		t.Fatalf("revoke with audit failure: apiErr=%v err=%v", apiErr, err)
 	}
 }

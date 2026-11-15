@@ -166,3 +166,488 @@ func TestCreateAnnouncementAuditFailureRollsBackPublish(t *testing.T) {
 		})
 	}
 }
+
+// ── 批次 4：标签屏蔽 / 公告 update+delete / RBAC 写路径的审计同事务 ──────────
+
+// moderationRollbackTxRunner 模拟真实事务回滚：回调出错时把内存审核仓储（标签
+// 屏蔽状态与公告表）恢复为调用前快照，用于断言「审计失败 → 业务写回滚」。
+func moderationRollbackTxRunner(mods *InMemoryModerationStore) func(context.Context, func(context.Context) error) error {
+	return func(ctx context.Context, fn func(context.Context) error) error {
+		mods.mu.RLock()
+		tags := make(map[string]TagRecord, len(mods.tags))
+		for name, record := range mods.tags {
+			tags[name] = record
+		}
+		blocked := make(map[string]struct{}, len(mods.blockedTags))
+		for name := range mods.blockedTags {
+			blocked[name] = struct{}{}
+		}
+		announcements := make(map[string]systemmodule.AnnouncementRecord, len(mods.announcements))
+		for id, record := range mods.announcements {
+			announcements[id] = record
+		}
+		mods.mu.RUnlock()
+		err := fn(ctx)
+		if err == nil {
+			return nil
+		}
+		mods.mu.Lock()
+		mods.tags = tags
+		mods.blockedTags = blocked
+		mods.announcements = announcements
+		mods.mu.Unlock()
+		return err
+	}
+}
+
+// memoryRepositoryRollbackTxRunner 模拟真实事务回滚：回调出错时恢复内存仓储中
+// RBAC（角色/管理员授权）与审计表的调用前快照。
+func memoryRepositoryRollbackTxRunner(repo *InMemoryRepository) func(context.Context, func(context.Context) error) error {
+	return func(ctx context.Context, fn func(context.Context) error) error {
+		repo.mu.RLock()
+		roles := make(map[string]roleRecord, len(repo.roles))
+		for id, record := range repo.roles {
+			roles[id] = record
+		}
+		admins := make(map[string]adminGrantRecord, len(repo.admins))
+		for id, record := range repo.admins {
+			admins[id] = record
+		}
+		auditLogs := make(map[string]AuditLogEntry, len(repo.auditLogs))
+		for id, entry := range repo.auditLogs {
+			auditLogs[id] = entry
+		}
+		auditOrder := append([]string(nil), repo.auditOrder...)
+		deletedRoles := make(map[string]struct{}, len(repo.deletedRoleIDs))
+		for id := range repo.deletedRoleIDs {
+			deletedRoles[id] = struct{}{}
+		}
+		revokedAdmins := make(map[string]struct{}, len(repo.revokedAdmins))
+		for id := range repo.revokedAdmins {
+			revokedAdmins[id] = struct{}{}
+		}
+		repo.mu.RUnlock()
+		err := fn(ctx)
+		if err == nil {
+			return nil
+		}
+		repo.mu.Lock()
+		repo.roles = roles
+		repo.admins = admins
+		repo.auditLogs = auditLogs
+		repo.auditOrder = auditOrder
+		repo.deletedRoleIDs = deletedRoles
+		repo.revokedAdmins = revokedAdmins
+		repo.mu.Unlock()
+		return err
+	}
+}
+
+// newAuditTxService 构造带可控审计故障与内存事务回滚的 admin Service。
+func newAuditTxService(mods ModerationStore, txRunner func(context.Context, func(context.Context) error) error) (*Service, *covRepo) {
+	repo := &covRepo{InMemoryRepository: NewInMemoryRepository()}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(txRunner)
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		panic(err)
+	}
+	return svc, repo
+}
+
+func TestSetTagBanAuditFailureRollsBackBan(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	svc, repo := newAuditTxService(mods, moderationRollbackTxRunner(mods))
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	req := AdminSetTagBanRequest{Name: "hotspot", Active: true}
+	if apiErr, err := svc.SetTagBan(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort tag ban: apiErr=%v err=%v", apiErr, err)
+	}
+	// 审计失败 → 屏蔽写回滚：标签仍未屏蔽、无 tag.set_ban 审计。
+	if _, blocked := mods.blockedTags["hotspot"]; blocked {
+		t.Fatal("tag ban must roll back on audit failure")
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionTagSetBan, "hotspot"); got != 0 {
+		t.Fatalf("tag.set_ban audit count after failure = %d, want 0", got)
+	}
+
+	// 撤掉审计故障后可安全重试：屏蔽生效且只落一条审计。
+	repo.auditErr = nil
+	if apiErr, err := svc.SetTagBan(adminCtx("admin1"), req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, blocked := mods.blockedTags["hotspot"]; !blocked {
+		t.Fatal("retry must block tag")
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionTagSetBan, "hotspot"); got != 1 {
+		t.Fatalf("tag.set_ban audit count = %d, want 1", got)
+	}
+}
+
+func TestUpdateAnnouncementAuditFailureRollsBackUpdate(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	svc, repo := newAuditTxService(mods, moderationRollbackTxRunner(mods))
+	created, apiErr, err := svc.CreateAnnouncement(adminCtx("admin1"), CreateAnnouncementRequest{Title: "原标题", Content: "内容", Severity: AnnounceLevelInfo})
+	if apiErr != nil || err != nil {
+		t.Fatalf("create announcement: apiErr=%v err=%v", apiErr, err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	newTitle := "审计失败的新标题"
+	req := UpdateAnnouncementRequest{AnnouncementID: created.AnnouncementID, Title: &newTitle}
+	if _, apiErr, err := svc.UpdateAnnouncement(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort update: apiErr=%v err=%v", apiErr, err)
+	}
+	current, found, getErr := mods.GetAnnouncement(context.Background(), created.AnnouncementID)
+	if getErr != nil || !found {
+		t.Fatalf("announcement missing: found=%v err=%v", found, getErr)
+	}
+	if current.Title != "原标题" {
+		t.Fatalf("announcement title after audit failure = %q, want 原标题 (must roll back)", current.Title)
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionAnnouncementUpdate, created.AnnouncementID); got != 0 {
+		t.Fatalf("announcement.update audit count after failure = %d, want 0", got)
+	}
+
+	// 撤掉故障后重试：更新生效且只落一条审计。
+	repo.auditErr = nil
+	if _, apiErr, err := svc.UpdateAnnouncement(adminCtx("admin1"), req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	current, _, getErr = mods.GetAnnouncement(context.Background(), created.AnnouncementID)
+	if getErr != nil || current.Title != newTitle {
+		t.Fatalf("retry must update title: title=%q err=%v", current.Title, getErr)
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionAnnouncementUpdate, created.AnnouncementID); got != 1 {
+		t.Fatalf("announcement.update audit count = %d, want 1", got)
+	}
+}
+
+func TestDeleteAnnouncementAuditFailureRollsBackDelete(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	svc, repo := newAuditTxService(mods, moderationRollbackTxRunner(mods))
+	created, apiErr, err := svc.CreateAnnouncement(adminCtx("admin1"), CreateAnnouncementRequest{Title: "待删公告", Content: "内容", Severity: AnnounceLevelInfo})
+	if apiErr != nil || err != nil {
+		t.Fatalf("create announcement: apiErr=%v err=%v", apiErr, err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	if apiErr, err := svc.DeleteAnnouncement(adminCtx("admin1"), created.AnnouncementID); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort delete: apiErr=%v err=%v", apiErr, err)
+	}
+	current, found, getErr := mods.GetAnnouncement(context.Background(), created.AnnouncementID)
+	if getErr != nil || !found {
+		t.Fatalf("announcement missing: found=%v err=%v", found, getErr)
+	}
+	if current.IsDeleted() {
+		t.Fatal("announcement delete must roll back on audit failure")
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionAnnouncementDelete, created.AnnouncementID); got != 0 {
+		t.Fatalf("announcement.delete audit count after failure = %d, want 0", got)
+	}
+
+	// 撤掉故障后重试：软删生效且只落一条审计。
+	repo.auditErr = nil
+	if apiErr, err := svc.DeleteAnnouncement(adminCtx("admin1"), created.AnnouncementID); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	current, _, getErr = mods.GetAnnouncement(context.Background(), created.AnnouncementID)
+	if getErr != nil || !current.IsDeleted() {
+		t.Fatalf("retry must soft-delete announcement: deleted=%v err=%v", current.IsDeleted(), getErr)
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionAnnouncementDelete, created.AnnouncementID); got != 1 {
+		t.Fatalf("announcement.delete audit count = %d, want 1", got)
+	}
+}
+
+func TestCreateRoleAuditFailureRollsBackCreate(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	// 内存仓储构造时预置了演示审计行：用基线差值断言，不能直接要求全表为空。
+	repoBase.mu.RLock()
+	auditBefore := len(repoBase.auditLogs)
+	repoBase.mu.RUnlock()
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	req := AdminRbacRoleCreateRequest{Name: "audit_rollback_role"}
+	if _, apiErr, err := svc.CreateRole(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort role create: apiErr=%v err=%v", apiErr, err)
+	}
+	if roles, _ := repo.ListRoles(context.Background()); len(roles) != 0 {
+		t.Fatalf("role create must roll back on audit failure, got %d roles", len(roles))
+	}
+	repoBase.mu.RLock()
+	auditAfter := len(repoBase.auditLogs)
+	repoBase.mu.RUnlock()
+	if auditAfter != auditBefore {
+		t.Fatalf("role.create audit row must roll back: before=%d after=%d", auditBefore, auditAfter)
+	}
+
+	repo.auditErr = nil
+	item, apiErr, err := svc.CreateRole(adminCtx("admin1"), req)
+	if apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleCreate, item.RoleID); got != 1 {
+		t.Fatalf("role.create audit count = %d, want 1", got)
+	}
+}
+
+func TestUpdateRoleAuditFailureRollsBackUpdate(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	role, err := repoBase.CreateRole(context.Background(), AdminRbacRoleCreateRequest{Name: "old_name"})
+	if err != nil {
+		t.Fatalf("create role: %v", err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	newName := "new_name"
+	req := AdminRbacRoleUpdateRequest{RoleID: role.RoleID, Name: &newName}
+	if apiErr, err := svc.UpdateRole(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort role update: apiErr=%v err=%v", apiErr, err)
+	}
+	after, found, getErr := repoBase.GetRole(context.Background(), role.RoleID)
+	if getErr != nil || !found || after.Name != "old_name" {
+		t.Fatalf("role update must roll back on audit failure: name=%q found=%v err=%v", after.Name, found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleUpdate, role.RoleID); got != 0 {
+		t.Fatalf("role.update audit count after failure = %d, want 0", got)
+	}
+
+	repo.auditErr = nil
+	if apiErr, err := svc.UpdateRole(adminCtx("admin1"), req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	after, _, _ = repoBase.GetRole(context.Background(), role.RoleID)
+	if after.Name != newName {
+		t.Fatalf("retry must rename role, got %q", after.Name)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleUpdate, role.RoleID); got != 1 {
+		t.Fatalf("role.update audit count = %d, want 1", got)
+	}
+}
+
+func TestDeleteRoleAuditFailureRollsBackDelete(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	role, err := repoBase.CreateRole(context.Background(), AdminRbacRoleCreateRequest{Name: "delete_me"})
+	if err != nil {
+		t.Fatalf("create role: %v", err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	if apiErr, err := svc.DeleteRole(adminCtx("admin1"), role.RoleID); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort role delete: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetRole(context.Background(), role.RoleID); getErr != nil || !found {
+		t.Fatalf("role delete must roll back on audit failure: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleDelete, role.RoleID); got != 0 {
+		t.Fatalf("role.delete audit count after failure = %d, want 0", got)
+	}
+
+	repo.auditErr = nil
+	if apiErr, err := svc.DeleteRole(adminCtx("admin1"), role.RoleID); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetRole(context.Background(), role.RoleID); getErr != nil || found {
+		t.Fatalf("retry must delete role: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleDelete, role.RoleID); got != 1 {
+		t.Fatalf("role.delete audit count = %d, want 1", got)
+	}
+}
+
+func TestSetRolePermissionsAuditFailureRollsBackPermissions(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	role, err := repoBase.CreateRole(context.Background(), AdminRbacRoleCreateRequest{Name: "perm_role"})
+	if err != nil {
+		t.Fatalf("create role: %v", err)
+	}
+	if err := repoBase.SetRolePermissions(context.Background(), role.RoleID, []string{permissionTagsRead}); err != nil {
+		t.Fatalf("seed permissions: %v", err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	req := AdminRbacRoleSetPermissionsRequest{RoleID: role.RoleID, PermissionKeys: []string{permissionTagsWrite}}
+	if apiErr, err := svc.SetRolePermissions(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort set permissions: apiErr=%v err=%v", apiErr, err)
+	}
+	after, found, getErr := repoBase.GetRole(context.Background(), role.RoleID)
+	if getErr != nil || !found {
+		t.Fatalf("role missing: found=%v err=%v", found, getErr)
+	}
+	if len(after.Permissions) != 1 || after.Permissions[0] != permissionTagsRead {
+		t.Fatalf("permissions must roll back on audit failure, got %v", after.Permissions)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleSetPermissions, role.RoleID); got != 0 {
+		t.Fatalf("role.set_permissions audit count after failure = %d, want 0", got)
+	}
+
+	repo.auditErr = nil
+	if apiErr, err := svc.SetRolePermissions(adminCtx("admin1"), req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	after, _, _ = repoBase.GetRole(context.Background(), role.RoleID)
+	if len(after.Permissions) != 1 || after.Permissions[0] != permissionTagsWrite {
+		t.Fatalf("retry must replace permissions, got %v", after.Permissions)
+	}
+	if got := countAuditByAction(repoBase, AuditActionRoleSetPermissions, role.RoleID); got != 1 {
+		t.Fatalf("role.set_permissions audit count = %d, want 1", got)
+	}
+}
+
+func TestGrantAdminAuditFailureRollsBackGrant(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	req := AdminRbacGrantAdminRequest{UserID: "user_bob", AwardAllPermissions: true}
+	if apiErr, err := svc.GrantAdmin(adminCtx("admin1"), req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort grant: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetActor(context.Background(), "user_bob"); getErr != nil || found {
+		t.Fatalf("grant must roll back on audit failure: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionAdminAward, "user_bob"); got != 0 {
+		t.Fatalf("admin.award audit count after failure = %d, want 0", got)
+	}
+
+	repo.auditErr = nil
+	if apiErr, err := svc.GrantAdmin(adminCtx("admin1"), req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetActor(context.Background(), "user_bob"); getErr != nil || !found {
+		t.Fatalf("retry must grant admin: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionAdminAward, "user_bob"); got != 1 {
+		t.Fatalf("admin.award audit count = %d, want 1", got)
+	}
+}
+
+func TestRevokeAdminAuditFailureRollsBackRevoke(t *testing.T) {
+	mods := NewInMemoryModerationStore()
+	repoBase := NewInMemoryRepository()
+	repo := &covRepo{InMemoryRepository: repoBase}
+	svc := NewService(repo, &stubProvider{config: defaultConfig()}, mods, nil)
+	svc.SetTxRunner(memoryRepositoryRollbackTxRunner(repoBase))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "user_bob", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant bob: %v", err)
+	}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	if apiErr, err := svc.RevokeAdmin(adminCtx("admin1"), "user_bob"); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort revoke: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetActor(context.Background(), "user_bob"); getErr != nil || !found {
+		t.Fatalf("revoke must roll back on audit failure: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionAdminRevoke, "user_bob"); got != 0 {
+		t.Fatalf("admin.revoke audit count after failure = %d, want 0", got)
+	}
+
+	repo.auditErr = nil
+	if apiErr, err := svc.RevokeAdmin(adminCtx("admin1"), "user_bob"); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if _, found, getErr := repoBase.GetActor(context.Background(), "user_bob"); getErr != nil || found {
+		t.Fatalf("retry must revoke admin: found=%v err=%v", found, getErr)
+	}
+	if got := countAuditByAction(repoBase, AuditActionAdminRevoke, "user_bob"); got != 1 {
+		t.Fatalf("admin.revoke audit count = %d, want 1", got)
+	}
+}
+
+// roleReadSequenceRepo 让第二次 GetRole（UpdateRole 更新后的回读）返回错误或
+// not found：覆盖「同事务内更新后回读异常必须回滚、不写不一致审计」两条分支。
+type roleReadSequenceRepo struct {
+	*InMemoryRepository
+	calls      int
+	failOnCall int
+	hideOnCall int
+}
+
+func (r *roleReadSequenceRepo) GetRole(ctx context.Context, roleID string) (AdminRoleItem, bool, error) {
+	r.calls++
+	if r.failOnCall > 0 && r.calls == r.failOnCall {
+		return AdminRoleItem{}, false, errors.New("injected get role failure")
+	}
+	if r.hideOnCall > 0 && r.calls == r.hideOnCall {
+		return AdminRoleItem{}, false, nil
+	}
+	return r.InMemoryRepository.GetRole(ctx, roleID)
+}
+
+func TestUpdateRolePostReadFailureAbortsWithoutAudit(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		repo *roleReadSequenceRepo
+	}{
+		{name: "read_error", repo: &roleReadSequenceRepo{failOnCall: 2}},
+		{name: "vanished", repo: &roleReadSequenceRepo{hideOnCall: 2}},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			tc.repo.InMemoryRepository = NewInMemoryRepository()
+			svc := NewService(tc.repo, &stubProvider{config: defaultConfig()}, NewInMemoryModerationStore(), nil)
+			if err := tc.repo.InMemoryRepository.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+				t.Fatalf("grant admin: %v", err)
+			}
+			role, err := tc.repo.InMemoryRepository.CreateRole(context.Background(), AdminRbacRoleCreateRequest{Name: "seq_role"})
+			if err != nil {
+				t.Fatalf("create role: %v", err)
+			}
+			name := "seq_role_new"
+			if apiErr, err := svc.UpdateRole(adminCtx("admin1"), AdminRbacRoleUpdateRequest{RoleID: role.RoleID, Name: &name}); err == nil || apiErr != nil {
+				t.Fatalf("post-update read anomaly must abort: apiErr=%v err=%v", apiErr, err)
+			}
+			if got := countAuditByAction(tc.repo.InMemoryRepository, AuditActionRoleUpdate, role.RoleID); got != 0 {
+				t.Fatalf("role.update audit count after post-read anomaly = %d, want 0", got)
+			}
+		})
+	}
+}
