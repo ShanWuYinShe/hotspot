@@ -23,6 +23,13 @@ const TopicSystemAnnouncement = "realtime.system_announcement"
 // TopicAdminReportHandled 是举报裁决结果 WS 通知（admin 生产，bootstrap 订阅）。
 const TopicAdminReportHandled = "realtime.admin_report_handled"
 
+// TopicMediaPurge 是账户注销级联的媒体对象清理事件（media 生产，bootstrap
+// 订阅）：payload 是该用户一批待删 storage_key（media.PurgeObjectsPayload）。
+// 生产方在删除上传会话行之后按批入队，由 dispatcher 在请求生命周期外逐条删除
+// 对象，避免超大媒体账户的注销请求同步串行删除数千对象而超时（第 81 轮审计
+// 批次 5 残留）；单条删除失败返回错误走 outbox 既有重试/死信语义。
+const TopicMediaPurge = "media.purge_objects"
+
 const (
 	defaultPollInterval = time.Second
 	defaultBatchSize    = 50

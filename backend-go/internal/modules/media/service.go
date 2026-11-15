@@ -35,6 +35,10 @@ type Service struct {
 	appConfig appconfig.Source
 	repo      Repository
 	provider  Provider
+	// eventOutbox 是异步后置副作用的事件生产者（bootstrap 注入通用 outbox
+	// writer）：账户注销级联的媒体对象清理由请求生命周期内改为入队投递；nil
+	// （单测/内存装配）或入队失败时回退同步删除，见 user_purge.go。
+	eventOutbox outboxWriter
 }
 
 func NewService() *Service {

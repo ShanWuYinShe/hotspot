@@ -97,6 +97,13 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	groupsModule := groups.NewModule(factory, usersModule.Service, notificationService)
 	mediaModule := media.NewModule(cfg, factory)
 	mediaModule.Service.SetAppConfig(sharedAppConfig)
+	// 账户注销级联的媒体对象清理改异步 outbox：会话行删除后按批入队，由
+	// bootstrap/app.go 的 dispatcher 在请求生命周期外删除（超大媒体账户不再
+	// 拖住注销请求）；未注入或入队失败时 Service 回退同步删除
+	// （见 media/user_purge.go）。writer 无事务上下文时退化为池直写。
+	if eventWriter := outbox.NewWriter(factory); eventWriter != nil {
+		mediaModule.Service.SetEventOutbox(eventWriter)
+	}
 	// 群头像归属校验 + 稳定代理路径转换（groups create/update；对齐 users 的
 	// AccountAvatarMediaResolver 注入，groupsModule 创建在先，此处回填注入）。
 	groupsModule.Service.SetGroupAvatarMediaResolver(mediaModule.Service)
