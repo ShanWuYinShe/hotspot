@@ -28,8 +28,10 @@ func NewFactory(cfg config.Config) *Factory {
 		poolConfig, err := pgxpool.ParseConfig(cfg.PostgresDSN)
 		if err != nil {
 			// DSN 解析失败是确定性启动错误，带病启动只会让后续每个请求都失败。
-			// panic 消息不含 DSN，避免泄漏连接串中的密码。
-			panic(fmt.Sprintf("parse postgres DSN: %v", err))
+			// panic 消息不含 DSN，避免泄漏连接串中的密码；口令含 URL 保留字符
+			// （/ @ : ? % 空格等）是最常见根因（compose 以未转义口令拼装 DSN），
+			// 在错误里给出排查方向。
+			panic(fmt.Sprintf("parse postgres DSN: %v (若口令含 / @ : ? %% 或空格等 URL 保留字符，请改用 URL 编码后的 DSN 或 hex 口令)", err))
 		}
 		// 运行期查询走预编译语句（extended protocol + 语句缓存）：省去每查询的
 		// 文本拼接/转义（simple protocol 的 sanitize 在 CPU profile 中占 ~2.7%）

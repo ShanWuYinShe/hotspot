@@ -155,7 +155,17 @@ weak_env_check() {
     val="$(env_val "$name")"
     reason=""
     case "$name" in
-      POSTGRES_PASSWORD|S3_SECRET_KEY)
+      POSTGRES_PASSWORD)
+        if [ -z "$val" ]; then reason="为空"
+        elif [ "$val" = "change-me" ] || [ "$val" = "minioadmin" ]; then reason="仍为 compose 默认值"
+        elif printf '%s' "$val" | grep -Eq '[^A-Za-z0-9._~-]'; then
+          # compose 把该值未转义拼进 POSTGRES_DSN（postgres://postgres:<口令>@...）：
+          # 含 / @ : ? % 或空格会让 pgx/libpq 解析失败或把 host 解析错位，
+          # 表现为「部署成功但后端反复崩溃/连不上库」。口令需只用 URL 安全字符。
+          reason="含 URL 保留字符（compose 以未转义口令拼装 POSTGRES_DSN，含 / @ : ? % 空格等会解析失败）"
+        fi
+        ;;
+      S3_SECRET_KEY)
         if [ -z "$val" ]; then reason="为空"
         elif [ "$val" = "change-me" ] || [ "$val" = "minioadmin" ]; then reason="仍为 compose 默认值"
         fi
@@ -183,7 +193,9 @@ weak_env_check() {
     echo "  风险：数据库可被任意连接拖库、对象存储可被匿名读写、认证 token 可被"
     echo "        伪造（等于整个登录体系失效）。"
     echo "  指引：在服务器 ${REMOTE_DIR}/.env 中为上述变量填入强随机值"
-    echo "        （openssl rand -base64 48 生成）。注意：POSTGRES_PASSWORD 仅在"
+    echo "        （POSTGRES_PASSWORD 用 openssl rand -hex 32：该值会被未转义拼进"
+    echo "         POSTGRES_DSN，必须只用 URL 安全字符；其它密钥可用 openssl rand -base64 48）。"
+    echo "        注意：POSTGRES_PASSWORD 仅在"
     echo "        数据卷首次初始化时生效，已有数据需 ALTER USER 同步；更换"
     echo "        AUTH_TOKEN_SECRET 会使所有已登录会话失效（需重新登录）；"
     echo "        S3_* 改后 docker compose up -d 重建 seaweedfs 与 backend 生效。"
