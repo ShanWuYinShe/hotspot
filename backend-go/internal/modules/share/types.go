@@ -50,10 +50,18 @@ type ShareUserInfo struct {
 	AvatarURL *string `json:"avatar_url"`
 }
 
+// SharePreview 是分享的展示用摘要（spec api_spec_types.md）。moment 分享的
+// cover_url 由 Service 在返回前覆盖为瞬间首图的签名读 URL；无图的纯文字瞬间
+// 保留仓储填写的作者头像兜底。
 type SharePreview struct {
 	Title    string  `json:"title"`
 	Subtitle *string `json:"subtitle"`
 	CoverURL *string `json:"cover_url"`
+
+	// coverStorageKey 是 moment 分享封面（该瞬间第一张已完成媒体）的对象存储
+	// key，仅仓储解析阶段填充、不参与 JSON（未导出字段 json 天然忽略）。Service
+	// 返回前用它 presign 成绝对读 URL 覆盖 CoverURL；为空时保留作者头像兜底。
+	coverStorageKey string
 }
 
 type ShareBase struct {

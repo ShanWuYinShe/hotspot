@@ -260,7 +260,7 @@ func TestSharePostgresResolvePreviewTypes(t *testing.T) {
 	}
 
 	// moment 描述为空 → 标题回退 location_name
-	backend.moments["moment_no_desc"] = [5]string{"", "Shanghai", "Bob", "", "public"}
+	backend.moments["moment_no_desc"] = shareStubMoment{LocationName: "Shanghai", AuthorNickname: "Bob", Visibility: "public"}
 	backend.shares["share_moment_fallback"] = shareStubRecord{ShareID: "share_moment_fallback", ShareCode: "ABCDEFGHJKMP", ShareType: ShareTypeMoment, CreatorUserID: "user_alice", PayloadJSON: sharePayloadJSONOf(t, map[string]any{"shared_moment_id": "moment_no_desc"})}
 	backend.byCode["ABCDEFGHJKMP"] = "share_moment_fallback"
 	detail, err = newShareTestRepo(backend).Get(ctx, getShareQuery{ShareCode: "ABCDEFGHJKMP"})

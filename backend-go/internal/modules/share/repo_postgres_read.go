@@ -31,7 +31,8 @@ WHERE group_id = ANY($1::text[])
   AND deleted_at IS NULL`
 
 	queryShareMomentsByIDs = `
-SELECT m.moment_id, m.description, m.location_name, u.nickname, COALESCE(u.avatar_url, '')
+SELECT m.moment_id, m.description, m.location_name, u.nickname, COALESCE(u.avatar_url, ''),
+       ` + queryShareMomentCoverStorageKey + `
 FROM moments m
 JOIN users u ON u.user_id = m.user_id
 WHERE m.moment_id = ANY($1::text[])
@@ -209,6 +210,8 @@ type sharedMomentPreview struct {
 	locationName    string
 	authorNickname  string
 	authorAvatarURL string
+	// coverStorageKey 该瞬间第一张已完成媒体的存储 key（空 = 纯文字瞬间，封面回退头像）。
+	coverStorageKey string
 }
 
 // resolveSharePreviews 批量解析列表页 preview（每类目标一次查询），返回与
@@ -274,7 +277,8 @@ func resolveSharePreviews(ctx context.Context, queryable persistence.Queryable, 
 			if title == "" {
 				title = moment.locationName
 			}
-			previews[i] = &SharePreview{Title: title, Subtitle: types.StrPtr(moment.authorNickname), CoverURL: types.StrPtr(moment.authorAvatarURL)}
+			// 封面先用作者头像兜底；有瞬间图时 Service 返回前用 presign URL 覆盖。
+			previews[i] = &SharePreview{Title: title, Subtitle: types.StrPtr(moment.authorNickname), CoverURL: types.StrPtr(moment.authorAvatarURL), coverStorageKey: moment.coverStorageKey}
 		case ShareTypeLocation:
 			sharedLocation, _ := target.payload["shared_location"].(map[string]any)
 			locationName, _ := sharedLocation["location_name"].(string)
@@ -345,7 +349,7 @@ func loadSharedMomentsByIDs(ctx context.Context, queryable persistence.Queryable
 	for rows.Next() {
 		var id string
 		var item sharedMomentPreview
-		if err := rows.Scan(&id, &item.description, &item.locationName, &item.authorNickname, &item.authorAvatarURL); err != nil {
+		if err := rows.Scan(&id, &item.description, &item.locationName, &item.authorNickname, &item.authorAvatarURL, &item.coverStorageKey); err != nil {
 			return nil, err
 		}
 		out[id] = item
@@ -381,7 +385,7 @@ func resolveSharePreview(ctx context.Context, queryable persistence.Queryable, s
 		}
 		return &SharePreview{Title: name, Subtitle: types.StrPtr(description), CoverURL: types.StrPtr(avatarURL)}, nil
 	case ShareTypeMoment:
-		_, description, locationName, authorNickname, authorAvatarURL, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id"))
+		_, description, locationName, authorNickname, authorAvatarURL, coverStorageKey, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id"))
 		if err != nil {
 			return nil, err
 		}
@@ -389,7 +393,8 @@ func resolveSharePreview(ctx context.Context, queryable persistence.Queryable, s
 		if title == "" {
 			title = locationName
 		}
-		return &SharePreview{Title: title, Subtitle: types.StrPtr(authorNickname), CoverURL: types.StrPtr(authorAvatarURL)}, nil
+		// 封面先用作者头像兜底；有瞬间图时 Service 返回前用 presign URL 覆盖。
+		return &SharePreview{Title: title, Subtitle: types.StrPtr(authorNickname), CoverURL: types.StrPtr(authorAvatarURL), coverStorageKey: coverStorageKey}, nil
 	case ShareTypeLocation:
 		sharedLocation, _ := payload["shared_location"].(map[string]any)
 		locationName, _ := sharedLocation["location_name"].(string)

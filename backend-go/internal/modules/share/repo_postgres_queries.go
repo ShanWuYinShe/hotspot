@@ -66,12 +66,27 @@ const (
 	WHERE group_id = $1
 	  AND deleted_at IS NULL`
 
+	// queryShareMomentCoverStorageKey 取该瞬间第一张「已完成」媒体的 storage_key
+	// （无图或上传未完成时为空），供分享封面使用（产品决策：moment 分享封面用
+	// 瞬间图，无图回退作者头像）。JOIN 谓词必须带 status='completed'：045 的
+	// idx_media_upload_sessions_file_id 是 partial index，谓词不匹配会退化为对
+	// media_upload_sessions 的全表扫描（与 moments 图片读取同一口径）。
+	queryShareMomentCoverStorageKey = `COALESCE((
+	         SELECT mus.storage_key
+	         FROM moment_images mi
+	         JOIN media_upload_sessions mus ON mus.file_id = mi.file_id AND mus.status = 'completed'
+	         WHERE mi.moment_id = m.moment_id
+	         ORDER BY mi.position
+	         LIMIT 1
+	       ), '')`
+
 	queryShareMomentExists = `
 	SELECT m.moment_id,
 	       m.description,
 	       m.location_name,
 	       u.nickname,
-	       COALESCE(u.avatar_url, '')
+	       COALESCE(u.avatar_url, ''),
+	       ` + queryShareMomentCoverStorageKey + `
 	FROM moments m
 	JOIN users u ON u.user_id = m.user_id
 	WHERE m.moment_id = $1

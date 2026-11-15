@@ -14,14 +14,30 @@ type InteractionCounter interface {
 	AdjustInteractionCount(ctx context.Context, momentID string, delta int)
 }
 
+// MomentCoverResolver 把 moment 封面的对象存储 key 签名成绝对读 URL；media.Service
+// 已满足（PresignGet），由 bootstrap 注入。允许为空：未注入时保留头像兜底。
+type MomentCoverResolver interface {
+	PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error)
+}
+
+// shareMomentCoverTTL 分享封面（瞬间首图）presign 读 URL 有效期，取 7 天与
+// moments 模块的 momentReadTTL 一致：分享链可能被转发到群聊/朋友圈后很久才被
+// 打开，签名过短会让图片 403；而落地页/OG 爬虫每次请求都会重新解析并签名，
+// 过期只影响已下发缓存的旧 URL，不会永久失效。
+const shareMomentCoverTTL = 7 * 24 * time.Hour
+
 type Service struct {
 	repo               Repository
 	interactionCounter InteractionCounter
+	coverResolver      MomentCoverResolver
 }
 
 func NewServiceWithRepo(repo Repository) *Service { return &Service{repo: repo} }
 
 func (s *Service) SetInteractionCounter(c InteractionCounter) { s.interactionCounter = c }
+
+// SetCoverResolver 注入 moment 分享封面签名器（bootstrap 传 media.Service）。
+func (s *Service) SetCoverResolver(resolver MomentCoverResolver) { s.coverResolver = resolver }
 
 func (s *Service) Create(ctx context.Context, req CreateShareRequest) (ShareCreated, error) {
 	principal, ok := platformauth.PrincipalFromContext(ctx)
@@ -57,6 +73,7 @@ func (s *Service) Get(ctx context.Context, req GetShareRequest) (ShareDetail, er
 		observability.FromContext(ctx).Error("share.get failed", "error", err, "share_code", observability.Redact(query.ShareCode))
 		return ShareDetail{}, err
 	}
+	s.applyMomentCover(ctx, item.Preview)
 	return item, nil
 }
 
@@ -86,7 +103,32 @@ func (s *Service) List(ctx context.Context, req ListSharesRequest) (PaginatedSha
 		observability.FromContext(ctx).Error("share.list failed", "error", err)
 		return PaginatedShares{}, err
 	}
+	// 列表页与单条入口共用同一封面口径（「我的分享」列表也展示封面）。
+	for i := range items.Items {
+		s.applyMomentCover(ctx, items.Items[i].Preview)
+	}
 	return items, nil
+}
+
+// applyMomentCover 把 preview 上由仓储带出的 moment 封面 storage key 签名成
+// 绝对读 URL 并覆盖 CoverURL（产品决策：moment 分享封面用瞬间第一张图片）。
+// 纯文字瞬间（coverStorageKey 为空）保留仓储填写的作者头像兜底；未注入
+// resolver 或签名失败时同样保留头像兜底并 WARN——封面只是展示增强，不能让
+// 分享解析/OG 落地页失败（预览爬虫会即时抓取，失败即回退而不是重试）。
+func (s *Service) applyMomentCover(ctx context.Context, preview *SharePreview) {
+	if preview == nil || preview.coverStorageKey == "" {
+		return
+	}
+	if s.coverResolver == nil {
+		observability.FromContext(ctx).Warn("share.moment_cover resolver not configured, fallback to avatar", "storage_key", preview.coverStorageKey)
+		return
+	}
+	url, err := s.coverResolver.PresignGet(ctx, preview.coverStorageKey, shareMomentCoverTTL)
+	if err != nil {
+		observability.FromContext(ctx).Warn("share.moment_cover presign failed, fallback to avatar", "error", err, "storage_key", preview.coverStorageKey)
+		return
+	}
+	preview.CoverURL = &url
 }
 
 func (s *Service) Revoke(ctx context.Context, req RevokeShareRequest) error {
