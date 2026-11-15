@@ -160,10 +160,13 @@ func NewApp(cfg config.Config) (*App, error) {
 		dispatcher.Register(outbox.TopicSystemAnnouncement, systemAnnouncementOutboxHandler(hub))
 		dispatcher.Register(outbox.TopicAdminReportHandled, adminReportHandledOutboxHandler(hub))
 		// 账户注销级联的媒体对象清理（media 生产、dispatcher 消费）：注销请求在
-		// 行删除后按批入队，这里在请求生命周期外逐条删除，重试/死信语义同其它
-		// topic（见 media/user_purge.go）。
+		// 行删除后按批入队，这里在请求生命周期外逐条删除对象。必须用
+		// RegisterExternal：S3 删除是慢外部 IO，放在领取事务内会让单轮事务膨胀到
+		// 分钟~小时级、阻塞公告/举报等所有其它 topic 投递并长期占用连接（第 82
+		// 轮审计 P1-4）；事务外执行路径的重试/死信语义与其它 topic 一致（见
+		// media/user_purge.go）。
 		if mediaService := mediaServiceFromModules(modules); mediaService != nil {
-			dispatcher.Register(outbox.TopicMediaPurge, mediaPurgeOutboxHandler(mediaService))
+			dispatcher.RegisterExternal(outbox.TopicMediaPurge, mediaPurgeOutboxHandler(mediaService))
 		} else {
 			logger.Error("bootstrap: media module missing, account purge media object cleanup disabled")
 		}

@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,11 +33,24 @@ func (r *purgerRepo) PurgeUserData(_ context.Context, userID string) error {
 }
 
 // purgeCallLog 记录注销级联各步骤的先后顺序（查询 keys → 删行 → 删对象）。
+// 对象删除 handler 内部有界并发执行，add 必须加锁；需要断言顺序的用例用
+// snapshot 取副本再排序。
 type purgeCallLog struct {
+	mu    sync.Mutex
 	calls []string
 }
 
-func (l *purgeCallLog) add(call string) { l.calls = append(l.calls, call) }
+func (l *purgeCallLog) add(call string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.calls = append(l.calls, call)
+}
+
+func (l *purgeCallLog) snapshot() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return append([]string(nil), l.calls...)
+}
 
 // purgeFakeRepo 在内存仓储基础上同时实现 userDataPurger 与 userStorageKeyLister：
 // 返回预设的待删存储键并记录调用顺序，用于验证 Service 层顺序编排与对象删除。
@@ -61,11 +76,14 @@ func (r *purgeFakeRepo) PurgeUserData(context.Context, string) error {
 	return r.purgeErr
 }
 
-// purgeFakeProvider 记录对象删除顺序，并可对指定 storage_key 注入删除失败。
+// purgeFakeProvider 记录对象删除顺序与被删键，并可对指定 storage_key 注入
+// 删除失败；Delete 会被 handler 并发调用，deleted 访问加锁。
 type purgeFakeProvider struct {
 	*coverageProvider
+	mu       sync.Mutex
 	log      *purgeCallLog
 	failKeys map[string]error
+	deleted  []string
 }
 
 func (p *purgeFakeProvider) Delete(_ context.Context, storageKey string) error {
@@ -75,7 +93,16 @@ func (p *purgeFakeProvider) Delete(_ context.Context, storageKey string) error {
 	if err, ok := p.failKeys[storageKey]; ok {
 		return err
 	}
+	p.mu.Lock()
+	p.deleted = append(p.deleted, storageKey)
+	p.mu.Unlock()
 	return nil
+}
+
+func (p *purgeFakeProvider) deletedStorageKeys() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return append([]string(nil), p.deleted...)
 }
 
 // captureStderr 捕获 fn 执行期间写入进程 stderr 的内容（用于断言 Warn 日志）；
@@ -603,9 +630,10 @@ func TestServicePurgeUserDataEmptyStorageKeysSkipsCleanup(t *testing.T) {
 	}
 }
 
-// DeletePurgeObjects 是 outbox handler 的删除逻辑：逐条删、空键跳过、空清单成功。
+// DeletePurgeObjects 是 outbox handler 的删除逻辑：空键跳过、空清单成功、非空键
+// 全部删除。handler 内部有界并发，删除完成顺序不保证，按集合比较。
 func TestServiceDeletePurgeObjects(t *testing.T) {
-	provider := &coverageProvider{}
+	provider := &purgeFakeProvider{failKeys: map[string]error{}}
 	svc := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider)
 	ctx := context.Background()
 	if err := svc.DeletePurgeObjects(ctx, "u1", nil); err != nil {
@@ -614,15 +642,17 @@ func TestServiceDeletePurgeObjects(t *testing.T) {
 	if err := svc.DeletePurgeObjects(ctx, "u1", []string{"", ""}); err != nil {
 		t.Fatalf("全空 keys 直接成功: %v", err)
 	}
-	if len(provider.deletedKeys) != 0 {
-		t.Fatalf("空清单不得发删除请求: %v", provider.deletedKeys)
+	if got := provider.deletedStorageKeys(); len(got) != 0 {
+		t.Fatalf("空清单不得发删除请求: %v", got)
 	}
 	if err := svc.DeletePurgeObjects(ctx, "u1", []string{"published/u1/a.jpg", "", "uploads/u1/b.png"}); err != nil {
 		t.Fatalf("delete purge objects: %v", err)
 	}
+	got := provider.deletedStorageKeys()
+	sort.Strings(got)
 	want := []string{"published/u1/a.jpg", "uploads/u1/b.png"}
-	if !slices.Equal(provider.deletedKeys, want) {
-		t.Fatalf("deleted keys = %v, want %v", provider.deletedKeys, want)
+	if !slices.Equal(got, want) {
+		t.Fatalf("deleted keys = %v, want %v", got, want)
 	}
 }
 
@@ -643,9 +673,11 @@ func TestServiceDeletePurgeObjectsFailureReturnsErrorForRetry(t *testing.T) {
 	if !strings.Contains(err.Error(), "u1") {
 		t.Fatalf("错误应带 user_id 便于排查: %v", err)
 	}
+	gotCalls := log.snapshot()
+	sort.Strings(gotCalls)
 	want := []string{"delete:a", "delete:b", "delete:c"}
-	if !slices.Equal(log.calls, want) {
-		t.Fatalf("单条失败不得中断其余删除: %v, want %v", log.calls, want)
+	if !slices.Equal(gotCalls, want) {
+		t.Fatalf("单条失败不得中断其余删除: %v, want %v", gotCalls, want)
 	}
 }
 

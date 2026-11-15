@@ -28,6 +28,8 @@ const TopicAdminReportHandled = "realtime.admin_report_handled"
 // 生产方在删除上传会话行之后按批入队，由 dispatcher 在请求生命周期外逐条删除
 // 对象，避免超大媒体账户的注销请求同步串行删除数千对象而超时（第 81 轮审计
 // 批次 5 残留）；单条删除失败返回错误走 outbox 既有重试/死信语义。
+// 该 topic 由 bootstrap 以 RegisterExternal（事务外执行）注册：S3 删除不放在
+// 领取事务内，慢/黑洞存储不会拖住其它 topic 投递或长期占用数据库连接。
 const TopicMediaPurge = "media.purge_objects"
 
 const (
@@ -35,6 +37,18 @@ const (
 	defaultBatchSize    = 50
 	maxAttempts         = 10
 	maxBackoff          = 5 * time.Minute
+
+	// 事务外（external）topic 的执行参数（RegisterExternal）：handler 不在领取
+	// 事务内运行，而是短事务领取后在有界并发 goroutine 里执行、再用短事务写回。
+	// 这样慢外部 IO（如对象存储批量删除）既不占用领取事务/连接，也不会阻塞其它
+	// topic 在本 dispatcher 循环里的投递。
+	externalHandlerTimeout  = 60 * time.Second // 单事件 handler 总时长上限（超时按投递失败重试）
+	externalFinalizeTimeout = 15 * time.Second // 结果写回短事务上限
+	externalConcurrency     = 4                // 同时执行的事务外事件数上限（每个事件一条 goroutine）
+	// externalLease 是领取事务里给行打上的租约：执行期间 available_at 被推到
+	// 未来，其它实例/下一轮不会重复领取。必须显著大于单事件超时，否则执行中的
+	// 行会被重新领取（at-least-once 下 handler 幂等，但会放大外部 IO）。
+	externalLease = 3 * time.Minute
 
 	// 保留期清理（审计缺口：outbox_events 只增不减）：成功投递的事件行保留
 	// defaultRetention 后分批物理删除；重试中的行永不自动删除——失败记录要留给
@@ -56,12 +70,67 @@ const (
 
 const queryInsertOutbox = `INSERT INTO outbox_events (topic, payload) VALUES ($1, $2::jsonb)`
 
+// queryClaimOutbox 领取一批「事务内执行」的事件：topic 不含 RegisterExternal
+// 注册的事务外 topic（$2 是事务外 topic 列表，空数组表示没有）——两类 topic
+// 分开领取，避免慢 topic 的积压占满同一批 50 行、饿死其它 topic 的实时事件。
 const queryClaimOutbox = `SELECT event_id, topic, payload, attempts
 FROM outbox_events
-WHERE processed_at IS NULL AND available_at <= now()
+WHERE processed_at IS NULL AND available_at <= now() AND topic <> ALL($2)
 ORDER BY event_id
 LIMIT $1
 FOR UPDATE SKIP LOCKED`
+
+// queryClaimOutboxExternal 只领取事务外 topic 的事件，$1 是本轮空闲并发槽位数：
+// 领取后由调用方在同一个短事务里把 available_at 推到租约到期（见
+// queryLeaseOutboxEvent），提交后 handler 才在事务外执行。
+const queryClaimOutboxExternal = `SELECT event_id, topic, payload, attempts
+FROM outbox_events
+WHERE processed_at IS NULL AND available_at <= now() AND topic = ANY($2)
+ORDER BY event_id
+LIMIT $1
+FOR UPDATE SKIP LOCKED`
+
+// queryLeaseOutboxEvent 给本轮领取的事务外事件打租约：available_at 推到未来，
+// 执行期间不会被其它实例/下一轮重复领取；进程崩溃（结果没写回）时租约到期后
+// 重新投递，保持 at-least-once 语义（handler 必须幂等）。
+const queryLeaseOutboxEvent = `UPDATE outbox_events SET available_at = now() + $2::interval WHERE event_id = $1 AND processed_at IS NULL`
+
+// 事务内执行（Register）路径的结果写回 SQL：handler 与写回同处领取事务，无需
+// 额外保护。
+const (
+	queryMarkOutboxProcessed  = `UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = NULL WHERE event_id = $1`
+	queryMarkOutboxDeadLetter = `UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = $3 WHERE event_id = $1`
+	queryScheduleOutboxRetry  = `UPDATE outbox_events SET attempts = $2, available_at = now() + $3::interval, last_error = $4 WHERE event_id = $1`
+)
+
+// 事务外执行（RegisterExternal）路径的结果写回 SQL：handler 在事务外运行，
+// 期间行可能因租约过期被重新领取、甚至已被新一轮写回，因此用 attempts（领取
+// 时的值）做比较交换当乐观锁，旧结果落空时丢弃（事件会在新一轮正常投递）。
+// persistence.Queryable 的 Exec 不暴露 affected rows，用 CTE + RETURNING 计数
+// （与上方保留期清理同口径）。$N 末尾参数是领取时的 attempts。
+const (
+	queryMarkLeasedOutboxProcessed = `
+WITH updated AS (
+    UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = NULL
+    WHERE event_id = $1 AND processed_at IS NULL AND attempts = $3
+    RETURNING 1
+)
+SELECT COUNT(*) FROM updated`
+	queryMarkLeasedOutboxDeadLetter = `
+WITH updated AS (
+    UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = $3
+    WHERE event_id = $1 AND processed_at IS NULL AND attempts = $4
+    RETURNING 1
+)
+SELECT COUNT(*) FROM updated`
+	queryScheduleLeasedOutboxRetry = `
+WITH updated AS (
+    UPDATE outbox_events SET attempts = $2, available_at = now() + $3::interval, last_error = $4
+    WHERE event_id = $1 AND processed_at IS NULL AND attempts = $5
+    RETURNING 1
+)
+SELECT COUNT(*) FROM updated`
+)
 
 // queryDeleteProcessedOutboxBefore 单批删除「成功投递且超过保留期」的事件行：
 // 子查询借 idx_outbox_processed 按 processed_at 顺序取最早的一批，再按 ctid
@@ -147,14 +216,22 @@ func (w *Writer) Enqueue(ctx context.Context, topic string, payload any) error {
 // Handler 投递单条事件；返回错误时按指数退避重试（最多 maxAttempts）。
 type Handler func(ctx context.Context, payload json.RawMessage) error
 
-// Dispatcher 定时领取未处理事件并投递。Register 必须在 Start/DrainOnce 前调用。
+// Dispatcher 定时领取未处理事件并投递。Register/RegisterExternal 必须在
+// Start/DrainOnce 前调用。
 type Dispatcher struct {
 	factory      *persistence.Factory
 	logger       *observability.Logger
 	handlers     map[string]Handler
+	external     map[string]struct{} // 注册为「事务外执行」的 topic（RegisterExternal）
 	handlersMu   sync.RWMutex
 	pollInterval time.Duration
 	batchSize    int
+	// externalInFlight/externalWG 跟踪事务外执行的并发槽位与在途 handler：槽位
+	// 用 externalMu 保护「查空位 → 领取 → 占位」序列，避免并发 DrainOnce 超额
+	// 领取；Wait 供测试与优雅停机编排等待在途 handler 结束。
+	externalMu       sync.Mutex
+	externalInFlight int
+	externalWG       sync.WaitGroup
 	// deadLetters 是最近一轮保留期清扫查到的死信行数，hotspot_outbox_dead_letters
 	// Gauge 的取值来源（见 NewDeadLettersCollector）：清扫 goroutine 写、/metrics
 	// 抓取读，用原子量避免数据竞争；抓取路径不查库。
@@ -165,20 +242,60 @@ func NewDispatcher(factory *persistence.Factory, logger *observability.Logger) *
 	if logger == nil {
 		logger = observability.L()
 	}
-	return &Dispatcher{factory: factory, logger: logger, handlers: map[string]Handler{}, pollInterval: defaultPollInterval, batchSize: defaultBatchSize}
+	return &Dispatcher{
+		factory:      factory,
+		logger:       logger,
+		handlers:     map[string]Handler{},
+		external:     map[string]struct{}{},
+		pollInterval: defaultPollInterval,
+		batchSize:    defaultBatchSize,
+	}
 }
 
-// Register 注册 topic 处理器（dispatcher 启动前调用）。
+// Register 注册「事务内执行」的 topic 处理器（dispatcher 启动前调用）：handler
+// 在领取事务内同步执行，只适合内存操作（WS 广播等）——慢 handler 会拖长领取
+// 事务并阻塞同批其它 topic，外部 IO 型 handler 必须用 RegisterExternal。
 func (d *Dispatcher) Register(topic string, handler Handler) {
 	d.handlersMu.Lock()
 	defer d.handlersMu.Unlock()
 	d.handlers[topic] = handler
+	delete(d.external, topic)
+}
+
+// RegisterExternal 注册「事务外执行」的 topic 处理器（dispatcher 启动前调用）：
+// dispatcher 在短事务里领取事件并用 available_at 租约占位（不持锁到执行结束），
+// 提交后在独立 goroutine 中执行 handler（有界并发 externalConcurrency、单事件
+// 超时 externalHandlerTimeout），成功/失败再用短事务写回 processed_at/attempts。
+//
+// 适用于外部 IO 型 handler（如对象存储批量删除）：慢 handler 不占用领取事务/
+// 数据库连接，也不会阻塞其它 topic 的投递；重试/死信/panic 隔离语义与 Register
+// 一致。语义为 at-least-once——进程在「执行完成」与「结果写回」之间崩溃、或
+// 租约过期被重新领取时，事件会被再次投递，handler 必须幂等。
+func (d *Dispatcher) RegisterExternal(topic string, handler Handler) {
+	d.handlersMu.Lock()
+	defer d.handlersMu.Unlock()
+	d.handlers[topic] = handler
+	d.external[topic] = struct{}{}
 }
 
 func (d *Dispatcher) handlerFor(topic string) Handler {
 	d.handlersMu.RLock()
 	defer d.handlersMu.RUnlock()
 	return d.handlers[topic]
+}
+
+// externalTopics 返回当前注册为事务外执行的 topic 列表（领取 SQL 的参数）。
+func (d *Dispatcher) externalTopics() []string {
+	d.handlersMu.RLock()
+	defer d.handlersMu.RUnlock()
+	if len(d.external) == 0 {
+		return nil
+	}
+	topics := make([]string, 0, len(d.external))
+	for topic := range d.external {
+		topics = append(topics, topic)
+	}
+	return topics
 }
 
 // invokeHandler 在 recover 保护下调用 handler：panic 转成普通 error（记 ERROR
@@ -378,36 +495,39 @@ type outboxRow struct {
 }
 
 // DrainOnce 领取并投递一批事件，返回处理（含失败）条数。测试与后台循环共用。
+//
+// 两类 topic 分开领取，互不阻塞：
+//   - 普通 topic（Register）：沿用既有语义——在一个事务内领取、执行 handler 并
+//     写回结果；handler 只应是内存操作，慢 handler 会拖长该事务。
+//   - 事务外 topic（RegisterExternal）：独立短事务里按空闲并发槽位领取并打租约
+//     （available_at 推到未来），提交后在有界并发 goroutine 里执行 handler（单
+//     事件超时），再用短事务写回结果；外部 IO 不占用领取事务/连接，也不阻塞
+//     其它 topic（do not wait：等待会重新把慢 handler 放回轮询循环的关键路径）。
 func (d *Dispatcher) DrainOnce(ctx context.Context) (int, error) {
 	if d == nil || d.factory == nil {
 		return 0, persistence.ErrNotImplemented
 	}
+	processed, err := d.drainInline(ctx)
+	if err != nil {
+		return processed, err
+	}
+	external, err := d.drainExternal(ctx)
+	return processed + external, err
+}
+
+// drainInline 执行「事务内」路径：领取一批事件、在同一个事务里逐条执行 handler
+// 并写回结果（成功/重试/死信）。panic 由 invokeHandler 转 error，不掀事务。
+func (d *Dispatcher) drainInline(ctx context.Context) (int, error) {
 	processed := 0
 	err := persistence.RunInTransaction(ctx, d.factory, func(txCtx context.Context) error {
 		queryable, ok := persistence.QueryableFromContext(txCtx)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		rows, err := queryable.Query(txCtx, queryClaimOutbox, d.batchSize)
+		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutbox, d.batchSize, d.externalTopics())
 		if err != nil {
 			return err
 		}
-		claimed := make([]outboxRow, 0, d.batchSize)
-		for rows.Next() {
-			var row outboxRow
-			var payload []byte
-			if err := rows.Scan(&row.eventID, &row.topic, &payload, &row.attempts); err != nil {
-				rows.Close()
-				return err
-			}
-			row.payload = append(json.RawMessage(nil), payload...)
-			claimed = append(claimed, row)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return err
-		}
-		rows.Close()
 		for _, row := range claimed {
 			processed++
 			handler := d.handlerFor(row.topic)
@@ -417,33 +537,228 @@ func (d *Dispatcher) DrainOnce(ctx context.Context) (int, error) {
 			} else {
 				handlerErr = d.invokeHandler(txCtx, handler, row)
 			}
-			nextAttempts := row.attempts + 1
-			if handlerErr == nil {
-				if err := queryable.Exec(txCtx, `UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = NULL WHERE event_id = $1`, row.eventID, nextAttempts); err != nil {
-					return err
-				}
-				continue
-			}
-			if nextAttempts >= maxAttempts {
-				d.logger.Error("outbox: event dead-lettered", "event_id", row.eventID, "topic", row.topic, "attempts", nextAttempts, "error", handlerErr)
-				if err := queryable.Exec(txCtx, `UPDATE outbox_events SET processed_at = now(), attempts = $2, last_error = $3 WHERE event_id = $1`, row.eventID, nextAttempts, handlerErr.Error()); err != nil {
-					return err
-				}
-				continue
-			}
-			backoff := time.Duration(1<<uint(nextAttempts)) * time.Second
-			if backoff > maxBackoff {
-				backoff = maxBackoff
-			}
-			if err := queryable.Exec(txCtx, `UPDATE outbox_events SET attempts = $2, available_at = now() + $3::interval, last_error = $4 WHERE event_id = $1`, row.eventID, nextAttempts, backoff.String(), handlerErr.Error()); err != nil {
+			if err := d.writeOutcome(txCtx, queryable, row, handlerErr, false); err != nil {
 				return err
 			}
-			d.logger.Warn("outbox: delivery failed, scheduled retry", "event_id", row.eventID, "topic", row.topic, "attempts", nextAttempts, "error", handlerErr)
 		}
 		return nil
 	})
-	if err != nil {
-		return processed, err
+	return processed, err
+}
+
+// drainExternal 执行「事务外」路径的领取阶段：按空闲并发槽位在短事务里领取
+// 事务外 topic 的事件并打租约，提交后把每个事件交给独立 goroutine 执行。
+// 本函数不等待 handler 结束（否则慢 handler 会重新阻塞 dispatcher 轮询循环）；
+// 结果由 runExternal 用短事务写回，测试/停机编排可用 Wait 等待在途 handler。
+func (d *Dispatcher) drainExternal(ctx context.Context) (int, error) {
+	topics := d.externalTopics()
+	if len(topics) == 0 {
+		return 0, nil
 	}
-	return processed, nil
+	reserved := d.reserveExternalSlots()
+	if reserved == 0 {
+		// 并发槽位已满：本轮不领取新事件，积压行保持 due 状态等下一轮。
+		return 0, nil
+	}
+	// 未派发出去的预留槽位必须归还（含领取失败与 panic 路径）：槽位泄漏会让
+	// 事务外并发永久缩水甚至停摆（dispatcher 的 GoRestartable 会重启轮询循环，
+	// 但 dispatcher 实例上的槽位计数不会被重置）。
+	dispatched := 0
+	defer func() {
+		if spare := reserved - dispatched; spare > 0 {
+			d.releaseExternalSlots(spare)
+		}
+	}()
+	var rows []outboxRow
+	err := persistence.RunInTransaction(ctx, d.factory, func(txCtx context.Context) error {
+		queryable, ok := persistence.QueryableFromContext(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutboxExternal, reserved, topics)
+		if err != nil {
+			return err
+		}
+		for _, row := range claimed {
+			if err := queryable.Exec(txCtx, queryLeaseOutboxEvent, row.eventID, externalLease.String()); err != nil {
+				return err
+			}
+		}
+		rows = claimed
+		return nil
+	})
+	if err != nil {
+		// 领取事务失败（DB 不可用等）：defer 释放预留槽位，下一轮重试。
+		return 0, err
+	}
+	for _, row := range rows {
+		d.startExternal(ctx, row) // 每个 handler 结束后自行释放自己占用的槽位
+		dispatched++
+	}
+	return len(rows), nil
+}
+
+// reserveExternalSlots 预留事务外执行的空闲并发槽位，返回预留成功数（0 表示
+// 已满）；领取到的事件数不足预留数时由调用方释放多余槽位，每个 handler 结束
+// 后（runExternal）释放自己占用的槽位。
+func (d *Dispatcher) reserveExternalSlots() int {
+	d.externalMu.Lock()
+	defer d.externalMu.Unlock()
+	free := externalConcurrency - d.externalInFlight
+	if free <= 0 {
+		return 0
+	}
+	d.externalInFlight += free
+	return free
+}
+
+func (d *Dispatcher) releaseExternalSlots(n int) {
+	d.externalMu.Lock()
+	d.externalInFlight -= n
+	d.externalMu.Unlock()
+}
+
+// startExternal 启动一个事务外 handler（每事件一个 goroutine，并发已由
+// drainExternal 的槽位预留限制）。goroutine 内再兜一层 recover：异步执行不在
+// dispatcher 轮询循环的 GoRestartable 保护范围内，panic 逃逸会掀掉整个进程。
+func (d *Dispatcher) startExternal(ctx context.Context, row outboxRow) {
+	d.externalWG.Add(1)
+	go func() {
+		defer d.externalWG.Done()
+		defer d.releaseExternalSlots(1)
+		defer func() {
+			if rec := recover(); rec != nil {
+				d.logger.Error("outbox: external handler panic escaped",
+					"event_id", row.eventID, "topic", row.topic, "panic", rec, "stack", string(debug.Stack()))
+			}
+		}()
+		d.runExternal(ctx, row)
+	}()
+}
+
+// runExternal 在领取事务之外执行单条事件并写回结果。handler 拿到带单事件超时
+// 的 ctx（慢外部 IO 不会无限拖住执行 goroutine）；panic 由 invokeHandler 转错。
+//
+// 停机（父 ctx 取消）语义：不把「被中断」当作投递失败累计 attempts（否则反复
+// 滚动重启会把合法事件推进死信），事件保持租约、重启后租约到期自动重投；结果
+// 写回使用脱离父 ctx 取消的短超时 ctx，保证正常结束的执行结果仍然落盘。
+func (d *Dispatcher) runExternal(ctx context.Context, row outboxRow) {
+	handler := d.handlerFor(row.topic)
+	handlerCtx, cancel := context.WithTimeout(ctx, externalHandlerTimeout)
+	var handlerErr error
+	if handler == nil {
+		handlerErr = fmt.Errorf("outbox: no handler for topic %q", row.topic)
+	} else {
+		handlerErr = d.invokeHandler(handlerCtx, handler, row)
+	}
+	cancel()
+	if ctx.Err() != nil {
+		d.logger.Warn("outbox: external handler interrupted by shutdown, event kept for lease retry",
+			"event_id", row.eventID, "topic", row.topic)
+		return
+	}
+	finalCtx, finalCancel := context.WithTimeout(context.WithoutCancel(ctx), externalFinalizeTimeout)
+	defer finalCancel()
+	err := persistence.RunInTransaction(finalCtx, d.factory, func(txCtx context.Context) error {
+		queryable, ok := persistence.QueryableFromContext(txCtx)
+		if !ok {
+			return persistence.ErrNotImplemented
+		}
+		return d.writeOutcome(txCtx, queryable, row, handlerErr, true)
+	})
+	if err != nil {
+		// 结果没写回：行仍处于租约中，租约到期后重新投递（at-least-once）。
+		d.logger.Warn("outbox: finalize external event failed, event will be retried after lease",
+			"event_id", row.eventID, "topic", row.topic, "error", err)
+	}
+}
+
+// Wait 等待当前已在执行的事务外 handler 全部结束（含结果写回）。仅供测试与
+// 优雅停机编排使用：生产 dispatcher 循环不等待，等待会让慢 handler 重新阻塞。
+func (d *Dispatcher) Wait() {
+	if d == nil {
+		return
+	}
+	d.externalWG.Wait()
+}
+
+// claimOutboxRows 执行领取 SQL 并扫描事件行。
+func claimOutboxRows(ctx context.Context, queryable persistence.Queryable, query string, limit int, topics []string) ([]outboxRow, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	if topics == nil {
+		// 必须传空数组而不是 nil：pgx 把 nil []string 编码为 NULL，而
+		// "$2" 为 NULL 时 "topic <> ALL($2)" 结果为 NULL（不匹配任何行）——
+		// 未注册事务外 topic 时 inline 领取会静默返回空批。
+		topics = []string{}
+	}
+	rows, err := queryable.Query(ctx, query, limit, topics)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	claimed := make([]outboxRow, 0, limit)
+	for rows.Next() {
+		var row outboxRow
+		var payload []byte
+		if err := rows.Scan(&row.eventID, &row.topic, &payload, &row.attempts); err != nil {
+			return nil, err
+		}
+		row.payload = append(json.RawMessage(nil), payload...)
+		claimed = append(claimed, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return claimed, nil
+}
+
+// writeOutcome 写回一条事件的投递结果：成功标记 processed；失败累计 attempts
+// 并按指数退避重排，达到 maxAttempts 进死信。leased=true 表示结果来自事务外
+// 执行的 handler，用 attempts 做比较交换（见 queryMarkLeased* 注释），旧结果
+// 落空只记 Warn、不报错（事件会被重新投递）；leased=false 保持既有领取事务内
+// 执行路径的无条件更新语义。
+func (d *Dispatcher) writeOutcome(ctx context.Context, queryable persistence.Queryable, row outboxRow, handlerErr error, leased bool) error {
+	nextAttempts := row.attempts + 1
+	if handlerErr == nil {
+		if !leased {
+			return queryable.Exec(ctx, queryMarkOutboxProcessed, row.eventID, nextAttempts)
+		}
+		return d.execLeasedOutcome(ctx, queryable, queryMarkLeasedOutboxProcessed, row, row.eventID, nextAttempts, row.attempts)
+	}
+	if nextAttempts >= maxAttempts {
+		d.logger.Error("outbox: event dead-lettered", "event_id", row.eventID, "topic", row.topic, "attempts", nextAttempts, "error", handlerErr)
+		if !leased {
+			return queryable.Exec(ctx, queryMarkOutboxDeadLetter, row.eventID, nextAttempts, handlerErr.Error())
+		}
+		return d.execLeasedOutcome(ctx, queryable, queryMarkLeasedOutboxDeadLetter, row, row.eventID, nextAttempts, handlerErr.Error(), row.attempts)
+	}
+	backoff := time.Duration(1<<uint(nextAttempts)) * time.Second
+	if backoff > maxBackoff {
+		backoff = maxBackoff
+	}
+	if leased {
+		if err := d.execLeasedOutcome(ctx, queryable, queryScheduleLeasedOutboxRetry, row, row.eventID, nextAttempts, backoff.String(), handlerErr.Error(), row.attempts); err != nil {
+			return err
+		}
+	} else if err := queryable.Exec(ctx, queryScheduleOutboxRetry, row.eventID, nextAttempts, backoff.String(), handlerErr.Error()); err != nil {
+		return err
+	}
+	d.logger.Warn("outbox: delivery failed, scheduled retry", "event_id", row.eventID, "topic", row.topic, "attempts", nextAttempts, "error", handlerErr)
+	return nil
+}
+
+// execLeasedOutcome 执行带 attempts CAS 保护的结果写回并统计影响行数：0 行表示
+// 租约已过期（行被重新领取/已由新一轮写回），旧结果丢弃，只记 Warn 便于排查。
+func (d *Dispatcher) execLeasedOutcome(ctx context.Context, queryable persistence.Queryable, query string, row outboxRow, args ...any) error {
+	var updated int64
+	if err := queryable.QueryRow(ctx, query, args...).Scan(&updated); err != nil {
+		return err
+	}
+	if updated == 0 {
+		d.logger.Warn("outbox: external event result discarded (lease expired or already finalized)",
+			"event_id", row.eventID, "topic", row.topic)
+	}
+	return nil
 }
