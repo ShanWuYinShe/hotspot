@@ -34,6 +34,9 @@ type stubGroupsRepo struct {
 	dismissErr      error
 	dismissAdminHit bool
 	ownedCount      int
+	// unreadForUser / unreadForUserErr 供 CountUnreadForUser 委托用例注入。
+	unreadForUser    int
+	unreadForUserErr error
 
 	members    []GroupMemberItem
 	membersCur string
@@ -1599,6 +1602,10 @@ func (r *stubGroupsRepo) CountOwnedGroups(context.Context, string) (int, error) 
 	return r.ownedCount, nil
 }
 
+func (r *stubGroupsRepo) CountUnreadForUser(context.Context, string) (int, error) {
+	return r.unreadForUser, r.unreadForUserErr
+}
+
 // --- 审计修复新增：封禁旁路 / owner 自降级 / 非成员操作 ---
 
 func TestServiceSetMemberRoleRejectsOwnerDemotion(t *testing.T) {
@@ -1767,4 +1774,26 @@ type captureDismissAudit struct {
 func (c *captureDismissAudit) AppendGroupDismissAudit(_ context.Context, operatorID, groupID, _ string, reason string) error {
 	c.operatorID, c.groupID, c.reason = operatorID, groupID, reason
 	return nil
+}
+
+// CountUnreadForUser 冷启动未读摘要的群聊聚合：Service 按 principal 解析查看者
+// 并委托 repo（SQL 口径由 repo 单测/真实库 IT 覆盖）。
+func TestServiceCountUnreadForUserDelegates(t *testing.T) {
+	repo := &stubGroupsRepo{unreadForUser: 11}
+	svc := NewServiceWithRepo(repo)
+	count, err := svc.CountUnreadForUser(grpCtx("u1"))
+	if err != nil {
+		t.Fatalf("count unread: %v", err)
+	}
+	if count != 11 {
+		t.Fatalf("count = %d want 11", count)
+	}
+}
+
+func TestServiceCountUnreadForUserPropagatesError(t *testing.T) {
+	repo := &stubGroupsRepo{unreadForUserErr: errors.New("aggregate failed")}
+	svc := NewServiceWithRepo(repo)
+	if _, err := svc.CountUnreadForUser(grpCtx("u1")); err == nil {
+		t.Fatal("expected aggregate error to propagate")
+	}
 }

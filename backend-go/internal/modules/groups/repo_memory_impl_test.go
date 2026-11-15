@@ -532,6 +532,12 @@ func (r *InMemoryRepository) CountOwnedGroups(_ context.Context, userID string) 
 	return count, nil
 }
 
+// CountUnreadForUser 内存实现不持有群消息/已读游标数据（消息归
+// groupmessages 模块，真实未读由 PG 仓储聚合），返回 0 保证契约用例可跑双实现。
+func (r *InMemoryRepository) CountUnreadForUser(context.Context, string) (int, error) {
+	return 0, nil
+}
+
 // SeedGroupsByUser 填充「按用户聚合的群组列表」测试数据（供跨包 handler
 // 测试构造 users 聚合场景；生产路径走 PostgresRepository）。
 func (r *InMemoryRepository) SeedGroupsByUser(userID string, items []GroupItem) {

@@ -133,3 +133,18 @@ func (r *PostgresRepository) CountOwnedGroups(ctx context.Context, userID string
 	}
 	return count, nil
 }
+
+// CountUnreadForUser 用户已加入群的未读消息总数（单条 COUNT，冷启动
+// unread_summary 聚合消费；口径见 queryCountUnreadGroupMessagesForUser，
+// 与 ListMyGroups 的 per-group unread_count 一致）。
+func (r *PostgresRepository) CountUnreadForUser(ctx context.Context, userID string) (int, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryCountUnreadGroupMessagesForUser, userID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}

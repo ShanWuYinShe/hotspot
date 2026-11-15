@@ -92,6 +92,20 @@ func (r *PostgresRepository) List(ctx context.Context, userID string, opts ListO
 	return items, "", nil
 }
 
+// CountUnreadForUser 当前用户全部私聊会话的未读总数（单条 COUNT，冷启动
+// unread_summary 聚合消费；口径见 queryCountUnreadPrivateMessagesForUser）。
+func (r *PostgresRepository) CountUnreadForUser(ctx context.Context, userID string) (int, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int
+	if err := queryable.QueryRow(ctx, queryCountUnreadPrivateMessagesForUser, userID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (r *PostgresRepository) GetState(ctx context.Context, userID, targetUserID string) (ChatState, error) {
 	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
 	if !ok {

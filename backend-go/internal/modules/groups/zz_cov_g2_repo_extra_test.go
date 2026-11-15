@@ -159,6 +159,9 @@ func TestCovPostgresRepositoryWithoutDB(t *testing.T) {
 	if _, err := repo.CountOwnedGroups(ctx, "u1"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("CountOwnedGroups err = %v", err)
 	}
+	if _, err := repo.CountUnreadForUser(ctx, "u1"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("CountUnreadForUser err = %v", err)
+	}
 	if err := repo.PurgeUserData(ctx, "u1"); !errors.Is(err, persistence.ErrNotImplemented) {
 		t.Fatalf("PurgeUserData err = %v", err)
 	}

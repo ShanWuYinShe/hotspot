@@ -72,4 +72,9 @@ type Repository interface {
 	CountCommonGroups(context.Context, string, string) (int, error)
 	// CountOwnedGroups 统计用户担任群主的未解散群数（注销守卫消费）。
 	CountOwnedGroups(context.Context, string) (int, error)
+	// CountUnreadForUser 统计用户已加入且未解散群的未读消息总数（冷启动
+	// unread_summary 聚合消费）。口径与 ListMyGroups 的 per-group unread_count
+	// 一致：未撤回且晚于 group_message_read_state.last_read_sent_at；已退群/
+	// 被移出（封禁）与已解散群不计。
+	CountUnreadForUser(context.Context, string) (int, error)
 }

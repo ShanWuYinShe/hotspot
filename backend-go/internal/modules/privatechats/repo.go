@@ -35,4 +35,10 @@ type Repository interface {
 	RestoreForUser(context.Context, string, string, time.Time) error
 	UpdateSettings(context.Context, string, string, UpdateChatSettings) error
 	DeleteForUser(context.Context, string, string, *time.Time) error
+	// CountUnreadForUser 统计该用户全部私聊会话的未读消息总数（冷启动
+	// unread_summary 聚合消费）。口径与列表逐会话 unread_count 一致：以对方
+	// 视角的已读游标（private_chat_read_state.last_read_sent_at）为界，叠加
+	// 会话可见边界（private_chat_user_state.visible_since/deleted_at），并排除
+	// 本人发送与已撤回消息；对方已注销的会话不计（列表同样不可达）。
+	CountUnreadForUser(context.Context, string) (int, error)
 }

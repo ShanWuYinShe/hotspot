@@ -16,9 +16,18 @@ type notifyUnreadCounter interface {
 	UnreadCount(ctx context.Context) (notify.UnreadSummaryResult, error)
 }
 
+// chatUnreadCounter 是未读摘要所需的聊天未读聚合能力（privatechats / groups
+// 各注入一个实现）：只暴露用到的一个方法，装配层单测可直接注入桩，避免在
+// bootstrap 构造完整业务 Service。
+type chatUnreadCounter interface {
+	CountUnreadForUser(ctx context.Context) (int, error)
+}
+
 type systemBootstrapResolver struct {
-	users  *users.Service
-	notify notifyUnreadCounter
+	users        *users.Service
+	notify       notifyUnreadCounter
+	privateChats chatUnreadCounter
+	groupChats   chatUnreadCounter
 }
 
 func (r systemBootstrapResolver) ResolveProfile(ctx context.Context) (any, bool) {
@@ -36,7 +45,9 @@ func (r systemBootstrapResolver) ResolveProfile(ctx context.Context) (any, bool)
 
 // ResolveUnreadSummary 汇总冷启动未读摘要（spec api_spec_system.md →
 // BootstrapData.unread_summary）：通知部分与 notify/unread_summary 同口径；
-// 聊天未读暂无低成本聚合入口（见内联说明），综合角标仍按 spec 公式求和。
+// 私聊/群聊未读分别经两个聊天模块的跨会话聚合入口现算（服务端不维护独立
+// 未读字段，按各自已读游标动态计算，见 backend-go/AGENTS.md「未读计数（聊天）」），
+// 综合角标按 spec 公式对三域求和（F10：各域之和，允许同一内容重复计入）。
 func (r systemBootstrapResolver) ResolveUnreadSummary(ctx context.Context) system.UnreadSummary {
 	result, err := r.notify.UnreadCount(ctx)
 	if err != nil {
@@ -45,18 +56,28 @@ func (r systemBootstrapResolver) ResolveUnreadSummary(ctx context.Context) syste
 		result = notify.UnreadSummaryResult{}
 	}
 	summary := system.UnreadSummary{
-		NotifyTotal:  result.Total,
-		NotifyByType: unreadByType(result.ByType),
-		// 聊天未读（private_chat_unread_count / group_chat_unread_count）当前
-		// 恒为 0：backend-go/AGENTS.md「未读计数（聊天）」约定服务端不维护独立
-		// 聊天未读字段（由客户端基于 WS 增量维护），且 privatechats 与
-		// groupmessages 都没有「全部会话未读总数」的低成本聚合入口——现有实现
-		// 只在分页会话列表里按已读游标逐会话现算，做全量聚合需在各自 repo 新增
-		// SUM 查询并暴露跨模块 API，超出本聚合端点「不引入新数据」的定位。
-		// 字段与公式仍按 spec 保留：后续接入聚合入口时只需给这两个字段赋值即可。
+		NotifyTotal:            result.Total,
+		NotifyByType:           unreadByType(result.ByType),
+		PrivateChatUnreadCount: r.chatUnreadCount(ctx, "private_chat", r.privateChats),
+		GroupChatUnreadCount:   r.chatUnreadCount(ctx, "group_chat", r.groupChats),
 	}
 	summary.TotalBadge = totalBadge(summary.NotifyTotal, summary.PrivateChatUnreadCount, summary.GroupChatUnreadCount)
 	return summary
+}
+
+// chatUnreadCount 取单个聊天域的未读总数：查询失败 WARN 后降级为 0（不连累
+// 另一域与 total_badge 公式），provider 未注入（无 DB 装配/装配层单测）同样按
+// 0 处理——冷启动摘要始终可返回，不因聊天聚合失败阻塞登录。
+func (r systemBootstrapResolver) chatUnreadCount(ctx context.Context, domain string, counter chatUnreadCounter) int {
+	if counter == nil {
+		return 0
+	}
+	count, err := counter.CountUnreadForUser(ctx)
+	if err != nil {
+		observability.FromContext(ctx).Warn("system.bootstrap chat unread query failed", "domain", domain, "error", err)
+		return 0
+	}
+	return count
 }
 
 // unreadByType 把通知未读分类投影为 spec 的 Record<NotifyCategory, number>。
