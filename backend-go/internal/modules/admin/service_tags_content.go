@@ -49,6 +49,11 @@ func (s *Service) SearchTags(ctx context.Context, req AdminTagSearchRequest) (Pa
 // 引用）；active=false 解屏蔽（对未屏蔽标签 no-op 成功，恢复同名标签可
 // 创建/命中）。屏蔽/解屏蔽均落审计（no-op 解屏蔽也落，与 users/set_ban
 // 的审计写法对齐）。
+//
+// 屏蔽状态写与 tag.set_ban 审计在同一事务内提交：审计写失败整体回滚并返回
+// 错误，管理员可安全重试（不会出现「屏蔽已生效但无审计」）。未装配 TxRunner
+// （单测/内存装配）时退化为直跑，语义与旧实现一致，但该回退路径的审计失败
+// 无法回滚已生效的屏蔽。
 func (s *Service) SetTagBan(ctx context.Context, req AdminSetTagBanRequest) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionTagsWrite)
 	if apiErr != nil || err != nil {
@@ -63,20 +68,19 @@ func (s *Service) SetTagBan(ctx context.Context, req AdminSetTagBanRequest) (*ht
 	if !req.Active && req.HardDelete {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	if err := s.moderationStore.SetTagBan(ctx, tagName, req.Active, req.HardDelete); err != nil {
-		if errors.Is(err, errTagNotFound) {
-			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "标签不存在"}, nil
-		}
-		return nil, err
-	}
 	details := AuditDetails{"type": string(AuditActionTagSetBan), "name": tagName, "active": req.Active}
 	if req.HardDelete {
 		details["hard_delete"] = true
 	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionTagSetBan, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details}); err != nil {
-		return nil, err
-	}
-	return nil, nil
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		if err := s.moderationStore.SetTagBan(txCtx, tagName, req.Active, req.HardDelete); err != nil {
+			if errors.Is(err, errTagNotFound) {
+				return &httpx.APIError{Code: httpx.CodeNotFound, Message: "标签不存在"}, nil
+			}
+			return nil, err
+		}
+		return nil, s.appendAudit(txCtx, AuditLogEntry{Action: AuditActionTagSetBan, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeTag, TargetID: tagName, TargetName: tagName, Details: details})
+	})
 }
 
 func (s *Service) ListAdminAnnouncements(ctx context.Context, req ListAdminAnnouncementsRequest) (PaginatedAdminAnnouncements, *httpx.APIError, error) {
@@ -190,6 +194,11 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateAnnouncement
 
 // UpdateAnnouncement 更新公告（spec api_spec_admin.md announcements/update：
 // 内容类更新返回更新后完整对象 ApiResponse<AdminAnnouncementItem>）。
+//
+// 读取、更新与 announcement.update 审计同一事务：审计写失败整体回滚（公告内容
+// 未变），管理员可安全重试，不再「更新已生效但返回错误/无审计」。审计 TargetName
+// 取事务内读到并写回的最新标题，避免事务外旧快照；未装配 TxRunner（单测/内存
+// 装配）时退化为直跑（无回滚语义）。
 func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncementRequest) (AdminAnnouncementItem, *httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
 	if apiErr != nil || err != nil {
@@ -198,54 +207,66 @@ func (s *Service) UpdateAnnouncement(ctx context.Context, req UpdateAnnouncement
 	if apiErr := validateAnnouncementUpdate(req); apiErr != nil {
 		return AdminAnnouncementItem{}, apiErr, nil
 	}
-	current, found, err := s.moderationStore.GetAnnouncement(ctx, req.AnnouncementID)
-	if err != nil {
-		return AdminAnnouncementItem{}, nil, err
-	}
-	if !found || current.IsDeleted() {
-		return AdminAnnouncementItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
-	}
-	changedFields := make([]string, 0, 4)
-	if req.Title != nil && strings.TrimSpace(*req.Title) != current.Title {
-		changedFields = append(changedFields, "title")
-	}
-	if req.Content != nil && strings.TrimSpace(*req.Content) != current.Content {
-		changedFields = append(changedFields, "content")
-	}
-	if req.Severity != nil && *req.Severity != current.Severity {
-		changedFields = append(changedFields, "severity")
-	}
-	currentActionURL := strings.TrimSpace(current.ActionURL)
-	if req.ActionURL != nil && strings.TrimSpace(*req.ActionURL) != currentActionURL {
-		changedFields = append(changedFields, "action_url")
-	}
-	updatedTitle := current.Title
-	if req.Title != nil {
-		updatedTitle = strings.TrimSpace(*req.Title)
-	}
-	updated, err := s.moderationStore.UpdateAnnouncement(ctx, systemmodule.AnnouncementUpdateInput{
-		AnnouncementID: req.AnnouncementID,
-		Title:          trimOptional(req.Title),
-		Content:        trimOptional(req.Content),
-		Severity:       req.Severity,
-		ActionURL:      trimOptional(req.ActionURL),
-	})
-	if err != nil {
-		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
-			return AdminAnnouncementItem{}, &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+	var updated systemmodule.AnnouncementRecord
+	apiErr, err = s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		current, found, getErr := s.moderationStore.GetAnnouncement(txCtx, req.AnnouncementID)
+		if getErr != nil {
+			return nil, getErr
 		}
-		return AdminAnnouncementItem{}, nil, err
-	}
-	details := AuditDetails{"type": string(AuditActionAnnouncementUpdate), "title": updatedTitle}
-	if len(changedFields) > 0 {
-		details["changed_fields"] = changedFields
-	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details}); err != nil {
-		return AdminAnnouncementItem{}, nil, err
+		if !found || current.IsDeleted() {
+			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+		}
+		changedFields := make([]string, 0, 4)
+		if req.Title != nil && strings.TrimSpace(*req.Title) != current.Title {
+			changedFields = append(changedFields, "title")
+		}
+		if req.Content != nil && strings.TrimSpace(*req.Content) != current.Content {
+			changedFields = append(changedFields, "content")
+		}
+		if req.Severity != nil && *req.Severity != current.Severity {
+			changedFields = append(changedFields, "severity")
+		}
+		currentActionURL := strings.TrimSpace(current.ActionURL)
+		if req.ActionURL != nil && strings.TrimSpace(*req.ActionURL) != currentActionURL {
+			changedFields = append(changedFields, "action_url")
+		}
+		updatedTitle := current.Title
+		if req.Title != nil {
+			updatedTitle = strings.TrimSpace(*req.Title)
+		}
+		item, updateErr := s.moderationStore.UpdateAnnouncement(txCtx, systemmodule.AnnouncementUpdateInput{
+			AnnouncementID: req.AnnouncementID,
+			Title:          trimOptional(req.Title),
+			Content:        trimOptional(req.Content),
+			Severity:       req.Severity,
+			ActionURL:      trimOptional(req.ActionURL),
+		})
+		if updateErr != nil {
+			if errors.Is(updateErr, systemmodule.ErrAnnouncementNotFound()) {
+				return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+			}
+			return nil, updateErr
+		}
+		updated = item
+		details := AuditDetails{"type": string(AuditActionAnnouncementUpdate), "title": updatedTitle}
+		if len(changedFields) > 0 {
+			details["changed_fields"] = changedFields
+		}
+		return nil, s.appendAudit(txCtx, AuditLogEntry{Action: AuditActionAnnouncementUpdate, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: req.AnnouncementID, TargetName: updatedTitle, Details: details})
+	})
+	if apiErr != nil || err != nil {
+		return AdminAnnouncementItem{}, apiErr, err
 	}
 	return toAdminAnnouncementItem(updated), nil, nil
 }
 
+// DeleteAnnouncement 删除公告（软删）。
+//
+// 读取（含已删除 no-op 判定）、软删与 announcement.delete 审计同一事务：审计写
+// 失败整体回滚（公告仍可见），管理员可安全重试。system 模块 store 的
+// DeleteAnnouncement 内部用 persistence.RunInTransaction 包裹「软删 + 清理
+// announcement_reads」，嵌套时复用本事务（RunInTransaction 检测到 ctx 已有事务
+// 直接执行），不会另起第二套事务。未装配 TxRunner 时退化为直跑（无回滚语义）。
 func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string) (*httpx.APIError, error) {
 	actor, apiErr, err := s.requirePermission(ctx, permissionAnnouncementsWrite)
 	if apiErr != nil || err != nil {
@@ -255,24 +276,23 @@ func (s *Service) DeleteAnnouncement(ctx context.Context, announcementID string)
 	if announcementID == "" {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	current, found, err := s.moderationStore.GetAnnouncement(ctx, announcementID)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
-	}
-	if current.IsDeleted() {
-		return nil, nil
-	}
-	if err := s.moderationStore.DeleteAnnouncement(ctx, announcementID); err != nil {
-		if errors.Is(err, systemmodule.ErrAnnouncementNotFound()) {
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		current, found, getErr := s.moderationStore.GetAnnouncement(txCtx, announcementID)
+		if getErr != nil {
+			return nil, getErr
+		}
+		if !found {
 			return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
 		}
-		return nil, err
-	}
-	if err := s.appendAudit(ctx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}}); err != nil {
-		return nil, err
-	}
-	return nil, nil
+		if current.IsDeleted() {
+			return nil, nil
+		}
+		if delErr := s.moderationStore.DeleteAnnouncement(txCtx, announcementID); delErr != nil {
+			if errors.Is(delErr, systemmodule.ErrAnnouncementNotFound()) {
+				return &httpx.APIError{Code: httpx.CodeNotFound, Message: "公告不存在"}, nil
+			}
+			return nil, delErr
+		}
+		return nil, s.appendAudit(txCtx, AuditLogEntry{Action: AuditActionAnnouncementDelete, Operator: UserInfo{UserID: actor.UserID, Nickname: actor.Nickname}, TargetType: AuditTargetTypeAnnouncement, TargetID: announcementID, TargetName: current.Title, Details: AuditDetails{"type": string(AuditActionAnnouncementDelete), "title": current.Title}})
+	})
 }

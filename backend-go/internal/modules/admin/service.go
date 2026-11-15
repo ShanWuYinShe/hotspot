@@ -87,9 +87,11 @@ func (s *Service) SetTxRunner(runInTx persistence.TxRunner) { s.runInTx = runInT
 // 包装事务时 APIError 不当作 Go error 上抛，但必须让事务回滚。
 var errAdminDecisionAborted = errors.New("admin: decision aborted")
 
-// runDecisionInTx 把跨模块编排写（内容删除/封禁/会话撤销/举报终态）放入同一
-// 事务；未注入 TxRunner（单测/内存装配）时直跑，语义不变。业务错误（含并发
-// 败者）通过哨兵回滚已执行副作用，再原样返回 APIError。
+// runDecisionInTx 把一次写路径的全部 DB 写放入同一事务：既用于跨模块编排写
+// （内容删除/封禁/会话撤销/举报终态），也用于「单模块业务写 + 审计日志」——
+// 审计写失败时业务写一并回滚，客户端可安全重试。未注入 TxRunner（单测/内存
+// 装配）时直跑，语义不变。业务错误（含并发败者）通过哨兵回滚已执行副作用，
+// 再原样返回 APIError。
 func (s *Service) runDecisionInTx(ctx context.Context, fn func(context.Context) (*httpx.APIError, error)) (*httpx.APIError, error) {
 	if s.runInTx == nil {
 		return fn(ctx)
