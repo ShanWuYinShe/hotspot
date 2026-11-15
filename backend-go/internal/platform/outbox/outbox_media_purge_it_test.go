@@ -61,6 +61,10 @@ func (p *purgeDeleteProvider) CopyObject(context.Context, string, string) error 
 	return errors.New("not implemented")
 }
 
+func (p *purgeDeleteProvider) ListObjects(context.Context, string, string, int) (media.ObjectListPage, error) {
+	return media.ObjectListPage{}, errors.New("not implemented")
+}
+
 func (p *purgeDeleteProvider) deletedKeys() []string {
 	p.mu.Lock()
 	defer p.mu.Unlock()

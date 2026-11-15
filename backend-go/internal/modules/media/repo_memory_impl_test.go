@@ -130,6 +130,42 @@ func (r *InMemoryRepository) PendingUploadUsage(_ context.Context, userID string
 	return usage, nil
 }
 
+// CompletedStorageBytes 与 PG 的 queryCompletedStorageBytes 同口径：只汇总该
+// 用户已完成会话的 final_file_size（账号级完成态媒体配额判定）。
+func (r *InMemoryRepository) CompletedStorageBytes(_ context.Context, userID string) (int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var total int64
+	for _, item := range r.uploads {
+		if !item.Completed || item.UserID != userID {
+			continue
+		}
+		total += int64(item.File.FileSize)
+	}
+	return total, nil
+}
+
+// ExistingStorageKeys 与 PG 的 queryExistingStorageKeys 同口径：返回候选键中
+// 仍被任意状态会话行引用的子集（保留期 uploads/ 孤儿清理的引用判定）。
+func (r *InMemoryRepository) ExistingStorageKeys(_ context.Context, storageKeys []string) (map[string]struct{}, error) {
+	existing := make(map[string]struct{}, len(storageKeys))
+	if len(storageKeys) == 0 {
+		return existing, nil
+	}
+	want := make(map[string]struct{}, len(storageKeys))
+	for _, storageKey := range storageKeys {
+		want[storageKey] = struct{}{}
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, item := range r.uploads {
+		if _, ok := want[item.StorageKey]; ok {
+			existing[item.StorageKey] = struct{}{}
+		}
+	}
+	return existing, nil
+}
+
 func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
 	return r.listStaleUploads(cutoff, limit, "")
 }

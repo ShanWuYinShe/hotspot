@@ -47,6 +47,12 @@ func (p *retentionProvider) CopyObject(context.Context, string, string) error {
 	return errors.New("not implemented")
 }
 
+// ListObjects 返回空页：保留期用例不构造孤儿对象（孤儿清理阶段有独立用例），
+// 但 runRetentionSweep 每轮都会调用它。
+func (p *retentionProvider) ListObjects(context.Context, string, string, int) (ObjectListPage, error) {
+	return ObjectListPage{}, nil
+}
+
 func (p *retentionProvider) deletedKeys() []string {
 	p.mu.Lock()
 	defer p.mu.Unlock()

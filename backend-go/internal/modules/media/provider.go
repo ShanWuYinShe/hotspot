@@ -21,4 +21,9 @@ type Provider interface {
 	// CopyObject 在存储端把 srcKey 复制到 dstKey（copy-on-complete 发布用），
 	// 不把大对象读进应用内存。失败返回错误，调用方不得提交完成态。
 	CopyObject(ctx context.Context, srcKey, dstKey string) error
+	// ListObjects 按前缀列举对象（S3 ListObjectsV2 单页语义）：prefix 为对象
+	// 键前缀；continuationToken 为空表示首页，非空时原样回传上一页的
+	// NextContinuationToken；maxKeys 为单页上限（越界由实现夹紧）。保留期
+	// sweeper 的 uploads/ 孤儿清理（retention.go）用它枚举对象。
+	ListObjects(ctx context.Context, prefix, continuationToken string, maxKeys int) (ObjectListPage, error)
 }

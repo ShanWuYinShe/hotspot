@@ -1,5 +1,7 @@
 package media
 
+import "time"
+
 type MediaCategory string
 
 const (
@@ -57,6 +59,22 @@ type UploadedMedia struct {
 type ObjectMetadata struct {
 	FileSize int
 	MimeType string
+}
+
+// ObjectSummary 是对象存储列举结果中的单个对象摘要（S3 ListObjectsV2 的
+// Contents 项）。LastModified 解析失败时为零值，调用方应按「无法判断对象年龄」
+// 保守跳过，不做删除。
+type ObjectSummary struct {
+	Key          string
+	LastModified time.Time
+}
+
+// ObjectListPage 是 S3 ListObjectsV2 的单页结果。IsTruncated 为 true 时用
+// NextContinuationToken 取下一页（令牌不透明，调用方原样回传）。
+type ObjectListPage struct {
+	Objects               []ObjectSummary
+	IsTruncated           bool
+	NextContinuationToken string
 }
 
 // MediaAsset is the resolved view of a completed upload, used by other modules

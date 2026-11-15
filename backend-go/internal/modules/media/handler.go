@@ -75,6 +75,12 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeNotFound, "upload_id 不存在")
 		case errors.Is(err, ErrUploadNotReady), errors.Is(err, ErrUploadConflict):
 			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeConflict, "上传状态冲突")
+		case errors.Is(err, ErrStorageQuotaExceeded):
+			// 10400 业务冲突（spec api_spec_errors.md「满员/前置状态不满足」）：
+			// 账号完成态媒体总字节已达上限（见 service.go 的
+			// completedMediaStorageLimitBytes）。上传会话保留在 pending，但上限
+			// 只增不减，客户端重试不会成功——提示用户媒体存储空间已满。
+			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeConflict, "媒体存储空间已达上限")
 		case errors.Is(err, ErrInvalidMediaRequest):
 			httpx.WriteBusinessError(w, r, "CompleteUpload", httpx.CodeInvalidRequest, "参数错误")
 		default:

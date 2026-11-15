@@ -92,6 +92,15 @@ func TestMediaHandlerCompleteBatchErrorPaths(t *testing.T) {
 	}
 }
 
+// 完成态媒体总量/引用判定委托内存实现：这些错误分支用例不涉及配额与孤儿清理。
+func (r *mediaErrRepo) CompletedStorageBytes(ctx context.Context, userID string) (int64, error) {
+	return r.repo.CompletedStorageBytes(ctx, userID)
+}
+
+func (r *mediaErrRepo) ExistingStorageKeys(ctx context.Context, storageKeys []string) (map[string]struct{}, error) {
+	return r.repo.ExistingStorageKeys(ctx, storageKeys)
+}
+
 func (r *mediaErrRepo) CompletedFileMetaByID(ctx context.Context, fileID string) (FileMeta, bool, error) {
 	return r.repo.CompletedFileMetaByID(ctx, fileID)
 }

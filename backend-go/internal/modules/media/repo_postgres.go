@@ -260,6 +260,50 @@ func (r *PostgresRepository) PendingUploadUsage(ctx context.Context, userID stri
 	return usage, nil
 }
 
+// CompletedStorageBytes 按 user_id 汇总已完成上传的 final_file_size（账号级
+// 完成态媒体配额判定，见 queryCompletedStorageBytes）。空集返回 0。
+func (r *PostgresRepository) CompletedStorageBytes(ctx context.Context, userID string) (int64, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	if err := queryable.QueryRow(ctx, queryCompletedStorageBytes, userID).Scan(&total); err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+// ExistingStorageKeys 批量返回仍被上传会话行引用的存储键集合（保留期 uploads/
+// 孤儿清理的引用判定，见 queryExistingStorageKeys）。空入参直接返回空集合，
+// 不向数据库发 ANY([]) 查询。
+func (r *PostgresRepository) ExistingStorageKeys(ctx context.Context, storageKeys []string) (map[string]struct{}, error) {
+	existing := make(map[string]struct{}, len(storageKeys))
+	if len(storageKeys) == 0 {
+		return existing, nil
+	}
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := queryable.Query(ctx, queryExistingStorageKeys, storageKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var storageKey string
+		if err := rows.Scan(&storageKey); err != nil {
+			return nil, err
+		}
+		existing[storageKey] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return existing, nil
+}
+
 // ListStaleUploads 返回超过保留期仍未完成的会话（按 created_at 升序，
 // 旧行优先处理），供保留期 GC 逐条删对象+删行。
 func (r *PostgresRepository) ListStaleUploads(ctx context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {

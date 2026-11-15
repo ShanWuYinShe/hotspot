@@ -135,4 +135,22 @@ FROM media_upload_sessions
 WHERE user_id = $1 AND status <> 'completed' AND created_at < $2
 ORDER BY created_at ASC
 LIMIT $3`
+	// queryCompletedStorageBytes 账号级完成态媒体配额（Service.checkCompletedStorageQuota）：
+	// 按 user_id 汇总已完成行的 final_file_size。user_id 命中
+	// idx_media_upload_sessions_user_created_at 前缀；final_file_size 不在索引中，
+	// 需要回表取列——单账号完成态行数受新配额（≤2GiB / 最小文件大小）与
+	// presign 限流约束，当前量级可接受；如需进一步优化可加「完成态行」部分索引。
+	queryCompletedStorageBytes = `
+SELECT COALESCE(SUM(final_file_size), 0)::bigint
+FROM media_upload_sessions
+WHERE user_id = $1 AND status = 'completed'`
+
+	// queryExistingStorageKeys 保留期 uploads/ 孤儿清理（Service.sweepOrphanUploadObjects）：
+	// 批量返回候选键中仍被会话行引用的子集。任意状态都要查——copy-on-complete
+	// 之前的历史完成态行 storage_key 仍是 uploads/ 键，被删除会导致完成态媒体
+	// 丢失。命中 idx_media_upload_sessions_storage_key。
+	queryExistingStorageKeys = `
+SELECT storage_key
+FROM media_upload_sessions
+WHERE storage_key = ANY($1)`
 )

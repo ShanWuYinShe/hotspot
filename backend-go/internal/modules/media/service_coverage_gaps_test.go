@@ -33,6 +33,15 @@ type coverageProvider struct {
 	putContentType string
 	putData        []byte
 	copiedPairs    [][2]string
+	// ListObjects 注入（保留期 uploads/ 孤儿清理用例）：listPages 按顺序出页，
+	// listErr 优先返回错误；listCalls/listPrefixes/listTokens/listMaxKeys 记录调用
+	// 形态，断言按前缀翻页与单页上限。
+	listPages    []ObjectListPage
+	listErr      error
+	listCalls    int
+	listPrefixes []string
+	listTokens   []string
+	listMaxKeys  []int
 }
 
 func (p *coverageProvider) Presign(context.Context, PresignFileInput, string) (PresignedUpload, error) {
@@ -70,6 +79,24 @@ func (p *coverageProvider) PutObject(_ context.Context, storageKey, contentType 
 func (p *coverageProvider) CopyObject(_ context.Context, srcKey, dstKey string) error {
 	p.copiedPairs = append(p.copiedPairs, [2]string{srcKey, dstKey})
 	return p.copyErr
+}
+
+// ListObjects 按 listPages 顺序逐页返回（用完后返回空页），供保留期 uploads/
+// 孤儿清理用例注入分页结果与错误。
+func (p *coverageProvider) ListObjects(_ context.Context, prefix, continuationToken string, maxKeys int) (ObjectListPage, error) {
+	p.listCalls++
+	p.listPrefixes = append(p.listPrefixes, prefix)
+	p.listTokens = append(p.listTokens, continuationToken)
+	p.listMaxKeys = append(p.listMaxKeys, maxKeys)
+	if p.listErr != nil {
+		return ObjectListPage{}, p.listErr
+	}
+	if len(p.listPages) == 0 {
+		return ObjectListPage{}, nil
+	}
+	page := p.listPages[0]
+	p.listPages = p.listPages[1:]
+	return page, nil
 }
 
 // mediaRepoOverride 在内存仓储基础上注入单方法错误/行为，覆盖服务层对仓储

@@ -95,6 +95,12 @@ func (p *mediaStubProvider) CopyObject(_ context.Context, srcKey, dstKey string)
 	return p.copyErr
 }
 
+// ListObjects 默认返回空页：complete 链路不列举对象，只有保留期孤儿清理会
+// 调用（相关用例用 coverageProvider 的可注入页结果）。
+func (p *mediaStubProvider) ListObjects(context.Context, string, string, int) (ObjectListPage, error) {
+	return ObjectListPage{}, nil
+}
+
 func mediaAuthedRequest(method, target, body string) *http.Request {
 	req := httptest.NewRequest(method, target, strings.NewReader(body))
 	ctx := platformauth.WithPrincipal(req.Context(), platformauth.Principal{UserID: "u1"})
@@ -279,6 +285,15 @@ func assertMediaCode(t *testing.T, rr *httptest.ResponseRecorder, expected httpx
 	if resp.Code != expected {
 		t.Fatalf("expected code %d, got %#v", expected, resp)
 	}
+}
+
+// 完成态媒体总量与引用判定：错误分支用例不涉及配额/孤儿清理，返回零值即可。
+func (r *mediaErrorRepo) CompletedStorageBytes(context.Context, string) (int64, error) {
+	return 0, nil
+}
+
+func (r *mediaErrorRepo) ExistingStorageKeys(context.Context, []string) (map[string]struct{}, error) {
+	return map[string]struct{}{}, nil
 }
 
 func (r *mediaErrorRepo) CompletedFileMetaByID(context.Context, string) (FileMeta, bool, error) {
