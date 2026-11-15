@@ -158,6 +158,9 @@ func NewApp(cfg config.Config) (*App, error) {
 		dispatcher := outbox.NewDispatcher(persistenceFactory, logger)
 		dispatcher.Register(outbox.TopicSystemAnnouncement, systemAnnouncementOutboxHandler(hub))
 		dispatcher.Register(outbox.TopicAdminReportHandled, adminReportHandledOutboxHandler(hub))
+		// 死信总数 Gauge：取值由 dispatcher 保留期 sweeper 周期刷新（抓取路径不查库），
+		// 配合 docker/prometheus-alerts.yml 的 HotspotOutboxDeadLetters 告警暴露死信堆积。
+		observability.Register(outbox.NewDeadLettersCollector(dispatcher))
 		dispatcher.Start(rootCtx)
 	}
 	router := NewHTTPRouterWithReadiness(modules, logger, readiness, resourceguardChecker, idemStore, platformAuth, adminRepo, hub)

@@ -45,6 +45,18 @@ groups:
           summary: "HotSpot Redis 降级持续发生（component={{ $labels.component }}）"
           description: "Redis 故障导致 fail-open：检查 redis 容器、网络与 maxmemory；限流/幂等/缓存/多实例广播处于降级状态。"
 
+      # 启动期 Redis 降级是持续状态（client 已丢弃、进程内不会重连，恢复需重启）：
+      # 命中即说明幂等/限流/跨实例广播/热缓存降级为单实例，多实例部署下限流阈值
+      # 会放大 N 倍、幂等失效、跨实例事件丢失，必须人工处理（审计第 81 轮批次 3）。
+      - alert: HotspotRedisStartupDegraded
+        expr: hotspot_redis_startup_degraded{job="hotspot-backend"} == 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot 启动期 Redis 不可达，已降级为单实例"
+          description: "REDIS_URL 已配置但启动探测失败：幂等/限流/跨实例广播/热缓存均处于降级态。检查 redis 容器、网络与 REDIS_URL；修复后需重启后端才能恢复。"
+
       # 内部错误（10600）持续出现：契约错误不走 HTTP 5xx，5xx 告警看不到，
       # 需要单独基于业务 envelope 的内部错误指标（ops 审计 P0-3）。
       - alert: HotspotInternalErrorsHigh
@@ -88,6 +100,17 @@ groups:
         annotations:
           summary: "HotSpot WebSocket 出站事件持续被丢弃"
           description: "排查慢客户端（大订阅量/弱网）与网络抖动；丢弃为保护服务端的预期降级。"
+
+      # outbox 死信堆积：事件达到最大重试次数仍投递失败（WS 广播/通知等副作用
+      # 永久丢失）。>0 即需排查；死信行保留 30 天后分批清理，排查窗口足够。
+      - alert: HotspotOutboxDeadLetters
+        expr: hotspot_outbox_dead_letters{job="hotspot-backend"} > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HotSpot outbox 出现死信（{{ $value }} 条）"
+          description: "投递达到最大重试次数仍失败的事件：查 outbox_events 的 topic/last_error 定位下游（WS 广播/通知）失败原因；死信超 30 天保留期会被分批清理。"
 
       # 内存逼近容器上限（limit 1g，GOMEMLIMIT 900MiB）：>850MiB 持续 10 分钟需关注。
       - alert: HotspotMemoryHigh
