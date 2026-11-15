@@ -3,6 +3,7 @@ package media
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/outbox"
@@ -57,11 +58,19 @@ func (r *PostgresRepository) PurgeUserData(ctx context.Context, userID string) e
 // dispatcher 投递（每个事件一批），此常量只约束未装配/入队失败的降级路径。
 const purgeObjectDeleteBatchSize = 100
 
-// purgeObjectEventBatchSize 是注销级联对象清理事件的单事件键数上限：outbox
-// handler 在领取事务内执行，单条事件过大将长时间占住事务/连接；单事件 ≤200 个
-// key 既限制单次删除耗时，也让重试粒度足够细（失败只重删这一批，已删对象
-// 404 幂等）。
+// purgeObjectEventBatchSize 是注销级联对象清理事件的单事件键数上限：单事件
+// ≤200 个 key 既限制单次执行时长（handler 在 outbox 事务外执行，单事件超时
+// 60s），也让重试粒度足够细（失败只重删这一批，已删对象 404 幂等）。
 const purgeObjectEventBatchSize = 200
+
+// purgeDeleteChunkSize/purgeDeleteConcurrency 限制单事件内对象删除的并发与
+// 分批：handler 对每批 key 最多 purgeDeleteConcurrency 条 DELETE 并发，批间
+// 检查 ctx（dispatcher 的单事件超时/停机），避免 200 键全串行时单事件最坏
+// 时长 200×单条 10s 超时=2000s，也避免一次性向对象存储打出突发请求。
+const (
+	purgeDeleteChunkSize   = 50
+	purgeDeleteConcurrency = 4
+)
 
 // PurgeObjectsPayload 是 outbox.TopicMediaPurge 的事件 payload（media 生产、
 // bootstrap dispatcher 消费）：user_id 仅用于日志与排查，keys 是该用户一批
@@ -185,10 +194,13 @@ func compactStorageKeys(storageKeys []string) []string {
 	return keys
 }
 
-// DeletePurgeObjects 是 outbox.TopicMediaPurge 的处理逻辑（bootstrap 装配的
-// dispatcher handler 调用）：按 payload 的键逐条删除对象（provider.Delete 把 404
-// 视为已删），空 keys 直接成功；单条失败继续删其余对象，最后返回错误让 outbox
-// 按既有指数退避/死信语义重试（重试对已删对象幂等）。日志带 user_id 与数量。
+// DeletePurgeObjects 是 outbox.TopicMediaPurge 的处理逻辑（bootstrap 以
+// RegisterExternal 注册，dispatcher 在领取事务之外、带单事件超时执行）：
+// 按 payload 的键分批删除对象（provider.Delete 把 404 视为已删），空 keys 直接
+// 成功。单条失败继续删其余对象（重试只需处理失败键），最后返回错误让 outbox
+// 按既有指数退避/死信语义重试。批内并发上限 purgeDeleteConcurrency、批间响应
+// ctx 取消（单事件总超时/停机），避免单事件最坏时长被串行 10s 超时放大到
+// 2000s。日志带 user_id 与数量。
 func (s *Service) DeletePurgeObjects(ctx context.Context, userID string, storageKeys []string) error {
 	keys := compactStorageKeys(storageKeys)
 	if len(keys) == 0 {
@@ -197,17 +209,21 @@ func (s *Service) DeletePurgeObjects(ctx context.Context, userID string, storage
 	logger := observability.FromContext(ctx)
 	var deletedObjects, failedObjects int
 	var firstErr error
-	for _, storageKey := range keys {
-		if err := s.provider.Delete(ctx, storageKey); err != nil {
-			failedObjects++
-			if firstErr == nil {
-				firstErr = err
-			}
-			logger.Warn("account purge media object delete failed",
-				"error", err, "user_id", userID, "storage_key", storageKey)
-			continue
+	for start := 0; start < len(keys); start += purgeDeleteChunkSize {
+		if err := ctx.Err(); err != nil {
+			// 单事件总超时/停机：不再发起新批，剩余键留在 payload 里由 outbox
+			// 重试（已删对象 404 幂等）。
+			failedObjects += len(keys) - start
+			firstErr = err
+			break
 		}
-		deletedObjects++
+		end := min(start+purgeDeleteChunkSize, len(keys))
+		deleted, failed, batchErr := s.deletePurgeObjectsChunk(ctx, userID, keys[start:end], logger)
+		deletedObjects += deleted
+		failedObjects += failed
+		if firstErr == nil && batchErr != nil {
+			firstErr = batchErr
+		}
 	}
 	if firstErr != nil {
 		logger.Warn("account purge media object batch incomplete",
@@ -217,6 +233,39 @@ func (s *Service) DeletePurgeObjects(ctx context.Context, userID string, storage
 	logger.Info("account purge media objects deleted",
 		"user_id", userID, "objects", len(keys), "deleted_objects", deletedObjects)
 	return nil
+}
+
+// deletePurgeObjectsChunk 删除一批对象：批内最多 purgeDeleteConcurrency 条
+// DELETE 并发（单条失败继续删其余，已删 404 幂等），返回本批成功/失败数与
+// 首个错误。
+func (s *Service) deletePurgeObjectsChunk(ctx context.Context, userID string, storageKeys []string, logger *observability.Logger) (deleted, failed int, firstErr error) {
+	sem := make(chan struct{}, purgeDeleteConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for _, storageKey := range storageKeys {
+		sem <- struct{}{}
+		wg.Add(1)
+		go func(storageKey string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if err := s.provider.Delete(ctx, storageKey); err != nil {
+				mu.Lock()
+				failed++
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
+				logger.Warn("account purge media object delete failed",
+					"error", err, "user_id", userID, "storage_key", storageKey)
+				return
+			}
+			mu.Lock()
+			deleted++
+			mu.Unlock()
+		}(storageKey)
+	}
+	wg.Wait()
+	return deleted, failed, firstErr
 }
 
 // deletePurgeObjects 同步回退：逐条删除注销级联的对象（幂等：provider.Delete 把

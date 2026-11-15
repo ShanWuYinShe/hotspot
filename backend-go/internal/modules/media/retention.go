@@ -33,33 +33,52 @@ var (
 // StartRetentionSweeper 启动上传会话保留期清理：超过保留期的未完成会话，
 // 先删其可能已部分上传的存储对象（幂等，404 视为已删），再删会话行。
 // goroutine 绑定 ctx 随优雅停机退出；重复调用 no-op。
+//
+// ctx/ticker 必须在每次 worker 运行内部创建（见 runRetentionSweeper）：此前在
+// 外层用 context.WithCancel 派生 sweepCtx、并在 worker 函数里 defer cancel，
+// worker.GoRestartable 在 panic 后重新执行同一闭包时会复用已被 cancel 的
+// sweepCtx——重启后的每一轮 sweep 都以 context canceled 静默失败，未完成上传
+// 永不回收（第 82 轮审计 P2-4）。
 func (s *Service) StartRetentionSweeper(ctx context.Context) {
 	retentionSweepMu.Lock()
 	defer retentionSweepMu.Unlock()
 	if retentionSweepStarted {
 		return
 	}
-	sweepCtx, cancel := context.WithCancel(ctx)
 	retentionSweepStarted = true
 	worker.GoRestartable("media.retention_sweeper", func() {
-		defer cancel()
+		// 只有干净退出（ctx 取消）才复位幂等标志：panic 时 GoRestartable 会立即
+		// 重启同一闭包，标志必须保持 true，否则并发调用 StartRetentionSweeper
+		// 会再起一个 sweeper（重复清扫、goroutine 泄漏）。
+		cleanExit := false
 		defer func() {
+			if !cleanExit {
+				return
+			}
 			retentionSweepMu.Lock()
 			retentionSweepStarted = false
 			retentionSweepMu.Unlock()
 		}()
-		ticker := time.NewTicker(retentionSweepCadence)
-		defer ticker.Stop()
-		s.sweepStaleUploads(sweepCtx) // 启动即先跑一轮
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				s.sweepStaleUploads(sweepCtx)
-			}
-		}
+		s.runRetentionSweeper(ctx)
+		cleanExit = true
 	})
+}
+
+// runRetentionSweeper 是保留期 sweeper 的单次运行周期（GoRestartable panic
+// 重启时重新进入本函数）：创建 ticker、启动即先跑一轮，之后按
+// retentionSweepCadence 循环直到 ctx 取消。
+func (s *Service) runRetentionSweeper(ctx context.Context) {
+	ticker := time.NewTicker(retentionSweepCadence)
+	defer ticker.Stop()
+	s.sweepStaleUploads(ctx) // 启动即先跑一轮
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.sweepStaleUploads(ctx)
+		}
+	}
 }
 
 func (s *Service) sweepStaleUploads(ctx context.Context) {
