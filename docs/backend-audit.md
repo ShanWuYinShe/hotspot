@@ -3930,14 +3930,15 @@ staticcheck U1000（-tests=false）清零。
   PUT 至 nginx `client_max_body_size 100m`），未完成会话保留 7 天且 GC 100/小时。发布后不可变已由
   copy-on-complete 解决，但「弃置大对象」的存储/带宽成本仍需配额或 S3 POST policy（需改客户端协议）
   等多方案评估，另行立项。
-- **outbox 死信仍不自动清理**：成功投递事件已按保留期分批清理；死信与重试中事件按设计永久保留
-  供排查，若线上死信量大需另设保留期/告警与归档（保留期治理其余项已在批次 3 修复）。
-- **注销级联不删媒体对象**：注销只清模块归属数据，不删除 S3 对象（保留期 GC 仅覆盖未完成上传），
-  长期会留下孤儿对象。
-- bootstrap 未读摘要的聊天未读（private/group chat count）仍恒 0：现有实现没有全量聚合入口，
-  需在 privatechats/groups repo 新增 SUM 查询后接线（字段与公式已就位）。
-- pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`，若服务器口令含
-  `@`/裸空格/`%` 会连不上库（部署脚本建议的 base64 口令无 `@`；需核对服务器 .env）。
+- **admin 残留审计事务缺口**：`config.update` 审计仍在事务外（platform/appconfig 的
+  PersistenceSource.Update 不感知 ctx 事务，需平台层改造）；`group.dismiss` 的 audit INSERT
+  已在 admin 事务内，但 groups 模块吞掉错误未上抛（批次 4 已收敛其余已审计写路径）。
+- **超大媒体账户注销**：注销在请求生命周期内同步逐批（100/批）删 S3 对象，数千对象可能触达 HTTP
+  超时，剩余对象 Warn 后成存储垃圾；建议后续改异步 outbox 清理（批次 4 已修「不删对象」本身）。
+- pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`。部署脚本已加
+  URL 安全字符预检（`openssl rand -hex 32` 指引）、`.env.example` 已注明、DSN 解析失败 panic 带
+  排查提示；**已有服务器 .env 需人工核对**口令是否含 `/ @ : ? %` 或空格（含则改 hex 口令并
+  `ALTER USER` 同步）。
 - moment 分享封面用作者头像而非瞬间图（产品口径待确认）。
 
 ### 四、本轮证伪 / 复核无问题
@@ -4016,3 +4017,32 @@ complete 幂等）、admin 真实库 IT（审计失败回滚/重试后仅一条�
 验证：受影响包 `go test -short` 与 `-race` 全绿；真实库临时库上 outbox 保留期清理、admin 分批
 删除、notify 事务失败回滚、公告 reads 清理 IT 通过；全模块 IT + platform 全绿；`migrate -verify-only`
 与 `check-migrations.sh`/manifest 一致性通过；PR CI 全绿（含 nginx -t、Docker 构建/运行时冒烟）。
+
+### 八、后续批次 4 修复（2026-11-15）
+
+admin 审计事务化收尾、outbox 死信可观测/保留期、bootstrap 聊天未读聚合、注销级联删媒体对象、部署口令 URL 安全已修复（同一 PR 门禁：CI 全绿后合并）：
+
+- **admin 已审计写路径同事务**：`tags/set_ban`、公告 update/delete、RBAC 六条写路径
+  （role.create/update/delete/set_permissions、admin.award/revoke）全部改为「业务写 + 审计」同一
+  事务（复用 runDecisionInTx；公告删除复用 system 模块嵌套事务），审计失败整体回滚可安全重试；
+  RBAC 由 best-effort 改 fail-closed（不再静默丢审计）。残留：`config.update` 在平台层事务外、
+  `group.dismiss` 审计错误被 groups 模块吞掉（见「三」）。
+- **outbox 死信可观测与保留期**：新增 Gauge `hotspot_outbox_dead_letters`（保留期 sweeper 周期查询
+  刷新，抓取路径不查库；失败保留旧值不写 0），死信按 30 天保留期分批清理（先有指标+告警再删除）；
+  `docker/prometheus-alerts.yml` 新增 `HotspotRedisStartupDegraded`（批次 3 的
+  `hotspot_redis_startup_degraded == 1`）与 `HotspotOutboxDeadLetters > 0` 两条告警（共 11 条规则，
+  promtool 校验通过）。
+- **bootstrap 聊天未读聚合**：privatechats/groups 各自 Repository 新增单条 COUNT 聚合，Service 暴露
+  `CountUnreadForUser`，bootstrap 注入后 `unread_summary.private_chat_unread_count /
+  group_chat_unread_count` 返回真实值（此前恒 0），单域失败仍降级为 0 不拖累 totalBadge 公式。
+- **注销级联删媒体对象**：media `PurgeUserData` 改为「先查全部 storage_key（completed 的
+  published/ 与未完成 uploads/）→ 删会话行 → 分批逐条删 S3 对象」，对象删除失败仅 Warn（不再被行
+  引用、预签名访问面消失），消除注销后永久孤儿。
+- **部署口令 URL 安全**：`deploy-production.sh` 弱口令预检新增 POSTGRES_PASSWORD 的 URL 保留字符
+  检查（`/` `@` `:` `?` `%` 空格 → 告警，指引改用 `openssl rand -hex 32`）；`.env.example`
+  注明 compose 会未转义把口令拼进 POSTGRES_DSN；DSN 解析失败 panic 附带排查提示（不泄漏 DSN）。
+
+验证：受影响包 `go test -short`/`-race` 全绿；真实库临时库上 admin 审计失败回滚/重试、outbox 死信
+保留期（只删旧死信）、聊天未读聚合（与列表逐群 unread 之和一致、敏感性改坏验证）、media 注销只删
+目标用户对象/分批/失败不阻塞等 IT 通过；全模块 IT 17 包 + platform + bootstrap 全绿；
+`migrate -verify-only` 通过；promtool 11 条规则校验通过；PR CI 全绿。
