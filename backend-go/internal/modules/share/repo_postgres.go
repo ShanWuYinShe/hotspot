@@ -131,7 +131,7 @@ func ensureShareTargetExists(ctx context.Context, queryable persistence.Queryabl
 		}
 		return nil
 	case ShareTypeMoment:
-		if _, _, _, _, _, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id")); err != nil {
+		if _, _, _, _, _, _, err := loadSharedMoment(ctx, queryable, getPayloadID(payload, "shared_moment_id")); err != nil {
 			return err
 		}
 		return nil
@@ -164,15 +164,17 @@ func loadSharedGroup(ctx context.Context, queryable persistence.Queryable, group
 	return id, name, description, avatarURL, nil
 }
 
-func loadSharedMoment(ctx context.Context, queryable persistence.Queryable, momentID string) (string, string, string, string, string, error) {
-	var id, description, locationName, authorNickname, authorAvatarURL string
-	if err := queryable.QueryRow(ctx, queryShareMomentExists, momentID).Scan(&id, &description, &locationName, &authorNickname, &authorAvatarURL); err != nil {
+// loadSharedMoment 读取瞬间分享的目标行；最后一个返回值是该瞬间第一张已完成
+// 媒体的 storage_key（空 = 纯文字瞬间），供 Service 签名成分享封面。
+func loadSharedMoment(ctx context.Context, queryable persistence.Queryable, momentID string) (string, string, string, string, string, string, error) {
+	var id, description, locationName, authorNickname, authorAvatarURL, coverStorageKey string
+	if err := queryable.QueryRow(ctx, queryShareMomentExists, momentID).Scan(&id, &description, &locationName, &authorNickname, &authorAvatarURL, &coverStorageKey); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return "", "", "", "", "", ErrShareNotFound
+			return "", "", "", "", "", "", ErrShareNotFound
 		}
-		return "", "", "", "", "", err
+		return "", "", "", "", "", "", err
 	}
-	return id, description, locationName, authorNickname, authorAvatarURL, nil
+	return id, description, locationName, authorNickname, authorAvatarURL, coverStorageKey, nil
 }
 
 func (r *PostgresRepository) getShareOwnership(ctx context.Context, queryable persistence.Queryable, shareID string) (string, bool, error) {

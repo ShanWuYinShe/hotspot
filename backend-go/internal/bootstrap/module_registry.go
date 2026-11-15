@@ -136,6 +136,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	shareModule := share.NewModule(factory)
 	// share 创建成功后维护 moments.interaction_count（模块自身不再私建 moments 服务实例）。
 	shareModule.Service.SetInteractionCounter(momentsModule.Service)
+	// moment 分享封面用瞬间第一张图片（产品决策）：media.Service 把仓储带出的
+	// 封面 storage key 签成读 URL；无图的纯文字瞬间仍回退作者头像（见
+	// share.Service.applyMomentCover）。
+	shareModule.Service.SetCoverResolver(mediaModule.Service)
 
 	gmModule := groupmessages.NewModule(factory, usersModule.Service, notificationService, shareModule.Service)
 	groupsModule.Service.SetMemberCache(hotCache)

@@ -13,10 +13,15 @@ import (
 type shareStaticGetRepo struct {
 	*shareStubRepo
 	detail ShareDetail
+	list   PaginatedShares
 }
 
 func (r *shareStaticGetRepo) Get(context.Context, getShareQuery) (ShareDetail, error) {
 	return r.detail, nil
+}
+
+func (r *shareStaticGetRepo) List(context.Context, listSharesQuery) (PaginatedShares, error) {
+	return r.list, nil
 }
 
 // TestServeCrawlerHTMLFallbackBranches 覆盖 preview 缺失时的类型标签回退描述，

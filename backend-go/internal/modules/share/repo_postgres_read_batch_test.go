@@ -45,7 +45,7 @@ func TestPostgresRepositoryListPreviewsAreBatched(t *testing.T) {
 	backend.users["user_carol"] = shareStubUser{Nickname: "Carol", Avatar: "https://example.com/carol.png"}
 	backend.users["user_ghost"] = shareStubUser{Nickname: "Ghost", Deleted: true}
 	backend.groups["group_2"] = [3]string{"Group Two", "", ""}
-	backend.moments["moment_no_desc"] = [5]string{"", "Shanghai", "Bob", "", "public"}
+	backend.moments["moment_no_desc"] = shareStubMoment{LocationName: "Shanghai", AuthorNickname: "Bob", Visibility: "public"}
 
 	addListShare(backend, "share_p_user_bob", ShareTypeUser, map[string]any{"shared_user_id": "user_bob"}, "2026-01-10T00:00:00Z")
 	addListShare(backend, "share_p_user_carol", ShareTypeUser, map[string]any{"shared_user_id": "user_carol"}, "2026-01-09T00:00:00Z")

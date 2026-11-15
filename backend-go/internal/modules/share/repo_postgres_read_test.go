@@ -32,6 +32,18 @@ type shareStubUser struct {
 	Deleted  bool // 模拟 users.is_deleted（已注销用户）
 }
 
+// shareStubMoment 是瞬间目标查询（queryShareMomentExists/queryShareMomentsByIDs）
+// 的桩行；Visibility 非 "public" 模拟 privacy_level='public' AND is_deleted=FALSE
+// 过滤（private/deleted），CoverStorageKey 模拟该瞬间第一张已完成媒体。
+type shareStubMoment struct {
+	Description     string
+	LocationName    string
+	AuthorNickname  string
+	AuthorAvatarURL string
+	Visibility      string
+	CoverStorageKey string
+}
+
 type shareBackendStub struct {
 	shares       map[string]shareStubRecord
 	byCode       map[string]string
@@ -44,9 +56,9 @@ type shareBackendStub struct {
 	queryRowCounts map[string]int
 	users          map[string]shareStubUser
 	groups         map[string][3]string
-	// moments 值末位为可见性：public 之外的值（private/deleted）模拟
-	// queryShareMomentExists 的 privacy_level='public' AND is_deleted=FALSE 过滤。
-	moments map[string][5]string
+	// moments 的 Visibility 非 public 模拟 queryShareMomentExists 的
+	// privacy_level='public' AND is_deleted=FALSE 过滤。
+	moments map[string]shareStubMoment
 }
 
 func newShareBackendStub() *shareBackendStub {
@@ -65,8 +77,8 @@ func newShareBackendStub() *shareBackendStub {
 		groups: map[string][3]string{
 			"group_1": {"Group One", "A nice group", "https://example.com/group.png"},
 		},
-		moments: map[string][5]string{
-			"moment_1": {"hello world", "Shanghai", "Bob", "https://example.com/bob.png", "public"},
+		moments: map[string]shareStubMoment{
+			"moment_1": {Description: "hello world", LocationName: "Shanghai", AuthorNickname: "Bob", AuthorAvatarURL: "https://example.com/bob.png", Visibility: "public"},
 		},
 	}
 }
@@ -141,10 +153,10 @@ func (b *shareBackendStub) QueryRow(_ context.Context, query string, args ...any
 	case queryShareMomentExists:
 		moment, ok := b.moments[args[0].(string)]
 		// 对齐 SQL 过滤：privacy_level='public' 且未删除的瞬间才可见。
-		if !ok || moment[4] != "public" {
+		if !ok || moment.Visibility != "public" {
 			return testdb.RowValues{Err: pgx.ErrNoRows}
 		}
-		return testdb.RowValues{Values: []any{args[0].(string), moment[0], moment[1], moment[2], moment[3]}}
+		return testdb.RowValues{Values: []any{args[0].(string), moment.Description, moment.LocationName, moment.AuthorNickname, moment.AuthorAvatarURL, moment.CoverStorageKey}}
 	default:
 		return testdb.RowValues{Err: persistence.ErrNotImplemented}
 	}
@@ -185,10 +197,10 @@ func (b *shareBackendStub) Query(_ context.Context, query string, args ...any) (
 		for _, id := range ids {
 			moment, ok := b.moments[id]
 			// 对齐 SQL 过滤：privacy_level='public' 且未删除的瞬间才可见。
-			if !ok || moment[4] != "public" {
+			if !ok || moment.Visibility != "public" {
 				continue
 			}
-			rows = append(rows, []any{id, moment[0], moment[1], moment[2], moment[3]})
+			rows = append(rows, []any{id, moment.Description, moment.LocationName, moment.AuthorNickname, moment.AuthorAvatarURL, moment.CoverStorageKey})
 		}
 		return &testdb.RowsValues{Rows: rows}, nil
 	}
@@ -342,8 +354,8 @@ func TestPostgresRepositoryRejectsMissingTarget(t *testing.T) {
 func TestPostgresRepositoryRejectsInvisibleTargets(t *testing.T) {
 	backend := newShareBackendStub()
 	backend.users["user_ghost"] = shareStubUser{Nickname: "Ghost", Deleted: true}
-	backend.moments["moment_private"] = [5]string{"secret", "", "Bob", "", "private"}
-	backend.moments["moment_deleted"] = [5]string{"gone", "", "Bob", "", "deleted"}
+	backend.moments["moment_private"] = shareStubMoment{Description: "secret", AuthorNickname: "Bob", Visibility: "private"}
+	backend.moments["moment_deleted"] = shareStubMoment{Description: "gone", AuthorNickname: "Bob", Visibility: "deleted"}
 	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
 	factory.DB.(*persistence.PostgresDB).Backend = backend
 	repo := NewPostgresRepository(factory)
