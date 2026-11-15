@@ -3943,7 +3943,6 @@ staticcheck U1000（-tests=false）清零。
   URL 安全字符预检（`openssl rand -hex 32` 指引）、`.env.example` 已注明、DSN 解析失败 panic 带
   排查提示；生产服务器 `.env` 已用布尔检查核对为 **URL 安全**（只输出 SAFE/UNSAFE、不回显口令），
   后续轮换口令仍需保持 URL 安全字符。
-- moment 分享封面用作者头像而非瞬间图（产品口径待确认）。
 
 ### 四、本轮证伪 / 复核无问题
 
@@ -4169,8 +4168,20 @@ platform + bootstrap + archtest 全绿；`check-migrations.sh`/manifest 一致�
 ### 十四、本轮结论（第 81-82 轮审计可执行项收口）
 
 第 81 轮审计（批次 1-6）与第 82 轮审计（批次 8）及其后续批次 9、10 已把「纯后端可闭环」的审计
-项全部完成；剩余三类的处理依赖产品/客户端/存储侧决策，已记录在「三、已复核、本轮未修」：
+项全部完成；剩余两类的处理依赖产品/客户端/存储侧决策，已记录在「三、已复核、本轮未修」：
 
 1. 完成态媒体无「业务引用」回收与账号存储配额运营化（需 spec/产品定义媒体删除语义与配额字段）；
-2. 未完成上传 body 大小精确约束（需 S3 POST policy（客户端协议）或存储侧配额）；
-3. moment 分享封面口径（产品确认）。
+2. 未完成上传 body 大小精确约束（需 S3 POST policy（客户端协议）或存储侧配额）。
+
+### 十五、产品决策落地：moment 分享封面改瞬间首图（2026-11-15）
+
+产品确认「moment 分享封面使用瞬间图」后落地：share 仓储在解析 moment 预览时带出该瞬间**第一张
+已完成媒体**（`moment_images JOIN media_upload_sessions`，按 `position` 排序、仅 `status=completed`）
+的 storage_key；Service 在 Get/List 返回前用注入的 media.Service `PresignGet` 签成 7 天绝对读 URL
+覆盖 `cover_url`（与 moments 读 URL 同 TTL），签名失败或未注入 resolver 时保留作者头像兜底，纯文字
+瞬间仍用作者头像；OG 落地页、`share/open_the_door`、「我的分享」列表共用同一口径。无 DB 迁移、无
+spec 变更（SharePreview.cover_url 仅定义为「封面」），前端无需改动。
+
+验证：share 包单测/契约测试与 `-race` 全绿；真实库 IT 覆盖「跳过未完成媒体、取 position 最小完成
+图、纯文字回退头像、injected resolver 覆盖 cover_url、转 private/软删后不可访问」；全模块 IT +
+platform + bootstrap + archtest 全绿。
