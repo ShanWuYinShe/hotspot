@@ -172,10 +172,12 @@ func TestOutboxDispatcherStartSurvivesHandlerPanic(t *testing.T) {
 	waitOutbox(t, 5*time.Second, func() bool { return goodDelivered.Load() >= 1 }, "毒事件退避期间正常事件未被投递")
 }
 
-// TestPostgresIT_OutboxRetentionPrune 覆盖保留期清理的删除口径：只删
-// 「成功投递（last_error 为空）且 processed_at 早于保留期」的行；pending、
-// 退避重试中、死信（last_error 非空）一律保留。全流程包在 TxScope 内，结束
-// 回滚，不向共享测试库提交任何行。
+// TestPostgresIT_OutboxRetentionPrune 覆盖两类保留期清理的删除口径：成功事件
+// （last_error 为空）保留 defaultRetention（7 天）后删除；死信（last_error 非空）
+// 保留更长的 deadLetterRetention（30 天）后删除——刚进入死信或未超死信保留期的
+// 记录必须保留（payload/last_error 是排查投递失败的唯一线索）。pending 与退避
+// 重试中的行一律保留。同时断言死信 Gauge 取值与库内实际死信行数一致。全流程包在
+// TxScope 内，结束回滚，不向共享测试库提交任何行。
 func TestPostgresIT_OutboxRetentionPrune(t *testing.T) {
 	testdb.SkipIfShort(t)
 	factory := testdb.Open(t)
@@ -205,13 +207,17 @@ func TestPostgresIT_OutboxRetentionPrune(t *testing.T) {
 			}
 		}
 		now := time.Now().UTC()
-		oldProcessed := now.Add(-defaultRetention - 24*time.Hour)
 		errText := "handler boom"
+		oldProcessed := now.Add(-defaultRetention - 24*time.Hour)           // 10 天前：超成功保留期
+		oldDeadProcessed := now.Add(-deadLetterRetention - 24*time.Hour)    // 31 天前：超死信保留期
+		recentDeadProcessed := now.Add(-deadLetterRetention + 24*time.Hour) // 29 天前：未超死信保留期
 		insert("success_old", &oldProcessed, 1, nil)
 		insert("success_recent", pointerTo(now.Add(-time.Hour)), 1, nil)
 		insert("pending", nil, 0, nil)
 		insert("retrying", nil, 1, &errText)
-		insert("dead_letter", &oldProcessed, maxAttempts, &errText)
+		insert("dead_letter", &oldProcessed, maxAttempts, &errText) // 超成功保留期但未超死信保留期：保留
+		insert("dead_letter_old", &oldDeadProcessed, maxAttempts, &errText)
+		insert("dead_letter_recent", &recentDeadProcessed, maxAttempts, &errText)
 
 		dispatcher := NewDispatcher(txFactory, nil)
 		dispatcher.pruneRetentionOnce(ctx)
@@ -235,29 +241,55 @@ func TestPostgresIT_OutboxRetentionPrune(t *testing.T) {
 		}
 		rows.Close()
 		for class, want := range map[string]int{
-			"success_old":    0, // 成功投递且超保留期：删除
-			"success_recent": 1, // 成功但未超期：保留
-			"pending":        1, // 未处理：保留
-			"retrying":       1, // 重试中：保留
-			"dead_letter":    1, // 死信：保留（失败记录供排查）
+			"success_old":        0, // 成功投递且超保留期：删除
+			"success_recent":     1, // 成功但未超期：保留
+			"pending":            1, // 未处理：保留
+			"retrying":           1, // 重试中：保留
+			"dead_letter":        1, // 死信未超死信保留期：保留
+			"dead_letter_recent": 1, // 刚进入死信：保留
+			"dead_letter_old":    0, // 死信且超保留期：删除
 		} {
 			if got := counts[topicOf(class)]; got != want {
 				t.Fatalf("%s retained = %d, want %d", class, got, want)
 			}
 		}
 
-		// 分批语义：单批最多 limit 行，循环删除直到空（避免一次 DELETE 无界锁行）。
+		// 死信 Gauge 口径：取值必须等于库内实际死信行数（本轮清理后刷新）。
+		var wantDeadLetters int64
+		if err := qdb.QueryRow(ctx, "SELECT COUNT(*) FROM outbox_events WHERE processed_at IS NOT NULL AND last_error IS NOT NULL").Scan(&wantDeadLetters); err != nil {
+			t.Fatalf("count dead letters: %v", err)
+		}
+		if got := dispatcher.deadLetters.Load(); got != wantDeadLetters {
+			t.Fatalf("dead letter gauge = %d, want %d（Gauge 必须反映清理后的死信行数）", got, wantDeadLetters)
+		}
+		if wantDeadLetters < 2 {
+			t.Fatalf("期望至少保留 2 条未超期死信，got %d", wantDeadLetters)
+		}
+
+		// 分批语义：成功事件与死信各自按 limit 分批删除，循环直到空（避免一次
+		// DELETE 无界锁行）。
 		for i := 0; i < 3; i++ {
 			insert("batch", &oldProcessed, 1, nil)
+			insert("dead_batch", &oldDeadProcessed, maxAttempts, &errText)
 		}
-		cutoff := now.Add(-defaultRetention)
+		processedCutoff := now.Add(-defaultRetention)
 		for _, want := range []int64{2, 1, 0} {
-			deleted, err := dispatcher.deleteProcessedBatch(ctx, cutoff, 2)
+			deleted, err := dispatcher.deleteProcessedBatch(ctx, processedCutoff, 2)
 			if err != nil {
-				t.Fatalf("delete batch: %v", err)
+				t.Fatalf("delete processed batch: %v", err)
 			}
 			if deleted != want {
-				t.Fatalf("batch deleted = %d, want %d", deleted, want)
+				t.Fatalf("processed batch deleted = %d, want %d", deleted, want)
+			}
+		}
+		deadCutoff := now.Add(-deadLetterRetention)
+		for _, want := range []int64{2, 1, 0} {
+			deleted, err := dispatcher.deleteDeadLetterBatch(ctx, deadCutoff, 2)
+			if err != nil {
+				t.Fatalf("delete dead letter batch: %v", err)
+			}
+			if deleted != want {
+				t.Fatalf("dead letter batch deleted = %d, want %d", deleted, want)
 			}
 		}
 	})

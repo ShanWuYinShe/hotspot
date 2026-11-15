@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -27,15 +30,21 @@ const (
 	maxBackoff          = 5 * time.Minute
 
 	// 保留期清理（审计缺口：outbox_events 只增不减）：成功投递的事件行保留
-	// defaultRetention 后分批物理删除；死信与重试中的行永不自动删除——失败记录
-	// 要留给人排查。成功/死信此前都只靠 processed_at 标记、无法区分，这里以
-	// last_error 为判别口径：成功路径显式清空 last_error，死信路径必然写入
-	// 错误文本，故 last_error IS NULL 等价于「成功投递」。
-	defaultRetention      = 7 * 24 * time.Hour // 成功事件保留期（7 天）
-	retentionBatchSize    = 500                // 单批删除行数上限，避免一次 DELETE 长时间持锁/撑大 WAL
-	retentionMaxBatches   = 100                // 单轮批数上限（单轮最多 5 万行，积压时多轮追平）
-	retentionSweepPeriod  = time.Hour          // 后台清理周期
-	retentionSweepTimeout = 5 * time.Minute    // 单轮超时，避免慢删除拖住后续周期
+	// defaultRetention 后分批物理删除；重试中的行永不自动删除——失败记录要留给
+	// 人排查。成功/死信此前都只靠 processed_at 标记、无法区分，这里以 last_error
+	// 为判别口径：成功路径显式清空 last_error，死信路径必然写入错误文本，故
+	// last_error IS NULL 等价于「成功投递」。
+	//
+	// 死信（processed_at 非空 + last_error 非空）单独用更长的 deadLetterRetention：
+	// 其 payload/last_error 是排查投递失败的唯一线索，先由 Gauge
+	// hotspot_outbox_dead_letters + 告警暴露堆积，超期后才分批清理，避免静默
+	// 丢弃排查线索（审计第 81 轮遗留项）。
+	defaultRetention      = 7 * 24 * time.Hour  // 成功事件保留期（7 天）
+	deadLetterRetention   = 30 * 24 * time.Hour // 死信保留期（30 天）
+	retentionBatchSize    = 500                 // 单批删除行数上限，避免一次 DELETE 长时间持锁/撑大 WAL
+	retentionMaxBatches   = 100                 // 单轮批数上限（单轮最多 5 万行，积压时多轮追平）
+	retentionSweepPeriod  = time.Hour           // 后台清理周期
+	retentionSweepTimeout = 5 * time.Minute     // 单轮超时，避免慢删除拖住后续周期
 )
 
 const queryInsertOutbox = `INSERT INTO outbox_events (topic, payload) VALUES ($1, $2::jsonb)`
@@ -67,6 +76,31 @@ WITH deleted AS (
     RETURNING 1
 )
 SELECT COUNT(*) FROM deleted`
+
+// queryDeleteDeadLettersBefore 单批删除「已进入死信且超过保留期」的事件行：
+// 结构与 queryDeleteProcessedOutboxBefore 相同，判别条件换成 last_error IS NOT
+// NULL（死信），保留期从 processed_at（进入死信的时间）起算。成功事件与死信
+// 是互斥集合（last_error 为空/非空），两者由不同循环清理、互不影响。
+const queryDeleteDeadLettersBefore = `
+WITH deleted AS (
+    DELETE FROM outbox_events
+    WHERE ctid IN (
+        SELECT ctid FROM outbox_events
+        WHERE processed_at IS NOT NULL
+          AND processed_at < $1
+          AND last_error IS NOT NULL
+        ORDER BY processed_at
+        LIMIT $2
+    )
+    RETURNING 1
+)
+SELECT COUNT(*) FROM deleted`
+
+// queryCountOutboxDeadLetters 统计当前死信行数（Gauge 取值来源）：processed_at
+// 非空（已终结）且 last_error 非空（最后一次投递失败）。只由保留期 sweeper 按
+// 周期查询并刷新 Gauge，不在 /metrics 抓取路径查库（抓取远快于清扫周期，且 DB
+// 故障时不应拖住指标抓取）。
+const queryCountOutboxDeadLetters = `SELECT COUNT(*) FROM outbox_events WHERE processed_at IS NOT NULL AND last_error IS NOT NULL`
 
 // Writer 在业务事务内写事件行；ctx 内存在事务时与业务写同事务提交。
 type Writer struct {
@@ -114,6 +148,10 @@ type Dispatcher struct {
 	handlersMu   sync.RWMutex
 	pollInterval time.Duration
 	batchSize    int
+	// deadLetters 是最近一轮保留期清扫查到的死信行数，hotspot_outbox_dead_letters
+	// Gauge 的取值来源（见 NewDeadLettersCollector）：清扫 goroutine 写、/metrics
+	// 抓取读，用原子量避免数据竞争；抓取路径不查库。
+	deadLetters atomic.Int64
 }
 
 func NewDispatcher(factory *persistence.Factory, logger *observability.Logger) *Dispatcher {
@@ -184,6 +222,7 @@ func (d *Dispatcher) Start(ctx context.Context) {
 	// 保留期清理挂在 Start 的既有生命周期内（rootCtx 取消即退出），不额外增加
 	// bootstrap wiring。单独 goroutine：大批删除不阻塞事件投递；启动先跑一轮
 	//（与既有 notify/media/auth sweeper 一致），之后每 retentionSweepPeriod 一轮。
+	// 死信 Gauge 也由该 goroutine 顺带刷新（启动先刷一次），/metrics 抓取不查库。
 	worker.GoRestartable("outbox.retention", func() {
 		d.pruneRetentionOnce(ctx)
 		ticker := time.NewTicker(retentionSweepPeriod)
@@ -199,33 +238,61 @@ func (d *Dispatcher) Start(ctx context.Context) {
 	})
 }
 
-// pruneRetentionOnce 执行一轮保留期清理：按 processed_at 从旧到新分批删除成功
-// 投递的事件，直到没有可删行或达到单轮批数上限（积压时多轮追平）。单轮独立
-// 超时，避免慢删除拖住后续周期；ctx 取消（优雅停机）时立即返回。
+// pruneRetentionOnce 执行一轮保留期清理：先删成功投递超期事件（7 天），再删
+// 超期死信（30 天）。两类都按 processed_at 从旧到新分批删除，直到没有可删行或
+// 达到单轮批数上限（积压时多轮追平）；单轮独立超时，避免慢删除拖住后续周期，
+// ctx 取消（优雅停机）时立即返回。两类清理相互独立：成功事件清理失败不阻断
+// 死信清理（反之亦然），各自记录 Warn 后继续。
+//
+// 死信 Gauge 在本轮前后各刷新一次：开始时先暴露历史堆积（清理失败也看得到），
+// 结束后校正为清理后的取值（避免告警因过期读数误报）；启动首轮即完成首次刷新。
 func (d *Dispatcher) pruneRetentionOnce(ctx context.Context) {
 	if d == nil || d.factory == nil || ctx.Err() != nil {
 		return
 	}
 	sweepCtx, cancel := context.WithTimeout(ctx, retentionSweepTimeout)
 	defer cancel()
-	cutoff := time.Now().UTC().Add(-defaultRetention)
+	d.refreshDeadLetterGauge(sweepCtx)
+	now := time.Now().UTC()
+
+	processedCutoff := now.Add(-defaultRetention)
+	processedDeleted, err := d.pruneBatches(sweepCtx, processedCutoff, d.deleteProcessedBatch)
+	if err != nil {
+		if sweepCtx.Err() == nil {
+			d.logger.Warn("outbox: retention prune failed", "deleted", processedDeleted, "error", err)
+		}
+	} else if processedDeleted > 0 {
+		d.logger.Info("outbox: processed events pruned", "deleted", processedDeleted, "cutoff", processedCutoff)
+	}
+
+	deadCutoff := now.Add(-deadLetterRetention)
+	deadDeleted, err := d.pruneBatches(sweepCtx, deadCutoff, d.deleteDeadLetterBatch)
+	if err != nil {
+		if sweepCtx.Err() == nil {
+			d.logger.Warn("outbox: dead letter retention prune failed", "deleted", deadDeleted, "error", err)
+		}
+	} else if deadDeleted > 0 {
+		d.logger.Info("outbox: dead letters pruned", "deleted", deadDeleted, "cutoff", deadCutoff)
+	}
+
+	d.refreshDeadLetterGauge(sweepCtx)
+}
+
+// pruneBatches 以 cutoff 为界分批删除，直到没有可删行或达到单轮批数上限（积压
+// 时多轮追平），返回本轮累计删除数与最后错误；出错时停止该类清理。
+func (d *Dispatcher) pruneBatches(ctx context.Context, cutoff time.Time, deleteBatch func(context.Context, time.Time, int) (int64, error)) (int64, error) {
 	var total int64
 	for batch := 0; batch < retentionMaxBatches; batch++ {
-		deleted, err := d.deleteProcessedBatch(sweepCtx, cutoff, retentionBatchSize)
+		deleted, err := deleteBatch(ctx, cutoff, retentionBatchSize)
 		total += deleted
 		if err != nil {
-			if sweepCtx.Err() == nil {
-				d.logger.Warn("outbox: retention prune failed", "deleted", total, "error", err)
-			}
-			return
+			return total, err
 		}
 		if deleted < retentionBatchSize {
 			break
 		}
 	}
-	if total > 0 {
-		d.logger.Info("outbox: processed events pruned", "deleted", total, "cutoff", cutoff)
-	}
+	return total, nil
 }
 
 // deleteProcessedBatch 删除一批超过保留期的已成功投递事件，返回删除行数。
@@ -239,6 +306,61 @@ func (d *Dispatcher) deleteProcessedBatch(ctx context.Context, cutoff time.Time,
 		return 0, err
 	}
 	return deleted, nil
+}
+
+// deleteDeadLetterBatch 删除一批超过保留期的死信事件，返回删除行数。
+func (d *Dispatcher) deleteDeadLetterBatch(ctx context.Context, cutoff time.Time, limit int) (int64, error) {
+	queryable, ok := persistence.QueryableForTx(ctx, d.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var deleted int64
+	if err := queryable.QueryRow(ctx, queryDeleteDeadLettersBefore, cutoff, limit).Scan(&deleted); err != nil {
+		return 0, err
+	}
+	return deleted, nil
+}
+
+// countDeadLetters 查询当前死信行数（新进入的死信 + 尚未过保留期的历史死信）。
+func (d *Dispatcher) countDeadLetters(ctx context.Context) (int64, error) {
+	queryable, ok := persistence.QueryableForTx(ctx, d.factory)
+	if !ok {
+		return 0, persistence.ErrNotImplemented
+	}
+	var count int64
+	if err := queryable.QueryRow(ctx, queryCountOutboxDeadLetters).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// refreshDeadLetterGauge 刷新死信 Gauge 取值；查询失败只记 Warn、保留上一次
+// 取值——把「查不到」写成 0 会把真实堆积伪装成「没有死信」，让告警静默失效。
+func (d *Dispatcher) refreshDeadLetterGauge(ctx context.Context) {
+	count, err := d.countDeadLetters(ctx)
+	if err != nil {
+		if ctx.Err() == nil {
+			d.logger.Warn("outbox: count dead letters failed", "error", err)
+		}
+		return
+	}
+	d.deadLetters.Store(count)
+}
+
+// NewDeadLettersCollector 返回死信总数 Gauge（hotspot_outbox_dead_letters）：
+// 取值来自最近一轮保留期清扫的查询结果（见 Dispatcher.refreshDeadLetterGauge），
+// /metrics 抓取路径零查询、不依赖 DB 可用性。同名告警规则见
+// docker/prometheus-alerts.yml（HotspotOutboxDeadLetters）。
+func NewDeadLettersCollector(d *Dispatcher) prometheus.Collector {
+	return prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+		Name: "hotspot_outbox_dead_letters",
+		Help: "outbox 死信总数（已终结但最后一次投递失败的事件；超过保留期会被分批清理）",
+	}, func() float64 {
+		if d == nil {
+			return 0
+		}
+		return float64(d.deadLetters.Load())
+	})
 }
 
 type outboxRow struct {
