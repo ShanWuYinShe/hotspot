@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +25,16 @@ import (
 )
 
 const mediaPresignTTL = 15 * time.Minute
+
+const (
+	// listObjectsMaxKeys 是 S3 ListObjectsV2 单页硬上限（服务端最多返回 1000 条，
+	// 超过的 max-keys 会被忽略）。调用方传更小值可让单轮扫描窗口更平滑。
+	listObjectsMaxKeys = 1000
+	// listObjectsResponseLimit 是列举响应体的读取上限：正常一页 ≤1000 条
+	// （单条 <1KB），4MiB 已极宽松；限制解码输入防止异常后端返回超大 body
+	// 占满内存。
+	listObjectsResponseLimit = 4 << 20
+)
 
 // presign GET 读 URL 的进程内缓存（审计 perf P3-4）：同一 key 在窗口内返回
 // 同一签名 URL——(a) 免去每次 feed 渲染对每图重复的 SigV4 签名；(b) URL 跨请求
@@ -272,6 +283,85 @@ func canonicalCopySource(bucket, storageKey string) string {
 	return "/" + strings.TrimSpace(bucket) + cleanKey
 }
 
+// ListObjects 列举指定前缀的对象（S3 ListObjectsV2 单页），供保留期 sweeper 的
+// uploads/ 孤儿清理枚举对象。翻页参数与签名都走 query 串：canonical query 由
+// 业务参数 + X-Amz-* 共同构成（见 presignInternalURLWithQuery），漏签任一参数
+// 都会验签失败。返回 IsTruncated/NextContinuationToken 由调用方驱动翻页，单轮
+// 扫描量由调用方限定（retention.go）。
+func (p *ObjectStorageProvider) ListObjects(ctx context.Context, prefix, continuationToken string, maxKeys int) (ObjectListPage, error) {
+	prefix = strings.TrimSpace(prefix)
+	if prefix == "" {
+		// 空前缀等于列举整个桶：调用方只应清理 uploads/ 这类明确前缀，误传空串
+		// 不放行，避免一次扫描把桶里全部对象当候选。
+		return ObjectListPage{}, fmt.Errorf("media object storage list: empty prefix")
+	}
+	if maxKeys <= 0 || maxKeys > listObjectsMaxKeys {
+		maxKeys = listObjectsMaxKeys
+	}
+	query := url.Values{}
+	query.Set("list-type", "2")
+	query.Set("prefix", prefix)
+	query.Set("max-keys", strconv.Itoa(maxKeys))
+	if token := strings.TrimSpace(continuationToken); token != "" {
+		query.Set("continuation-token", token)
+	}
+	// 桶级请求的 storageKey 传空串：canonicalURIForEndpoint 对空键返回 /<bucket>
+	// （path-style）或 /（virtual-host style），与对象级路径区分。
+	signedURL, err := p.presignInternalURLWithQuery(ctx, http.MethodGet, "", 5*time.Minute, query)
+	if err != nil {
+		return ObjectListPage{}, err
+	}
+	// #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
+	if err != nil {
+		return ObjectListPage{}, err
+	}
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	if err != nil {
+		return ObjectListPage{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, listObjectsResponseLimit))
+		return ObjectListPage{}, fmt.Errorf("media object storage list failed: status %d", resp.StatusCode)
+	}
+	var result listObjectsV2Result
+	if err := xml.NewDecoder(io.LimitReader(resp.Body, listObjectsResponseLimit)).Decode(&result); err != nil {
+		return ObjectListPage{}, fmt.Errorf("media object storage list decode failed: %w", err)
+	}
+	page := ObjectListPage{
+		Objects:               make([]ObjectSummary, 0, len(result.Contents)),
+		IsTruncated:           result.IsTruncated,
+		NextContinuationToken: strings.TrimSpace(result.NextContinuationToken),
+	}
+	for _, item := range result.Contents {
+		key := strings.TrimSpace(item.Key)
+		if key == "" {
+			continue
+		}
+		// LastModified 解析失败保留零值：调用方据此判定「年龄未知」并跳过删除，
+		// 不因单条脏数据让整页列举失败（否则孤儿清理会被一条坏数据长期阻断）。
+		lastModified, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(item.LastModified))
+		if parseErr != nil {
+			lastModified = time.Time{}
+		}
+		page.Objects = append(page.Objects, ObjectSummary{Key: key, LastModified: lastModified.UTC()})
+	}
+	return page, nil
+}
+
+// listObjectsV2Result 是 ListObjectsV2 响应的 XML 子集（只取孤儿清理需要的
+// 字段）；Key/LastModified/IsTruncated/NextContinuationToken 之外的字段忽略。
+type listObjectsV2Result struct {
+	XMLName               xml.Name `xml:"ListBucketResult"`
+	IsTruncated           bool     `xml:"IsTruncated"`
+	NextContinuationToken string   `xml:"NextContinuationToken"`
+	Contents              []struct {
+		Key          string `xml:"Key"`
+		LastModified string `xml:"LastModified"`
+	} `xml:"Contents"`
+}
+
 // PresignGet returns a client-facing absolute URL that grants short-term
 // read access to the object at storageKey. The URL is signed against the
 // public (client-facing) endpoint so it is valid through the reverse proxy.
@@ -345,11 +435,11 @@ func (p *ObjectStorageProvider) storePresignedURL(cacheKey, url string, ttl time
 }
 
 func (p *ObjectStorageProvider) presignURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
-	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint, nil)
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.clientFacingEndpoint, nil, nil)
 }
 
 func (p *ObjectStorageProvider) presignInternalURL(ctx context.Context, method, storageKey string, ttl time.Duration) (string, error) {
-	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, nil)
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, nil, nil)
 }
 
 // presignInternalURLWithHeaders 为内部端点签名请求，并把 extraHeaders 纳入签名
@@ -357,10 +447,18 @@ func (p *ObjectStorageProvider) presignInternalURL(ctx context.Context, method, 
 // canonical headers 取头值的去空白形态，wire 上的值一旦不同（增删/改大小写
 // 之外的内容）就会验签失败。CopyObject 用它签名 x-amz-copy-source。
 func (p *ObjectStorageProvider) presignInternalURLWithHeaders(ctx context.Context, method, storageKey string, ttl time.Duration, extraHeaders map[string]string) (string, error) {
-	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, extraHeaders)
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, extraHeaders, nil)
 }
 
-func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func(context.Context) (*url.URL, bool, error), extraHeaders map[string]string) (string, error) {
+// presignInternalURLWithQuery 为内部端点签名带业务 query 参数的请求
+// （ListObjectsV2 的 list-type/prefix/max-keys/continuation-token）。这些参数
+// 必须与 X-Amz-* 一起进入 SigV4 canonical query：S3 按实际收到的全部 query
+// 参数重算签名，漏签任一参数都会 SignatureDoesNotMatch。
+func (p *ObjectStorageProvider) presignInternalURLWithQuery(ctx context.Context, method, storageKey string, ttl time.Duration, extraQuery url.Values) (string, error) {
+	return p.presignURLWithEndpoint(ctx, method, storageKey, ttl, p.internalEndpoint, nil, extraQuery)
+}
+
+func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, method, storageKey string, ttl time.Duration, endpointFn func(context.Context) (*url.URL, bool, error), extraHeaders map[string]string, extraQuery url.Values) (string, error) {
 	endpoint, forcePathStyle, err := endpointFn(ctx)
 	if err != nil {
 		return "", err
@@ -405,6 +503,11 @@ func (p *ObjectStorageProvider) presignURLWithEndpoint(ctx context.Context, meth
 		signedHeaders = strings.Join(headerNames, ";")
 	}
 	query := url.Values{}
+	for name, values := range extraQuery {
+		for _, value := range values {
+			query.Add(name, value)
+		}
+	}
 	query.Set("X-Amz-Algorithm", "AWS4-HMAC-SHA256")
 	query.Set("X-Amz-Credential", p.cfg.S3AccessKey+"/"+credentialScope)
 	query.Set("X-Amz-Date", amzDate)
@@ -497,11 +600,21 @@ func (p *ObjectStorageProvider) configClientFacingEndpoint() (*url.URL, bool, er
 
 func canonicalURIForEndpoint(endpoint *url.URL, bucket, storageKey string, forcePathStyle bool) string {
 	cleanKey := path.Clean("/" + strings.TrimLeft(storageKey, "/"))
+	bucketLevel := cleanKey == "/" // 空对象键 = 桶级请求（ListObjectsV2）
 	if forcePathStyle || strings.Contains(endpoint.Host, ":") || endpoint.Host == "localhost" {
-		// Server-relative path only (/<bucket>/<key>). The proxy mount
+		// Server-relative path only (/<bucket>[/<key>]). The proxy mount
 		// (endpoint.Path) is intentionally excluded because the S3 server
 		// receives the path after the proxy strips its mount prefix.
+		if bucketLevel {
+			// 桶级请求的 canonical URI 是 /<bucket>（不带尾斜杠）：尾斜杠会被
+			// 部分 S3 实现归一化，与签名串不一致导致 403。
+			return "/" + bucket
+		}
 		return "/" + bucket + cleanKey
+	}
+	if bucketLevel {
+		// virtual-host style 的桶级请求路径是 /。
+		return "/"
 	}
 	return cleanKey
 }

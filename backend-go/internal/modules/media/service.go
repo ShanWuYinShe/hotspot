@@ -29,6 +29,12 @@ var (
 	// （见 checkPresignQuota）：拒绝签发新上传 URL，客户端应完成已有上传或
 	// 等待弃置会话过期（handler 映射 spec 10400 业务冲突）。
 	ErrUploadQuotaExceeded = errors.New("media: pending upload quota exceeded")
+	// ErrStorageQuotaExceeded 该账号「已完成媒体」总字节已达上限
+	// （见 checkCompletedStorageQuota，上限 completedMediaStorageLimitBytes）：
+	// complete 拒绝提交（handler 映射 spec 10400 业务冲突）。与未完成上传配额
+	// 分开是因为语义与释放方式不同——完成态媒体是永久业务数据，配额只增不减，
+	// 客户端无法通过「完成已有上传」释放，只能等运维调整上限。
+	ErrStorageQuotaExceeded = errors.New("media: completed media storage quota exceeded")
 )
 
 type Service struct {
@@ -253,15 +259,20 @@ func (s *Service) publishImageObject(ctx context.Context, uploadKey, publishedKe
 //     会话做一次限量 best-effort 清理后重试配额判断（cleanupStalePendingUploads），
 //     不必等 2 天保留期。
 //
-// 单账号上界与残留风险（审计报告口径）：
+// 单账号上界（审计报告口径，第 82 轮 P2-2/P2-3 修复后）：
 //   - 未完成会话：≤ pendingUploadSessionLimit 条、声明字节 ≤ pendingUploadBytesLimit；
 //     弃置会话最长占 2 天（保留期 GC），但配额拒绝时会提前清理超过宽限期的
 //     弃置会话，实际「锁死上传功能」的窗口从约 2 天压到分钟级；
-//   - 完成态媒体不计入 pending 配额，且完成后的对象不做「业务引用检查/未引用
-//     回收」：单账号可经 presign → PUT → complete 循环持续占用存储（受
-//     upload_presign_per_hour=100 与每批 200MB 声明量约束，但存储上界不收敛）。
-//     这是已知残留（第 82 轮审计 P2-3），需要业务引用登记或用户总存储配额才能
-//     真正收敛，本轮未实现。
+//   - 完成态媒体：≤ completedMediaStorageLimitBytes（2GiB，complete 阶段校验，
+//     见 checkCompletedStorageQuota）。此前完成态媒体不计入任何配额，单账号可经
+//     presign → PUT → complete 循环无限占用存储（complete 即重置 pending 配额，
+//     第 82 轮审计 P2-3）；现在上界收敛为「账号数 × 2GiB」。仍无「完成后未被
+//     业务引用」的回收策略（上传后不挂载到任何实体也计入配额）——那需要业务侧
+//     引用登记，属后续工作，但与账号总配额叠加后存储上界已可预测；
+//   - uploads/ 孤儿对象（complete 后旧上传键被重 PUT，第 82 轮审计 P2-2）：
+//     保留期 sweeper 每轮的孤儿清理阶段按「对象早于保留期且 DB 无对应
+//     storage_key 行」删除（见 retention.go sweepOrphanUploadObjects），不再
+//     是永久孤儿。
 const (
 	// pendingUploadSessionLimit 单用户未完成上传会话数上限（正常单次业务
 	// 上传 1~9 个文件且立即 complete，20 留足慢网/多业务并行余量）。
@@ -281,6 +292,27 @@ const (
 	// 由 provider 视为已删，通常很快）。
 	pendingUploadCleanupTimeout = 5 * time.Second
 )
+
+// completedMediaStorageLimitBytes 单账号「已完成媒体」总字节上限（2GiB）：
+// 完成态媒体（头像/瞬间图/聊天附件等）是业务数据，永不回收，此前没有账号级
+// 上界——complete 即重置未完成配额，攻击者可在限流允许的节奏下无限上传
+// （第 82 轮审计 P2-3）。本上限把单账号完成态存储收敛到 2GiB：按契约单文件
+// 上限（头像 5MB / 图片 10MB / 视频与 chat_file 100MB）折算，约合 2000 张
+// 原图、200 个视频或数千张头像，足够单账号正常积累，同时把「账号数 × 上限」
+// 作为存储预算的硬上界。
+//
+// 调整方式：直接改此常量并随版本发布——不新增迁移/AppConfig 字段。媒体存储
+// 配额不在 spec 契约内（spec 只定义单文件上限），走 AppConfig 会形成契约外
+// 运营配置且引入「配置误配放宽安全上界」的入口；若后续产品化需要运营可调，
+// 应先扩展 spec AppLimits 再接线。
+//
+// 精度说明：按 complete 阶段 HEAD 到的对象大小（meta.FileSize）判定；图片
+// EXIF 清洗后实际发布字节通常更小，故判定偏保守（不会低估）。检查发生在
+// 发布/拷贝对象之前，被拒的 upload 不产生发布副本。检查与提交非原子：并发
+// complete、同一批量 complete 的多个 upload 各自读取同一总量，可能小幅超限
+// （上界约为并发数/批大小 × 单文件上限）。配额是存储滥用的粗闸门，不承担精确
+// 计费语义。
+const completedMediaStorageLimitBytes int64 = 2 << 30 // 2GiB
 
 // checkPresignQuota 按用户校验「未完成上传」配额：会话数或声明字节总量
 // （已有 + 本次批量）超限时返回 ErrUploadQuotaExceeded，调用方整批拒绝。
@@ -323,6 +355,35 @@ func (s *Service) checkPresignQuota(ctx context.Context, userID string, files []
 func pendingUploadWithinQuota(usage PendingUploadUsage, batchSessions, batchBytes int64) bool {
 	return usage.Count+batchSessions <= pendingUploadSessionLimit &&
 		usage.DeclaredBytes+batchBytes <= pendingUploadBytesLimit
+}
+
+// checkCompletedStorageQuota 校验「该账号已完成媒体总字节 + 本次文件大小」是否
+// 仍在 completedMediaStorageLimitBytes 内（第 82 轮审计 P2-3：完成态媒体此前
+// 无账号级上界，complete 即重置未完成配额，单账号存储可无限放大）。超限返回
+// ErrStorageQuotaExceeded，由 handler 映射 spec 10400 业务冲突。
+//
+// 调用点在 PrepareComplete 的发布/拷贝之前：超限拒绝不会为本次 upload 产生发布
+// 副本（同批已 Prepare 的 upload 的发布副本与其它 pre-commit 失败路径同语义：
+// 未被任何行引用、重试会覆盖同一键）。会话行保持 pending（不释放）——上限是
+// 账号级状态，释放单个会话也不会腾出空间，行留给保留期 GC 回收（对象与行）。
+//
+// 查询本身失败时返回原始错误（映射 10600）：不能把「无法判断用量」当成未超限
+// 放行，否则存储上界在 DB 故障期间直接失效。
+func (s *Service) checkCompletedStorageQuota(ctx context.Context, userID string, additionalBytes int64) error {
+	used, err := s.repo.CompletedStorageBytes(ctx, userID)
+	if err != nil {
+		observability.FromContext(ctx).Error("media.complete storage usage query failed", "error", err, "user_id", userID)
+		return err
+	}
+	if used+additionalBytes <= completedMediaStorageLimitBytes {
+		return nil
+	}
+	observability.FromContext(ctx).Warn("media.complete storage quota exceeded",
+		"user_id", userID,
+		"used_bytes", used,
+		"additional_bytes", additionalBytes,
+		"limit_bytes", completedMediaStorageLimitBytes)
+	return ErrStorageQuotaExceeded
 }
 
 // cleanupStalePendingUploads 清理指定用户「超过宽限期仍未完成」的会话（释放
@@ -414,6 +475,13 @@ func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (prepare
 		if errors.Is(err, ErrUploadConflict) {
 			s.releaseRejectedUpload(ctx, upload, "object metadata mismatch")
 		}
+		return preparedComplete{}, err
+	}
+	// 账号级完成态媒体配额（第 82 轮审计 P2-3）：按 HEAD 到的对象大小校验
+	// 「已完成媒体总字节 + 本次文件」，超限在发布/拷贝之前拒绝——此时尚未产生
+	// 发布副本，拒绝零副作用；完成态媒体因此有账号级上界（见
+	// completedMediaStorageLimitBytes）。
+	if err := s.checkCompletedStorageQuota(ctx, upload.UserID, int64(meta.FileSize)); err != nil {
 		return preparedComplete{}, err
 	}
 	// 魔数嗅探（P2-1）：图片类别在 complete 阶段读取对象前 512 字节校验魔数，
