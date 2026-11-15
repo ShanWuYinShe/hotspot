@@ -124,4 +124,15 @@ LIMIT $2`
 
 	queryDeleteUploadRow = `
 DELETE FROM media_upload_sessions WHERE upload_id = $1 AND status <> 'completed'`
+
+	// queryListStaleUploadsForUser 预签名配额被拒时的提前清理
+	// （Service.cleanupStalePendingUploads）：限定用户 + 超过宽限期未完成，
+	// 按 created_at 升序、限量——先回收最老的弃置会话；user_id + created_at
+	// 命中 idx_media_upload_sessions_user_created_at。
+	queryListStaleUploadsForUser = `
+SELECT upload_id, storage_key, user_id
+FROM media_upload_sessions
+WHERE user_id = $1 AND status <> 'completed' AND created_at < $2
+ORDER BY created_at ASC
+LIMIT $3`
 )

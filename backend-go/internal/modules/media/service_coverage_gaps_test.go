@@ -84,6 +84,9 @@ type mediaRepoOverride struct {
 	deleteRowErr error
 	getErr       error
 	usageErr     error
+	// userListErr 注入 ListStaleUploadsForUser 错误（配额拒绝时清理路径的
+	// best-effort 分支：查询失败不得改变 presign 的错误语义）。
+	userListErr error
 }
 
 func (r *mediaRepoOverride) Get(ctx context.Context, uploadID string) (pendingUpload, bool, error) {
@@ -136,6 +139,13 @@ func (r *mediaRepoOverride) DeleteUploadRow(ctx context.Context, uploadID string
 		return r.deleteRowErr
 	}
 	return r.InMemoryRepository.DeleteUploadRow(ctx, uploadID)
+}
+
+func (r *mediaRepoOverride) ListStaleUploadsForUser(ctx context.Context, userID string, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	if r.userListErr != nil {
+		return nil, r.userListErr
+	}
+	return r.InMemoryRepository.ListStaleUploadsForUser(ctx, userID, cutoff, limit)
 }
 
 func staticSource(t *testing.T, apply func(*appconfig.AppConfig)) *appconfig.StaticSource {
@@ -286,15 +296,26 @@ func coveragePNGWithEXIF() []byte {
 // publishImageObject：图片元数据清洗结果必须直接写到发布键（不能回写可写
 // 上传键——上传键在预签名 TTL 内仍可被客户端重 PUT 覆盖，发布后内容不可变的
 // 前提是发布键从不签发给客户端）。fail-open：读取/解析/PUT 失败退回复制原对象。
+// 返回值必须是发布对象的实际字节数（第 82 轮审计 P2-6：final_file_size 不能用
+// 清洗前大小）。
 func TestPublishImageObjectPaths(t *testing.T) {
 	ctx := context.Background()
 	const uploadKey = "uploads/u1/upload_pub.png"
 	const publishedKey = "published/u1/upload_pub.png"
+	const objectSize = 100
+
+	publish := func(provider *coverageProvider, mimeType string, size int) (int, error) {
+		return NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, mimeType, size)
+	}
 
 	t.Run("get object error falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObjectErr: errors.New("get boom")}
-		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+		size, err := publish(provider, "image/png", objectSize)
+		if err != nil {
 			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
+		if size != objectSize {
+			t.Fatalf("copied original size = %d, want %d", size, objectSize)
 		}
 		if provider.putData != nil {
 			t.Fatal("must not PUT when object read fails")
@@ -306,8 +327,12 @@ func TestPublishImageObjectPaths(t *testing.T) {
 
 	t.Run("parse error falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObject: []byte{0xFF, 0xD8, 0xFF, 0xE1, 0x7F, 0xFF, 0x01, 0x02}}
-		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/jpeg"); err != nil {
+		size, err := publish(provider, "image/jpeg", 8)
+		if err != nil {
 			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
+		if size != 8 {
+			t.Fatalf("copied original size = %d, want 8", size)
 		}
 		if provider.putData != nil {
 			t.Fatal("must not PUT when metadata parsing fails")
@@ -317,9 +342,11 @@ func TestPublishImageObjectPaths(t *testing.T) {
 		}
 	})
 
-	t.Run("cleaned bytes are written directly to the published key", func(t *testing.T) {
-		provider := &coverageProvider{getObject: coveragePNGWithEXIF()}
-		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+	t.Run("cleaned bytes are written directly to the published key and size follows them", func(t *testing.T) {
+		src := coveragePNGWithEXIF()
+		provider := &coverageProvider{getObject: src}
+		size, err := publish(provider, "image/png", len(src))
+		if err != nil {
 			t.Fatalf("publish image: %v", err)
 		}
 		if provider.putKey != publishedKey {
@@ -334,6 +361,12 @@ func TestPublishImageObjectPaths(t *testing.T) {
 		if !bytes.Contains(provider.putData, []byte("imagedata")) {
 			t.Fatal("image payload must survive scrubbing")
 		}
+		if size != len(provider.putData) {
+			t.Fatalf("published size = %d, want cleaned bytes %d", size, len(provider.putData))
+		}
+		if size >= len(src) {
+			t.Fatalf("cleaned png should be smaller: size=%d original=%d", size, len(src))
+		}
 		if len(provider.copiedPairs) != 0 {
 			t.Fatalf("must not copy when cleaned bytes are written, got %#v", provider.copiedPairs)
 		}
@@ -341,8 +374,12 @@ func TestPublishImageObjectPaths(t *testing.T) {
 
 	t.Run("put failure falls back to copying original", func(t *testing.T) {
 		provider := &coverageProvider{getObject: coveragePNGWithEXIF(), putErr: errors.New("put boom")}
-		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); err != nil {
+		size, err := publish(provider, "image/png", objectSize)
+		if err != nil {
 			t.Fatalf("copy fallback must be fail-open, got %v", err)
+		}
+		if size != objectSize {
+			t.Fatalf("copied original size = %d, want %d", size, objectSize)
 		}
 		if len(provider.copiedPairs) != 1 {
 			t.Fatalf("expected copy fallback after PUT failure, got %#v", provider.copiedPairs)
@@ -352,7 +389,7 @@ func TestPublishImageObjectPaths(t *testing.T) {
 	t.Run("copy failure propagates so complete cannot commit", func(t *testing.T) {
 		copyErr := errors.New("copy boom")
 		provider := &coverageProvider{getObjectErr: errors.New("get boom"), copyErr: copyErr}
-		if err := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider).publishImageObject(ctx, uploadKey, publishedKey, "image/png"); !errors.Is(err, copyErr) {
+		if _, err := publish(provider, "image/png", objectSize); !errors.Is(err, copyErr) {
 			t.Fatalf("expected copy error, got %v", err)
 		}
 	})

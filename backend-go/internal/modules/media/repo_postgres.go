@@ -283,6 +283,29 @@ func (r *PostgresRepository) ListStaleUploads(ctx context.Context, cutoff time.T
 	return items, rows.Err()
 }
 
+// ListStaleUploadsForUser 返回指定用户超过宽限期仍未完成的会话（预签名配额
+// 被拒时的提前清理用，见 queryListStaleUploadsForUser）。
+func (r *PostgresRepository) ListStaleUploadsForUser(ctx context.Context, userID string, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	queryable, err := r.queryable(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := queryable.Query(ctx, queryListStaleUploadsForUser, userID, cutoff, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]pendingUpload, 0)
+	for rows.Next() {
+		var item pendingUpload
+		if err := rows.Scan(&item.UploadID, &item.StorageKey, &item.UserID); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 // DeleteUploadRow 按 upload_id 物理删除会话行（GC 第二步）。
 func (r *PostgresRepository) DeleteUploadRow(ctx context.Context, uploadID string) error {
 	queryable, err := r.queryable(ctx)

@@ -9,10 +9,13 @@ import (
 // EXIF/元数据清洗（成熟度审计：带 GPS 的照片原图此前原样分发，位置社交
 // 产品下可暴露发布坐标之外的住址级位置）。纯 Go 段/块解析，无外部依赖。
 //
-// 策略：JPEG 删除全部 APPn 段（APP1=EXIF/XMP、APP13=Photoshop IPTC），
-// 保留 JFIF 所需的 APP0；标记前的 0xFF 填充字节（fill bytes，ITU-T T.81
-// B.1.1.2）属合法结构，跳过继续解析；SOS 之后是熵编码数据（内含 0xFFxx
-// 填充与 RSTn 重启标记，不可按段解析），整段原样拷贝到 EOI。PNG 删除
+// 策略：JPEG 删除 APP1（EXIF/XMP）、APP13（Photoshop IPTC）与其余元数据 APPn，
+// 保留 JFIF 所需的 APP0、ICC 色彩配置（APP2 的 ICC_PROFILE，多段按原顺序保留）
+// 与 Adobe 标记（APP14，CMYK/YCCK JPEG 的色彩变换解释依赖它，误删会导致反色/
+// 色偏；与 PNG 保留 iCCP 的口径对齐，第 82 轮审计 P2-5）；标记前的 0xFF 填充
+// 字节（fill bytes，ITU-T T.81 B.1.1.2）属合法结构，跳过继续解析；SOS 之后是
+// 熵编码数据（内含 0xFFxx 填充与 RSTn 重启标记，不可按段解析），整段原样拷贝
+// 到 EOI。PNG 删除
 // eXIf 与 XMP/文本版 EXIF 块（iTXt/zTXt/tEXt 的 "XML:com.adobe.xmp"、
 // "Raw profile type exif"、"Raw profile type xmp"）。
 // WebP（RIFF 容器）删除 EXIF 与 XMP chunk（P2-13：此前走 default 原样
@@ -42,8 +45,10 @@ func stripImageMetadata(data []byte) ([]byte, bool, error) {
 	}
 }
 
-// stripJPEGMetadata 遍历 JPEG 段并删除 APP1~APPn（EXIF/XMP/IPTC/厂商注释），
-// 保留 APP0（JFIF 基本参数，部分解码器依赖且不含元数据载荷）。
+// stripJPEGMetadata 遍历 JPEG 段并删除元数据 APPn（APP1=EXIF/XMP、APP13=IPTC
+// 及其余厂商注释段），保留 APP0（JFIF 基本参数，部分解码器依赖且不含元数据
+// 载荷）、APP2 的 ICC_PROFILE 色彩配置与 APP14 Adobe 色彩变换标记（见
+// jpegAPPNSegmentKept）。
 //
 // 标记前的 0xFF 填充字节（fill bytes）是合法结构：JPEG 标记允许前置任意数量
 // 0xFF，标记本体是其后第一个非 0xFF 字节。此前把连续 0xFF 当作畸形段直接
@@ -106,14 +111,35 @@ func stripJPEGMetadata(data []byte) ([]byte, bool, error) {
 		if err != nil {
 			return nil, false, err
 		}
-		if marker >= 0xE1 && marker <= 0xEF {
-			changed = true // 丢弃 APP1~APP15（EXIF/XMP/IPTC/厂商注释）；其前置填充一并丢弃
+		if marker >= 0xE1 && marker <= 0xEF && !jpegAPPNSegmentKept(marker, data[markerPos+3:end]) {
+			changed = true // 丢弃元数据 APP1~APP15（EXIF/XMP/IPTC/厂商注释）；其前置填充一并丢弃
 		} else {
-			out.Write(data[pos:end]) // 保留段连同其前置填充字节原样拷贝
+			out.Write(data[pos:end]) // 保留段（含 APP0/ICC/Adobe）连同其前置填充字节原样拷贝
 		}
 		pos = end
 	}
 	return out.Bytes(), changed, nil
+}
+
+// jpegAPPNSegmentKept 判定 APPn 段是否必须保留（隐私清洗只删元数据，不删色彩
+// 管理数据）：
+//   - APP2 的 ICC_PROFILE：ICC 色彩配置（iPhone Display P3、Adobe RGB 等广色域
+//     照片依赖它；删除后浏览器按 sRGB 解释会出现可见色偏）。ICC 规范允许把
+//     大 profile 拆成多段 APP2，各段共享同一 marker 且顺序即拼接顺序，因此
+//     逐段保留即可，无需改写。其余 APP2（FlashPix/MPF 等仍属元数据）继续删除。
+//   - APP14 Adobe：Adobe 色彩变换标记（4 分量 CMYK/YCCK JPEG 的颜色解释依赖它，
+//     缺失会被错误解释成反色）。
+//   - 其余 APP1~APP15 一律删除（APP1=EXIF/XMP、APP13=IPTC、APP3~APP12 厂商
+//     注释）。
+func jpegAPPNSegmentKept(marker byte, payload []byte) bool {
+	switch marker {
+	case 0xE2: // APP2
+		return bytes.HasPrefix(payload, []byte("ICC_PROFILE\x00"))
+	case 0xEE: // APP14 Adobe
+		return true
+	default:
+		return false
+	}
 }
 
 // stripPNGMetadata 删除 PNG 的 EXIF/XMP 元数据块（GPS/隐私载体），其余块
@@ -187,8 +213,9 @@ const (
 )
 
 // stripWebPMetadata 按 RIFF chunk 遍历删除 WebP 的元数据 chunk：
-// "EXIF"（EXIF/GPS 载体）与 "XMP "（XMP 元数据，与 JPEG 删全部 APPn
-// 的口径对齐）。VP8/VP8L/VP8X/ANMF/ALPH 等图像数据 chunk 原样保留，
+// "EXIF"（EXIF/GPS 载体）与 "XMP "（XMP 元数据，与 JPEG 删元数据 APPn
+// 的口径对齐；两端的色彩管理数据都保留——JPEG 保留 APP2 ICC/APP14 Adobe，
+// WebP 保留 ICCP chunk）。VP8/VP8L/VP8X/ANMF/ALPH 等图像数据 chunk 原样保留，
 // 不解码重编码（无质量损失、无新增依赖）。删除 chunk 后同步改写 RIFF
 // 头的大小字段（文件总长-8），并把 VP8X 标志字节中已无对应 chunk 的
 // E/X 位清零（第 81 轮审计：只删 chunk 不清标志时，文件元数据「自述」
