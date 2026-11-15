@@ -528,6 +528,7 @@
     "notifications:notifications_pkey",
     "outbox_events:idx_outbox_due",
     "outbox_events:idx_outbox_processed",
+    "outbox_events:idx_outbox_topic_due",
     "outbox_events:outbox_events_pkey",
     "private_chat_read_state:idx_private_chat_read_state_user_updated_at",
     "private_chat_read_state:private_chat_read_state_pkey",
