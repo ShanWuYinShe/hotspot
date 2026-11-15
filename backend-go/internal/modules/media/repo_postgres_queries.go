@@ -94,6 +94,14 @@ WHERE file_id = ANY($1)
   AND status = 'completed'`
 )
 
+// 账户注销级联（user_purge.go）：Service 层在删除会话行之前先取出该用户全部
+// 上传会话的存储键——含 completed 的不可写发布键与未完成的临时上传键——行删除
+// 完成后逐条删除对应对象，避免已注销账号的媒体对象永久残留（第 81 轮审计）。
+const queryListUserStorageKeys = `
+SELECT storage_key
+FROM media_upload_sessions
+WHERE user_id = $1`
+
 // 保留期 GC（retention.go）：超期未完成会话 + 其孤儿存储对象。
 const (
 	queryListStaleUploads = `
