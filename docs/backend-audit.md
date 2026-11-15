@@ -3931,12 +3931,10 @@ staticcheck U1000（-tests=false）清零。
   或存储侧配额。批次 5 已加粗闸门：单用户未完成会话 ≤20 条且声明字节 ≤200MB（超限 presign 返回
   `10400`），未完成会话保留期 7 天→2 天、单轮 GC 100→500 条；单账号放大窗口从「无上限 × 7 天」
   压到「~2GB × 2 天」量级。
-- **超大媒体账户注销**：注销在请求生命周期内同步逐批（100/批）删 S3 对象，数千对象可能触达 HTTP
-  超时，剩余对象 Warn 后成存储垃圾；建议后续改异步 outbox 清理（批次 4 已修「不删对象」本身）。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`。部署脚本已加
   URL 安全字符预检（`openssl rand -hex 32` 指引）、`.env.example` 已注明、DSN 解析失败 panic 带
-  排查提示；**已有服务器 .env 需人工核对**口令是否含 `/ @ : ? %` 或空格（含则改 hex 口令并
-  `ALTER USER` 同步）。
+  排查提示；生产服务器 `.env` 已用布尔检查核对为 **URL 安全**（只输出 SAFE/UNSAFE、不回显口令），
+  后续轮换口令仍需保持 URL 安全字符。
 - moment 分享封面用作者头像而非瞬间图（产品口径待确认）。
 
 ### 四、本轮证伪 / 复核无问题
@@ -4065,3 +4063,26 @@ admin 审计事务化收尾与媒体上传放大治理已完成（同一 PR 门�
 一致性、group.dismiss 审计失败回滚（owner 硬删 + 平台软删）、media 配额边界/聚合 SQL/WebP 标志位
 等单测与 IT 通过（admin 29 PASS、groups 48 PASS 全量回归）；全模块 IT 17 包 + platform + bootstrap
 全绿；`migrate -verify-only` 通过；PR CI 全绿。
+
+### 十、后续批次 6 修复（2026-11-15）
+
+注销媒体对象清理异步化与运维可观测性加固已完成（同一 PR 门禁：CI 全绿后合并）：
+
+- **注销媒体对象异步清理**：media PurgeUserData 在删除会话行后按批（≤200 keys/事件）投递
+  `media.purge_objects` outbox 事件，由 dispatcher 在请求生命周期外逐条删除（404 幂等，单条失败
+  返回错误走指数退避/死信），超大媒体账户不再拖住注销请求；未注入 writer 或入队失败时回退同步
+  删除，不因异步化产生孤儿。删行→入队崩溃窗口与同步实现删行后崩溃同级（可接受存储垃圾，存储侧
+  前缀兜底）。
+- **Grafana 总览面板补齐**：在既有 hotspot-overview.json 增 4 个面板——outbox 死信
+  （hotspot_outbox_dead_letters）、Redis 启动降级（hotspot_redis_startup_degraded）、backend
+  up/HTTP 5xx、通知/WS 推送链路（realtime 指标；media/通知暂无专属埋点，面板说明已注明）；
+  一次性 Grafana 容器实测 provisioning 自动加载 12 面板。
+- **夜间 fuzz CI**：新增 `.github/workflows/fuzz.yml`（cron + workflow_dispatch，不进 PR 门禁），
+  每周跑 6 个既有 fuzz 目标各 30s，失败时导出新语料；actionlint 通过、本地 6 目标实跑通过。
+- **生产服务器口令形态复核**：ssh 布尔检查确认 `.env` 的 POSTGRES_PASSWORD 为 URL 安全字符
+  （`/ @ : ? %` 空格均无，检查不输出口令内容），pgx DSN 解析风险已消除；后续轮换仍需保持该约束。
+
+验证：受影响包 `go test -short`/`-race` 全绿；真实库临时库上 PurgeUserData 入队 outbox
+（topic/payload 完整、行已删）与同步降级路径 IT 通过、media 覆盖率 96.7%；全模块 IT 17 包 +
+platform + bootstrap 全绿；`migrate -verify-only` 通过；actionlint/YAML/JSON 校验通过；Grafana
+容器 provisioning 实测通过；PR CI 全绿。
