@@ -3926,13 +3926,11 @@ staticcheck U1000（-tests=false）清零。
 
 ### 三、已复核、本轮未修（后续批次，按优先级）
 
-- **未完成上传的存储放大（DoS 面，未修）**：预签名 PUT 的 body 大小不受签名约束（声明 1 字节可
-  PUT 至 nginx `client_max_body_size 100m`），未完成会话保留 7 天且 GC 100/小时。发布后不可变已由
-  copy-on-complete 解决，但「弃置大对象」的存储/带宽成本仍需配额或 S3 POST policy（需改客户端协议）
-  等多方案评估，另行立项。
-- **admin 残留审计事务缺口**：`config.update` 审计仍在事务外（platform/appconfig 的
-  PersistenceSource.Update 不感知 ctx 事务，需平台层改造）；`group.dismiss` 的 audit INSERT
-  已在 admin 事务内，但 groups 模块吞掉错误未上抛（批次 4 已收敛其余已审计写路径）。
+- **未完成上传的存储放大（DoS 面，已部分收敛）**：预签名 PUT 的 body 大小仍不受签名约束（声明
+  1 字节可 PUT 至 nginx `client_max_body_size 100m`），彻底方案需 S3 POST policy（改客户端协议）
+  或存储侧配额。批次 5 已加粗闸门：单用户未完成会话 ≤20 条且声明字节 ≤200MB（超限 presign 返回
+  `10400`），未完成会话保留期 7 天→2 天、单轮 GC 100→500 条；单账号放大窗口从「无上限 × 7 天」
+  压到「~2GB × 2 天」量级。
 - **超大媒体账户注销**：注销在请求生命周期内同步逐批（100/批）删 S3 对象，数千对象可能触达 HTTP
   超时，剩余对象 Warn 后成存储垃圾；建议后续改异步 outbox 清理（批次 4 已修「不删对象」本身）。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`。部署脚本已加
@@ -4046,3 +4044,24 @@ admin 审计事务化收尾、outbox 死信可观测/保留期、bootstrap 聊�
 保留期（只删旧死信）、聊天未读聚合（与列表逐群 unread 之和一致、敏感性改坏验证）、media 注销只删
 目标用户对象/分批/失败不阻塞等 IT 通过；全模块 IT 17 包 + platform + bootstrap 全绿；
 `migrate -verify-only` 通过；promtool 11 条规则校验通过；PR CI 全绿。
+
+### 九、后续批次 5 修复（2026-11-15）
+
+admin 审计事务化收尾与媒体上传放大治理已完成（同一 PR 门禁：CI 全绿后合并）：
+
+- **config.update 审计事务化**：platform/appconfig 的 PersistenceSource.Update 改为 ctx 事务感知
+  （`QueryableFromContext` 优先、无事务回退共享池），且进程内配置快照延迟到 COMMIT 后更新
+  （aftercommit），避免审计失败回滚后内存读到「库内未生效」的幻影配置；admin UpdateAppConfig 用
+  runDecisionInTx 把「读前态 → 写配置 → config.update 审计」同事务，审计失败整体回滚、管理员可重试。
+- **group.dismiss 审计错误上抛**：groups 的 Dismiss/DismissAsAdmin 在自身事务内完成「解散写 +
+  AppendGroupDismissAudit」，审计失败整体回滚并上抛错误（群未解散、无幻影 GroupDismissed 广播）；
+  admin 举报通道解散随裁决事务一起回滚。
+- **媒体上传放大治理**：presign 增加按用户未完成上传配额（≤20 条、声明字节总量 ≤200MB，超限整批
+  拒绝并返回 spec 10400 业务冲突）；未完成会话保留期 7 天→2 天、单轮 GC 100→500 条；WebP 删除
+  EXIF/XMP chunk 后清 VP8X 的 E/X 标志位（元数据自述与实际一致）。残留：body 大小不受签名约束的
+  彻底方案仍需 S3 POST policy（需改客户端协议，见「三」）。
+
+验证：受影响包 `go test -short`/`-race` 全绿；真实库临时库上 config.update 审计失败回滚/内存快照
+一致性、group.dismiss 审计失败回滚（owner 硬删 + 平台软删）、media 配额边界/聚合 SQL/WebP 标志位
+等单测与 IT 通过（admin 29 PASS、groups 48 PASS 全量回归）；全模块 IT 17 包 + platform + bootstrap
+全绿；`migrate -verify-only` 通过；PR CI 全绿。
