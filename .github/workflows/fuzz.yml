@@ -50,7 +50,8 @@ jobs:
           set -uo pipefail
           cd backend-go
           # 目标清单与 docs/backend-audit.md「不可信输入 fuzz 覆盖」保持一致；
-          # 新增 Fuzz 目标时必须同步补这里，否则会漏在 CI 之外。
+          # archtest 的 TestFuzzWorkflowTargetsMatchCode 会与代码中全部 func Fuzz*
+          # 交叉校验（漏登记/多登记都会让 CI 红灯），新增目标时必须同步补这里。
           targets=(
             "./internal/platform/cursor/:FuzzDecodeNeverPanics"
             "./internal/platform/cursor/:FuzzDecodeStringNeverPanics"
