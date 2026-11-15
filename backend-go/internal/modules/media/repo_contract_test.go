@@ -304,6 +304,68 @@ func TestMediaRepositoryContract(t *testing.T) {
 			},
 		},
 		{
+			Name: "pending upload usage aggregates only owner's incomplete sessions",
+			Run: func(t *testing.T, repo Repository, state mediaContractState) {
+				// 预签名配额口径：只统计目标用户 status <> 'completed' 的会话，
+				// 声明字节按 declared_file_size 求和；无会话用户返回零值。
+				for _, step := range []struct {
+					id   string
+					size int
+				}{
+					{"upload_usage_pending_1", 100},
+					{"upload_usage_pending_2", 250},
+				} {
+					upload := pending(step.id, state.userA, CategoryAvatar, base)
+					upload.DeclaredFileSize = step.size
+					if err := repo.Save(state.ctx, upload); err != nil {
+						t.Fatalf("save %s: %v", step.id, err)
+					}
+				}
+				// 已完成会话不占配额（含其声明字节）。
+				completed := pending("upload_usage_completed", state.userA, CategoryAvatar, base)
+				completed.DeclaredFileSize = 4096
+				completed.File = file("upload_usage_completed")
+				if err := repo.Save(state.ctx, completed); err != nil {
+					t.Fatalf("save completed: %v", err)
+				}
+				if ok, err := repo.Complete(state.ctx, "upload_usage_completed", completed.File, publishedKey("upload_usage_completed"), "idem-usage"); err != nil || !ok {
+					t.Fatalf("complete: ok=%v err=%v", ok, err)
+				}
+				// 其它用户的未完成会话不串账。
+				otherOwner := pending("upload_usage_other", state.userB, CategoryAvatar, base)
+				otherOwner.DeclaredFileSize = 777
+				if err := repo.Save(state.ctx, otherOwner); err != nil {
+					t.Fatalf("save other owner: %v", err)
+				}
+				if err := repo.Save(state.ctx, pending("upload_usage_other_pending", state.userB, CategoryAvatar, base)); err != nil {
+					t.Fatalf("save other owner pending: %v", err)
+				}
+
+				usage, err := repo.PendingUploadUsage(state.ctx, state.userA)
+				if err != nil {
+					t.Fatalf("usage: %v", err)
+				}
+				if usage.Count != 2 || usage.DeclaredBytes != 350 {
+					t.Fatalf("owner usage = %#v, want count=2 bytes=350", usage)
+				}
+				otherUsage, err := repo.PendingUploadUsage(state.ctx, state.userB)
+				if err != nil {
+					t.Fatalf("other usage: %v", err)
+				}
+				// 777（显式声明）+ 默认 1024（pending() 的 DeclaredFileSize）。
+				if otherUsage.Count != 2 || otherUsage.DeclaredBytes != 1801 {
+					t.Fatalf("other owner usage = %#v, want count=2 bytes=1801", otherUsage)
+				}
+				emptyUsage, err := repo.PendingUploadUsage(state.ctx, "it_media_contract_missing")
+				if err != nil {
+					t.Fatalf("empty usage: %v", err)
+				}
+				if emptyUsage.Count != 0 || emptyUsage.DeclaredBytes != 0 {
+					t.Fatalf("empty usage = %#v, want zero value", emptyUsage)
+				}
+			},
+		},
+		{
 			Name: "save upserts basic session fields",
 			Run: func(t *testing.T, repo Repository, state mediaContractState) {
 				first := pending("upload_upsert", state.userA, CategoryAvatar, base)

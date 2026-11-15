@@ -13,9 +13,16 @@ import (
 // 对象此前永不清理——应用代码零对象删除调用，媒体只进不出）。
 // 模式对齐 notify StartPruneSweeper。
 const (
-	retentionSweepCadence    = time.Hour
-	staleUploadRetentionDays = 7   // 未完成上传会话保留 7 天
-	staleUploadBatchLimit    = 100 // 单轮最多处理条数，防止单轮时长失控
+	retentionSweepCadence = time.Hour
+	// 未完成上传会话保留 2 天：预签名 URL 短时有效，正常上传在分钟级完成，
+	// 2 天覆盖慢网/中断重试窗口，同时把「弃置会话占用存储」的窗口从 7 天压到
+	// 2 天（配合 Service.checkPresignQuota 的 presign 配额，共同收敛单账号的
+	// 存储放大面；7 天 × 无限弃置是第 81 轮审计的 DoS 残留）。
+	staleUploadRetentionDays = 2
+	// 单轮最多处理条数：500 条/轮 × 每小时一轮，足以消化配额时代遗留的弃置
+	// 会话积压；同时限制单轮时长（每条约 1 次 S3 delete + 1 次 DB delete），
+	// 避免单轮长时间占用 sweeping goroutine。
+	staleUploadBatchLimit = 500
 )
 
 var (

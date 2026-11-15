@@ -35,6 +35,13 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")
 			return
 		}
+		if errors.Is(err, ErrUploadQuotaExceeded) {
+			// 10400 业务冲突（spec api_spec_errors.md「满员/前置状态不满足」）：
+			// 未完成上传已达配额，客户端提示用户完成已有上传或稍后重试；不引导
+			// 立即重试（10500 的 Retry-After 语义不适用，配额不会短时自动恢复）。
+			httpx.WriteBusinessError(w, r, "PresignUpload", httpx.CodeConflict, "未完成上传过多，请完成上传后重试")
+			return
+		}
 		httpx.WriteAPIError(w, r, "PresignUpload", err)
 		return
 	}

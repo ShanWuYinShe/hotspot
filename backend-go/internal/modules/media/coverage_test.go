@@ -31,6 +31,12 @@ func (r *mediaErrRepo) ListStaleUploads(context.Context, time.Time, int) ([]pend
 }
 func (r *mediaErrRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
+// 预签名配额聚合委托内存实现：这些用例的仓储里没有未完成会话，用量为零，
+// Presign 照常继续（配额不干扰既有错误分支断言）。
+func (r *mediaErrRepo) PendingUploadUsage(ctx context.Context, userID string) (PendingUploadUsage, error) {
+	return r.repo.PendingUploadUsage(ctx, userID)
+}
+
 func (r *mediaErrRepo) Complete(ctx context.Context, uploadID string, media UploadedMedia, storageKey, idempotencyKey string) (bool, error) {
 	if r.err != nil {
 		return false, r.err
