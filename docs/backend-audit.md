@@ -3932,13 +3932,11 @@ staticcheck U1000（-tests=false）清零。
   同款，即使 PUT 正确长度也 403 SignatureDoesNotMatch），该路线排除。批次 5 加粗闸门（≤20 条 /
   ≤200MB / 保留期 2 天 / GC 500 条每轮），批次 8 追加失败重试释放与 15 分钟弃置清理，避免失败重试
   被锁 2 天。
-- **媒体存储上界不收敛（残留）**：完成态媒体计入账号永久数据且无引用回收；complete 后旧 uploads/
-  键在 15 分钟 PUT TTL 内重放会生成永久孤儿（保留期只扫未完成行、注销只删 published 键）；配额只
-  约束未完成会话，攻击者可 complete 后继续上传使单账号存储无上界。彻底方案需账号级存储配额/异步
-  回收策略，另行评估。
-- **outbox inline 领取扫描（残留）**：外部 topic（媒体清理）极端积压时，inline 领取 SQL 需跳过外部
-  topic 扫描（O(积压)，10 万行约 10.5ms）；现实量级远小于此，若积压风险升高需按 topic 拆队列或加
-  过滤索引。
+- **媒体存储回收边界（部分收敛）**：批次 9 已加账号级完成态媒体配额（2GiB/账号粗闸门，检查与
+  提交非原子）与 uploads/ 前缀孤儿对象清理（S3 ListObjectsV2 + DB 引用判定、2 天保留期、单轮
+  有界）。剩余：published/ 前缀孤儿（批量 complete 中途失败留下的发布副本，可同构后续实现）；
+  完成态媒体无「未被业务引用」回收（无媒体删除 API，上传后不挂载也计入配额，命中上限持续
+  10400）——需产品/契约决定；配额为常量（spec AppLimits 无账号存储配额字段，运营可调需先扩 spec）。
 - **扩展名×MIME 严格一致兼容风险（残留）**：浏览器对未知类型回落 `application/octet-stream` 的已
   登记扩展名会被拒；如线上客诉应按真实客户端 MIME 补表，而不是放宽契约。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`。部署脚本已加
@@ -4133,3 +4131,24 @@ P1=6、P2=8），批次 8 修复全部 P1 与可快速闭环的 P2：
 新实现 PASS）、outbox 事务外隔离/重试/死信/panic、媒体配额释放、未读 SQL 等价性与计划回归、迁移 071
 索引均通过；全模块 IT 17 包 + platform + bootstrap + archtest 全绿；`check-migrations.sh` 与
 `migrate -verify-only` 通过；gosec/actionlint 0 issue；PR CI 全绿。
+
+### 十二、批次 9 修复（2026-11-15）
+
+第 82 轮审计两项「残留」已闭环：
+
+- **媒体存储上界治理**：complete 阶段按账号已完成媒体总字节（SUM(final_file_size)）+ 本次对象
+  Head 大小校验 2GiB 配额（超限返回 spec 已有 10400；检查与提交非原子，属粗闸门）；保留期
+  sweeper 追加 uploads/ 前缀孤儿清理——Provider.ListObjects（SigV4 预签名 ListObjectsV2 单页、
+  业务 query 进 canonical query）、2 天保留期、ExistingStorageKeys 批量引用判定（任意状态行都算
+  引用）、单轮 ≤20 页/≤500 删除/60s，失败仅告警下轮重试；dev SeaweedFS 实测分页/边翻页边删除/
+  验签通过，EXPLAIN 显示配额 SUM 与 storage_key ANY 均走既有索引。
+- **outbox inline 领取优化**：inline 领取由 `topic <> ALL(外部 topic)` 反向过滤改为
+  `topic = ANY(inline topic)` 白名单（Dispatcher 维护 inline 列表，无 inline 注册时跳过领取）；
+  迁移 072 增部分索引 `(topic, available_at, event_id) WHERE processed_at IS NULL`；并发现 pgx
+  预编译 generic plan 会退回主键顺序扫描（10.9ms/丢弃 10 万行），在领取事务内
+  `SET LOCAL plan_cache_mode = force_custom_plan` 后 0.116ms/仅触碰 60 条 inline 行，外部 topic
+  积压不再影响实时 topic 投递；manifest 已重建。
+
+验证：gofmt/build/vet 全绿；media/outbox/bootstrap 单测与 `-race` 全绿；真实库临时库 IT（media
+97.5% 覆盖、outbox 领取计划回归、迁移 072 verify、media 存储治理 5/5）通过；全模块 IT 17 包 +
+platform + bootstrap + archtest 全绿；`check-migrations.sh`/manifest 一致；gosec 0 issue；PR CI 全绿。
