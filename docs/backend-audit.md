@@ -3928,9 +3928,19 @@ staticcheck U1000（-tests=false）清零。
 
 - **未完成上传的存储放大（DoS 面，已部分收敛）**：预签名 PUT 的 body 大小仍不受签名约束（声明
   1 字节可 PUT 至 nginx `client_max_body_size 100m`），彻底方案需 S3 POST policy（改客户端协议）
-  或存储侧配额。批次 5 已加粗闸门：单用户未完成会话 ≤20 条且声明字节 ≤200MB（超限 presign 返回
-  `10400`），未完成会话保留期 7 天→2 天、单轮 GC 100→500 条；单账号放大窗口从「无上限 × 7 天」
-  压到「~2GB × 2 天」量级。
+  或存储侧配额；第 82 轮已验证「预签名 PUT 签名 content-length」在本项目的 SeaweedFS 不可行（dev/prod
+  同款，即使 PUT 正确长度也 403 SignatureDoesNotMatch），该路线排除。批次 5 加粗闸门（≤20 条 /
+  ≤200MB / 保留期 2 天 / GC 500 条每轮），批次 8 追加失败重试释放与 15 分钟弃置清理，避免失败重试
+  被锁 2 天。
+- **媒体存储上界不收敛（残留）**：完成态媒体计入账号永久数据且无引用回收；complete 后旧 uploads/
+  键在 15 分钟 PUT TTL 内重放会生成永久孤儿（保留期只扫未完成行、注销只删 published 键）；配额只
+  约束未完成会话，攻击者可 complete 后继续上传使单账号存储无上界。彻底方案需账号级存储配额/异步
+  回收策略，另行评估。
+- **outbox inline 领取扫描（残留）**：外部 topic（媒体清理）极端积压时，inline 领取 SQL 需跳过外部
+  topic 扫描（O(积压)，10 万行约 10.5ms）；现实量级远小于此，若积压风险升高需按 topic 拆队列或加
+  过滤索引。
+- **扩展名×MIME 严格一致兼容风险（残留）**：浏览器对未知类型回落 `application/octet-stream` 的已
+  登记扩展名会被拒；如线上客诉应按真实客户端 MIME 补表，而不是放宽契约。
 - pgx 5.11 起连接串按 libpq 精确解析：生产 compose 未转义拼装 `POSTGRES_PASSWORD`。部署脚本已加
   URL 安全字符预检（`openssl rand -hex 32` 指引）、`.env.example` 已注明、DSN 解析失败 panic 带
   排查提示；生产服务器 `.env` 已用布尔检查核对为 **URL 安全**（只输出 SAFE/UNSAFE、不回显口令），
@@ -4086,3 +4096,40 @@ admin 审计事务化收尾与媒体上传放大治理已完成（同一 PR 门�
 （topic/payload 完整、行已删）与同步降级路径 IT 通过、media 覆盖率 96.7%；全模块 IT 17 包 +
 platform + bootstrap 全绿；`migrate -verify-only` 通过；actionlint/YAML/JSON 校验通过；Grafana
 容器 provisioning 实测通过；PR CI 全绿。
+
+### 十一、第 82 轮审计与批次 8 修复（2026-11-15）
+
+对批次 1-6 新增/改动代码做对抗性审查（media / platform+运维 / SQL+事务 三条只读审计线；P0=0、
+P1=6、P2=8），批次 8 修复全部 P1 与可快速闭环的 P2：
+
+- **appconfig 并发丢更新回归（P1）**：批次 5 把快照更新移到 aftercommit 后，事务内仍以进程快照为
+  底稿 → 两个并发更新各自整份覆盖、静默丢字段（真实库确定性复现）。改为事务内
+  `SELECT ... FOR UPDATE` 取库内最新行再 apply/upsert（含并发首写 ON CONFLICT 路径），aftercommit
+  只更新进程快照（回滚不污染）；补真实库并发 IT + 旧实现 FAIL 敏感性验证；事务路径不再持 loadMu，
+  避免阻塞每请求一次的配置读取。
+- **聊天未读聚合全表扫描（P1）**：bootstrap unread_summary 的私聊/群聊 COUNT 改为每会话 LATERAL
+  索引范围计数，成本与「该用户未读数」而非全站历史相关；真实库等价性验证（31.8 万私聊/11.5 万群聊
+  行，老/新结果一致），EXPLAIN：私聊 31 万行 Seq Scan 60ms → 索引 3.7ms，群聊 15k→9k 行 / 2ms；
+  新增 EXPLAIN 计划形态回归用例。
+- **media 契约校验缺失（P1）**：补 chat_file 等类别扩展名黑名单 + 扩展名×MIME 一致性（presign 与
+  complete 双层，含服务端脚本/标记类）、complete_upload 批量上限（按批内类别最大上限，原实现只看
+  首个文件类别）、AppConfig 上传大小硬上限 clamp（只能收紧不能放宽）。
+- **上传配额锁死回归（P1）**：complete 确定性失败（大小/类型/扩展名/魔数）立即删会话释放配额；
+  presign 超配额时先清理该用户超过 15 分钟宽限期的弃置会话（限量）再重试一次配额判断，避免失败
+  重试被锁 2 天。
+- **outbox 慢 handler 头阻塞（P1）**：新增 `RegisterExternal` 事务外执行路径（独立短事务领取 +
+  3min 租约 + 4 并发 + 单事件 60s 超时 + 短事务 CAS 写回），媒体 S3 删除不再占领取事务、不阻塞
+  其它 topic；purge handler 改 50 键/批 + 4 并发有界；inline topic 语义与既有真实库 IT 回归全绿。
+- **媒体保留期 sweeper ctx 失效（P2）**：panic 重启后复用已取消 ctx 会永久静默失效，ctx/ticker
+  移入每次 worker 运行内部，并修正重启期间 started 标志。
+- **JPEG 清洗误删 ICC/Adobe（P2）**：保留 APP2 ICC_PROFILE（多段保序）与 APP14 Adobe，继续删
+  APP1 EXIF/XMP 与 APP13 IPTC；`final_file_size` 改记清洗后实际发布字节数。
+- **媒体保留期 GC 无索引（P2）**：迁移 071 增部分索引 `(created_at) WHERE status <> 'completed'`
+  （30 万行 67.75ms/4926 buffers → 0.18ms/502 buffers），schema manifest 已重建。
+- **fuzz 工作流漂移（P2）**：archtest 工具链守卫扩展为全部 workflow 的 go-version，并双向校验
+  fuzz.yml 目标清单与代码 `func Fuzz*` 集合（漏登记/多登记/重复/空清单均失败）。
+
+验证：受影响包 `go test -short`/`-race` 全绿；真实库临时库上 appconfig 并发丢更新（旧实现 FAIL /
+新实现 PASS）、outbox 事务外隔离/重试/死信/panic、媒体配额释放、未读 SQL 等价性与计划回归、迁移 071
+索引均通过；全模块 IT 17 包 + platform + bootstrap + archtest 全绿；`check-migrations.sh` 与
+`migrate -verify-only` 通过；gosec/actionlint 0 issue；PR CI 全绿。
