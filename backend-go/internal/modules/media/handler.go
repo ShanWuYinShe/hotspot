@@ -22,8 +22,11 @@ func (h *Handler) PresignUpload(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteInvalidRequest(w, r, "PresignUpload", "参数错误")
 		return
 	}
-	// 批次上限 = 批次内各类别上限的最大值（spec api_spec_media.md：moment_image → max_moment_images；chat_* → max_chat_files）
-	if limit := h.service.BatchLimitFor(string(req.Files[0].Category)); len(req.Files) > limit {
+	// 批次上限 = 批次内各类别上限的最大值（spec api_spec_media.md presign_upload：
+	// moment_image → max_moment_images；chat_* → max_chat_files；取批次内最大值）。
+	// 不能只看 files[0] 的类别：混合类别批次会被首个文件的类别误限（第 82 轮审计
+	// P2-1 备注）。
+	if limit := h.service.BatchLimitForFiles(req.Files); len(req.Files) > limit {
 		httpx.WriteInvalidRequest(w, r, "PresignUpload", "批量文件数超出上限")
 		return
 	}
@@ -52,6 +55,13 @@ func (h *Handler) CompleteUpload(w http.ResponseWriter, r *http.Request) {
 	var req CompleteUploadRequest
 	if err := httpx.DecodeStrictJSON(r, &req); err != nil || len(req.UploadIDs) == 0 {
 		httpx.WriteInvalidRequest(w, r, "CompleteUpload", "参数错误")
+		return
+	}
+	// 批量上限与 presign_upload 一致（spec api_spec_media.md complete_upload：
+	// upload_ids 1..N，上限与 presign_upload 一致）。此前没有上限，单请求可带
+	// 数万个 upload_id 放大成同量级 DB/S3 操作（第 82 轮审计 P1-2）。
+	if limit := h.service.CompleteBatchLimit(); len(req.UploadIDs) > limit {
+		httpx.WriteInvalidRequest(w, r, "CompleteUpload", "批量 upload_id 数超出上限")
 		return
 	}
 	// 整批原子语义（spec api_spec_media.md）：第一阶段对全部 upload_id 执行

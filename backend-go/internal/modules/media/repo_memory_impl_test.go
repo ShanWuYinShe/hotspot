@@ -131,11 +131,26 @@ func (r *InMemoryRepository) PendingUploadUsage(_ context.Context, userID string
 }
 
 func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	return r.listStaleUploads(cutoff, limit, "")
+}
+
+// ListStaleUploadsForUser 与 PG 的 queryListStaleUploadsForUser 同口径：限定
+// 用户、created_at 早于 cutoff、按 created_at 升序限量（预签名配额被拒时的
+// 提前清理用）。
+func (r *InMemoryRepository) ListStaleUploadsForUser(_ context.Context, userID string, cutoff time.Time, limit int) ([]pendingUpload, error) {
+	return r.listStaleUploads(cutoff, limit, userID)
+}
+
+// listStaleUploads 是两个查询的公共实现；userID 为空表示不限定用户。
+func (r *InMemoryRepository) listStaleUploads(cutoff time.Time, limit int, userID string) ([]pendingUpload, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	items := make([]pendingUpload, 0)
 	for _, item := range r.uploads {
 		if item.Completed {
+			continue
+		}
+		if userID != "" && item.UserID != userID {
 			continue
 		}
 		created, err := time.Parse(time.RFC3339, item.CreatedAt)
@@ -144,8 +159,8 @@ func (r *InMemoryRepository) ListStaleUploads(_ context.Context, cutoff time.Tim
 		}
 		items = append(items, item)
 	}
-	// 与 PG queryListStaleUploads（ORDER BY created_at ASC LIMIT $2）同序：
-	// 旧行优先处理；此前按 map 随机序并提前 break，GC 顺序与批次不稳定。
+	// 与 PG 查询（ORDER BY created_at ASC LIMIT $N）同序：旧行优先处理；此前
+	// 按 map 随机序并提前 break，GC 顺序与批次不稳定。
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].CreatedAt == items[j].CreatedAt {
 			return items[i].UploadID < items[j].UploadID

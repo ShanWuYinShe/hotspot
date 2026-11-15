@@ -391,6 +391,62 @@ func TestMediaRepositoryContract(t *testing.T) {
 				}
 			},
 		},
+		{
+			Name: "user stale upload cleanup scopes owner, cutoff and limit",
+			Run: func(t *testing.T, repo Repository, state mediaContractState) {
+				// 预签名配额被拒时的提前清理（cleanupStalePendingUploads）依赖该
+				// 查询：只返回目标用户、超过宽限期、未完成的会话，按 created_at
+				// 升序限量；已完成会话与宽限期内会话不得返回（第 82 轮审计 P1-3）。
+				cutoff := base.Add(-15 * time.Minute)
+				seed := func(uploadID, userID string, createdAt time.Time) {
+					if err := repo.Save(state.ctx, pending(uploadID, userID, CategoryAvatar, createdAt)); err != nil {
+						t.Fatalf("save %s: %v", uploadID, err)
+					}
+				}
+				seed("upload_userstale_2h", state.userA, base.Add(-2*time.Hour))
+				seed("upload_userstale_1h", state.userA, base.Add(-time.Hour))
+				seed("upload_userstale_fresh", state.userA, base.Add(-time.Minute))
+				seed("upload_userstale_other", state.userB, base.Add(-3*time.Hour))
+				completed := pending("upload_userstale_completed", state.userA, CategoryAvatar, base.Add(-4*time.Hour))
+				completed.File = file("upload_userstale_completed")
+				if err := repo.Save(state.ctx, completed); err != nil {
+					t.Fatalf("save completed: %v", err)
+				}
+				if ok, err := repo.Complete(state.ctx, "upload_userstale_completed", completed.File, publishedKey("upload_userstale_completed"), "idem-userstale"); err != nil || !ok {
+					t.Fatalf("complete: ok=%v err=%v", ok, err)
+				}
+
+				stale, err := repo.ListStaleUploadsForUser(state.ctx, state.userA, cutoff, 10)
+				if err != nil {
+					t.Fatalf("list stale for user: %v", err)
+				}
+				if len(stale) != 2 || stale[0].UploadID != "upload_userstale_2h" || stale[1].UploadID != "upload_userstale_1h" {
+					t.Fatalf("user stale = %#v", staleIDs(stale))
+				}
+				if stale[0].StorageKey != "uploads/upload_userstale_2h" || stale[0].UserID != state.userA {
+					t.Fatalf("stale fields = %#v", stale[0])
+				}
+				limited, err := repo.ListStaleUploadsForUser(state.ctx, state.userA, cutoff, 1)
+				if err != nil || len(limited) != 1 || limited[0].UploadID != "upload_userstale_2h" {
+					t.Fatalf("limited user stale = %#v err=%v", staleIDs(limited), err)
+				}
+				other, err := repo.ListStaleUploadsForUser(state.ctx, state.userB, cutoff, 10)
+				if err != nil || len(other) != 1 || other[0].UploadID != "upload_userstale_other" {
+					t.Fatalf("other owner stale = %#v err=%v", staleIDs(other), err)
+				}
+				missing, err := repo.ListStaleUploadsForUser(state.ctx, "it_media_contract_missing", cutoff, 10)
+				if err != nil || len(missing) != 0 {
+					t.Fatalf("missing user stale = %#v err=%v", staleIDs(missing), err)
+				}
+				// 清理路径只删未完成行：已完成会话不会被 DeleteUploadRow 删除。
+				if err := repo.DeleteUploadRow(state.ctx, "upload_userstale_completed"); err != nil {
+					t.Fatalf("delete completed: %v", err)
+				}
+				if got, found, err := repo.Get(state.ctx, "upload_userstale_completed"); err != nil || !found || !got.Completed {
+					t.Fatalf("completed row must survive cleanup delete: found=%v err=%v record=%#v", found, err, got)
+				}
+			},
+		},
 	})
 }
 

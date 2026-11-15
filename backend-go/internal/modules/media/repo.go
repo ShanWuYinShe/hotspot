@@ -44,6 +44,11 @@ type Repository interface {
 	PendingUploadUsage(context.Context, string) (PendingUploadUsage, error)
 	// ListStaleUploads 返回超过保留期仍未完成的上传会话（retention.go GC 入口）。
 	ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error)
+	// ListStaleUploadsForUser 返回指定用户超过宽限期仍未完成的上传会话（按
+	// created_at 升序，限量；预签名配额被拒时的 best-effort 释放路径用，见
+	// Service.cleanupStalePendingUploads）。配额只统计未完成会话，弃置会话
+	// 若不提前清理会把用户上传功能锁到保留期。
+	ListStaleUploadsForUser(context.Context, string, time.Time, int) ([]pendingUpload, error)
 	// DeleteUploadRow 按 upload_id 删除会话行（GC 第二步，对象删除成功后）。
 	DeleteUploadRow(context.Context, string) error
 	// ResolveByFileIDs returns the completed uploads owned by userID for the

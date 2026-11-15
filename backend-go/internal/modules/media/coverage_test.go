@@ -29,6 +29,9 @@ func (r *mediaErrRepo) Get(ctx context.Context, uploadID string) (pendingUpload,
 func (r *mediaErrRepo) ListStaleUploads(context.Context, time.Time, int) ([]pendingUpload, error) {
 	return nil, nil
 }
+func (r *mediaErrRepo) ListStaleUploadsForUser(context.Context, string, time.Time, int) ([]pendingUpload, error) {
+	return nil, nil
+}
 func (r *mediaErrRepo) DeleteUploadRow(context.Context, string) error { return nil }
 
 // 预签名配额聚合委托内存实现：这些用例的仓储里没有未完成会话，用量为零，
