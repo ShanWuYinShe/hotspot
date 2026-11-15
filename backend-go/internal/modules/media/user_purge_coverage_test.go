@@ -3,6 +3,7 @@ package media
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"hotspot/backend-go/internal/platform/observability"
+	"hotspot/backend-go/internal/platform/outbox"
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
 )
@@ -405,5 +407,323 @@ func TestPostgresRepositoryPurgeUserDataDeletesOnlyTargetUser(t *testing.T) {
 	}
 	if _, found, err := repo.Get(ctx, "mediacov_purge_upload_other"); err != nil || found {
 		t.Fatalf("service purge must delete other user's rows: found=%v err=%v", found, err)
+	}
+}
+
+// purgeEnqueueCall 记录一次 outbox 入队（topic + payload），用于断言异步路径。
+type purgeEnqueueCall struct {
+	topic   string
+	payload PurgeObjectsPayload
+}
+
+// purgeRecordingOutbox 是 outboxWriter 的测试替身：记录入队事件，可对第 errAt
+// 次调用注入失败（1-based，0 表示不失败）。
+type purgeRecordingOutbox struct {
+	calls []purgeEnqueueCall
+	errAt int
+	err   error
+}
+
+func (o *purgeRecordingOutbox) Enqueue(_ context.Context, topic string, payload any) error {
+	call := purgeEnqueueCall{topic: topic}
+	if event, ok := payload.(PurgeObjectsPayload); ok {
+		call.payload = event
+	}
+	o.calls = append(o.calls, call)
+	if o.errAt > 0 && len(o.calls) == o.errAt {
+		if o.err != nil {
+			return o.err
+		}
+		return errors.New("outbox enqueue boom")
+	}
+	return nil
+}
+
+// enqueuedKeys 按入队顺序展开所有事件里的 keys。
+func (o *purgeRecordingOutbox) enqueuedKeys() []string {
+	keys := make([]string, 0)
+	for _, call := range o.calls {
+		keys = append(keys, call.payload.Keys...)
+	}
+	return keys
+}
+
+// 注入 outbox writer 后注销级联不再同步删对象：删行后按批入队
+// TopicMediaPurge（payload 带 user_id 与完整 keys），对象清理交给 dispatcher。
+func TestServicePurgeUserDataEnqueuesObjectsInsteadOfDeleting(t *testing.T) {
+	log := &purgeCallLog{}
+	keys := []string{"published/u1/a.jpg", "uploads/u1/b.png"}
+	repo := &purgeFakeRepo{InMemoryRepository: NewInMemoryRepository(), storageKeys: keys, log: log}
+	provider := &purgeFakeProvider{coverageProvider: &coverageProvider{}, log: log}
+	writer := &purgeRecordingOutbox{}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(writer)
+	if err := svc.PurgeUserData(context.Background(), "u1"); err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if want := []string{"list", "purge"}; !slices.Equal(log.calls, want) {
+		t.Fatalf("异步路径不得同步删对象，调用顺序 = %v, want %v", log.calls, want)
+	}
+	if len(provider.deletedKeys) != 0 {
+		t.Fatalf("异步路径不得调用 provider.Delete: %v", provider.deletedKeys)
+	}
+	if len(writer.calls) != 1 {
+		t.Fatalf("enqueued events = %d, want 1", len(writer.calls))
+	}
+	call := writer.calls[0]
+	if call.topic != outbox.TopicMediaPurge {
+		t.Fatalf("topic = %q, want %q", call.topic, outbox.TopicMediaPurge)
+	}
+	if call.payload.UserID != "u1" {
+		t.Fatalf("payload user_id = %q, want u1", call.payload.UserID)
+	}
+	if !slices.Equal(call.payload.Keys, keys) {
+		t.Fatalf("payload keys = %v, want %v", call.payload.Keys, keys)
+	}
+}
+
+// 单事件 key 数上限：超过批大小时拆多个事件，事件并集与原清单一致。
+func TestServicePurgeUserDataEnqueueBatchesKeys(t *testing.T) {
+	keys := make([]string, 0, 2*purgeObjectEventBatchSize+1)
+	for i := 0; i < 2*purgeObjectEventBatchSize+1; i++ {
+		keys = append(keys, fmt.Sprintf("published/u1/%d.jpg", i))
+	}
+	repo := &purgeFakeRepo{InMemoryRepository: NewInMemoryRepository(), storageKeys: keys}
+	provider := &coverageProvider{}
+	writer := &purgeRecordingOutbox{}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(writer)
+	if err := svc.PurgeUserData(context.Background(), "u1"); err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if len(writer.calls) != 3 {
+		t.Fatalf("enqueued events = %d, want 3", len(writer.calls))
+	}
+	wantSizes := []int{purgeObjectEventBatchSize, purgeObjectEventBatchSize, 1}
+	for i, call := range writer.calls {
+		if len(call.payload.Keys) != wantSizes[i] {
+			t.Fatalf("event %d keys = %d, want %d", i, len(call.payload.Keys), wantSizes[i])
+		}
+	}
+	if got := writer.enqueuedKeys(); !slices.Equal(got, keys) {
+		t.Fatalf("事件 keys 并集与清单不一致: got %d keys, want %d", len(got), len(keys))
+	}
+	if len(provider.deletedKeys) != 0 {
+		t.Fatalf("异步路径不得调用 provider.Delete: %v", provider.deletedKeys)
+	}
+}
+
+// 入队失败回退同步删除（注销不因异步化失败而失败，也不留孤儿对象），并记
+// Warn 日志（带失败原因与 user_id）。
+func TestServicePurgeUserDataEnqueueFailureFallsBackToSyncDelete(t *testing.T) {
+	keys := []string{"published/u1/a.jpg", "uploads/u1/b.png", "uploads/u1/c.png"}
+	repo := &purgeFakeRepo{InMemoryRepository: NewInMemoryRepository(), storageKeys: keys}
+	provider := &coverageProvider{}
+	writer := &purgeRecordingOutbox{errAt: 1, err: errors.New("outbox db down")}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(writer)
+	var (
+		purgeErr  error
+		loggerErr error
+	)
+	// logger 必须在 stderr 重定向之后创建：zap 在 Build 时按路径打开输出，
+	// 提前创建会绑定到原 stderr 而捕获不到 Warn。
+	stderr := captureStderr(t, func() {
+		logger, err := observability.NewLogger("development", "warn")
+		if err != nil {
+			loggerErr = err
+			return
+		}
+		ctx := observability.WithLogger(context.Background(), logger)
+		purgeErr = svc.PurgeUserData(ctx, "u1")
+	})
+	if loggerErr != nil {
+		t.Fatalf("new logger: %v", loggerErr)
+	}
+	if purgeErr != nil {
+		t.Fatalf("入队失败必须回退同步删除而不是让注销失败，got %v", purgeErr)
+	}
+	if len(writer.calls) != 1 {
+		t.Fatalf("入队尝试次数 = %d, want 1", len(writer.calls))
+	}
+	if !slices.Equal(provider.deletedKeys, keys) {
+		t.Fatalf("回退同步删除应删全部键: %v, want %v", provider.deletedKeys, keys)
+	}
+	if !strings.Contains(stderr, "outbox enqueue failed") {
+		t.Fatalf("入队失败应记录 Warn，stderr = %q", stderr)
+	}
+	if !strings.Contains(stderr, "user_id") {
+		t.Fatalf("Warn 应带 user_id，stderr = %q", stderr)
+	}
+}
+
+// 入队中途失败：只回退「尚未入队」的剩余键，已入队批次不重复同步删除。
+func TestServicePurgeUserDataEnqueuePartialFailureDeletesOnlyRemainingKeys(t *testing.T) {
+	keys := make([]string, 0, 2*purgeObjectEventBatchSize+1)
+	for i := 0; i < 2*purgeObjectEventBatchSize+1; i++ {
+		keys = append(keys, fmt.Sprintf("published/u1/%d.jpg", i))
+	}
+	repo := &purgeFakeRepo{InMemoryRepository: NewInMemoryRepository(), storageKeys: keys}
+	provider := &coverageProvider{}
+	writer := &purgeRecordingOutbox{errAt: 2, err: errors.New("outbox db down")}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(writer)
+	if err := svc.PurgeUserData(context.Background(), "u1"); err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if len(writer.calls) != 2 {
+		t.Fatalf("入队尝试次数 = %d, want 2", len(writer.calls))
+	}
+	// 第二次调用已失败，其 keys 未入队：只有第一个事件的 keys 生效。
+	wantEnqueued := keys[0:purgeObjectEventBatchSize]
+	if got := writer.calls[0].payload.Keys; !slices.Equal(got, wantEnqueued) {
+		t.Fatalf("已入队 keys 数 = %d, want %d", len(got), len(wantEnqueued))
+	}
+	wantDeleted := keys[purgeObjectEventBatchSize:]
+	if !slices.Equal(provider.deletedKeys, wantDeleted) {
+		t.Fatalf("回退只删剩余键: got %d keys, want %d", len(provider.deletedKeys), len(wantDeleted))
+	}
+}
+
+// 空 storage_key 不产生事件也不发删除请求（防御空键）。
+func TestServicePurgeUserDataEmptyStorageKeysSkipsCleanup(t *testing.T) {
+	repo := &purgeFakeRepo{InMemoryRepository: NewInMemoryRepository(), storageKeys: []string{"", ""}}
+	provider := &coverageProvider{}
+	writer := &purgeRecordingOutbox{}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(writer)
+	if err := svc.PurgeUserData(context.Background(), "u1"); err != nil {
+		t.Fatalf("purge: %v", err)
+	}
+	if len(writer.calls) != 0 {
+		t.Fatalf("空键不得入队: %#v", writer.calls)
+	}
+	if len(provider.deletedKeys) != 0 {
+		t.Fatalf("空键不得触发删除: %v", provider.deletedKeys)
+	}
+}
+
+// DeletePurgeObjects 是 outbox handler 的删除逻辑：逐条删、空键跳过、空清单成功。
+func TestServiceDeletePurgeObjects(t *testing.T) {
+	provider := &coverageProvider{}
+	svc := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider)
+	ctx := context.Background()
+	if err := svc.DeletePurgeObjects(ctx, "u1", nil); err != nil {
+		t.Fatalf("空 keys 直接成功: %v", err)
+	}
+	if err := svc.DeletePurgeObjects(ctx, "u1", []string{"", ""}); err != nil {
+		t.Fatalf("全空 keys 直接成功: %v", err)
+	}
+	if len(provider.deletedKeys) != 0 {
+		t.Fatalf("空清单不得发删除请求: %v", provider.deletedKeys)
+	}
+	if err := svc.DeletePurgeObjects(ctx, "u1", []string{"published/u1/a.jpg", "", "uploads/u1/b.png"}); err != nil {
+		t.Fatalf("delete purge objects: %v", err)
+	}
+	want := []string{"published/u1/a.jpg", "uploads/u1/b.png"}
+	if !slices.Equal(provider.deletedKeys, want) {
+		t.Fatalf("deleted keys = %v, want %v", provider.deletedKeys, want)
+	}
+}
+
+// 单条删除失败：继续删其余对象并返回错误（outbox 据此重试，已删对象 404 幂等）。
+func TestServiceDeletePurgeObjectsFailureReturnsErrorForRetry(t *testing.T) {
+	boom := errors.New("s3 delete boom")
+	log := &purgeCallLog{}
+	provider := &purgeFakeProvider{
+		coverageProvider: &coverageProvider{},
+		log:              log,
+		failKeys:         map[string]error{"b": boom},
+	}
+	svc := NewServiceWithRepoAndProvider(NewInMemoryRepository(), provider)
+	err := svc.DeletePurgeObjects(context.Background(), "u1", []string{"a", "b", "c"})
+	if !errors.Is(err, boom) {
+		t.Fatalf("删除失败必须返回错误供 outbox 重试, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "u1") {
+		t.Fatalf("错误应带 user_id 便于排查: %v", err)
+	}
+	want := []string{"delete:a", "delete:b", "delete:c"}
+	if !slices.Equal(log.calls, want) {
+		t.Fatalf("单条失败不得中断其余删除: %v, want %v", log.calls, want)
+	}
+}
+
+// 真实库用例（BeginScope 事务内写入、结束回滚，不提交任何行）：注入 outbox
+// writer 后 PurgeUserData 把对象清理按批写进 outbox_events（注销请求不再同步
+// 删对象）——事件 topic/payload 完整覆盖全部 storage_key，且会话行已删。
+func TestPostgresRepositoryPurgeUserDataEnqueuesOutboxEvents(t *testing.T) {
+	testdb.SkipIfShort(t)
+	testdb.Open(t)
+	factory, cleanup := testdb.BeginScope(t)
+	defer cleanup()
+
+	repo := NewPostgresRepository(factory)
+	ctx := context.Background()
+	const targetUser = "mediacov_purge_outbox_user"
+	for _, uploadID := range []string{"mediacov_purge_outbox_a", "mediacov_purge_outbox_b"} {
+		if err := repo.Save(ctx, pendingUpload{
+			UploadID:         uploadID,
+			UserID:           targetUser,
+			StorageKey:       "uploads/" + targetUser + "/" + uploadID + ".png",
+			FileName:         uploadID + ".png",
+			DeclaredFileSize: 100,
+			DeclaredMimeType: "image/png",
+			Category:         CategoryAvatar,
+			CreatedAt:        time.Now().UTC().Format(time.RFC3339),
+		}); err != nil {
+			t.Fatalf("save %s: %v", uploadID, err)
+		}
+	}
+	wantKeys, err := repo.ListUserStorageKeys(ctx, targetUser)
+	if err != nil {
+		t.Fatalf("list storage keys: %v", err)
+	}
+	slices.Sort(wantKeys)
+
+	provider := &coverageProvider{}
+	svc := NewServiceWithRepoAndProvider(repo, provider)
+	svc.SetEventOutbox(outbox.NewWriter(factory))
+	if err := svc.PurgeUserData(ctx, targetUser); err != nil {
+		t.Fatalf("purge user data: %v", err)
+	}
+	if len(provider.deletedKeys) != 0 {
+		t.Fatalf("异步路径不得同步删对象: %v", provider.deletedKeys)
+	}
+	if remaining, err := repo.ListUserStorageKeys(ctx, targetUser); err != nil || len(remaining) != 0 {
+		t.Fatalf("会话行必须已删: keys=%v err=%v", remaining, err)
+	}
+
+	qdb, ok := factory.DB.(persistence.QueryableDB)
+	if !ok {
+		t.Fatal("factory.DB is not QueryableDB")
+	}
+	rows, err := qdb.Query(ctx, "SELECT payload FROM outbox_events WHERE topic = $1 AND payload->>'user_id' = $2", outbox.TopicMediaPurge, targetUser)
+	if err != nil {
+		t.Fatalf("query outbox events: %v", err)
+	}
+	defer rows.Close()
+	payloads := make([]PurgeObjectsPayload, 0)
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			t.Fatalf("scan outbox payload: %v", err)
+		}
+		var payload PurgeObjectsPayload
+		if err := json.Unmarshal(raw, &payload); err != nil {
+			t.Fatalf("decode outbox payload: %v", err)
+		}
+		payloads = append(payloads, payload)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate outbox events: %v", err)
+	}
+	if len(payloads) != 1 {
+		t.Fatalf("outbox events = %d, want 1", len(payloads))
+	}
+	gotKeys := append([]string(nil), payloads[0].Keys...)
+	slices.Sort(gotKeys)
+	if payloads[0].UserID != targetUser || !slices.Equal(gotKeys, wantKeys) {
+		t.Fatalf("outbox payload = user:%q keys:%v, want user:%q keys:%v", payloads[0].UserID, gotKeys, targetUser, wantKeys)
 	}
 }

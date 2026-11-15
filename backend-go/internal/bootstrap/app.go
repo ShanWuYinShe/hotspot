@@ -14,6 +14,7 @@ import (
 
 	adminmodule "hotspot/backend-go/internal/modules/admin"
 	"hotspot/backend-go/internal/modules/groups"
+	"hotspot/backend-go/internal/modules/media"
 	"hotspot/backend-go/internal/modules/notify"
 	"hotspot/backend-go/internal/modules/system"
 	"hotspot/backend-go/internal/modules/users"
@@ -152,12 +153,20 @@ func NewApp(cfg config.Config) (*App, error) {
 	// 不再依赖模块隐式读取进程级 DefaultHub。
 	hub := realtime.NewHub()
 	// 通用 outbox dispatcher：业务事务内写入的事件在 COMMIT 后由后台投递；
-	// 进程崩溃重启后未处理行仍会补投。当前接入系统公告 WS 广播（topic 见
-	// outbox.TopicSystemAnnouncement）。
+	// 进程崩溃重启后未处理行仍会补投。当前接入系统公告/举报裁决的 WS 广播与
+	// 账户注销的媒体对象清理（topic 见 outbox.Topic*，处置见下方 Register）。
 	if persistenceFactory.DB != nil && cfg.PostgresDSN != "" {
 		dispatcher := outbox.NewDispatcher(persistenceFactory, logger)
 		dispatcher.Register(outbox.TopicSystemAnnouncement, systemAnnouncementOutboxHandler(hub))
 		dispatcher.Register(outbox.TopicAdminReportHandled, adminReportHandledOutboxHandler(hub))
+		// 账户注销级联的媒体对象清理（media 生产、dispatcher 消费）：注销请求在
+		// 行删除后按批入队，这里在请求生命周期外逐条删除，重试/死信语义同其它
+		// topic（见 media/user_purge.go）。
+		if mediaService := mediaServiceFromModules(modules); mediaService != nil {
+			dispatcher.Register(outbox.TopicMediaPurge, mediaPurgeOutboxHandler(mediaService))
+		} else {
+			logger.Error("bootstrap: media module missing, account purge media object cleanup disabled")
+		}
 		// 死信总数 Gauge：取值由 dispatcher 保留期 sweeper 周期刷新（抓取路径不查库），
 		// 配合 docker/prometheus-alerts.yml 的 HotspotOutboxDeadLetters 告警暴露死信堆积。
 		observability.Register(outbox.NewDeadLettersCollector(dispatcher))
@@ -270,6 +279,43 @@ func adminReportHandledOutboxHandler(hub *realtime.Hub) outbox.Handler {
 		hub.BroadcastToUser(event.ReporterUserID, realtime.Event{Type: eventType, Payload: wsPayload})
 		return nil
 	}
+}
+
+// mediaPurgeObjectDeleter 是注销级联的媒体对象清理能力（media.Service 实现；
+// bootstrap 只经该接口消费，便于 handler 单测注入假实现）。
+type mediaPurgeObjectDeleter interface {
+	DeletePurgeObjects(ctx context.Context, userID string, keys []string) error
+}
+
+// mediaPurgeOutboxHandler 消费注销级联的媒体对象清理事件：payload 是该用户一批
+// 待删对象键（上传会话行已在入队前删除）。逐条删除（404 幂等），单条失败返回
+// 错误让 dispatcher 按既有指数退避/死信语义重试；空 keys 直接成功（幂等）。
+func mediaPurgeOutboxHandler(deleter mediaPurgeObjectDeleter) outbox.Handler {
+	return func(ctx context.Context, payload json.RawMessage) error {
+		var event media.PurgeObjectsPayload
+		if err := json.Unmarshal(payload, &event); err != nil {
+			return fmt.Errorf("bootstrap: decode media purge outbox payload: %w", err)
+		}
+		if event.UserID == "" {
+			return errors.New("bootstrap: invalid media purge outbox payload: missing user_id")
+		}
+		if len(event.Keys) == 0 {
+			return nil
+		}
+		return deleter.DeletePurgeObjects(ctx, event.UserID, event.Keys)
+	}
+}
+
+// mediaServiceFromModules 从已构建模块中取出 media 模块的 Service（dispatcher
+// 注册注销对象清理 handler 用）：media 模块在 modules 切片里，按具体模块类型
+// 断言后访问其导出字段 Service（与 module_registry 的构造侧口径一致）。
+func mediaServiceFromModules(modules []modulekit.Module) *media.Service {
+	for _, module := range modules {
+		if mediaModule, ok := module.(*media.Module); ok {
+			return mediaModule.Service
+		}
+	}
+	return nil
 }
 
 func (a *App) Router() http.Handler {
