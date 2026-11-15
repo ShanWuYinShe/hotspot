@@ -84,11 +84,21 @@ func (s *Service) invalidateMemberCache(ctx context.Context, groupID, userID str
 }
 
 // SetTxRunner wires the optional transaction runner（bootstrap 注入；
-// Update 的 读-改-再读 序列包进同一事务，避免并发更新拼出两版 diff）。
+// Update 的 读-改-再读 序列包进同一事务，避免并发更新拼出两版 diff；
+// 解散群的「业务写 + group.dismiss 审计」同样依赖它同事务提交）。
 func (s *Service) SetTxRunner(runInTx persistence.TxRunner) {
 	if s != nil {
 		s.runInTx = runInTx
 	}
+}
+
+// runWriteInTx 在装配了 TxRunner 时把写路径包进事务；未装配（单测/内存装配）
+// 时直跑，语义与旧实现一致（无回滚能力）。
+func (s *Service) runWriteInTx(ctx context.Context, fn func(context.Context) error) error {
+	if s.runInTx != nil {
+		return s.runInTx(ctx, fn)
+	}
+	return fn(ctx)
 }
 
 // GroupDismissAuditWriter records a group-dismiss audit entry (spec
@@ -441,21 +451,34 @@ func (s *Service) Dismiss(ctx context.Context, req DismissGroupRequest) error {
 			return ErrInvalidReason
 		}
 	}
-	if err := s.repo.Dismiss(ctx, req.GroupID); err != nil {
-		op.Fail(err)
-		return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
-	}
-	if s.audit != nil {
-		if err := s.audit.AppendGroupDismissAudit(ctx, principal.UserID, group.Group.GroupID, group.Group.Name, reason); err != nil {
-			observability.FromContext(ctx).Error("groups.dismiss audit failed", "error", err, "group_id", req.GroupID)
+	// 解散业务写与 group.dismiss 审计同一事务：审计写失败整体回滚（群未解散、
+	// 无幻影广播）并上抛错误，owner 可安全重试。此前审计错误被吞掉 → 群已解散
+	// 但没有任何审计记录，且请求仍返回成功（第 81 轮审计批次 4 残留）。
+	dismissFn := func(txCtx context.Context) error {
+		if err := s.repo.Dismiss(txCtx, req.GroupID); err != nil {
+			return fmt.Errorf("groups.Service.Dismiss: repo: %w", err)
 		}
+		if s.audit != nil {
+			if auditErr := s.audit.AppendGroupDismissAudit(txCtx, principal.UserID, group.Group.GroupID, group.Group.Name, reason); auditErr != nil {
+				return fmt.Errorf("groups.Service.Dismiss: audit: %w", auditErr)
+			}
+		}
+		return nil
+	}
+	if err := s.runWriteInTx(ctx, dismissFn); err != nil {
+		op.Fail(err)
+		return err
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: req.GroupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "owner_dismissed"}}
+	// 广播/摘除订阅在事务 COMMIT 后执行（ctx 在事务内时经 aftercommit 延迟，
+	// 回滚则丢弃）；无事务时 Register 立即执行，与旧行为一致。
 	// 仅按群广播一次（owner 亦是成员，另发 BroadcastToUser 会收到重复事件）；
 	// 离线成员由 resume 兜底（解散为持久状态，重连后群已不可见）。
-	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
-	// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
-	realtime.HubFromContext(ctx).DropGroup(req.GroupID)
+	aftercommit.Register(ctx, func(context.Context) {
+		realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
+		// 解散后摘除全部订阅者对该群的订阅（成员资格随解散全部终止）。
+		realtime.HubFromContext(ctx).DropGroup(req.GroupID)
+	})
 	op.Complete()
 	return nil
 }
@@ -473,20 +496,32 @@ func (s *Service) DismissAsAdmin(ctx context.Context, operatorID, groupID, reaso
 	if !ok {
 		return GroupInfo{}, ErrGroupNotFound
 	}
-	hit, err := s.repo.DismissAsAdmin(ctx, groupID)
-	if err != nil {
-		return GroupInfo{}, fmt.Errorf("groups.Service.DismissAsAdmin: repo: %w", err)
-	}
-	if !hit {
-		return GroupInfo{}, ErrGroupNotFound
-	}
-	if s.audit != nil {
-		if err := s.audit.AppendGroupDismissAudit(ctx, operatorID, group.Group.GroupID, group.Group.Name, reason); err != nil {
-			observability.FromContext(ctx).Error("groups.DismissAsAdmin audit failed", "error", err, "group_id", groupID)
+	// 软删群 + 作废 pending 申请/邀请 + group.dismiss 审计同一事务：审计写失败
+	// 整体回滚并上抛错误（admin 侧 runDecisionInTx 随之回滚裁决事务），可安全
+	// 重试。此前审计错误被吞掉 → 解散已生效但审计缺失且请求返回成功。
+	hit := false
+	dismissFn := func(txCtx context.Context) error {
+		var dismissErr error
+		hit, dismissErr = s.repo.DismissAsAdmin(txCtx, groupID)
+		if dismissErr != nil {
+			return fmt.Errorf("groups.Service.DismissAsAdmin: repo: %w", dismissErr)
 		}
+		if !hit {
+			return ErrGroupNotFound
+		}
+		if s.audit != nil {
+			if auditErr := s.audit.AppendGroupDismissAudit(txCtx, operatorID, group.Group.GroupID, group.Group.Name, reason); auditErr != nil {
+				return fmt.Errorf("groups.Service.DismissAsAdmin: audit: %w", auditErr)
+			}
+		}
+		return nil
+	}
+	if err := s.runWriteInTx(ctx, dismissFn); err != nil {
+		return GroupInfo{}, err
 	}
 	event := realtime.Event{Type: realtime.EventTypeGroupDismissed, Payload: GroupDismissedPayload{GroupID: groupID, DismissedAt: time.Now().UTC().Format(time.RFC3339), Reason: "policy_violation"}}
-	// 广播/DropGroup 在事务 COMMIT 后执行；无事务时立即执行。
+	// 广播/DropGroup 在事务 COMMIT 后执行（ctx 在事务内时经 aftercommit 延迟，
+	// 回滚则丢弃）；无事务时立即执行。
 	aftercommit.Register(ctx, func(context.Context) {
 		realtime.HubFromContext(ctx).BroadcastToGroup(groupID, event)
 		realtime.HubFromContext(ctx).DropGroup(groupID)

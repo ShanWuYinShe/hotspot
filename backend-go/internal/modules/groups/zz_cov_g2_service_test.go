@@ -332,10 +332,12 @@ func TestCovServiceUpdateBranches(t *testing.T) {
 
 func TestCovServiceDismissAuditAndAdmin(t *testing.T) {
 	ctx := covCtx("user_alice")
+	auditDown := errors.New("audit down")
 	auditErrSvc := NewServiceWithRepo(covNewRepo(covOwnerGroup()))
-	auditErrSvc.SetGroupDismissAuditWriter(covAuditWriter{err: errors.New("audit down")})
-	if err := auditErrSvc.Dismiss(ctx, DismissGroupRequest{GroupID: "g1"}); err != nil {
-		t.Fatalf("dismiss with failing audit must succeed: %v", err)
+	auditErrSvc.SetGroupDismissAuditWriter(covAuditWriter{err: auditDown})
+	// 审计失败必须上抛（此前吞掉错误 → 群已解散但无审计记录）。
+	if err := auditErrSvc.Dismiss(ctx, DismissGroupRequest{GroupID: "g1"}); !errors.Is(err, auditDown) {
+		t.Fatalf("dismiss with failing audit must propagate: %v", err)
 	}
 
 	// DismissAsAdmin：Get 错误。
@@ -362,14 +364,13 @@ func TestCovServiceDismissAuditAndAdmin(t *testing.T) {
 	if _, err := NewServiceWithRepo(notHitRepo).DismissAsAdmin(ctx, "op", "g1", "reason"); !errors.Is(err, ErrGroupNotFound) {
 		t.Fatalf("not hit err = %v", err)
 	}
-	// 审计失败不影响返回。
+	// 审计失败必须上抛（此前吞掉错误 → 群已解散但无审计记录）。
 	auditFailRepo := covNewRepo(covOwnerGroup())
 	auditFailRepo.dismissAsAdminHit = true
 	auditFailSvc := NewServiceWithRepo(auditFailRepo)
-	auditFailSvc.SetGroupDismissAuditWriter(covAuditWriter{err: errors.New("audit down")})
-	info, err := auditFailSvc.DismissAsAdmin(ctx, "op", "g1", "reason")
-	if err != nil || info.GroupID != "g1" {
-		t.Fatalf("dismiss as admin with failing audit = %#v, %v", info, err)
+	auditFailSvc.SetGroupDismissAuditWriter(covAuditWriter{err: auditDown})
+	if _, err := auditFailSvc.DismissAsAdmin(ctx, "op", "g1", "reason"); !errors.Is(err, auditDown) {
+		t.Fatalf("dismiss as admin with failing audit must propagate: %v", err)
 	}
 }
 
