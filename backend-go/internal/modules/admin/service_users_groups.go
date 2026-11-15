@@ -191,8 +191,9 @@ func (s *Service) dismissGroup(ctx context.Context, req AdminDismissGroupRequest
 // group.dismiss 审计。admin 端点（groups/dismiss）与举报裁决（reports/judge
 // resolve 群目标）共用，保证两条解散路径语义一致（spec api_spec_admin.md
 // groups/dismiss 安全约束）。
-// 审计写入失败按 best-effort 处理（记错误日志，不回滚已生效的解散）：解散不可逆，
-// 失败报错只会诱导管理员重试并撞上「群组不存在」。
+// 解散写与 group.dismiss 审计由 groups 模块在同一事务内提交；审计失败时 groups
+// 上抛错误，本调用方的 runDecisionInTx 事务整体回滚（群未解散、无幻影广播），
+// 管理员可重试。此前 groups 吞掉审计错误 → 解散已生效但审计缺失、请求仍返回成功。
 func (s *Service) dismissGroupAndTrace(ctx context.Context, actor AdminActor, groupID, reason string) (AdminGroupItem, *httpx.APIError, error) {
 	if s.groupModerator == nil {
 		return AdminGroupItem{}, nil, errors.New("admin: group moderator not configured")

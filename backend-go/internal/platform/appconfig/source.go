@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/persistence"
@@ -123,14 +124,23 @@ func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) Ap
 	next := cloneConfig(apply(current))
 	updatedAt := time.Now().UTC().Format(time.RFC3339)
 	next.UpdatedAt = updatedAt
-	if db, ok := s.queryable(); ok {
+	if db, ok := s.queryable(ctx); ok {
 		payload, err := json.Marshal(next)
 		if err != nil {
 			return AppConfig{}, err
 		}
+		// 注意：ctx 内已有事务时这里加入该事务（RepoQueryable 语义），upsert
+		// 与调用方的业务写/审计同 COMMIT——admin 的 config.update 审计写失败
+		// 会把配置写一并回滚，管理员可重试。
 		if err := db.Exec(ctx, queryAppConfigUpsert, appConfigConfigID, string(payload), parseTimeOrNow(updatedAt), nullableString(next.UpdatedByUserID)); err != nil {
 			return AppConfig{}, err
 		}
+		// 进程内快照必须等 COMMIT 后再更新：事务回滚（如审计写失败）时把未提交
+		// 配置留在内存会让 Get/后续 Update 在重载 TTL 内读到「库内未生效」的
+		// 幻影配置（old_value 口径也随之失真）。无事务时 Register 立即执行，
+		// 与旧实现的「写库成功即更新内存」语义一致。
+		aftercommit.Register(ctx, func(context.Context) { s.fallback.Set(next) })
+		return cloneConfig(next), nil
 	}
 	s.fallback.Set(next)
 	return cloneConfig(next), nil
@@ -164,7 +174,7 @@ func (s *PersistenceSource) ensureLoadedLocked(ctx context.Context) {
 
 // tryLoad 尝试从 DB 加载配置；调用方必须持有 loadMu。
 func (s *PersistenceSource) tryLoad(ctx context.Context) {
-	if db, ok := s.queryable(); ok {
+	if db, ok := s.queryable(ctx); ok {
 		cfg, ok, err := loadFromDB(ctx, db)
 		if err != nil {
 			s.loadErr = err
@@ -185,7 +195,17 @@ func (s *PersistenceSource) tryLoad(ctx context.Context) {
 	s.fallback.Set(s.loadedCfg)
 }
 
-func (s *PersistenceSource) queryable() (queryable, bool) {
+// queryable 返回本次读写的连接：ctx 内已有事务（persistence.RunInTransaction
+// 注入）时复用该事务，否则回退 factory 的共享连接池。此前只取池连接，导致
+// 事务内 Update 的 upsert 落在另一条连接上——admin 事务里的 config.update
+// 审计失败无法回滚已生效的配置（第 81 轮审计批次 4 残留）。
+// 保留本地窄接口而非直接用 persistence.RepoQueryable：本包只需要 Exec/QueryRow，
+// 且现有单测替身（mockQueryableDB）未实现 Query，直接换 RepoQueryable 会让
+// 无事务路径误判为「无库」。
+func (s *PersistenceSource) queryable(ctx context.Context) (queryable, bool) {
+	if tx, ok := persistence.QueryableFromContext(ctx); ok {
+		return tx, true
+	}
 	if s.factory == nil || s.factory.DB == nil || s.factory.Config.PostgresDSN == "" {
 		return nil, false
 	}

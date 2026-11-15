@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
+	"hotspot/backend-go/internal/platform/appconfig"
 )
 
 // 本文件锁定第 81 轮审计的「审计写入与业务写同事务」口径：
@@ -649,5 +650,100 @@ func TestUpdateRolePostReadFailureAbortsWithoutAudit(t *testing.T) {
 				t.Fatalf("role.update audit count after post-read anomaly = %d, want 0", got)
 			}
 		})
+	}
+}
+
+// ── 批次 5：config.update 审计同事务 ─────────────────────────────────────────
+//
+// 第 81 轮审计批次 4 残留项：UpdateAppConfig 此前「先写库、事务外写审计」，
+// 审计失败时配置已生效。现在「读前态 → 写配置 → config.update 审计」包进同一
+// 事务（platform/appconfig 的 Update 已按 ctx 复用事务连接）；审计写失败整体
+// 回滚，管理员可重试。真实事务回滚语义由真实库 IT 覆盖（audit_tx_it_test.go），
+// 这里用快照 TxRunner 模拟回滚，锁定错误出口与重试语义。
+
+// appConfigSnapshotSource 是可控 MutableSource 替身：记录当前配置，供单测
+// 模拟事务回滚时恢复。
+type appConfigSnapshotSource struct {
+	cfg appconfig.AppConfig
+}
+
+func (s *appConfigSnapshotSource) Get(context.Context) appconfig.AppConfig { return s.cfg }
+
+func (s *appConfigSnapshotSource) Update(_ context.Context, apply func(appconfig.AppConfig) appconfig.AppConfig) (appconfig.AppConfig, error) {
+	s.cfg = apply(s.cfg)
+	return s.cfg, nil
+}
+
+// appConfigRollbackTxRunner 模拟真实事务回滚：回调出错时把配置源恢复为调用前
+// 快照（appconfig 的 PersistenceSource 在真实事务里由数据库回滚 + aftercommit
+// 延迟快照共同保证同一语义）。
+func appConfigRollbackTxRunner(source *appConfigSnapshotSource) func(context.Context, func(context.Context) error) error {
+	return func(ctx context.Context, fn func(context.Context) error) error {
+		saved := source.cfg
+		if err := fn(ctx); err != nil {
+			source.cfg = saved
+			return err
+		}
+		return nil
+	}
+}
+
+func TestUpdateAppConfigAuditFailureRollsBackConfig(t *testing.T) {
+	source := &appConfigSnapshotSource{}
+	repo := &covRepo{InMemoryRepository: NewInMemoryRepository()}
+	svc := NewService(repo, NewAppConfigProvider(source), NewInMemoryModerationStore(), nil)
+	svc.SetTxRunner(appConfigRollbackTxRunner(source))
+	if err := repo.GrantAdmin(context.Background(), AdminGrantUpsert{UserID: "admin1", GrantAllPermissions: true}); err != nil {
+		t.Fatalf("grant admin: %v", err)
+	}
+	ctx := adminCtx("admin1")
+	oldLimit := source.Get(context.Background()).Limits.MaxGroupMembers
+	newLimit := oldLimit + 5
+	req := UpdateAppConfigRequest{Limits: &PartialAppLimits{MaxGroupMembers: intPtr(newLimit)}}
+
+	auditErr := errors.New("audit insert failed")
+	repo.auditErr = auditErr
+	if apiErr, err := svc.UpdateAppConfig(ctx, req); !errors.Is(err, auditErr) || apiErr != nil {
+		t.Fatalf("audit failure must abort config update: apiErr=%v err=%v", apiErr, err)
+	}
+	// 审计失败 → 配置写回滚（库内实际生效值未变），且无 config.update 审计。
+	if got := source.Get(context.Background()).Limits.MaxGroupMembers; got != oldLimit {
+		t.Fatalf("config must roll back on audit failure: max_group_members=%d, want %d", got, oldLimit)
+	}
+	if cfg, apiErr, err := svc.GetAppConfig(ctx); err != nil || apiErr != nil || cfg.Limits.MaxGroupMembers != oldLimit {
+		t.Fatalf("GetAppConfig after audit failure = %#v, apiErr=%v err=%v", cfg.Limits, apiErr, err)
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionConfigUpdate, "app_config"); got != 0 {
+		t.Fatalf("config.update audit count after failure = %d, want 0", got)
+	}
+
+	// 撤掉审计故障后重试成功：配置生效，且只落一条 config.update 审计。
+	repo.auditErr = nil
+	if apiErr, err := svc.UpdateAppConfig(ctx, req); apiErr != nil || err != nil {
+		t.Fatalf("retry after audit recovery: apiErr=%v err=%v", apiErr, err)
+	}
+	if got := source.Get(context.Background()).Limits.MaxGroupMembers; got != newLimit {
+		t.Fatalf("retry must apply config: max_group_members=%d, want %d", got, newLimit)
+	}
+	if got := countAuditByAction(repo.InMemoryRepository, AuditActionConfigUpdate, "app_config"); got != 1 {
+		t.Fatalf("config.update audit count = %d, want 1", got)
+	}
+	// before/after 口径保持：审计 details 的 old_value/new_value 是生效前后整份配置。
+	repo.mu.RLock()
+	var entry AuditLogEntry
+	for _, candidate := range repo.auditLogs {
+		if candidate.Action == AuditActionConfigUpdate && candidate.TargetID == "app_config" {
+			entry = candidate
+		}
+	}
+	repo.mu.RUnlock()
+	oldValue, oldOK := entry.Details["old_value"].(AdminAppConfig)
+	newValue, newOK := entry.Details["new_value"].(AdminAppConfig)
+	if !oldOK || !newOK {
+		t.Fatalf("audit details old/new value types = %T/%T", entry.Details["old_value"], entry.Details["new_value"])
+	}
+	if oldValue.Limits.MaxGroupMembers != oldLimit || newValue.Limits.MaxGroupMembers != newLimit {
+		t.Fatalf("audit details limits old/new = %d/%d, want %d/%d",
+			oldValue.Limits.MaxGroupMembers, newValue.Limits.MaxGroupMembers, oldLimit, newLimit)
 	}
 }

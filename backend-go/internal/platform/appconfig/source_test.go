@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"hotspot/backend-go/internal/platform/aftercommit"
 	"hotspot/backend-go/internal/platform/config"
 	"hotspot/backend-go/internal/platform/persistence"
 
@@ -327,5 +328,164 @@ func TestLoadFromDBMalformedJSON(t *testing.T) {
 	_, ok, err := loadFromDB(ctx, mockDB)
 	if err == nil || ok {
 		t.Fatalf("expected error on malformed json, got ok=%v, err=%v", ok, err)
+	}
+}
+
+// ── 第 81 轮审计批次 4 残留：config.update 事务化 ────────────────────────────
+//
+// 以下用例锁定 PersistenceSource 的 ctx 事务感知：
+//   1. Update/tryLoad 在 ctx 已有事务时复用该事务（而非另取池连接），使 admin
+//      的「配置写 + config.update 审计」落在同一事务；
+//   2. 事务内的配置 upsert 不在 COMMIT 前更新进程内快照——回滚（审计失败）时
+//      不会把未提交配置缓存进内存。
+
+// txRecordingQueryable 是 ctx 事务连接替身：记录经事务执行的 SQL，并按需
+// 返回预设行（模拟事务内读取到的已提交配置）。
+type txRecordingQueryable struct {
+	execSQL  []string
+	execArgs [][]any
+	rowFunc  func() persistence.Row
+}
+
+func (q *txRecordingQueryable) Exec(_ context.Context, sql string, args ...any) error {
+	q.execSQL = append(q.execSQL, sql)
+	q.execArgs = append(q.execArgs, append([]any(nil), args...))
+	return nil
+}
+
+func (q *txRecordingQueryable) QueryRow(context.Context, string, ...any) persistence.Row {
+	if q.rowFunc != nil {
+		return q.rowFunc()
+	}
+	return &mockRow{err: pgx.ErrNoRows}
+}
+
+// Query 只为满足 persistence.Queryable（WithTx 入参）——本包不使用多行查询。
+func (q *txRecordingQueryable) Query(context.Context, string, ...any) (persistence.Rows, error) {
+	return nil, persistence.ErrNotImplemented
+}
+
+func TestPersistenceSourceUpdateJoinsContextTx(t *testing.T) {
+	ctx := context.Background()
+	poolExecSQL := ""
+	mockDB := &mockQueryableDB{
+		queryRowFunc: func(context.Context, string, ...any) persistence.Row { return &mockRow{err: pgx.ErrNoRows} },
+		execFunc: func(_ context.Context, sql string, _ ...any) error {
+			poolExecSQL = sql
+			return nil
+		},
+	}
+	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
+	src := NewPersistenceSource(config.Config{}, fac)
+
+	tx := &txRecordingQueryable{}
+	txCtx := persistence.WithTx(ctx, tx, nil)
+	updated, err := src.Update(txCtx, func(c AppConfig) AppConfig {
+		c.Contact.SupportEmail = "tx@example.com"
+		return c
+	})
+	if err != nil {
+		t.Fatalf("update in tx: %v", err)
+	}
+	if updated.Contact.SupportEmail != "tx@example.com" {
+		t.Fatalf("updated support email = %q", updated.Contact.SupportEmail)
+	}
+	// 事务内 upsert 必须落在 tx 连接上，池连接一次都不应被写。
+	if poolExecSQL != "" {
+		t.Fatalf("pool exec must not be used inside tx, got %q", poolExecSQL)
+	}
+	if len(tx.execSQL) != 1 || tx.execSQL[0] != queryAppConfigUpsert {
+		t.Fatalf("tx exec = %#v, want one upsert", tx.execSQL)
+	}
+	if got := src.Get(ctx).Contact.SupportEmail; got != "tx@example.com" {
+		t.Fatalf("fallback email = %q", got)
+	}
+
+	// 无事务时保持旧行为：走 factory 共享池。
+	if _, err := src.Update(ctx, func(c AppConfig) AppConfig {
+		c.Contact.SupportEmail = "pool@example.com"
+		return c
+	}); err != nil {
+		t.Fatalf("update without tx: %v", err)
+	}
+	if poolExecSQL != queryAppConfigUpsert {
+		t.Fatalf("pool exec sql = %q, want upsert", poolExecSQL)
+	}
+}
+
+func TestPersistenceSourceGetLoadsThroughContextTx(t *testing.T) {
+	poolQueries := 0
+	mockDB := &mockQueryableDB{
+		queryRowFunc: func(context.Context, string, ...any) persistence.Row {
+			poolQueries++
+			return &mockRow{err: errors.New("pool must not be queried inside tx")}
+		},
+	}
+	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
+	storedCfg := defaultConfig(config.Config{})
+	storedCfg.Contact.SupportEmail = "tx-loaded@example.com"
+	payloadBytes, _ := json.Marshal(storedCfg)
+	tx := &txRecordingQueryable{
+		rowFunc: func() persistence.Row {
+			return &mockRow{scanFunc: func(dest ...any) error {
+				if len(dest) >= 3 {
+					*dest[0].(*string) = string(payloadBytes)
+					*dest[1].(*time.Time) = time.Now().UTC()
+					*dest[2].(*string) = "admin_tx"
+				}
+				return nil
+			}}
+		},
+	}
+	src := NewPersistenceSource(config.Config{}, fac)
+	cfg := src.Get(persistence.WithTx(context.Background(), tx, nil))
+	if poolQueries != 0 {
+		t.Fatalf("pool queried %d times inside tx", poolQueries)
+	}
+	if cfg.Contact.SupportEmail != "tx-loaded@example.com" {
+		t.Fatalf("support email = %q, want tx-loaded@example.com", cfg.Contact.SupportEmail)
+	}
+	if cfg.UpdatedByUserID != "admin_tx" {
+		t.Fatalf("updated by = %q", cfg.UpdatedByUserID)
+	}
+}
+
+func TestPersistenceSourceDefersMemorySnapshotUntilCommit(t *testing.T) {
+	mockDB := &mockQueryableDB{
+		queryRowFunc: func(context.Context, string, ...any) persistence.Row { return &mockRow{err: pgx.ErrNoRows} },
+	}
+	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
+	src := NewPersistenceSource(config.Config{SupportEmail: "old@example.com"}, fac)
+	tx := &txRecordingQueryable{}
+	txCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), tx, nil)
+
+	if _, err := src.Update(txCtx, func(c AppConfig) AppConfig {
+		c.Contact.SupportEmail = "new@example.com"
+		return c
+	}); err != nil {
+		t.Fatalf("update in tx: %v", err)
+	}
+	// 未 COMMIT：进程内快照必须仍是旧值（回滚时不会暴露未提交配置）。
+	if got := src.Get(context.Background()).Contact.SupportEmail; got != "old@example.com" {
+		t.Fatalf("uncommitted config leaked into memory snapshot: %q", got)
+	}
+
+	// COMMIT：提交后回调把新配置写入快照。
+	aftercommit.Run(txCtx)
+	if got := src.Get(context.Background()).Contact.SupportEmail; got != "new@example.com" {
+		t.Fatalf("committed config missing from memory snapshot: %q", got)
+	}
+
+	// ROLLBACK：再次事务内更新后丢弃回调，快照保持提交后的值。
+	rollbackCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), &txRecordingQueryable{}, nil)
+	if _, err := src.Update(rollbackCtx, func(c AppConfig) AppConfig {
+		c.Contact.SupportEmail = "rolled-back@example.com"
+		return c
+	}); err != nil {
+		t.Fatalf("update in rollback tx: %v", err)
+	}
+	aftercommit.Discard(rollbackCtx)
+	if got := src.Get(context.Background()).Contact.SupportEmail; got != "new@example.com" {
+		t.Fatalf("rolled-back config leaked into memory snapshot: %q", got)
 	}
 }

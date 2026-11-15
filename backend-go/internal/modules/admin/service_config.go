@@ -52,55 +52,63 @@ func (s *Service) UpdateAppConfig(ctx context.Context, req UpdateAppConfigReques
 	if req.Upload == nil && req.Defaults == nil && req.RateLimits == nil && req.ResponseDefaults == nil && req.Auth == nil && req.Features == nil && req.Limits == nil && req.Contact == nil {
 		return httpx.InvalidRequest("参数错误"), nil
 	}
-	before, err := s.provider.GetAppConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-	updated, apiErr, err := s.provider.UpdateAppConfig(ctx, actor.UserID, func(cfg AdminAppConfig) (AdminAppConfig, *httpx.APIError) {
-		if req.Upload != nil {
-			if err := applyUploadConfigPatch(&cfg.Upload, *req.Upload); err != nil {
-				return AdminAppConfig{}, err
+	// 读前态 → 写配置 → config.update 审计放在同一事务：审计写失败整体回滚
+	//（配置保持原值，不会出现「配置已生效但审计缺失」），管理员可安全重试。
+	// platform/appconfig 的 PersistenceSource.Update 已按 ctx 复用事务连接，
+	// 配置 upsert 与审计 INSERT 落在同一 COMMIT。未注入 TxRunner（单测/内存
+	// 装配）时 runDecisionInTx 直跑旧语义：先写库、后事务外审计，审计失败时
+	// 配置已生效——该回退路径仅单测/内存装配使用，生产 bootstrap 始终注入。
+	return s.runDecisionInTx(ctx, func(txCtx context.Context) (*httpx.APIError, error) {
+		before, getErr := s.provider.GetAppConfig(txCtx)
+		if getErr != nil {
+			return nil, getErr
+		}
+		updated, updateAPIErr, updateErr := s.provider.UpdateAppConfig(txCtx, actor.UserID, func(cfg AdminAppConfig) (AdminAppConfig, *httpx.APIError) {
+			if req.Upload != nil {
+				if err := applyUploadConfigPatch(&cfg.Upload, *req.Upload); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
-		}
-		if req.Defaults != nil {
-			if err := applyDefaultsPatch(&cfg.Defaults, *req.Defaults); err != nil {
-				return AdminAppConfig{}, err
+			if req.Defaults != nil {
+				if err := applyDefaultsPatch(&cfg.Defaults, *req.Defaults); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
-		}
-		if req.RateLimits != nil {
-			if err := applyRateLimitsPatch(&cfg.RateLimits, *req.RateLimits); err != nil {
-				return AdminAppConfig{}, err
+			if req.RateLimits != nil {
+				if err := applyRateLimitsPatch(&cfg.RateLimits, *req.RateLimits); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
-		}
-		if req.ResponseDefaults != nil {
-			if err := applyResponseDefaultsPatch(&cfg.ResponseDefaults, *req.ResponseDefaults); err != nil {
-				return AdminAppConfig{}, err
+			if req.ResponseDefaults != nil {
+				if err := applyResponseDefaultsPatch(&cfg.ResponseDefaults, *req.ResponseDefaults); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
-		}
-		if req.Auth != nil {
-			if err := applyAuthConfigPatch(&cfg.Auth, *req.Auth); err != nil {
-				return AdminAppConfig{}, err
+			if req.Auth != nil {
+				if err := applyAuthConfigPatch(&cfg.Auth, *req.Auth); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
-		}
-		if req.Features != nil {
-			applyFeaturesPatch(&cfg.Features, *req.Features)
-		}
-		if req.Limits != nil {
-			if err := applyLimitsPatch(&cfg.Limits, *req.Limits); err != nil {
-				return AdminAppConfig{}, err
+			if req.Features != nil {
+				applyFeaturesPatch(&cfg.Features, *req.Features)
 			}
-		}
-		if req.Contact != nil {
-			if err := applyContactPatch(&cfg.Contact, *req.Contact); err != nil {
-				return AdminAppConfig{}, err
+			if req.Limits != nil {
+				if err := applyLimitsPatch(&cfg.Limits, *req.Limits); err != nil {
+					return AdminAppConfig{}, err
+				}
 			}
+			if req.Contact != nil {
+				if err := applyContactPatch(&cfg.Contact, *req.Contact); err != nil {
+					return AdminAppConfig{}, err
+				}
+			}
+			return cfg, nil
+		})
+		if updateAPIErr != nil || updateErr != nil {
+			return updateAPIErr, updateErr
 		}
-		return cfg, nil
+		return nil, s.appendConfigAudit(txCtx, actor, "app_config", before, updated)
 	})
-	if apiErr != nil || err != nil {
-		return apiErr, err
-	}
-	return nil, s.appendConfigAudit(ctx, actor, "app_config", before, updated)
 }
 
 // --- Patch helper functions for unified UpdateAppConfig ---
