@@ -57,9 +57,9 @@ type Repository interface {
 	// idx_media_upload_sessions_user_created_at 的 user_id 前缀。
 	CompletedStorageBytes(context.Context, string) (int64, error)
 	// ExistingStorageKeys 返回给定存储键中仍被 media_upload_sessions 行引用的
-	// 子集（保留期 uploads/ 孤儿清理用：只有「无行引用且超过保留期」的对象才可
-	// 删除）。批量查询命中 idx_media_upload_sessions_storage_key，调用方按页
-	// 提交候选键，避免逐键查库。
+	// 子集（保留期 uploads/ 与 published/ 孤儿清理用：只有「无行引用且超过保留期」
+	// 的对象才可删除）。批量查询命中 idx_media_upload_sessions_storage_key，调用方
+	// 按页提交候选键，避免逐键查库。
 	ExistingStorageKeys(context.Context, []string) (map[string]struct{}, error)
 	// ResolveByFileIDs returns the completed uploads owned by userID for the
 	// given file_ids, filtered to the given category. Only rows with

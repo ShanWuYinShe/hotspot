@@ -284,7 +284,7 @@ func canonicalCopySource(bucket, storageKey string) string {
 }
 
 // ListObjects 列举指定前缀的对象（S3 ListObjectsV2 单页），供保留期 sweeper 的
-// uploads/ 孤儿清理枚举对象。翻页参数与签名都走 query 串：canonical query 由
+// uploads/ 与 published/ 孤儿清理枚举对象。翻页参数与签名都走 query 串：canonical query 由
 // 业务参数 + X-Amz-* 共同构成（见 presignInternalURLWithQuery），漏签任一参数
 // 都会验签失败。返回 IsTruncated/NextContinuationToken 由调用方驱动翻页，单轮
 // 扫描量由调用方限定（retention.go）。

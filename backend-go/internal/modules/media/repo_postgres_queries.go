@@ -145,10 +145,10 @@ SELECT COALESCE(SUM(final_file_size), 0)::bigint
 FROM media_upload_sessions
 WHERE user_id = $1 AND status = 'completed'`
 
-	// queryExistingStorageKeys 保留期 uploads/ 孤儿清理（Service.sweepOrphanUploadObjects）：
-	// 批量返回候选键中仍被会话行引用的子集。任意状态都要查——copy-on-complete
-	// 之前的历史完成态行 storage_key 仍是 uploads/ 键，被删除会导致完成态媒体
-	// 丢失。命中 idx_media_upload_sessions_storage_key。
+	// queryExistingStorageKeys 保留期孤儿清理（Service.sweepOrphanPrefix，uploads/
+	// 与 published/ 两个前缀）：批量返回候选键中仍被会话行引用的子集。任意状态都要
+	// 查——copy-on-complete 之前的历史完成态行 storage_key 仍是 uploads/ 键，被删除
+	// 会导致完成态媒体丢失。命中 idx_media_upload_sessions_storage_key。
 	queryExistingStorageKeys = `
 SELECT storage_key
 FROM media_upload_sessions
