@@ -577,6 +577,15 @@ func (s *Service) ListMyGroups(ctx context.Context, req MyGroupsRequest) ([]Grou
 	return items, cursor, nil
 }
 
+// CountUnreadForUser 当前用户已加入群的未读消息总数（冷启动
+// unread_summary 聚合，spec api_spec_system.md →
+// UnreadSummary.group_chat_unread_count）。口径与我的群列表逐群
+// unread_count 一致（见 Repository.CountUnreadForUser）。
+func (s *Service) CountUnreadForUser(ctx context.Context) (int, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.CountUnreadForUser(ctx, principal.UserID)
+}
+
 func (s *Service) JoinGroup(ctx context.Context, req EnterGroupRequest) (EnterGroupResult, error) {
 	if apiErr := validateGroupMessage(req.Message); apiErr != nil {
 		return EnterGroupResult{}, apiErr

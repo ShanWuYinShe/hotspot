@@ -121,6 +121,15 @@ func (s *Service) List(ctx context.Context, req MyPrivateChatsRequest) (Paginate
 	return resp, nil
 }
 
+// CountUnreadForUser 当前用户全部私聊会话的未读消息总数（冷启动
+// unread_summary 聚合，spec api_spec_system.md →
+// UnreadSummary.private_chat_unread_count）。读取层按 principal 解析查看者，
+// 口径与列表逐会话 unread_count 一致（见 Repository.CountUnreadForUser）。
+func (s *Service) CountUnreadForUser(ctx context.Context) (int, error) {
+	principal, _ := platformauth.PrincipalFromContext(ctx)
+	return s.repo.CountUnreadForUser(ctx, principal.UserID)
+}
+
 func (s *Service) UpdateSettings(ctx context.Context, req UpdatePrivateChatSettingsRequest) error {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	// 与 Delete 对齐：先确认目标用户存在，不存在按 10300 处理，避免

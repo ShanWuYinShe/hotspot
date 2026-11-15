@@ -96,6 +96,12 @@ func (r *InMemoryRepository) DeleteForUser(_ context.Context, userID, targetUser
 	return nil
 }
 
+// CountUnreadForUser 内存实现不持有消息/已读游标数据（消息归 privatemessages
+// 模块，真实未读由 PG 仓储聚合），返回 0 保证列表契约用例可跑双实现。
+func (r *InMemoryRepository) CountUnreadForUser(context.Context, string) (int, error) {
+	return 0, nil
+}
+
 func (r *InMemoryRepository) ensureChatLocked(userID, targetUserID string) *memoryChatState {
 	k := key(userID, targetUserID)
 	if chat, ok := r.chats[k]; ok {

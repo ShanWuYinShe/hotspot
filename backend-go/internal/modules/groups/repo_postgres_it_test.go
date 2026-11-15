@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"hotspot/backend-go/internal/platform/persistence"
 	"hotspot/backend-go/internal/platform/testdb"
@@ -1059,6 +1060,136 @@ func TestPostgresIT_CountOwnedGroups(t *testing.T) {
 		}
 		if count != 0 {
 			t.Fatalf("expected 0 owned groups for member, got %d", count)
+		}
+	})
+}
+
+// TestPostgresIT_CountUnreadForUser 覆盖冷启动 unread_summary 群聊聚合的真实库
+// 口径（第 81 轮遗留项）：与 ListMyGroups 的 per-group unread_count 逐字一致
+// （未撤回且晚于 last_read_sent_at，含本人发送消息）；已退群/被移出（封禁）与
+// 已解散群不计。事务内自建数据、结束整体回滚（不残留、不污染共享库）。
+func TestPostgresIT_CountUnreadForUser(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		q := txFactory.DB.(persistence.QueryableDB)
+		repo := NewPostgresRepository(txFactory)
+		owner := testdb.InsertUser(t, txFactory, "it_gcu_owner", "Owner")
+		viewer := testdb.InsertUser(t, txFactory, "it_gcu_viewer", "Viewer")
+		other := testdb.InsertUser(t, txFactory, "it_gcu_other", "Other")
+		outsider := testdb.InsertUser(t, txFactory, "it_gcu_outsider", "Outsider")
+
+		base := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+		createGroup := func(name string) string {
+			group, err := repo.Create(ctx, owner, CreateGroupRequest{
+				Name:       name,
+				JoinMethod: GroupJoinMethodDirect,
+				Location: Location{LocationName: "Beijing", Point: struct {
+					Latitude  float64 `json:"latitude"`
+					Longitude float64 `json:"longitude"`
+				}{Latitude: 39.9, Longitude: 116.4}},
+			})
+			if err != nil {
+				t.Fatalf("create group %s: %v", name, err)
+			}
+			return group.Group.GroupID
+		}
+		join := func(groupID string) {
+			if _, err := repo.JoinGroup(ctx, viewer, groupID, nil); err != nil {
+				t.Fatalf("join group %s: %v", groupID, err)
+			}
+		}
+		insertMessage := func(groupID, sender string, sentAt time.Time, recalled bool) string {
+			messageID := "it_gcu_" + groupID + "_" + sentAt.Format("150405.000000000")
+			if err := q.Exec(ctx, `INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, sent_at, is_recalled) VALUES ($1,$2,$3,'text','hi',$4,$5)`, messageID, groupID, sender, sentAt, recalled); err != nil {
+				t.Fatalf("insert group message: %v", err)
+			}
+			return messageID
+		}
+		// 已读位点 upsert（同一群可能多次推进，如「全部已读 -> 0」用例）。
+		markRead := func(groupID, messageID string, sentAt time.Time) {
+			if err := q.Exec(ctx, `INSERT INTO group_message_read_state (group_id, user_id, last_read_message_id, last_read_sent_at) VALUES ($1,$2,$3,$4)
+				ON CONFLICT (group_id, user_id) DO UPDATE SET last_read_message_id = EXCLUDED.last_read_message_id, last_read_sent_at = EXCLUDED.last_read_sent_at`, groupID, viewer, messageID, sentAt); err != nil {
+				t.Fatalf("mark group read: %v", err)
+			}
+		}
+
+		// g1：无已读游标 → 未撤回消息全部未读（含本人 1 条；已撤回 1 条不计）= 3。
+		g1 := createGroup("gcu-1")
+		join(g1)
+		insertMessage(g1, other, base.Add(1*time.Minute), false)
+		insertMessage(g1, other, base.Add(2*time.Minute), false)
+		insertMessage(g1, viewer, base.Add(3*time.Minute), false)
+		insertMessage(g1, other, base.Add(4*time.Minute), true)
+
+		// g2：部分已读——3 条消息、已读位点落在第 2 条 → 1 条未读。
+		g2 := createGroup("gcu-2")
+		join(g2)
+		insertMessage(g2, other, base.Add(10*time.Minute), false)
+		readAt := insertMessage(g2, other, base.Add(11*time.Minute), false)
+		insertMessage(g2, other, base.Add(12*time.Minute), false)
+		markRead(g2, readAt, base.Add(11*time.Minute))
+
+		// g3：已退群 → 不计。
+		g3 := createGroup("gcu-3")
+		join(g3)
+		insertMessage(g3, other, base.Add(20*time.Minute), false)
+		if err := repo.LeaveGroup(ctx, viewer, g3); err != nil {
+			t.Fatalf("leave group: %v", err)
+		}
+
+		// g4：平台审核解散（软删群、成员行保留）→ 不计。
+		g4 := createGroup("gcu-4")
+		join(g4)
+		insertMessage(g4, other, base.Add(30*time.Minute), false)
+		if hit, err := repo.DismissAsAdmin(ctx, g4); err != nil || !hit {
+			t.Fatalf("dismiss group as admin: hit=%v err=%v", hit, err)
+		}
+
+		// g5：viewer 从未加入 → 不计。
+		g5 := createGroup("gcu-5")
+		insertMessage(g5, other, base.Add(40*time.Minute), false)
+
+		// g1=3 + g2=1 = 4（g3 退群、g4 解散、g5 未加入均不计）。
+		count, err := repo.CountUnreadForUser(ctx, viewer)
+		if err != nil {
+			t.Fatalf("CountUnreadForUser: %v", err)
+		}
+		if count != 4 {
+			t.Fatalf("unread count = %d, want 4 (g1=3 + g2=1)", count)
+		}
+
+		// 与「我的群列表」逐群 unread_count 之和一致：聚合口径与列表徽标同源
+		// （客户端冷启动角标与列表徽标不能漂移）。
+		items, _, err := repo.ListMyGroups(ctx, viewer, 100, "")
+		if err != nil {
+			t.Fatalf("ListMyGroups: %v", err)
+		}
+		listSum := 0
+		for _, item := range items {
+			if item.ViewerState != nil {
+				listSum += item.ViewerState.UnreadCount
+			}
+		}
+		if listSum != count {
+			t.Fatalf("aggregate unread = %d, list unread sum = %d, want equal", count, listSum)
+		}
+
+		// 全部已读（位点推进到各自最新消息）→ 0。
+		markRead(g1, insertMessage(g1, viewer, base.Add(5*time.Minute), false), base.Add(5*time.Minute))
+		markRead(g2, insertMessage(g2, viewer, base.Add(13*time.Minute), false), base.Add(13*time.Minute))
+		count, err = repo.CountUnreadForUser(ctx, viewer)
+		if err != nil {
+			t.Fatalf("CountUnreadForUser after read: %v", err)
+		}
+		if count != 0 {
+			t.Fatalf("unread count after read-all = %d, want 0", count)
+		}
+
+		// 无群用户 → 0（不因空集返回错误）。
+		count, err = repo.CountUnreadForUser(ctx, outsider)
+		if err != nil || count != 0 {
+			t.Fatalf("outsider count = %d err=%v, want 0", count, err)
 		}
 	})
 }

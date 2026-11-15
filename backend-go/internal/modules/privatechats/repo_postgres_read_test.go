@@ -38,6 +38,8 @@ type privateChatBackendStub struct {
 	execErrs     map[string]error
 	queryErrs    map[string]error
 	queryRowErrs map[string]error
+	// unreadForUser 是 CountUnreadForUser 聚合查询的桩返回值。
+	unreadForUser int
 }
 
 func (b *privateChatBackendStub) Ping(context.Context) error { return nil }
@@ -90,6 +92,8 @@ func (b *privateChatBackendStub) QueryRow(_ context.Context, query string, args 
 			return testdb.RowValues{Err: persistence.ErrNotImplemented}
 		}
 		return testdb.RowValues{Values: []any{record.CreatedAt}}
+	case queryCountUnreadPrivateMessagesForUser:
+		return testdb.RowValues{Values: []any{b.unreadForUser}}
 	case queryGetPrivateChatState:
 		userID := args[0].(string)
 		chatKey := args[1].(string)
@@ -245,5 +249,42 @@ func TestPostgresRepositoryEnsureChat(t *testing.T) {
 	svc := NewServiceWithDeps(repo, &privateChatMessageReader{}, &privateChatUserReader{})
 	if err := svc.EnsureChat(context.Background(), "user_a:user_c", "user_a", "user_c", time.Now().UTC()); err != nil {
 		t.Fatalf("service ensure chat: %v", err)
+	}
+}
+
+// CountUnreadForUser 是冷启动 unread_summary 的私聊未读聚合（第 81 轮遗留
+// 项）：repo 只负责单条 COUNT 往返，SQL 口径见
+// queryCountUnreadPrivateMessagesForUser 与真实库 IT。
+func TestPostgresRepositoryCountUnreadForUser(t *testing.T) {
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{}, unreadForUser: 3}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+
+	count, err := repo.CountUnreadForUser(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("count unread: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("count = %d want 3", count)
+	}
+}
+
+func TestPostgresRepositoryCountUnreadForUserErrors(t *testing.T) {
+	// 无可用 queryable（未配置 DB）→ ErrNotImplemented，由装配层降级为 0。
+	offline := NewPostgresRepository(&persistence.Factory{
+		Config: persistence.Config{PostgresDSN: "postgres://example"},
+		DB:     privateChatNonQueryableDB{},
+	})
+	if _, err := offline.CountUnreadForUser(context.Background(), "user_alice"); !errors.Is(err, persistence.ErrNotImplemented) {
+		t.Fatalf("expected ErrNotImplemented, got %v", err)
+	}
+
+	// 查询失败原样上抛（装配层 Warn + 0，不吞错）。
+	backend := &privateChatBackendStub{chats: map[string]privateChatStubRecord{}, states: map[string]map[string]privateChatUserStateRecord{}, execErrs: map[string]error{}, queryErrs: map[string]error{}, queryRowErrs: map[string]error{queryCountUnreadPrivateMessagesForUser: errors.New("boom")}}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	if _, err := NewPostgresRepository(factory).CountUnreadForUser(context.Background(), "user_alice"); err == nil {
+		t.Fatal("expected query error to propagate")
 	}
 }

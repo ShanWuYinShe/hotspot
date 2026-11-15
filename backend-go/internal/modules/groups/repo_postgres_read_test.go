@@ -43,6 +43,9 @@ type groupBackendStub struct {
 	queryErrs map[string]error
 	queryRow  persistence.Row
 	execErrs  map[string]error
+	// queryRowErrs / unreadForUser：CountUnreadForUser 聚合查询的错误注入与桩返回值。
+	queryRowErrs  map[string]error
+	unreadForUser int
 }
 
 func (b *groupBackendStub) Ping(context.Context) error { return nil }
@@ -54,11 +57,17 @@ func (b *groupBackendStub) Exec(_ context.Context, query string, _ ...any) error
 	return nil
 }
 func (b *groupBackendStub) QueryRow(_ context.Context, query string, _ ...any) persistence.Row {
+	if err := b.queryRowErrs[query]; err != nil {
+		return testdb.RowValues{Err: err}
+	}
 	if query == queryGetGroup {
 		return b.queryRow
 	}
 	if query == queryCountGroupMembers {
 		return testdb.RowValues{Values: []any{1}}
+	}
+	if query == queryCountUnreadGroupMessagesForUser {
+		return testdb.RowValues{Values: []any{b.unreadForUser}}
 	}
 	if query == queryGetGroupMembership {
 		return testdb.RowValues{Err: pgx.ErrNoRows}
@@ -271,4 +280,37 @@ func groupSearchIDs(items []GroupItem) []string {
 		ids[i] = item.Group.GroupID
 	}
 	return ids
+}
+
+// CountUnreadForUser 是冷启动 unread_summary 的群聊未读聚合（第 81 轮遗留项）：
+// repo 只负责单条 COUNT 往返，SQL 口径见 queryCountUnreadGroupMessagesForUser
+// 与真实库 IT。
+func TestPostgresRepositoryCountUnreadForUser(t *testing.T) {
+	backend := &groupBackendStub{queryErrs: map[string]error{}, queryRow: testdb.RowValues{Err: persistence.ErrNotImplemented}, execErrs: map[string]error{}, unreadForUser: 5}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+
+	count, err := repo.CountUnreadForUser(context.Background(), "user_alice")
+	if err != nil {
+		t.Fatalf("count unread: %v", err)
+	}
+	if count != 5 {
+		t.Fatalf("count = %d want 5", count)
+	}
+}
+
+func TestPostgresRepositoryCountUnreadForUserErrors(t *testing.T) {
+	// 查询失败原样上抛（装配层 Warn + 0，不吞错）。
+	backend := &groupBackendStub{
+		queryErrs:    map[string]error{},
+		queryRowErrs: map[string]error{queryCountUnreadGroupMessagesForUser: errors.New("boom")},
+		execErrs:     map[string]error{},
+	}
+	factory := persistence.NewFactory(config.Config{PostgresDSN: "postgres://example"})
+	factory.DB.(*persistence.PostgresDB).Backend = backend
+	repo := NewPostgresRepository(factory)
+	if _, err := repo.CountUnreadForUser(context.Background(), "user_alice"); err == nil {
+		t.Fatal("expected query error to propagate")
+	}
 }

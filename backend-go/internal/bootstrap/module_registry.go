@@ -141,9 +141,13 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, usersModule.Service, pmModule.MessageService())
 	pmModule.SetChatEnsurer(pcModule.Service())
 
+	// 冷启动未读摘要：通知 + 私聊/群聊未读聚合（跨模块只经各自 Service 的
+	// CountUnreadForUser 接口消费，不直查对方表）。
 	systemModule.Service().SetBootstrapResolver(systemBootstrapResolver{
-		users:  usersModule.Service,
-		notify: notificationService,
+		users:        usersModule.Service,
+		notify:       notificationService,
+		privateChats: pcModule.Service(),
+		groupChats:   groupsModule.Service,
 	})
 
 	reactionProviders := []reactions.TargetProvider{

@@ -24,6 +24,9 @@ type stubChatRepo struct {
 	restoreErr   error
 	updateSetErr error
 	deleteErr    error
+	// unreadForUser / unreadForUserErr 供 CountUnreadForUser 委托用例注入。
+	unreadForUser    int
+	unreadForUserErr error
 }
 
 func (r *stubChatRepo) GetOrCreate(_ context.Context, _, _ string) (time.Time, error) {
@@ -54,6 +57,9 @@ func (r *stubChatRepo) UpdateSettings(_ context.Context, _, _ string, _ UpdateCh
 }
 func (r *stubChatRepo) DeleteForUser(_ context.Context, _, _ string, _ *time.Time) error {
 	return r.deleteErr
+}
+func (r *stubChatRepo) CountUnreadForUser(_ context.Context, _ string) (int, error) {
+	return r.unreadForUser, r.unreadForUserErr
 }
 
 type stubMsgReadService struct {
@@ -481,5 +487,29 @@ func TestServiceListPaginationAcrossPinnedBoundary(t *testing.T) {
 	}
 	if seen[0] != "u2" || seen[1] != "u3" || seen[2] != "u4" {
 		t.Fatalf("expected pinned-first order [u2 u3 u4], got %v", seen)
+	}
+}
+
+// CountUnreadForUser 冷启动未读摘要的私聊聚合：Service 只负责按 principal 解析
+// 查看者并委托 repo（SQL 口径由 repo 单测/真实库 IT 覆盖）。
+func TestServiceCountUnreadForUserDelegates(t *testing.T) {
+	repo := &stubChatRepo{unreadForUser: 7}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})
+
+	count, err := svc.CountUnreadForUser(chatCtx("u1"))
+	if err != nil {
+		t.Fatalf("count unread: %v", err)
+	}
+	if count != 7 {
+		t.Fatalf("count = %d want 7", count)
+	}
+}
+
+func TestServiceCountUnreadForUserPropagatesError(t *testing.T) {
+	repo := &stubChatRepo{unreadForUserErr: errors.New("aggregate failed")}
+	svc := NewServiceWithDeps(repo, &stubMsgReadService{}, &stubChatUserReader{})
+
+	if _, err := svc.CountUnreadForUser(chatCtx("u1")); err == nil {
+		t.Fatal("expected aggregate error to propagate")
 	}
 }

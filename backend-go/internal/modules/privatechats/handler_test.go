@@ -45,6 +45,9 @@ func (r *privateChatErrorRepo) UpdateSettings(context.Context, string, string, U
 func (r *privateChatErrorRepo) DeleteForUser(context.Context, string, string, *time.Time) error {
 	return r.deleteErr
 }
+func (r *privateChatErrorRepo) CountUnreadForUser(context.Context, string) (int, error) {
+	return 0, nil
+}
 
 type privateChatMessageReader struct {
 	recentErr    error
