@@ -70,20 +70,17 @@ const (
 
 const queryInsertOutbox = `INSERT INTO outbox_events (topic, payload) VALUES ($1, $2::jsonb)`
 
-// queryClaimOutbox 领取一批「事务内执行」的事件：topic 不含 RegisterExternal
-// 注册的事务外 topic（$2 是事务外 topic 列表，空数组表示没有）——两类 topic
-// 分开领取，避免慢 topic 的积压占满同一批 50 行、饿死其它 topic 的实时事件。
+// queryClaimOutbox 按 topic 白名单领取一批待投递事件，$1 是领取条数上限、$2 是
+// topic 列表。inline 与 external 两条路径共用同一 SQL，只是 topic 列表换成各自
+// 注册集合（inline 用 Register 注册的 topic、external 用 RegisterExternal 注册的
+// topic），因此两类 topic 分开领取、互不挤占同一批行。
+//
+// 领取条件用白名单 "topic = ANY($2)" 而不是此前的「排除事务外 topic」反向过滤
+// （topic <> ALL(externalTopics)）：外部 topic（媒体清理）极端积压时，反向过滤
+// 必须按 event_id 顺序逐行扫描再丢弃积压行（O(积压)，10 万积压实测 10.5ms）且随
+// 积压线性增长；白名单可直接走迁移 072 的 (topic, available_at, event_id) 部分
+// 索引按 topic 定位，成本与其它 topic 的积压量无关。
 const queryClaimOutbox = `SELECT event_id, topic, payload, attempts
-FROM outbox_events
-WHERE processed_at IS NULL AND available_at <= now() AND topic <> ALL($2)
-ORDER BY event_id
-LIMIT $1
-FOR UPDATE SKIP LOCKED`
-
-// queryClaimOutboxExternal 只领取事务外 topic 的事件，$1 是本轮空闲并发槽位数：
-// 领取后由调用方在同一个短事务里把 available_at 推到租约到期（见
-// queryLeaseOutboxEvent），提交后 handler 才在事务外执行。
-const queryClaimOutboxExternal = `SELECT event_id, topic, payload, attempts
 FROM outbox_events
 WHERE processed_at IS NULL AND available_at <= now() AND topic = ANY($2)
 ORDER BY event_id
@@ -94,6 +91,16 @@ FOR UPDATE SKIP LOCKED`
 // 执行期间不会被其它实例/下一轮重复领取；进程崩溃（结果没写回）时租约到期后
 // 重新投递，保持 at-least-once 语义（handler 必须幂等）。
 const queryLeaseOutboxEvent = `UPDATE outbox_events SET available_at = now() + $2::interval WHERE event_id = $1 AND processed_at IS NULL`
+
+// queryForceCustomPlan 让本轮领取事务内的语句按实际参数值重新规划（custom
+// plan）。领取查询的 topic 列表是运行时数组参数：pgx 默认走预编译语句，而
+// PostgreSQL 的 plan_cache_mode=auto 在若干次执行后可能改为 generic plan——
+// 此时 planner 不知道数组实际元素，按「可能匹配很多 topic」估算（实测 10 万
+// 行积压时估算 ~98% 命中），退化为按 event_id 顺序的主键扫描（Rows Removed by
+// Filter 10 万、约 10ms），迁移 072 的 topic 部分索引完全用不上，白名单改造
+// 也就失效。SET LOCAL 只作用于本次领取事务（提交/回滚即失效），不影响同一
+// 连接上其它查询；custom plan 的规划开销约 0.05-0.1ms，相对 1s 轮询可忽略。
+const queryForceCustomPlan = `SET LOCAL plan_cache_mode = force_custom_plan`
 
 // 事务内执行（Register）路径的结果写回 SQL：handler 与写回同处领取事务，无需
 // 额外保护。
@@ -282,6 +289,26 @@ func (d *Dispatcher) handlerFor(topic string) Handler {
 	d.handlersMu.RLock()
 	defer d.handlersMu.RUnlock()
 	return d.handlers[topic]
+}
+
+// inlineTopics 返回当前注册为「事务内执行」的 topic 列表（领取 SQL 的参数）：
+// handlers 中除去 external 的 topic。Register 与 RegisterExternal 维护两集合
+// 互斥（Register 会把同 topic 的 external 标记清掉），故 handlers-external 即
+// inline 集合；未注册任何 inline topic 时返回 nil，调用方跳过领取。
+func (d *Dispatcher) inlineTopics() []string {
+	d.handlersMu.RLock()
+	defer d.handlersMu.RUnlock()
+	if len(d.handlers) == len(d.external) {
+		return nil
+	}
+	topics := make([]string, 0, len(d.handlers)-len(d.external))
+	for topic := range d.handlers {
+		if _, ok := d.external[topic]; ok {
+			continue
+		}
+		topics = append(topics, topic)
+	}
+	return topics
 }
 
 // externalTopics 返回当前注册为事务外执行的 topic 列表（领取 SQL 的参数）。
@@ -497,8 +524,9 @@ type outboxRow struct {
 // DrainOnce 领取并投递一批事件，返回处理（含失败）条数。测试与后台循环共用。
 //
 // 两类 topic 分开领取，互不阻塞：
-//   - 普通 topic（Register）：沿用既有语义——在一个事务内领取、执行 handler 并
-//     写回结果；handler 只应是内存操作，慢 handler 会拖长该事务。
+//   - 普通 topic（Register）：只按注册的 inline topic 白名单领取，在同一个事务内
+//     执行 handler 并写回结果；handler 只应是内存操作，慢 handler 会拖长该事务。
+//     （白名单精确匹配使领取成本与外部 topic 积压量无关，见 queryClaimOutbox）
 //   - 事务外 topic（RegisterExternal）：独立短事务里按空闲并发槽位领取并打租约
 //     （available_at 推到未来），提交后在有界并发 goroutine 里执行 handler（单
 //     事件超时），再用短事务写回结果；外部 IO 不占用领取事务/连接，也不阻塞
@@ -517,14 +545,27 @@ func (d *Dispatcher) DrainOnce(ctx context.Context) (int, error) {
 
 // drainInline 执行「事务内」路径：领取一批事件、在同一个事务里逐条执行 handler
 // 并写回结果（成功/重试/死信）。panic 由 invokeHandler 转 error，不掀事务。
+//
+// 只领取 Register 注册的 inline topic（白名单精确匹配，见 queryClaimOutbox）；
+// 未注册任何 inline topic 时直接返回、不开启领取事务——纯事务外 topic 装配
+// （或未装配 outbox 的测试桩）不必为「注定空批」的领取付出事务/查询开销。
 func (d *Dispatcher) drainInline(ctx context.Context) (int, error) {
+	topics := d.inlineTopics()
+	if len(topics) == 0 {
+		return 0, nil
+	}
 	processed := 0
 	err := persistence.RunInTransaction(ctx, d.factory, func(txCtx context.Context) error {
 		queryable, ok := persistence.QueryableFromContext(txCtx)
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutbox, d.batchSize, d.externalTopics())
+		// 按实际 topic 数组值规划，避免 plan_cache_mode=auto 退化为 generic plan
+		// 后改走主键扫描（见 queryForceCustomPlan 注释）。
+		if err := queryable.Exec(txCtx, queryForceCustomPlan); err != nil {
+			return err
+		}
+		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutbox, d.batchSize, topics)
 		if err != nil {
 			return err
 		}
@@ -575,7 +616,15 @@ func (d *Dispatcher) drainExternal(ctx context.Context) (int, error) {
 		if !ok {
 			return persistence.ErrNotImplemented
 		}
-		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutboxExternal, reserved, topics)
+		// 与 inline 领取共用同一白名单 SQL：topic 列表换成外部 topic、limit
+		// 换成空闲并发槽位数；领取后在同一短事务里逐行打租约（见
+		// queryLeaseOutboxEvent），提交后 handler 才在事务外执行。
+		// 同样强制 custom plan：外部 topic 事件可能排在大量 inline 积压之后，
+		// generic plan 的主键扫描会让领取成本随积压线性增长。
+		if err := queryable.Exec(txCtx, queryForceCustomPlan); err != nil {
+			return err
+		}
+		claimed, err := claimOutboxRows(txCtx, queryable, queryClaimOutbox, reserved, topics)
 		if err != nil {
 			return err
 		}
@@ -688,9 +737,9 @@ func claimOutboxRows(ctx context.Context, queryable persistence.Queryable, query
 		return nil, nil
 	}
 	if topics == nil {
-		// 必须传空数组而不是 nil：pgx 把 nil []string 编码为 NULL，而
-		// "$2" 为 NULL 时 "topic <> ALL($2)" 结果为 NULL（不匹配任何行）——
-		// 未注册事务外 topic 时 inline 领取会静默返回空批。
+		// 传空数组而不是 nil：nil []string 会被 pgx 编码为 NULL，让
+		// "topic = ANY(NULL)" 恒为 NULL（依赖 NULL 三值语义才能得到空批）；
+		// 显式空数组语义更直接，也不受 ANY/NOT IN 等改写影响。
 		topics = []string{}
 	}
 	rows, err := queryable.Query(ctx, query, limit, topics)

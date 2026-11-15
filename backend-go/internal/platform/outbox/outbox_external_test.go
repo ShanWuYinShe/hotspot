@@ -1,10 +1,12 @@
 package outbox
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,17 +18,18 @@ import (
 
 // fakeOutboxQueryable 在内存里模拟 outbox 的领取/租约/结果写回 SQL，用于不依赖
 // 数据库地验证 dispatcher 的编排逻辑（真实 SQL 语义由 outbox_external_it_test.go
-// 的真实库用例覆盖）：Query 按领取 SQL 返回预置行，QueryRow 模拟事务外结果写回
-// 的 CTE 计数，Exec/QueryRow 都记录到 calls 供断言。
+// 的真实库用例覆盖）：Query 按领取 SQL 的 topic 白名单返回预置行，QueryRow 模拟
+// 事务外结果写回的 CTE 计数，Exec/Query/QueryRow 都记录到 calls 供断言。
 type fakeOutboxQueryable struct {
-	mu        sync.Mutex
-	inline    []outboxRow
-	external  []outboxRow
-	casResult int64 // 事务外结果写回的影响行数（默认 1；0 模拟租约过期/CAS 落空）
+	mu       sync.Mutex
+	inline   []outboxRow
+	external []outboxRow
+	// casResult 是事务外结果写回的影响行数（默认 1；0 模拟租约过期/CAS 落空）。
+	casResult int64
 	calls     []fakeOutboxCall
-	claimErr  error // 模拟 inline 领取 SQL 失败
-	// externalClaimErr 模拟事务外领取 SQL 失败（inline 领取仍正常）。
-	externalClaimErr error
+	// claimErr 模拟领取 SQL 失败（inline/external 共用同一条领取 SQL，任一
+	// 路径失败都返回该错误）。
+	claimErr error
 }
 
 type fakeOutboxCall struct {
@@ -44,21 +47,31 @@ func (f *fakeOutboxQueryable) Exec(_ context.Context, query string, args ...any)
 func (f *fakeOutboxQueryable) Query(_ context.Context, query string, args ...any) (persistence.Rows, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	var rows []outboxRow
-	switch query {
-	case queryClaimOutbox:
-		if f.claimErr != nil {
-			return nil, f.claimErr
-		}
-		rows = append([]outboxRow(nil), f.inline...)
-	case queryClaimOutboxExternal:
-		if f.externalClaimErr != nil {
-			return nil, f.externalClaimErr
-		}
-		rows = append([]outboxRow(nil), f.external...)
-	default:
+	f.calls = append(f.calls, fakeOutboxCall{query: query, args: append([]any(nil), args...)})
+	if query != queryClaimOutbox {
 		return nil, fmt.Errorf("fakeOutboxQueryable: unexpected query %q", query)
 	}
+	if f.claimErr != nil {
+		return nil, f.claimErr
+	}
+	// 与真实领取 SQL 同语义：先按 $2 的 topic 白名单过滤（inline 与 external
+	// 两条路径共用同一 SQL，靠注册集合区分），再按 event_id 升序取前 $1 条。
+	// fake 不模拟 FOR UPDATE SKIP LOCKED 的行锁竞争。
+	allowed := make(map[string]struct{})
+	if len(args) > 1 {
+		topics, _ := args[1].([]string)
+		for _, topic := range topics {
+			allowed[topic] = struct{}{}
+		}
+	}
+	all := append(append([]outboxRow(nil), f.inline...), f.external...)
+	rows := make([]outboxRow, 0, len(all))
+	for _, row := range all {
+		if _, ok := allowed[row.topic]; ok {
+			rows = append(rows, row)
+		}
+	}
+	slices.SortFunc(rows, func(a, b outboxRow) int { return cmp.Compare(a.eventID, b.eventID) })
 	if len(args) > 0 {
 		if limit, ok := args[0].(int); ok && limit < len(rows) {
 			rows = rows[:limit]
@@ -72,6 +85,19 @@ func (f *fakeOutboxQueryable) QueryRow(_ context.Context, query string, args ...
 	defer f.mu.Unlock()
 	f.calls = append(f.calls, fakeOutboxCall{query: query, args: append([]any(nil), args...)})
 	return fakeOutboxRowResult{updated: f.casResult}
+}
+
+// firstCallIndex 返回第一条 SQL 等于 query 的调用下标（-1 表示没有），用于
+// 断言 SET LOCAL 与领取查询的先后顺序。
+func (f *fakeOutboxQueryable) firstCallIndex(query string) int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for i, call := range f.calls {
+		if call.query == query {
+			return i
+		}
+	}
+	return -1
 }
 
 // callsMatching 返回记录中 SQL 等于 query 的调用（含参数）。
@@ -155,6 +181,121 @@ func TestDispatcherRegisterExternalPartitionsTopics(t *testing.T) {
 	dispatcher.Register("slow.topic", handler)
 	if got := dispatcher.externalTopics(); len(got) != 0 {
 		t.Fatalf("Register 覆盖后 external topics = %v, want 空", got)
+	}
+}
+
+// TestDispatcherInlineTopics 锁定 inline topic 列表的维护口径：Register 注册的
+// topic 进入 inline 领取白名单（handlers - external），RegisterExternal 注册的
+// topic 不进入；同一 topic 改为 Register 后退回 inline 集合。
+func TestDispatcherInlineTopics(t *testing.T) {
+	handler := func(context.Context, json.RawMessage) error { return nil }
+	dispatcher := NewDispatcher(nil, nil)
+	if got := dispatcher.inlineTopics(); len(got) != 0 {
+		t.Fatalf("未注册时 inline topics = %v, want 空", got)
+	}
+	dispatcher.Register("inline.a", handler)
+	dispatcher.Register("inline.b", handler)
+	dispatcher.RegisterExternal("slow.topic", handler)
+	got := dispatcher.inlineTopics()
+	if len(got) != 2 || !slices.Contains(got, "inline.a") || !slices.Contains(got, "inline.b") {
+		t.Fatalf("inline topics = %v, want [inline.a inline.b]", got)
+	}
+	if ext := dispatcher.externalTopics(); len(ext) != 1 || ext[0] != "slow.topic" {
+		t.Fatalf("external topics = %v, want [slow.topic]", ext)
+	}
+	dispatcher.Register("slow.topic", handler)
+	got = dispatcher.inlineTopics()
+	if len(got) != 3 || !slices.Contains(got, "slow.topic") {
+		t.Fatalf("Register 覆盖后 inline topics = %v, want 含 slow.topic", got)
+	}
+	if ext := dispatcher.externalTopics(); len(ext) != 0 {
+		t.Fatalf("Register 覆盖后 external topics = %v, want 空", ext)
+	}
+}
+
+// TestDrainInlineClaimsOnlyInlineTopics 锁定 inline 领取的白名单语义：只领取
+// Register 注册的 topic（外部 topic 归 external 路径领取、未注册 topic 不领取），
+// 且领取 SQL 的 $2 是 inline topic 列表（而非此前的「外部 topic 排除列表」）。
+func TestDrainInlineClaimsOnlyInlineTopics(t *testing.T) {
+	const inlineTopic, externalTopic, unregisteredTopic = "test.inline.a", "test.external.e", "test.unregistered"
+	fake := &fakeOutboxQueryable{
+		inline: []outboxRow{
+			externalTestRow(1, inlineTopic),
+			// 未注册 topic：白名单外，不得被 inline 领取（旧实现会领取后按无
+			// handler 失败重试）。
+			externalTestRow(2, unregisteredTopic),
+		},
+		external:  []outboxRow{externalTestRow(3, externalTopic)},
+		casResult: 1,
+	}
+	dispatcher, ctx := newFakeDispatcher(t, fake)
+	var inlineCalls atomic.Int32
+	dispatcher.Register(inlineTopic, func(context.Context, json.RawMessage) error {
+		inlineCalls.Add(1)
+		return nil
+	})
+	dispatcher.RegisterExternal(externalTopic, func(context.Context, json.RawMessage) error { return nil })
+
+	if processed, err := dispatcher.DrainOnce(ctx); err != nil || processed != 2 {
+		t.Fatalf("drain: processed=%d err=%v, want 2（inline + external 各一条）", processed, err)
+	}
+	dispatcher.Wait()
+	if got := inlineCalls.Load(); got != 1 {
+		t.Fatalf("inline handler 投递次数 = %d, want 1（未注册 topic 不得被领取）", got)
+	}
+	claims := fake.callsMatching(queryClaimOutbox)
+	if len(claims) != 2 {
+		t.Fatalf("领取 SQL 次数 = %d, want 2（inline 与 external 各一次）", len(claims))
+	}
+	if topics, _ := claims[0].args[1].([]string); len(topics) != 1 || topics[0] != inlineTopic {
+		t.Fatalf("inline 领取 topic 参数 = %v, want [%s]（白名单而非外部排除列表）", claims[0].args, inlineTopic)
+	}
+	if topics, _ := claims[1].args[1].([]string); len(topics) != 1 || topics[0] != externalTopic {
+		t.Fatalf("external 领取 topic 参数 = %v, want [%s]", claims[1].args, externalTopic)
+	}
+	// 领取前必须先把领取事务切到 custom plan：generic plan 下 planner 不知道
+	// topic 数组实际值，会退化为主键扫描（见 queryForceCustomPlan 注释）。
+	claimIdx := fake.firstCallIndex(queryClaimOutbox)
+	planIdx := fake.firstCallIndex(queryForceCustomPlan)
+	if claimIdx < 0 || planIdx < 0 || planIdx > claimIdx {
+		t.Fatalf("领取前必须先执行 SET LOCAL force_custom_plan（plan 下标=%d claim 下标=%d）", planIdx, claimIdx)
+	}
+}
+
+// TestDrainInlineSkipsWithoutInlineTopics 锁定「无 inline topic 时跳过领取」：
+// 纯事务外 topic 装配（如未装配 media 服务的测试桩）不应为注定空批的 inline
+// 领取开启事务/发查询，DrainOnce 只走 external 领取。
+func TestDrainInlineSkipsWithoutInlineTopics(t *testing.T) {
+	const externalTopic = "test.external.only"
+	fake := &fakeOutboxQueryable{external: []outboxRow{externalTestRow(9, externalTopic)}, casResult: 1}
+	dispatcher, ctx := newFakeDispatcher(t, fake)
+	dispatcher.RegisterExternal(externalTopic, func(context.Context, json.RawMessage) error { return nil })
+
+	if processed, err := dispatcher.DrainOnce(ctx); err != nil || processed != 1 {
+		t.Fatalf("drain: processed=%d err=%v, want 1（仅 external 领取）", processed, err)
+	}
+	dispatcher.Wait()
+	claims := fake.callsMatching(queryClaimOutbox)
+	if len(claims) != 1 {
+		t.Fatalf("领取 SQL 次数 = %d, want 1（无 inline topic 时不得发起 inline 领取）", len(claims))
+	}
+	if topics, _ := claims[0].args[1].([]string); len(topics) != 1 || topics[0] != externalTopic {
+		t.Fatalf("唯一一次领取的 topic 参数 = %v, want [%s]", claims[0].args, externalTopic)
+	}
+	claimIdx := fake.firstCallIndex(queryClaimOutbox)
+	planIdx := fake.firstCallIndex(queryForceCustomPlan)
+	if claimIdx < 0 || planIdx < 0 || planIdx > claimIdx {
+		t.Fatalf("事务外领取前同样必须先执行 SET LOCAL force_custom_plan（plan 下标=%d claim 下标=%d）", planIdx, claimIdx)
+	}
+
+	// 完全未注册 topic 的 dispatcher：两条路径都跳过，一次查询都不发。
+	empty := &fakeOutboxQueryable{}
+	emptyDispatcher, emptyCtx := newFakeDispatcher(t, empty)
+	if processed, err := emptyDispatcher.DrainOnce(emptyCtx); err != nil || processed != 0 {
+		t.Fatalf("无注册 topic: processed=%d err=%v, want 0/nil", processed, err)
+	}
+	if calls := empty.callsMatching(queryClaimOutbox); len(calls) != 0 {
+		t.Fatalf("无注册 topic 时不得发出领取查询，got %d 次", len(calls))
 	}
 }
 
@@ -388,7 +529,7 @@ func TestDrainOnceExternalSlotLimitCapsClaims(t *testing.T) {
 // 时必须归还预留的并发槽位，否则一次失败会让并发槽位永久泄漏、慢 topic 停摆。
 func TestDrainOnceExternalClaimFailureReleasesSlots(t *testing.T) {
 	const topic = "test.external.claimfail"
-	fake := &fakeOutboxQueryable{externalClaimErr: errors.New("db down")}
+	fake := &fakeOutboxQueryable{claimErr: errors.New("db down")}
 	dispatcher, ctx := newFakeDispatcher(t, fake)
 	dispatcher.RegisterExternal(topic, func(context.Context, json.RawMessage) error { return nil })
 
