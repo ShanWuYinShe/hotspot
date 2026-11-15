@@ -3,6 +3,8 @@ package privatechats
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,6 +130,8 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 		peerB := testdb.InsertUser(t, txFactory, "it_pcu_b", "B")
 		peerC := testdb.InsertUser(t, txFactory, "it_pcu_c", "C")
 		peerD := testdb.InsertUser(t, txFactory, "it_pcu_d", "D")
+		peerE := testdb.InsertUser(t, txFactory, "it_pcu_e", "E")
+		peerF := testdb.InsertUser(t, txFactory, "it_pcu_f", "F")
 
 		base := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 		insertChat := func(peer string) string {
@@ -137,11 +141,14 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 			}
 			return chatKey
 		}
-		insertMessage := func(chatKey, sender string, sentAt time.Time, recalled bool) string {
-			messageID := "it_pcu_msg_" + sentAt.Format("150405.000000000")
+		insertMessageWithID := func(chatKey, messageID, sender string, sentAt time.Time, recalled bool) {
 			if err := q.Exec(ctx, `INSERT INTO private_messages (message_id, chat_key, sender_user_id, type, content, sent_at, is_recalled) VALUES ($1,$2,$3,'text','hi',$4,$5)`, messageID, chatKey, sender, sentAt, recalled); err != nil {
 				t.Fatalf("insert message: %v", err)
 			}
+		}
+		insertMessage := func(chatKey, sender string, sentAt time.Time, recalled bool) string {
+			messageID := "it_pcu_msg_" + sentAt.Format("150405.000000000")
+			insertMessageWithID(chatKey, messageID, sender, sentAt, recalled)
 			return messageID
 		}
 		// 已读位点 upsert（同一会话可能多次推进，如「全部已读 -> 0」用例）。
@@ -182,20 +189,45 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 		}
 		insertMessage(chatD, peerD, base.Add(32*time.Minute), false)
 
+		// 会话 E：已读位点只剩 last_read_sent_at、last_read_message_id 为 NULL
+		// （该列 ON DELETE SET NULL，被指向消息删除后即可到达）。同刻消息仍须
+		// 按已读排除，只有更晚的 1 条计入——若把边界简化成
+		// NOT(sent_at = last_read AND message_id = last_read)，这里会多算 1 条。
+		chatE := insertChat(peerE)
+		insertMessage(chatE, peerE, base.Add(40*time.Minute), false)
+		insertMessage(chatE, peerE, base.Add(41*time.Minute), false)
+		insertMessage(chatE, peerE, base.Add(42*time.Minute), false)
+		if err := q.Exec(ctx, `INSERT INTO private_chat_read_state (chat_key, user_id, last_read_message_id, last_read_sent_at) VALUES ($1,$2,NULL,$3)`, chatE, viewer, base.Add(41*time.Minute)); err != nil {
+			t.Fatalf("mark chat E read with null message id: %v", err)
+		}
+
+		// 会话 F：同一 sent_at 下两条对方消息、已读位点指向其中一条 message_id：
+		// 另一条同刻消息按原 OR 语义计入（sent_at = last_read 的 message_id 分支），
+		// 本人同刻消息不计。
+		chatF := insertChat(peerF)
+		sameAt := base.Add(50 * time.Minute)
+		readMsgF := "it_pcu_msg_f_read"
+		insertMessageWithID(chatF, readMsgF, peerF, sameAt, false)
+		insertMessageWithID(chatF, "it_pcu_msg_f_other", peerF, sameAt, false)
+		insertMessageWithID(chatF, "it_pcu_msg_f_self", viewer, sameAt, false)
+		markRead(chatF, readMsgF, sameAt)
+
 		repo := NewPostgresRepository(txFactory)
-		// A=3 + B=1 + C=0 + D=1 = 5。
+		// A=3 + B=1 + C=0 + D=1 + E=1 + F=1 = 7。
 		count, err := repo.CountUnreadForUser(ctx, viewer)
 		if err != nil {
 			t.Fatalf("CountUnreadForUser: %v", err)
 		}
-		if count != 5 {
-			t.Fatalf("unread count = %d, want 5 (A3+B1+C0+D1)", count)
+		if count != 7 {
+			t.Fatalf("unread count = %d, want 7 (A3+B1+C0+D1+E1+F1)", count)
 		}
 
 		// 全部会话已读（位点推进到各自最新消息）→ 0：游标口径不残留未读。
 		markRead(chatA, insertMessage(chatA, viewer, base.Add(6*time.Minute), false), base.Add(6*time.Minute))
 		markRead(chatB, insertMessage(chatB, viewer, base.Add(12*time.Minute), false), base.Add(12*time.Minute))
 		markRead(chatD, insertMessage(chatD, viewer, base.Add(33*time.Minute), false), base.Add(33*time.Minute))
+		markRead(chatE, insertMessage(chatE, viewer, base.Add(43*time.Minute), false), base.Add(43*time.Minute))
+		markRead(chatF, insertMessage(chatF, viewer, sameAt.Add(time.Minute), false), sameAt.Add(time.Minute))
 		count, err = repo.CountUnreadForUser(ctx, viewer)
 		if err != nil {
 			t.Fatalf("CountUnreadForUser after read: %v", err)
@@ -211,6 +243,103 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 			t.Fatalf("stranger count = %d err=%v, want 0", count, err)
 		}
 	})
+}
+
+// TestPostgresIT_CountUnreadForUserUsesIndexRange 锁死聚合 SQL 的计划形态（第 82
+// 轮审计 C-P1-1 性能回归）：未读区间必须能下推为消息索引的 Index Cond，而不是
+// 把整张 private_messages 读出来再过滤。enable_seqscan=off 只用于在小数据集的
+// 测试事务里暴露「谓词能否作为索引条件」（真实数据量下规划器本就会选索引），
+// 不改变 SQL 语义；断言只要求「目标索引 + Index Cond 含 sent_at」，索引扫描与
+// 位图索引扫描均可通过，不锁定具体节点形态。
+func TestPostgresIT_CountUnreadForUserUsesIndexRange(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		q := txFactory.DB.(persistence.QueryableDB)
+		viewer := testdb.InsertUser(t, txFactory, "it_pcu_plan_viewer", "Viewer")
+		base := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+		for i := 0; i < 30; i++ {
+			peer := testdb.InsertUser(t, txFactory, fmt.Sprintf("it_pcu_plan_peer_%02d", i), "Peer")
+			if err := q.Exec(ctx, `INSERT INTO private_chats (chat_key, user_a_id, user_b_id, created_at) VALUES ($1,$2,$3,$4)`,
+				key(viewer, peer), viewer, peer, base); err != nil {
+				t.Fatalf("insert chat: %v", err)
+			}
+		}
+		// 每个会话 100 条消息、已读游标停在 60：未读只占 40%，规划器才有依据
+		// 选择 (chat_key, sent_at) 的范围扫描，而不是读完整个会话再过滤；数据量
+		// 需要过 ANALYZE，否则统计缺失时索引选择退化为页大小比较（会选中
+		// chat_key 前缀相同但无 sent_at 列的索引，断言失去区分力）。
+		if err := q.Exec(ctx, `INSERT INTO private_messages (message_id, chat_key, sender_user_id, type, content, sent_at, is_recalled)
+SELECT pc.chat_key || ':' || j, pc.chat_key,
+       CASE WHEN j % 2 = 0 THEN $1::text ELSE CASE WHEN pc.user_a_id = $1 THEN pc.user_b_id ELSE pc.user_a_id END END,
+       'text', 'hi', $2::timestamptz + j * INTERVAL '1 minute', FALSE
+FROM private_chats pc, generate_series(1, 100) j
+WHERE pc.user_a_id = $1 OR pc.user_b_id = $1`, viewer, base); err != nil {
+			t.Fatalf("insert messages: %v", err)
+		}
+		if err := q.Exec(ctx, `INSERT INTO private_chat_read_state (chat_key, user_id, last_read_message_id, last_read_sent_at)
+SELECT pc.chat_key, $1, pc.chat_key || ':60', $2::timestamptz + 60 * INTERVAL '1 minute'
+FROM private_chats pc WHERE pc.user_a_id = $1 OR pc.user_b_id = $1`, viewer, base); err != nil {
+			t.Fatalf("insert read state: %v", err)
+		}
+		for _, table := range []string{"private_messages", "private_chats", "private_chat_read_state", "private_chat_user_state"} {
+			if err := q.Exec(ctx, "ANALYZE "+table); err != nil {
+				t.Fatalf("analyze %s: %v", table, err)
+			}
+		}
+		if _, err := NewPostgresRepository(txFactory).CountUnreadForUser(ctx, viewer); err != nil {
+			t.Fatalf("CountUnreadForUser: %v", err)
+		}
+		if err := q.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
+			t.Fatalf("set local enable_seqscan: %v", err)
+		}
+		plan := explainPlanText(t, ctx, q, queryCountUnreadPrivateMessagesForUser, viewer)
+		assertUnreadPlanUsesIndexRange(t, plan, "private_messages", "idx_private_messages_chat_key_sent_at")
+	})
+}
+
+// explainPlanText 取查询的文本计划（裸 EXPLAIN，不执行），供计划形态回归断言。
+func explainPlanText(t *testing.T, ctx context.Context, q persistence.QueryableDB, query string, args ...any) string {
+	t.Helper()
+	rows, err := q.Query(ctx, "EXPLAIN "+query, args...)
+	if err != nil {
+		t.Fatalf("explain: %v", err)
+	}
+	defer rows.Close()
+	var lines []string
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatalf("scan explain: %v", err)
+		}
+		lines = append(lines, line)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("explain rows: %v", err)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// assertUnreadPlanUsesIndexRange 断言未读聚合在消息表上走索引范围扫描：计划里
+// 出现目标索引名、且某条 Index Cond 含 sent_at（单次比较下推成功），同时不得
+// 出现对消息表的全表 Seq Scan（否则成本重新随聊天历史总量增长）。
+func assertUnreadPlanUsesIndexRange(t *testing.T, plan, table, index string) {
+	t.Helper()
+	if !strings.Contains(plan, index) {
+		t.Fatalf("plan does not use %s:\n%s", index, plan)
+	}
+	hasRangeCond := false
+	for _, line := range strings.Split(plan, "\n") {
+		if strings.Contains(line, "Seq Scan on "+table) {
+			t.Fatalf("unread aggregation still scans %s sequentially:\n%s", table, plan)
+		}
+		if strings.Contains(line, "Index Cond") && strings.Contains(line, "sent_at") {
+			hasRangeCond = true
+		}
+	}
+	if !hasRangeCond {
+		t.Fatalf("sent_at is not an index range condition on %s:\n%s", table, plan)
+	}
 }
 
 func targetIDs(states []ChatState) []string {

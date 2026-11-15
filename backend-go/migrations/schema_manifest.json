@@ -498,6 +498,7 @@
     "groups:idx_groups_tags_gin",
     "groups:idx_groups_visible_s2_cell_id",
     "media_upload_sessions:idx_media_upload_sessions_file_id",
+    "media_upload_sessions:idx_media_upload_sessions_stale",
     "media_upload_sessions:idx_media_upload_sessions_storage_key",
     "media_upload_sessions:idx_media_upload_sessions_user_created_at",
     "media_upload_sessions:media_upload_sessions_pkey",

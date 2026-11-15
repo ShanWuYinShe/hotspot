@@ -3,6 +3,8 @@ package groups
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -1150,7 +1152,15 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 		g5 := createGroup("gcu-5")
 		insertMessage(g5, other, base.Add(40*time.Minute), false)
 
-		// g1=3 + g2=1 = 4（g3 退群、g4 解散、g5 未加入均不计）。
+		// g6：已读位点恰好落在一条消息上（严格 > 把同刻消息视为已读），其后
+		// 的已撤回消息也不计 → 0。覆盖游标边界与撤回过滤的交集。
+		g6 := createGroup("gcu-6")
+		join(g6)
+		readAt6 := insertMessage(g6, other, base.Add(50*time.Minute), false)
+		insertMessage(g6, other, base.Add(51*time.Minute), true)
+		markRead(g6, readAt6, base.Add(50*time.Minute))
+
+		// g1=3 + g2=1 = 4（g3 退群、g4 解散、g5 未加入、g6 全已读均不计）。
 		count, err := repo.CountUnreadForUser(ctx, viewer)
 		if err != nil {
 			t.Fatalf("CountUnreadForUser: %v", err)
@@ -1192,6 +1202,112 @@ func TestPostgresIT_CountUnreadForUser(t *testing.T) {
 			t.Fatalf("outsider count = %d err=%v, want 0", count, err)
 		}
 	})
+}
+
+// TestPostgresIT_CountUnreadForUserUsesIndexRange 锁死聚合 SQL 的计划形态（第 82
+// 轮审计 C-P1-1 / B-P2-2 性能回归）：未读区间必须能下推为消息索引的 Index Cond，
+// 而不是把整张 group_messages 读出来再过滤。enable_seqscan=off 只用于在小数据集
+// 的测试事务里暴露「谓词能否作为索引条件」（真实数据量下规划器本就会选索引），
+// 不改变 SQL 语义；断言只要求「目标索引 + Index Cond 含 sent_at」，索引扫描与
+// 位图索引扫描均可通过，不锁定具体节点形态。
+func TestPostgresIT_CountUnreadForUserUsesIndexRange(t *testing.T) {
+	testdb.SkipIfShort(t)
+	factory := testdb.Open(t)
+	testdb.TxScope(t, factory, func(ctx context.Context, txFactory *persistence.Factory) {
+		q := txFactory.DB.(persistence.QueryableDB)
+		repo := NewPostgresRepository(txFactory)
+		owner := testdb.InsertUser(t, txFactory, "it_gcu_plan_owner", "Owner")
+		viewer := testdb.InsertUser(t, txFactory, "it_gcu_plan_viewer", "Viewer")
+		base := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
+		for i := 0; i < 30; i++ {
+			group, err := repo.Create(ctx, owner, CreateGroupRequest{
+				Name:       fmt.Sprintf("gcu-plan-%02d", i),
+				JoinMethod: GroupJoinMethodDirect,
+				Location: Location{LocationName: "Beijing", Point: struct {
+					Latitude  float64 `json:"latitude"`
+					Longitude float64 `json:"longitude"`
+				}{Latitude: 39.9, Longitude: 116.4}},
+			})
+			if err != nil {
+				t.Fatalf("create group: %v", err)
+			}
+			if _, err := repo.JoinGroup(ctx, viewer, group.Group.GroupID, nil); err != nil {
+				t.Fatalf("join group: %v", err)
+			}
+		}
+		// 每个群 100 条消息、已读游标停在 60：未读只占 40%，规划器才有依据选择
+		// (group_id, sent_at) 范围扫描，而不是读完整个群的消息再过滤；数据需要
+		// 过 ANALYZE，否则统计缺失时索引选择退化为索引页大小比较（会选中
+		// group_id 前缀相同但无 sent_at 列的索引，断言失去区分力）。
+		if err := q.Exec(ctx, `INSERT INTO group_messages (message_id, group_id, sender_user_id, type, content, sent_at, is_recalled)
+SELECT gm.group_id || ':' || j, gm.group_id, $2, 'text', 'hi', $3::timestamptz + j * INTERVAL '1 minute', FALSE
+FROM group_members gm, generate_series(1, 100) j
+WHERE gm.user_id = $1`, viewer, owner, base); err != nil {
+			t.Fatalf("insert messages: %v", err)
+		}
+		if err := q.Exec(ctx, `INSERT INTO group_message_read_state (group_id, user_id, last_read_message_id, last_read_sent_at)
+SELECT gm.group_id, $1, gm.group_id || ':60', $2::timestamptz + 60 * INTERVAL '1 minute'
+FROM group_members gm WHERE gm.user_id = $1`, viewer, base); err != nil {
+			t.Fatalf("insert read state: %v", err)
+		}
+		for _, table := range []string{"group_messages", "group_members", "groups", "group_message_read_state"} {
+			if err := q.Exec(ctx, "ANALYZE "+table); err != nil {
+				t.Fatalf("analyze %s: %v", table, err)
+			}
+		}
+		if _, err := repo.CountUnreadForUser(ctx, viewer); err != nil {
+			t.Fatalf("CountUnreadForUser: %v", err)
+		}
+		if err := q.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
+			t.Fatalf("set local enable_seqscan: %v", err)
+		}
+		plan := explainPlanText(t, ctx, q, queryCountUnreadGroupMessagesForUser, viewer)
+		assertUnreadPlanUsesIndexRange(t, plan, "group_messages", "idx_group_messages_group_id_sent_at")
+	})
+}
+
+// explainPlanText 取查询的文本计划（裸 EXPLAIN，不执行），供计划形态回归断言。
+func explainPlanText(t *testing.T, ctx context.Context, q persistence.QueryableDB, query string, args ...any) string {
+	t.Helper()
+	rows, err := q.Query(ctx, "EXPLAIN "+query, args...)
+	if err != nil {
+		t.Fatalf("explain: %v", err)
+	}
+	defer rows.Close()
+	var lines []string
+	for rows.Next() {
+		var line string
+		if err := rows.Scan(&line); err != nil {
+			t.Fatalf("scan explain: %v", err)
+		}
+		lines = append(lines, line)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("explain rows: %v", err)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// assertUnreadPlanUsesIndexRange 断言未读聚合在消息表上走索引范围扫描：计划里
+// 出现目标索引名、且某条 Index Cond 含 sent_at（单次比较下推成功），同时不得
+// 出现对消息表的全表 Seq Scan（否则成本重新随聊天历史总量增长）。
+func assertUnreadPlanUsesIndexRange(t *testing.T, plan, table, index string) {
+	t.Helper()
+	if !strings.Contains(plan, index) {
+		t.Fatalf("plan does not use %s:\n%s", index, plan)
+	}
+	hasRangeCond := false
+	for _, line := range strings.Split(plan, "\n") {
+		if strings.Contains(line, "Seq Scan on "+table) {
+			t.Fatalf("unread aggregation still scans %s sequentially:\n%s", table, plan)
+		}
+		if strings.Contains(line, "Index Cond") && strings.Contains(line, "sent_at") {
+			hasRangeCond = true
+		}
+	}
+	if !hasRangeCond {
+		t.Fatalf("sent_at is not an index range condition on %s:\n%s", table, plan)
+	}
 }
 
 func TestPostgresIT_CommonGroupCount(t *testing.T) {
