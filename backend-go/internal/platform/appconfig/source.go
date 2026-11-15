@@ -72,6 +72,19 @@ const (
 SELECT payload_json, updated_at, COALESCE(updated_by_user_id, '')
 FROM app_configs
 WHERE config_id = $1`
+	// queryAppConfigGetForUpdate 是事务路径（Update）的底稿读：FOR UPDATE 加行锁
+	// 后再合并，两个并发/跨实例更新在行锁上自然串行化（READ COMMITTED 下等锁
+	// 结束会重读最新已提交版本），不会各自用提交前快照整份覆盖。
+	queryAppConfigGetForUpdate = queryAppConfigGet + `
+FOR UPDATE`
+	// queryAppConfigInsertIfAbsent 在行不存在时先落一行基线（已存在则不动），
+	// 随后 FOR UPDATE 重读。新库首次写入时若不先建行，两个并发首写会各自以缺省
+	// 配置为底稿整份覆盖（行锁只对已存在的行生效）。占位行与最终 payload 在同一
+	// 事务内提交，apply/upsert 失败回滚后不会把半成品留在库内。
+	queryAppConfigInsertIfAbsent = `
+INSERT INTO app_configs (config_id, payload_json, updated_at, updated_by_user_id)
+VALUES ($1,$2,$3,NULL)
+ON CONFLICT (config_id) DO NOTHING`
 	queryAppConfigUpsert = `
 INSERT INTO app_configs (config_id, payload_json, updated_at, updated_by_user_id)
 VALUES ($1,$2,$3,$4)
@@ -113,10 +126,21 @@ func (s *PersistenceSource) Get(ctx context.Context) AppConfig {
 }
 
 func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) AppConfig) (AppConfig, error) {
-	// 读-改-写全程持 loadMu：ensureLoaded 与 apply/fallback.Set 原子化。
-	// 此前 Update 只在入口 ensureLoaded（单独临界区），两个并发 Update 各自
-	// Get 到旧快照、后写者把先写者的字段改动整体回滚（丢更新）。admin 改
-	// 配置为低频路径，锁内做一次 DB upsert 的开销可忽略。
+	// 事务路径（生产 admin 的 config.update 全程在 RunInTransaction 内）：以 DB
+	// 行为权威取底稿，而不是进程内快照。快照最多滞后 reloadTTL，且本实例已提交
+	// 但快照尚未更新（更新被推迟到 aftercommit）的窗口内同样过期——用它当读-改-
+	// 写底稿会让后提交事务把先提交事务已写入的字段整份覆盖（静默丢更新，第 82
+	// 轮审计 P1）。事务内 SELECT ... FOR UPDATE 拿最新已提交行再 apply/upsert，
+	// 行锁同时把并发/跨实例更新串行化。
+	// 这段不在 loadMu 内执行：等行锁可能持续到对方事务 COMMIT，而限流中间件每个
+	// 请求都要读一次 AppConfig，持 loadMu 等锁会阻塞全部请求的配置读取。
+	if tx, ok := persistence.QueryableFromContext(ctx); ok {
+		if db, ok := tx.(queryable); ok {
+			return s.updateInTransaction(ctx, db, apply)
+		}
+	}
+	// 无事务路径保持原语义：读-改-写全程持 loadMu，ensureLoaded 与 apply/
+	// fallback.Set 原子化（同进程两个并发 Update 不会各自 Get 旧快照后互相覆盖）。
 	s.loadMu.Lock()
 	defer s.loadMu.Unlock()
 	s.ensureLoadedLocked(ctx)
@@ -129,9 +153,6 @@ func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) Ap
 		if err != nil {
 			return AppConfig{}, err
 		}
-		// 注意：ctx 内已有事务时这里加入该事务（RepoQueryable 语义），upsert
-		// 与调用方的业务写/审计同 COMMIT——admin 的 config.update 审计写失败
-		// 会把配置写一并回滚，管理员可重试。
 		if err := db.Exec(ctx, queryAppConfigUpsert, appConfigConfigID, string(payload), parseTimeOrNow(updatedAt), nullableString(next.UpdatedByUserID)); err != nil {
 			return AppConfig{}, err
 		}
@@ -143,6 +164,48 @@ func (s *PersistenceSource) Update(ctx context.Context, apply func(AppConfig) Ap
 		return cloneConfig(next), nil
 	}
 	s.fallback.Set(next)
+	return cloneConfig(next), nil
+}
+
+// updateInTransaction 在调用方事务内完成读-改-写：底稿取自事务内的 DB 行
+// （FOR UPDATE），而不是进程内快照。调用方（persistence.RunInTransaction）保证
+// ctx 绑定了事务连接，因此配置 upsert 与 admin 的 config.update 审计写同
+// COMMIT——审计写失败整体回滚，管理员可重试。aftercommit 只负责提交后更新进程
+// 快照：回滚时回调被丢弃，内存不会残留「库内未生效」的幻影配置。
+func (s *PersistenceSource) updateInTransaction(ctx context.Context, db queryable, apply func(AppConfig) AppConfig) (AppConfig, error) {
+	current, ok, err := loadFromDBQuery(ctx, db, queryAppConfigGetForUpdate)
+	if err != nil {
+		return AppConfig{}, err
+	}
+	if !ok {
+		// 新库首次写入：先落一行基线（已存在则不动）再 FOR UPDATE 重读，两个并发
+		// 首写才会在同一行锁上串行化，而不是各自以缺省配置为底稿互相整份覆盖。
+		payload, err := json.Marshal(s.fallback.Get())
+		if err != nil {
+			return AppConfig{}, err
+		}
+		if err := db.Exec(ctx, queryAppConfigInsertIfAbsent, appConfigConfigID, string(payload), time.Now().UTC()); err != nil {
+			return AppConfig{}, err
+		}
+		current, ok, err = loadFromDBQuery(ctx, db, queryAppConfigGetForUpdate)
+		if err != nil {
+			return AppConfig{}, err
+		}
+		if !ok {
+			return AppConfig{}, errors.New("appconfig: app_configs row missing after insert")
+		}
+	}
+	next := cloneConfig(apply(current))
+	updatedAt := time.Now().UTC().Format(time.RFC3339)
+	next.UpdatedAt = updatedAt
+	payload, err := json.Marshal(next)
+	if err != nil {
+		return AppConfig{}, err
+	}
+	if err := db.Exec(ctx, queryAppConfigUpsert, appConfigConfigID, string(payload), parseTimeOrNow(updatedAt), nullableString(next.UpdatedByUserID)); err != nil {
+		return AppConfig{}, err
+	}
+	aftercommit.Register(ctx, func(context.Context) { s.fallback.Set(next) })
 	return cloneConfig(next), nil
 }
 
@@ -214,10 +277,16 @@ func (s *PersistenceSource) queryable(ctx context.Context) (queryable, bool) {
 }
 
 func loadFromDB(ctx context.Context, db queryable) (AppConfig, bool, error) {
+	return loadFromDBQuery(ctx, db, queryAppConfigGet)
+}
+
+// loadFromDBQuery 用给定 SELECT 语句读配置行：常规加载用 queryAppConfigGet，
+// Update 的事务路径用 queryAppConfigGetForUpdate 在事务内加行锁取最新底稿。
+func loadFromDBQuery(ctx context.Context, db queryable, query string) (AppConfig, bool, error) {
 	var payload string
 	var updatedAt time.Time
 	var updatedBy string
-	if err := db.QueryRow(ctx, queryAppConfigGet, appConfigConfigID).Scan(&payload, &updatedAt, &updatedBy); err != nil {
+	if err := db.QueryRow(ctx, query, appConfigConfigID).Scan(&payload, &updatedAt, &updatedBy); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return AppConfig{}, false, nil
 		}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -344,6 +346,7 @@ func TestLoadFromDBMalformedJSON(t *testing.T) {
 type txRecordingQueryable struct {
 	execSQL  []string
 	execArgs [][]any
+	querySQL []string
 	rowFunc  func() persistence.Row
 }
 
@@ -353,7 +356,8 @@ func (q *txRecordingQueryable) Exec(_ context.Context, sql string, args ...any) 
 	return nil
 }
 
-func (q *txRecordingQueryable) QueryRow(context.Context, string, ...any) persistence.Row {
+func (q *txRecordingQueryable) QueryRow(_ context.Context, sql string, _ ...any) persistence.Row {
+	q.querySQL = append(q.querySQL, sql)
 	if q.rowFunc != nil {
 		return q.rowFunc()
 	}
@@ -377,8 +381,29 @@ func TestPersistenceSourceUpdateJoinsContextTx(t *testing.T) {
 	}
 	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
 	src := NewPersistenceSource(config.Config{}, fac)
+	// 预加载进程快照（池上无配置行 → 快照为缺省配置），使后面的事务内 Update
+	// 与读取不会触发 30s 重载而掩盖快照断言。
+	_ = src.Get(ctx)
 
-	tx := &txRecordingQueryable{}
+	// 事务内底稿必须来自 DB 行（FOR UPDATE 读到的最新已提交配置），而不是进程
+	// 快照：快照里的 support_email 为空，DB 行里是 db@example.com。
+	storedCfg := defaultConfig(config.Config{})
+	storedCfg.Contact.SupportEmail = "db@example.com"
+	storedCfg.Contact.PrivacyPolicyURL = "https://db.example/privacy"
+	storedPayload, err := json.Marshal(storedCfg)
+	if err != nil {
+		t.Fatalf("marshal stored config: %v", err)
+	}
+	tx := &txRecordingQueryable{rowFunc: func() persistence.Row {
+		return &mockRow{scanFunc: func(dest ...any) error {
+			if len(dest) >= 3 {
+				*dest[0].(*string) = string(storedPayload)
+				*dest[1].(*time.Time) = time.Now().UTC()
+				*dest[2].(*string) = "admin_tx"
+			}
+			return nil
+		}}
+	}}
 	txCtx := persistence.WithTx(ctx, tx, nil)
 	updated, err := src.Update(txCtx, func(c AppConfig) AppConfig {
 		c.Contact.SupportEmail = "tx@example.com"
@@ -390,9 +415,17 @@ func TestPersistenceSourceUpdateJoinsContextTx(t *testing.T) {
 	if updated.Contact.SupportEmail != "tx@example.com" {
 		t.Fatalf("updated support email = %q", updated.Contact.SupportEmail)
 	}
+	// DB 行独有字段必须保留：证明合并底稿是事务内 DB 行而非进程快照。
+	if updated.Contact.PrivacyPolicyURL != "https://db.example/privacy" {
+		t.Fatalf("merge base must be the locked DB row, got privacy_policy_url=%q", updated.Contact.PrivacyPolicyURL)
+	}
 	// 事务内 upsert 必须落在 tx 连接上，池连接一次都不应被写。
 	if poolExecSQL != "" {
 		t.Fatalf("pool exec must not be used inside tx, got %q", poolExecSQL)
+	}
+	// 底稿读取必须在事务内加行锁：FOR UPDATE 是并发/跨实例更新串行化的前提。
+	if len(tx.querySQL) != 1 || !strings.Contains(tx.querySQL[0], "FOR UPDATE") {
+		t.Fatalf("tx query = %#v, want one SELECT ... FOR UPDATE", tx.querySQL)
 	}
 	if len(tx.execSQL) != 1 || tx.execSQL[0] != queryAppConfigUpsert {
 		t.Fatalf("tx exec = %#v, want one upsert", tx.execSQL)
@@ -450,13 +483,34 @@ func TestPersistenceSourceGetLoadsThroughContextTx(t *testing.T) {
 	}
 }
 
+// txRowReturning 返回一个事务连接替身：其 FOR UPDATE 读返回 payload 对应的行
+// （模拟事务内读到的最新已提交配置）。
+func txRowReturning(t *testing.T, cfg AppConfig) *txRecordingQueryable {
+	t.Helper()
+	payload, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal tx row: %v", err)
+	}
+	return &txRecordingQueryable{rowFunc: func() persistence.Row {
+		return &mockRow{scanFunc: func(dest ...any) error {
+			if len(dest) >= 3 {
+				*dest[0].(*string) = string(payload)
+				*dest[1].(*time.Time) = time.Now().UTC()
+				*dest[2].(*string) = "admin_tx"
+			}
+			return nil
+		}}
+	}}
+}
+
 func TestPersistenceSourceDefersMemorySnapshotUntilCommit(t *testing.T) {
 	mockDB := &mockQueryableDB{
 		queryRowFunc: func(context.Context, string, ...any) persistence.Row { return &mockRow{err: pgx.ErrNoRows} },
 	}
 	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
 	src := NewPersistenceSource(config.Config{SupportEmail: "old@example.com"}, fac)
-	tx := &txRecordingQueryable{}
+	committed := defaultConfig(config.Config{SupportEmail: "old@example.com"})
+	tx := txRowReturning(t, committed)
 	txCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), tx, nil)
 
 	if _, err := src.Update(txCtx, func(c AppConfig) AppConfig {
@@ -477,7 +531,9 @@ func TestPersistenceSourceDefersMemorySnapshotUntilCommit(t *testing.T) {
 	}
 
 	// ROLLBACK：再次事务内更新后丢弃回调，快照保持提交后的值。
-	rollbackCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), &txRecordingQueryable{}, nil)
+	rollbackBase := committed
+	rollbackBase.Contact.SupportEmail = "new@example.com"
+	rollbackCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), txRowReturning(t, rollbackBase), nil)
 	if _, err := src.Update(rollbackCtx, func(c AppConfig) AppConfig {
 		c.Contact.SupportEmail = "rolled-back@example.com"
 		return c
@@ -487,5 +543,147 @@ func TestPersistenceSourceDefersMemorySnapshotUntilCommit(t *testing.T) {
 	aftercommit.Discard(rollbackCtx)
 	if got := src.Get(context.Background()).Contact.SupportEmail; got != "new@example.com" {
 		t.Fatalf("rolled-back config leaked into memory snapshot: %q", got)
+	}
+}
+
+// TestPersistenceSourceUpdateInTxSeedsMissingRow：新库（app_configs 无行）首次
+// 事务内更新时，先 INSERT ... ON CONFLICT DO NOTHING 落一行基线再 FOR UPDATE
+// 重读，以基线为底稿合并——没有这一步，两个并发「首写」会各自以缺省配置为底稿
+// 整份覆盖（行锁只对已存在的行生效）。
+func TestPersistenceSourceUpdateInTxSeedsMissingRow(t *testing.T) {
+	base := defaultConfig(config.Config{SupportEmail: "seed@example.com"})
+	base.Limits.MaxGroupMembers = 500
+	basePayload, err := json.Marshal(base)
+	if err != nil {
+		t.Fatalf("marshal base config: %v", err)
+	}
+	queries := 0
+	tx := &txRecordingQueryable{
+		rowFunc: func() persistence.Row {
+			queries++
+			if queries == 1 {
+				return &mockRow{err: pgx.ErrNoRows} // 第一次 FOR UPDATE：行不存在
+			}
+			// 占位 INSERT 之后重读：返回刚落下的基线行。
+			return &mockRow{scanFunc: func(dest ...any) error {
+				if len(dest) >= 3 {
+					*dest[0].(*string) = string(basePayload)
+					*dest[1].(*time.Time) = time.Now().UTC()
+					*dest[2].(*string) = ""
+				}
+				return nil
+			}}
+		},
+	}
+	// 带一个「查不到行」的池连接：让加载状态标记为已成功（lastLoadSuccess），
+	// 后面的快照断言才不会被无 DB 场景下每次都重载 loadedCfg 的行为掩盖。
+	mockDB := &mockQueryableDB{
+		queryRowFunc: func(context.Context, string, ...any) persistence.Row { return &mockRow{err: pgx.ErrNoRows} },
+	}
+	fac := &persistence.Factory{Config: persistence.Config{PostgresDSN: "postgres://mock"}, DB: mockDB}
+	src := NewPersistenceSource(config.Config{SupportEmail: "seed@example.com"}, fac)
+	txCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), tx, nil)
+
+	updated, err := src.Update(txCtx, func(c AppConfig) AppConfig {
+		c.Limits.MaxGroupMembers = 4321
+		return c
+	})
+	if err != nil {
+		t.Fatalf("update in tx with missing row: %v", err)
+	}
+	if updated.Contact.SupportEmail != "seed@example.com" || updated.Limits.MaxGroupMembers != 4321 {
+		t.Fatalf("config not merged onto seeded baseline: support_email=%q max_group_members=%d",
+			updated.Contact.SupportEmail, updated.Limits.MaxGroupMembers)
+	}
+	if len(tx.execSQL) != 2 {
+		t.Fatalf("tx exec = %#v, want seed insert + upsert", tx.execSQL)
+	}
+	if !strings.Contains(tx.execSQL[0], "INSERT INTO app_configs") || !strings.Contains(tx.execSQL[0], "DO NOTHING") {
+		t.Fatalf("first exec should seed the missing row, got %q", tx.execSQL[0])
+	}
+	if tx.execSQL[1] != queryAppConfigUpsert {
+		t.Fatalf("second exec = %q, want upsert", tx.execSQL[1])
+	}
+	if len(tx.querySQL) != 2 || !strings.Contains(tx.querySQL[1], "FOR UPDATE") {
+		t.Fatalf("tx queries = %#v, want two FOR UPDATE reads", tx.querySQL)
+	}
+	// 提交前快照不更新（回滚不污染），提交后才写入。
+	if got := src.Get(context.Background()).Limits.MaxGroupMembers; got == 4321 {
+		t.Fatal("uncommitted config leaked into memory snapshot")
+	}
+	aftercommit.Run(txCtx)
+	if got := src.Get(context.Background()).Limits.MaxGroupMembers; got != 4321 {
+		t.Fatalf("committed config missing from memory snapshot: %d", got)
+	}
+}
+
+// blockingTxQueryable 的 QueryRow 阻塞在 entered/release 通道上，用于模拟事务内
+// 「SELECT ... FOR UPDATE 等行锁」。
+type blockingTxQueryable struct {
+	entered chan struct{}
+	release chan struct{}
+	payload []byte
+	once    sync.Once
+}
+
+func (q *blockingTxQueryable) Exec(context.Context, string, ...any) error { return nil }
+
+func (q *blockingTxQueryable) QueryRow(context.Context, string, ...any) persistence.Row {
+	q.once.Do(func() { close(q.entered) })
+	<-q.release
+	return &mockRow{scanFunc: func(dest ...any) error {
+		if len(dest) >= 3 {
+			*dest[0].(*string) = string(q.payload)
+			*dest[1].(*time.Time) = time.Now().UTC()
+			*dest[2].(*string) = ""
+		}
+		return nil
+	}}
+}
+
+func (q *blockingTxQueryable) Query(context.Context, string, ...any) (persistence.Rows, error) {
+	return nil, persistence.ErrNotImplemented
+}
+
+// TestPersistenceSourceUpdateInTxDoesNotBlockReaders：事务内 Update 等行锁时不得
+// 持有 loadMu——否则所有 AppConfig 读取（限流中间件每请求一次）都会排到行锁之后，
+// 阻塞时长取决于对方事务持有时长。
+func TestPersistenceSourceUpdateInTxDoesNotBlockReaders(t *testing.T) {
+	payload, err := json.Marshal(defaultConfig(config.Config{}))
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	tx := &blockingTxQueryable{entered: make(chan struct{}), release: make(chan struct{}), payload: payload}
+	src := NewPersistenceSource(config.Config{}, nil)
+	txCtx := persistence.WithTx(aftercommit.WithHooks(context.Background()), tx, nil)
+
+	updateDone := make(chan error, 1)
+	go func() {
+		_, updateErr := src.Update(txCtx, func(c AppConfig) AppConfig {
+			c.Features.EnableMoments = false
+			return c
+		})
+		updateDone <- updateErr
+	}()
+	select {
+	case <-tx.entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Update 未进入事务内底稿读取（FOR UPDATE）")
+	}
+
+	readDone := make(chan AppConfig, 1)
+	go func() { readDone <- src.Get(context.Background()) }()
+	select {
+	case <-readDone:
+		// 读取路径未被 Update 阻塞：符合预期。
+	case <-time.After(2 * time.Second):
+		close(tx.release)
+		<-updateDone
+		t.Fatal("AppConfig 读取被事务内 Update 阻塞：Update 等行锁时不应持有 loadMu")
+	}
+
+	close(tx.release)
+	if err := <-updateDone; err != nil {
+		t.Fatalf("update in tx: %v", err)
 	}
 }
