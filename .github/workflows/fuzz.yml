@@ -1,0 +1,111 @@
+# ── 夜间 fuzz（cron + 手动触发；不进 PR 门禁）────────────────────────
+# 仓库已有 6 个 Go fuzz 目标（清单与契约见 docs/backend-audit.md「不可信输入
+# fuzz 覆盖」）：客户端完全可控的输入面——cursor 游标、请求体严格解码、幂等 key、
+# 图片元数据剥离。默认 go test 只回放种子语料，只有 -fuzz 才会随机构造输入，
+# 因此用定时任务每周固定跑一轮，尽早暴露 panic / 契约漂移（图片解析历史上出现
+# 过 panic）。
+#
+# 为什么 cron 专属：fuzz 是时间型随机搜索，放 PR 门禁会让每次推送都变慢且结论
+# 不稳定；PR 的固定种子回放仍由 ci.yml 的 go test 覆盖，检查等级不降。cron 只在
+# 默认分支（main）调度，可用 workflow_dispatch 手动验证。
+#
+# 失败取证：job 非 0 退出；Go 会把触发失败的输入写入对应包 testdata/fuzz/<目标>/
+# 目录，末尾步骤把新增语料打印到 job 日志（GitHub 日志保留 90 天，足够复现），
+# 不引入额外 artifact action 依赖。
+
+name: Fuzz (Nightly)
+
+on:
+  schedule:
+    # 每周一 02:00（北京时间）= 周日 18:00 UTC，避开工作日与整点负载高峰。
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false # 夜间长跑不因重复手动触发被取消
+
+permissions:
+  contents: read
+
+jobs:
+  fuzz:
+    name: Go Fuzz Targets
+    runs-on: ubuntu-24.04
+    # 6 个目标 × 30s + 首次编译，正常 5 分钟内完成；留足余量防挂死。
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version: '1.26.11'
+          cache: true
+          cache-dependency-path: backend-go/go.sum
+
+      # 每个目标 30s（单目标引擎预热约 1s，剩余时间足够跑出数万次执行）；串行跑，
+      # 任一目标失败不中断后续目标——一轮里尽量把 6 个面都覆盖到，最后统一非 0 退出。
+      - name: fuzz all targets (30s each)
+        run: |
+          set -uo pipefail
+          cd backend-go
+          # 目标清单与 docs/backend-audit.md「不可信输入 fuzz 覆盖」保持一致；
+          # 新增 Fuzz 目标时必须同步补这里，否则会漏在 CI 之外。
+          targets=(
+            "./internal/platform/cursor/:FuzzDecodeNeverPanics"
+            "./internal/platform/cursor/:FuzzDecodeStringNeverPanics"
+            "./internal/platform/httpx/:FuzzDecodeStrictJSON"
+            "./internal/platform/httpx/:FuzzRequireEmptyObject"
+            "./internal/platform/idempotency/:FuzzRequireKey"
+            "./internal/modules/media/:FuzzStripImageMetadata"
+          )
+          failed=0
+          for entry in "${targets[@]}"; do
+            pkg="${entry%%:*}"
+            name="${entry##*:}"
+            echo "::group::fuzz ${name} (${pkg}, 30s)"
+            # -run=^$ 跳过普通测试（只跑 fuzz）；-fuzz 锚定单个目标；失败即非 0。
+            if go test -run=^$ -fuzz="^${name}$" -fuzztime=30s "${pkg}" 2>&1 | tee "/tmp/fuzz-${name}.log"; then
+              echo "PASS ${name}"
+            else
+              echo "::error::fuzz ${name} 失败（包 ${pkg}，日志 /tmp/fuzz-${name}.log）"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::存在失败的 fuzz 目标，见上方 group 与日志"
+          else
+            echo "全部 ${#targets[@]} 个 fuzz 目标通过（每个 30s）"
+          fi
+          exit "$failed"
+
+      # 失败取证：Go 把触发失败的输入写入 testdata/fuzz/<目标>/（未跟踪文件），
+      # 逐份打印内容（Go fuzz 语料的文本格式，可直接粘贴到本地复现）。
+      - name: dump failing fuzz corpus
+        if: failure()
+        run: |
+          set -uo pipefail
+          cd backend-go
+          git status --porcelain || true
+          # 用 ls-files --others 列未跟踪文件：git status 默认会把未跟踪目录折叠成
+          # 一行目录路径（首次失败时 testdata/fuzz/<目标>/ 整目录都是新的），逐个文件
+          # 输出才能直接 cat 语料内容。
+          new_files="$(git ls-files --others --exclude-standard | grep 'testdata/fuzz/' || true)"
+          if [ -z "$new_files" ]; then
+            echo '未发现新增 fuzz 语料文件（失败可能来自编译/环境问题，见上方日志）'
+            exit 0
+          fi
+          for f in $new_files; do
+            echo "--- ${f} ---"
+            sed -n '1,60p' "$f"
+          done
+
+      - name: print fuzz logs on failure
+        if: failure()
+        run: |
+          for f in /tmp/fuzz-*.log; do
+            [ -e "$f" ] || continue
+            echo "===== $f ====="
+            tail -60 "$f"
+          done
