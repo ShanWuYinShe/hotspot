@@ -15,12 +15,21 @@
 //                    字体/尺寸一变就会漂移，必须统一
 //   header-center    页头标题与返回按钮同轴：单行标题=字形中心对齐按钮中心；
 //                    标题+副标题两行块=整块中心对齐按钮中心（<=2px）
+//   card-chip-edge / card-chip-inset-asym / card-text-edge  卡片右上角时间胶囊/文字不得贴边
+//   overlay-missing-glass 图片叠字卡片（图片 >80% 铺底）有白字或黑渐变却没有玻璃条
+//   overlay-glass-theme   叠字卡片的玻璃条颜色必须与卡片所在主题匹配（浅色主题白条 / 深色主题深条）
+//   overlay-text-theme    叠字卡片正文/计数颜色必须与主题匹配（浅色主题深字 / 深色主题浅字）
+//   overlay-chip-text     叠字卡片黑色胶囊内文字必须反白
+//   nav-item-indent       侧边栏导航项 x 必须同一基准（激活项不得缩进，<=2px）
 //
 // 返回值：{ summary, violations, warnings }（violations 为空即通过）
 // ============================================================================
 var ROW_LIMIT = 2.0;      // 同行字形中心允许偏差（px）
 var HEADER_LIMIT = 2.0;   // 页头中心允许偏差（px）
 var MAX_ITEMS = 160;      // 每类最多输出条数，避免超出 MCP 返回值上限
+var NAV_LIMIT = 2.0;      // 侧边栏导航项 x 允许偏差（px）
+var OVERLAY_COVER = 0.8;  // 叠字卡片内图片覆盖率阈值
+var NAV_LABELS = ['首页', '附近的人', '附近的群组', '附近瞬间', '消息', '我的瞬间', '我的群组', '关系', '管理后台'];
 
 function absPos(n) {
   var x = 0, y = 0, c = n;
@@ -54,9 +63,100 @@ function isPillRect(n) {
 
 function round1(v) { return Math.round(v * 10) / 10; }
 
+function relLum(c) { return c.r * 0.299 + c.g * 0.587 + c.b * 0.114; }
+
+function isWhiteFill(n) {
+  var f = (n.fills || [])[0];
+  if (!f || f.type !== 'SOLID' || !f.color) return false;
+  return f.color.r > 0.93 && f.color.g > 0.93 && f.color.b > 0.93;
+}
+
+function isGlassBar(n) {
+  if (n.type !== 'RECTANGLE') return false;
+  var f = (n.fills || [])[0];
+  if (!f || f.type !== 'SOLID' || !f.color) return false;
+  var e = (n.effects || [])[0];
+  return !!(e && e.type === 'BACKGROUND_BLUR');
+}
+
+function isBlackPillRect(n) {
+  if (n.type !== 'RECTANGLE') return false;
+  var f = (n.fills || [])[0];
+  if (!f || f.type !== 'SOLID' || !f.color) return false;
+  if (f.opacity === undefined || f.opacity < 0.25 || f.opacity > 0.85) return false;
+  return f.color.r < 0.25 && f.color.g < 0.25 && f.color.b < 0.25 && n.width < 220 && n.height < 40;
+}
+
+// 节点是否被某个黑胶囊背景覆盖（胶囊与文字在生成稿里是兄弟节点）
+function insideAnyPill(node, pills) {
+  for (var i = 0; i < pills.length; i++) {
+    var p = pills[i];
+    if (node.x >= p.x - 6 && node.x + node.width <= p.x + p.width + 6 &&
+        node.y >= p.y - 4 && node.y + node.height <= p.y + p.height + 4) return true;
+  }
+  return false;
+}
+
+// 主题判定：取变量的「浅色/深色」模式集合，向上找最近一层已解析的变量模式
+var tokenModes = {};
+try {
+  var varColls = await figma.variables.getLocalVariableCollectionsAsync();
+  for (var vci = 0; vci < varColls.length; vci++) {
+    var vc2 = varColls[vci];
+    var hasLight = false, hasDark = false;
+    for (var vmi = 0; vmi < vc2.modes.length; vmi++) {
+      if (/light/i.test(vc2.modes[vmi].name)) hasLight = true;
+      if (/dark/i.test(vc2.modes[vmi].name)) hasDark = true;
+    }
+    if (!hasLight || !hasDark) continue;
+    tokenModes[vc2.id] = {};
+    for (var vmi2 = 0; vmi2 < vc2.modes.length; vmi2++) tokenModes[vc2.id][vc2.modes[vmi2].modeId] = vc2.modes[vmi2].name;
+  }
+} catch (e) { tokenModes = {}; }
+
+function themeOf(node) {
+  var c = node;
+  while (c && c.type !== 'PAGE') {
+    var modes = c.resolvedVariableModes || {};
+    for (var cid in tokenModes) {
+      if (!tokenModes.hasOwnProperty(cid)) continue;
+      var mid = modes[cid];
+      if (mid && tokenModes[cid][mid]) return tokenModes[cid][mid];
+    }
+    c = c.parent;
+  }
+  return '';
+}
+
+function modeOfX(items) {
+  var counts = {};
+  for (var i = 0; i < items.length; i++) {
+    var k = Math.round(items[i].x);
+    counts[k] = (counts[k] || 0) + 1;
+  }
+  var base = null, best = 0;
+  for (var k2 in counts) {
+    if (counts.hasOwnProperty(k2) && counts[k2] > best) { best = counts[k2]; base = Number(k2); }
+  }
+  return base;
+}
+
+function isOverlayImageCard(n) {
+  if (n.type !== 'FRAME' || n.visible === false) return false;
+  if (!(n.width >= 120 && n.width <= 820)) return false;
+  if (!(n.height >= 120 && n.height <= 560)) return false;
+  var kids = n.children || [];
+  for (var i = 0; i < kids.length; i++) {
+    var k = kids[i];
+    var f = (k.fills || [])[0];
+    if (k.type === 'RECTANGLE' && f && f.type === 'IMAGE' && k.width >= n.width * OVERLAY_COVER && k.height >= n.height * OVERLAY_COVER) return true;
+  }
+  return false;
+}
+
 var violations = [];
 var warnings = [];
-var stats = { pages: 0, screens: 0, rows: 0, headers: 0, chips: 0 };
+var stats = { pages: 0, screens: 0, rows: 0, headers: 0, chips: 0, overlays: 0, navGroups: 0 };
 
 var allPages = [];
 for (var pi = 0; pi < figma.root.children.length; pi++) {
@@ -285,6 +385,154 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
         }
       }
     }
+    // ---------- 规则 5：图片叠字卡片的玻璃条与主题一致性（设计规范页除外） ----------
+    if (page.name.indexOf('01') < 0) {
+      var overlayCards = fr.findAll(isOverlayImageCard);
+      for (var ofi = 0; ofi < overlayCards.length; ofi++) {
+        var ocard = overlayCards[ofi];
+        var okids = (ocard.children || []).filter(function (k) { return k.visible !== false; });
+        var bars = [];
+        var grads = 0;
+        var pills2 = [];
+        for (var oki = 0; oki < okids.length; oki++) {
+          var ok = okids[oki];
+          if (isGlassBar(ok)) bars.push(ok);
+          var okf = (ok.fills || [])[0];
+          if (ok.type === 'RECTANGLE' && okf && String(okf.type).indexOf('GRADIENT') === 0) grads++;
+          if (isBlackPillRect(ok)) pills2.push(ok);
+        }
+        stats.overlays++;
+        var otheme = themeOf(ocard);
+        var oDark = /dark/i.test(otheme);
+        var wTexts = [];
+        var otexts = ocard.findAll(function (n) { return n.type === 'TEXT' && n.visible !== false; });
+        for (var oti = 0; oti < otexts.length; oti++) {
+          if (isWhiteFill(otexts[oti]) && !insideAnyPill(otexts[oti], pills2)) wTexts.push(otexts[oti]);
+        }
+        if (!bars.length) {
+          // 仅有装饰性渐变（无叠字）不算问题，只拦「白字压图却没有承托」的情况
+          if (wTexts.length > 0 && violations.length < MAX_ITEMS) {
+            violations.push({
+              rule: 'overlay-missing-glass',
+              page: page.name,
+              screen: fr.name,
+              card: ocard.id + '|' + round1(ocard.width) + 'x' + round1(ocard.height),
+              theme: otheme,
+              whiteTexts: wTexts.length,
+              gradients: grads,
+              hint: '图片叠字卡片缺玻璃条（图片 >80% 铺底且有白字/黑渐变）：浅色主题=白 62% + 深字，深色主题=深色 66% + 浅字，模糊 18'
+            });
+          }
+          continue;
+        }
+        for (var bari = 0; bari < bars.length; bari++) {
+          var bf = bars[bari].fills[0];
+          var bLum = relLum(bf.color);
+          if ((bLum < 0.5) !== oDark && violations.length < MAX_ITEMS) {
+            violations.push({
+              rule: 'overlay-glass-theme',
+              page: page.name,
+              screen: fr.name,
+              card: ocard.id,
+              bar: bars[bari].id,
+              theme: otheme,
+              luminance: round1(bLum),
+              hint: oDark ? '深色主题下玻璃条应为深色（建议 #0B111C 66% + 模糊 18）' : '浅色主题下玻璃条应为浅色（建议白 62% + 模糊 18）'
+            });
+          }
+        }
+        for (var otj = 0; otj < otexts.length; otj++) {
+          var ot = otexts[otj];
+          var otf = (ot.fills || [])[0];
+          if (!otf || otf.type !== 'SOLID' || !otf.color) continue;
+          var otLum = relLum(otf.color);
+          if (insideAnyPill(ot, pills2)) {
+            if (otLum < 0.7 && violations.length < MAX_ITEMS) {
+              violations.push({
+                rule: 'overlay-chip-text',
+                page: page.name,
+                screen: fr.name,
+                card: ocard.id,
+                text: ot.id + '|' + String(ot.characters).slice(0, 8),
+                luminance: round1(otLum),
+                hint: '黑色胶囊内文字必须反白（content-inverse），当前偏暗'
+              });
+            }
+            continue;
+          }
+          if ((otLum > 0.6) !== oDark && violations.length < MAX_ITEMS) {
+            violations.push({
+              rule: 'overlay-text-theme',
+              page: page.name,
+              screen: fr.name,
+              card: ocard.id,
+              text: ot.id + '|' + String(ot.characters).slice(0, 8),
+              theme: otheme,
+              luminance: round1(otLum),
+              hint: oDark ? '深色主题叠字应为浅色（正文 #E8F1E9 / 次级 #A8BDAE）' : '浅色主题叠字应为深色（正文 #16233A / 次级 #52647F）'
+            });
+          }
+        }
+      }
+
+      // ---------- 规则 6：桌面侧边栏导航项对齐（激活项不得缩进） ----------
+      if (fr.width >= 1100) {
+        var sPos = absPos(fr);
+        var navTexts = [];
+        var navIcons = [];
+        var navAll = fr.findAll(function (n) { return n.visible !== false; });
+        for (var nti = 0; nti < navAll.length; nti++) {
+          var nt = navAll[nti];
+          if (nt.type === 'TEXT') {
+            if (NAV_LABELS.indexOf(String(nt.characters || '').trim()) < 0) continue;
+            var ntb = renderBox(nt);
+            if (!ntb) continue;
+            var ntx = ntb.x - sPos.x, nty = ntb.y - sPos.y;
+            if (ntx > 240 || nty > 700) continue;
+            navTexts.push({ node: nt, x: ntx, y: nty, text: String(nt.characters) });
+          } else if (nt.type === 'FRAME' && nt.width >= 15 && nt.width <= 21 && Math.abs(nt.width - nt.height) <= 3) {
+            var nib = renderBox(nt);
+            if (!nib) continue;
+            var nix = nib.x - sPos.x, niy = nib.y - sPos.y;
+            if (nix > 200 || niy > 700) continue;
+            navIcons.push({ node: nt, x: nix });
+          }
+        }
+        if (navTexts.length >= 4) {
+          stats.navGroups++;
+          var navBase = modeOfX(navTexts);
+          for (var ntj = 0; ntj < navTexts.length; ntj++) {
+            var ndx = round1(navTexts[ntj].x - navBase);
+            if (Math.abs(ndx) > NAV_LIMIT && violations.length < MAX_ITEMS) {
+              violations.push({
+                rule: 'nav-item-indent',
+                page: page.name,
+                screen: fr.name,
+                item: navTexts[ntj].node.id + '|' + navTexts[ntj].text,
+                offset: ndx,
+                hint: '侧边栏导航项缩进：激活项文字/图标被右移，应与普通项同一 x 基准（文字 x=基准，图标 x=基准-35）'
+              });
+            }
+          }
+        }
+        if (navIcons.length >= 5) {
+          var iconBase = modeOfX(navIcons);
+          for (var nij = 0; nij < navIcons.length; nij++) {
+            var idx = round1(navIcons[nij].x - iconBase);
+            if (Math.abs(idx) > NAV_LIMIT && violations.length < MAX_ITEMS) {
+              violations.push({
+                rule: 'nav-item-indent',
+                page: page.name,
+                screen: fr.name,
+                item: navIcons[nij].node.id + '|icon',
+                offset: idx,
+                hint: '侧边栏导航图标缩进：同一列图标 x 必须一致（与文字共用同一基准）'
+              });
+            }
+          }
+        }
+      }
+    }
   }
 }
 
@@ -301,10 +549,12 @@ return {
     checkedRows: stats.rows,
     checkedHeaders: stats.headers,
     checkedChips: stats.chips,
+    checkedOverlayCards: stats.overlays,
+    checkedNavGroups: stats.navGroups,
     violations: violations.length,
     warnings: warnings.length,
     byRule: { violations: countBy(violations, 'rule'), warnings: countBy(warnings, 'rule') },
-    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT, cardChipInset: 6 },
+    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT, cardChipInset: 6, navIndent: NAV_LIMIT, overlayCover: OVERLAY_COVER },
     pass: violations.length === 0
   },
   violations: violations,
