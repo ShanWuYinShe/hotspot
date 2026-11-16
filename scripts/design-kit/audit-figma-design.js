@@ -21,6 +21,8 @@
 //   overlay-text-theme    叠字卡片正文/计数颜色必须与主题匹配（浅色主题深字 / 深色主题浅字）
 //   overlay-chip-text     叠字卡片黑色胶囊内文字必须反白
 //   nav-item-indent       侧边栏导航项 x 必须同一基准（激活项不得缩进，<=2px）
+//   card-text-overflow    圆角卡片内文案渲染宽度不得超出卡片右内边距，也不得压住右侧行内图标
+//   card-inner-band       圆角卡片内不应出现方形（圆角 0）行带矩形（提示）
 //
 // 返回值：{ summary, violations, warnings }（violations 为空即通过）
 // ============================================================================
@@ -29,6 +31,7 @@ var HEADER_LIMIT = 2.0;   // 页头中心允许偏差（px）
 var MAX_ITEMS = 160;      // 每类最多输出条数，避免超出 MCP 返回值上限
 var NAV_LIMIT = 2.0;      // 侧边栏导航项 x 允许偏差（px）
 var OVERLAY_COVER = 0.8;  // 叠字卡片内图片覆盖率阈值
+var CARD_PAD = 16;        // 圆角卡片右内边距（文案可用宽度基准）
 var NAV_LABELS = ['首页', '附近的人', '附近的群组', '附近瞬间', '消息', '我的瞬间', '我的群组', '关系', '管理后台'];
 
 function absPos(n) {
@@ -156,7 +159,7 @@ function isOverlayImageCard(n) {
 
 var violations = [];
 var warnings = [];
-var stats = { pages: 0, screens: 0, rows: 0, headers: 0, chips: 0, overlays: 0, navGroups: 0 };
+var stats = { pages: 0, screens: 0, rows: 0, headers: 0, chips: 0, overlays: 0, navGroups: 0, cardTexts: 0 };
 
 var allPages = [];
 for (var pi = 0; pi < figma.root.children.length; pi++) {
@@ -533,6 +536,84 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
         }
       }
     }
+
+    // ---------- 规则 7：卡片内文案不得溢出卡片 / 不得压住右侧行内图标 ----------
+    if (page.name.indexOf('01') < 0) {
+      var cardBoxes = fr.findAll(function (n) {
+        if (n.type !== 'RECTANGLE' || n.visible === false) return false;
+        if (typeof n.cornerRadius !== 'number' || n.cornerRadius < 16) return false;
+        if (n.width < 200 || n.width > 420) return false;
+        if (n.height < 100 || n.height > 700) return false;
+        return true;
+      });
+      var rowIcons = fr.findAll(function (n) {
+        return n.type === 'FRAME' && n.visible !== false && n.width >= 10 && n.width <= 16 && Math.abs(n.width - n.height) <= 2;
+      });
+      for (var cvi = 0; cvi < cardBoxes.length; cvi++) {
+        var vcard = cardBoxes[cvi];
+        var vcb = renderBox(vcard);
+        if (!vcb) continue;
+        var vTexts = fr.findAll(function (n) { return n.type === 'TEXT' && n.visible !== false; });
+        for (var vti = 0; vti < vTexts.length; vti++) {
+          var vt = vTexts[vti];
+          if (vt.textAlignHorizontal && vt.textAlignHorizontal !== 'LEFT') continue;
+          var vtb = renderBox(vt);
+          if (!vtb) continue;
+          if (vtb.x < vcb.x + 4 || vtb.x > vcb.x + vcb.w - 2) continue;
+          if (vtb.y < vcb.y - 1 || vtb.y > vcb.y + vcb.h) continue;
+          stats.cardTexts++;
+          // 默认允许到达卡片右缘；若右侧同行有 10-16px 图标，再让出图标宽度 + 4px 间距
+          var limit = vcb.x + vcb.w - 2;
+          for (var vri = 0; vri < rowIcons.length; vri++) {
+            if (rowIcons[vri].parent && vt.parent && rowIcons[vri].parent.id !== vt.parent.id) continue;
+            var ric = renderBox(rowIcons[vri]);
+            if (!ric) continue;
+            if (ric.x <= vtb.x) continue;
+            if (Math.abs(ric.cy - vtb.cy) > 8) continue;
+            var iconLimit = ric.x - 4;
+            if (iconLimit < limit) limit = iconLimit;
+          }
+          var vRight = vtb.x + vtb.w;
+          if (vRight > limit + 2 && violations.length < MAX_ITEMS) {
+            violations.push({
+              rule: 'card-text-overflow',
+              page: page.name,
+              screen: fr.name,
+              card: vcard.id,
+              text: vt.id + '|' + String(vt.characters).slice(0, 14),
+              overflow: round1(vRight - limit),
+              hint: '卡片内文案渲染超出可用宽度（卡片右内边距 ' + CARD_PAD + 'px，或压住右侧行内图标）：应缩短文案并加省略号，或开启换行/截断'
+            });
+          }
+        }
+        // 卡片内方形行带（r<=2 的实心矩形）——生成端常见噪音
+        var vKids = fr.children;
+        for (var vki = 0; vki < vKids.length; vki++) {
+          var vk = vKids[vki];
+          if (vk.visible === false || vk.type !== 'RECTANGLE' || vk.id === vcard.id) continue;
+          if (typeof vk.cornerRadius === 'number' && vk.cornerRadius > 2) continue;
+          var vf = (vk.fills || [])[0];
+          if (!vf || vf.type !== 'SOLID') continue;
+          var vkb = renderBox(vk);
+          if (!vkb) continue;
+          if (vkb.w < vcard.width * 0.55 || vkb.h < 24) continue;
+          if (vkb.x < vcb.x + 1 || vkb.x + vkb.w > vcb.x + vcb.w - 1) continue;
+          if (vkb.y < vcb.y + 1 || vkb.y + vkb.h > vcb.y + vcb.h - 1) continue;
+          if (warnings.length < MAX_ITEMS) {
+            warnings.push({
+              rule: 'card-inner-band',
+              page: page.name,
+              screen: fr.name,
+              card: vcard.id,
+              rect: vk.id + '|' + round1(vkb.w) + 'x' + round1(vkb.h),
+              insetL: round1(vkb.x - vcb.x),
+              insetR: round1(vcb.x + vcb.w - (vkb.x + vkb.w)),
+              hint: '圆角卡片内出现方形行带矩形（圆角 0、左右内缩不对称）：要么移除改为扁平列表，要么统一圆角 12 + 左右内缩相同'
+            });
+          }
+        }
+      }
+    }
   }
 }
 
@@ -551,10 +632,11 @@ return {
     checkedChips: stats.chips,
     checkedOverlayCards: stats.overlays,
     checkedNavGroups: stats.navGroups,
+    checkedCardTexts: stats.cardTexts,
     violations: violations.length,
     warnings: warnings.length,
     byRule: { violations: countBy(violations, 'rule'), warnings: countBy(warnings, 'rule') },
-    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT, cardChipInset: 6, navIndent: NAV_LIMIT, overlayCover: OVERLAY_COVER },
+    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT, cardChipInset: 6, navIndent: NAV_LIMIT, overlayCover: OVERLAY_COVER, cardPad: CARD_PAD },
     pass: violations.length === 0
   },
   violations: violations,
