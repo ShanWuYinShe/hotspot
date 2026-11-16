@@ -15,6 +15,7 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
 - 批量重构表格、列表或卡片元素并确保多列中心线像素级对齐。
 - 改动完成后通过 MCP 截图进行视觉闭环验收。
 - 设计稿同步完成后跑巡检门禁，确认同行标签基线、页头标题居中无偏差。
+- 需要在 Figma 版本历史留下里程碑记录（版本名 + 变更摘要）。
 
 ## 规则 / 做法
 
@@ -174,8 +175,37 @@ bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
 - `violations` 条目含 `rule`、`page`、`screen`、节点 id、偏差值与 `hint`；修完重跑，直到 `violations` 为空。
 - `warnings` 不阻塞同步，但同类（如 `tab-row-va-mixed`）应在下一次改动中收敛，避免后续漂移。
 
+### 5. 写版本历史（Version History）
+
+同步或批量修复完成后，用脚本在 Figma 版本历史留下里程碑（不需要桌面 UI）：
+
+```js
+// vh.js —— 通过 use-figma.sh 在服务端沙盒执行
+var now = new Date();
+var timeStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' +
+              String(now.getHours()).padStart(2, '0') + ':' +
+              String(now.getMinutes()).padStart(2, '0');
+await figma.saveVersionHistoryAsync(
+  '细节精修版 · <主题> (' + timeStr + ')',
+  '【本次版本更新内容摘要】\n\n1. <模块>：<要点>\n2. <模块>：<要点>'
+);
+return { ok: true, title: '...' };
+```
+
+```bash
+FILE_KEY="<fileKey>" \
+SESSION_ID="<UUID>" \
+bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
+  vh.js "save version history" "resource:figma-use"
+```
+
+- 标题沿用 design-kit 插件同步时的命名：`细节精修版 · <主题> (M月D日 HH:MM)`；
+- 描述用「1. 模块：要点」结构，一条记录覆盖本轮全部改动，含巡检结论（0 违规）；
+- 通道限制：Figma REST API 的 `/v1/files/:key/versions` 只读、MCP 工具列表里没有版本工具，唯一可写通道就是插件 API `saveVersionHistoryAsync`（选区外无需桌面端插件）。
+
 ## 陷阱 / 限制
 
+- **陷阱：远程 MCP 缺 `X-Figma-Plugin-Bundle` 头会落到受限插件运行时**：`use_figma` 的默认插件 bundle 缺少部分编辑器 API（例：`figma.saveVersionHistoryAsync` 报 `not a supported API`）。请求头必须带 `X-Figma-Plugin-Bundle: figma_prod@2_2_208`（与官方 Gemini / Claude 客户端一致）；本地 `.workwork/figma-mcp/mcp.ts` 已内置该头并支持 `FIGMA_PLUGIN_BUNDLE` 环境变量覆盖。遇到「编辑器 API 不存在」先核对这个头，不要改用桌面 UI 自动化绕行。
 - **陷阱：`figma.mixed` Symbol 类型与数值比较**：Figma 中多角不同的矩形其 `cornerRadius` 为 `Symbol(figma.mixed)`。执行 `n.cornerRadius > 3` 会触发致命异常 `cannot convert symbol to number`。筛选条件必须加类型防御：`typeof n.cornerRadius === 'number' && n.cornerRadius > 3`。
 - **陷阱：`textAlignVertical` 触发字体未加载报错**：很多人误以为只有改 `characters` 才需要加载字体，实际上修改 `textAlignVertical` 也会促使引擎重算排版，遇到未加载字形会直接抛错。必须在修改前先为文本赋值已加载的字体（`Noto Sans SC`）。
 - **陷阱：遍历删除引发级联失效**：删除父节点后，其包含的所有子节点会被 Figma 底层自动级联销毁。如果遍历列表仍引用了已被销毁的子节点，会抛出 `The node with id "..." does not exist`。必须按树层级自顶向下整块删除，或将遍历逻辑包裹 `try { node.remove(); } catch (e) {}`。
