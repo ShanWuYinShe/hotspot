@@ -56,7 +56,7 @@ function round1(v) { return Math.round(v * 10) / 10; }
 
 var violations = [];
 var warnings = [];
-var stats = { pages: 0, screens: 0, rows: 0, headers: 0 };
+var stats = { pages: 0, screens: 0, rows: 0, headers: 0, chips: 0 };
 
 var allPages = [];
 for (var pi = 0; pi < figma.root.children.length; pi++) {
@@ -203,6 +203,88 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
         }
       }
     }
+
+    // ---------- 规则 4：卡片右上角时间胶囊不得贴边/溢出 ----------
+    var cardFrames = fr.findAll(function (n) {
+      return n.type === 'FRAME' && n.visible !== false && n.width >= 150 && n.width <= 820 && n.height >= 120 && n.height <= 480;
+    });
+    for (var cfi = 0; cfi < cardFrames.length; cfi++) {
+      var card = cardFrames[cfi];
+      var ckids = (card.children || []).filter(function (k) { return k.visible !== false; });
+      var chipRects = [];
+      for (var cki = 0; cki < ckids.length; cki++) {
+        var chip = ckids[cki];
+        if (chip.type !== 'RECTANGLE') continue;
+        if (typeof chip.cornerRadius !== 'number' || chip.cornerRadius < 6) continue;
+        if (!(chip.height >= 17 && chip.height <= 30)) continue;
+        if (!(chip.width >= 36 && chip.width <= 140)) continue;
+        if (!(chip.x > card.width * 0.55)) continue;
+        if (!(chip.y >= 4 && chip.y <= 20)) continue;
+        var chipText = null;
+        for (var cti = 0; cti < ckids.length; cti++) {
+          var cand2 = ckids[cti];
+          if (cand2.type !== 'TEXT' || !String(cand2.characters || '').trim()) continue;
+          if (cand2.x >= chip.x - 8 && cand2.x <= chip.x + chip.width && cand2.y >= chip.y - 6 && cand2.y <= chip.y + chip.height + 6) { chipText = cand2; break; }
+        }
+        if (!chipText) continue;
+        chipRects.push(chip);
+        stats.chips++;
+        var rightGap = round1(card.width - (chip.x + chip.width));
+        var topGap = round1(chip.y);
+        if (rightGap < 6 && violations.length < MAX_ITEMS) {
+          violations.push({
+            rule: 'card-chip-edge',
+            page: page.name,
+            screen: fr.name,
+            card: card.id,
+            chip: chip.id + '|' + String(chipText.characters).slice(0, 10),
+            cardW: round1(card.width),
+            rightGap: rightGap,
+            topGap: topGap,
+            hint: '卡片右上角时间胶囊右缘贴边/溢出（应内缩到与上内边距对称，建议 10px）：chip.x = card.width - inset - chip.width，文字同步左移'
+          });
+        } else if (Math.abs(rightGap - topGap) > 3 && warnings.length < MAX_ITEMS) {
+          warnings.push({
+            rule: 'card-chip-inset-asym',
+            page: page.name,
+            screen: fr.name,
+            card: card.id,
+            chip: chip.id,
+            rightGap: rightGap,
+            topGap: topGap,
+            hint: '时间胶囊内边距不对称（右 ' + rightGap + ' vs 上 ' + topGap + '），建议统一为相同 inset'
+          });
+        }
+      }
+      // 卡片右上角纯文字同样不得贴边
+      for (var pti = 0; pti < ckids.length; pti++) {
+        var pt = ckids[pti];
+        if (pt.type !== 'TEXT' || !String(pt.characters || '').trim()) continue;
+        if (pt.y > 40) continue;
+        var ptBox = renderBox(pt);
+        if (!ptBox) continue;
+        var cardPos = absPos(card);
+        var textGap = round1((cardPos.x + card.width) - (ptBox.x + ptBox.w));
+        if (textGap >= 6) continue;
+        var insideChip = false;
+        for (var cii = 0; cii < chipRects.length; cii++) {
+          var cr = chipRects[cii];
+          if (pt.x >= cr.x - 8 && pt.x <= cr.x + cr.width + 8 && pt.y >= cr.y - 6 && pt.y <= cr.y + cr.height + 6) { insideChip = true; break; }
+        }
+        if (insideChip) continue;
+        if (violations.length < MAX_ITEMS) {
+          violations.push({
+            rule: 'card-text-edge',
+            page: page.name,
+            screen: fr.name,
+            card: card.id,
+            text: pt.id + '|' + String(pt.characters).slice(0, 10),
+            rightGap: textGap,
+            hint: '卡片右上角文字贴边（右内边距 < 6px），应内缩到与卡片内边距一致'
+          });
+        }
+      }
+    }
   }
 }
 
@@ -218,10 +300,11 @@ return {
     screens: stats.screens,
     checkedRows: stats.rows,
     checkedHeaders: stats.headers,
+    checkedChips: stats.chips,
     violations: violations.length,
     warnings: warnings.length,
     byRule: { violations: countBy(violations, 'rule'), warnings: countBy(warnings, 'rule') },
-    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT },
+    thresholds: { rowSpread: ROW_LIMIT, headerCenter: HEADER_LIMIT, cardChipInset: 6 },
     pass: violations.length === 0
   },
   violations: violations,
