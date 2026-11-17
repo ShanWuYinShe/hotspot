@@ -1,6 +1,6 @@
 ---
 name: hotspot-figma-automation
-description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、全站配色 token 化（叠字卡片玻璃条/管理后台/图标随 6 个颜色模式自适应）、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
+description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、全站配色 token 化（叠字卡片玻璃条/管理后台/图标随 6 个颜色模式自适应）、细节巡检（中文缺字/文字重叠/文字溢出/底部裁切）、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
 ---
 
 # hotspot-figma-automation
@@ -183,6 +183,21 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
   - 不要同时对 TEXT 写 `characters`：字体未加载会抛 `Cannot write to node with unloaded font`；只改 fills 是安全的。
 - **主题自适应验证**：对代表屏临时 `setExplicitVariableModeForCollection(coll, '5:3')`（forest-dark 等）→ 截图确认玻璃条/文字/药丸/后台表格全部翻转 → 再切回原模式（5:2 等），过程中不要留下残留模式。
 - **收口标准**：巡检 `hardcoded-color` / `overlay-glass-theme` / `overlay-text-theme` 全部 0 违规；三端抽样截图在浅色与深色下均无不可读文字、无刺眼残留亮/暗块。
+
+### 22. 细节巡检与修复（文字重叠 / 裁切 / 字体 / 溢出）
+
+- **巡检已覆盖的细节规则**（`audit-figma-design.js`，summary 含 `checkedTexts` / `checkedColorPaints`）：
+  - `hardcoded-color`：颜色未绑定变量；
+  - `cjk-font-missing`：中文文案字体不是 Noto Sans SC / PingFang SC；
+  - `text-overflow-box`：文案渲染尺寸超出自身文本框（NONE/HEIGHT 自适应）> 2px；
+  - `text-row-overlap`：同父级「标题 + 副标题」字盒纵向重叠（行距小于字高）；
+  - `screen-cut`：直接子元素被屏幕底边裁切（bottom > screenH + 1）。
+- **CJK 字体修复**：全站遍历 TEXT，含中文且 family 非 Noto/PingFang 的，按原 style 映射到 Noto Sans SC（Bold→Bold、Medium/SemiBold→Medium、其余→Regular）；Inter 里的中文会字距错乱或显示缺字。
+- **标题/副标题重叠修复**：同父级、|Δx| ≤ 2、第二行 fontSize ≤ 11 且纵向间距小于第一行字高时，把第二行 `y = 第一行.y + 第一行.height + 1`；一般行距 52px 内安全。
+- **屏幕底裁切修复**：只处理真正越界的元素（bottom > screenH + 1），上移后留 8~16px 安全边距。**不要**按 `bottom >= screenH-1` 批量上移（会把贴底 TabBar/输入栏/操作栏全部抬起），也不要事后对已贴底元素做统一 flush 还原（会把底部簇内部的相对间距改坏，引出一批新的重叠）；改完逐屏截图确认。
+- **文字横向溢出修复**：优先截断文案；若节点是 PingFang（沙盒不可加载，不能改 characters），新建同位置同字号的 Noto Sans SC 文本、复制 fills/行高，截断到文本框宽度内，再把原节点 `visible = false`。
+- **文本框高度滞后**（渲染高度只超 2~3px）：加载字体后重设 `characters` 并按 `NONE` → `HEIGHT` 重排即可。
+- **判定口径**：滚动内容被固定 TabBar/评论输入栏覆盖、红点紧贴文字等属于正常层级叠压，不算缺陷；只修同父级行内相撞、越界裁切、缺字与溢出。
 
 ## 命令 / 脚本通道
 
