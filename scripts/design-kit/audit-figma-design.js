@@ -304,18 +304,23 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
       violations.push({ rule: 'text-row-overlap', page: page.name, screen: fr.name, count: overlapPairs.length, samples: overlapPairs.slice(0, 6), hint: '同一父级下标题/副标题字盒重叠（行距小于字高）：把副标题下移或缩小行高，避免文字相撞' });
     }
 
-    // ---------- 规则 13：直接子元素被屏幕底边裁切 ----------
+    // ---------- 规则 13：底部固定容器被屏幕裁切（滚动内容贴底裁切属正常滚动状态，不检查） ----------
     var kids0 = fr.children || [];
     var cutSamples = [];
+    var frAbs0 = absPos(fr);
     for (var cki = 0; cki < kids0.length; cki++) {
       var ck0 = kids0[cki];
-      if (ck0.visible === false) continue;
-      var ckh = ck0.height || 0;
-      if (ckh < 8 || ckh > 80) continue;
-      if (ck0.y < fr.height && ck0.y + ckh > fr.height + 1) cutSamples.push(ck0.id + '|' + String(ck0.name).slice(0, 16) + '|bottom=' + Math.round(ck0.y + ckh) + '>screenH=' + Math.round(fr.height));
+      if (ck0.visible === false || ck0.type !== 'FRAME') continue;
+      if (ck0.width < fr.width * 0.5) continue;
+      if (ck0.height > 200) continue; // 高容器多为滚动内容列，贴底裁切属正常滚动状态
+      var ckb = null;
+      try { ckb = ck0.absoluteBoundingBox; } catch (e) { ckb = null; }
+      if (!ckb) continue;
+      var overB = (ckb.y + ckb.height) - (frAbs0.y + fr.height);
+      if (overB > 1) cutSamples.push(ck0.id + '|' + String(ck0.name).slice(0, 16) + '|bottom 超出屏幕 ' + Math.round(overB) + 'px');
     }
     if (cutSamples.length && violations.length < MAX_ITEMS) {
-      violations.push({ rule: 'screen-cut', page: page.name, screen: fr.name, count: cutSamples.length, samples: cutSamples.slice(0, 6), hint: '底部元素被屏幕底边裁切：上移到安全区内（留 8~16px 边距），或改用可滚动容器' });
+      violations.push({ rule: 'screen-cut', page: page.name, screen: fr.name, count: cutSamples.length, samples: cutSamples.slice(0, 6), hint: '底部固定容器（导航/输入条/操作条/面板）超出屏幕底边：容器应完整落在屏幕内，底边贴齐屏幕底或按安全区留白' });
     }
 
     // ---------- 规则 14：底部安全区（小白条 / home indicator） ----------
@@ -375,6 +380,26 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
       }
       if (safeBad.length && violations.length < MAX_ITEMS) {
         violations.push({ rule: 'safe-area-bottom', page: page.name, screen: fr.name, count: safeBad.length, samples: safeBad.slice(0, 6), hint: '底部导航/输入条未留出 home indicator 安全区（移动端 34px、平板 20px）：导航整体上移、输入条加高并把内容上移' });
+      }
+    }
+
+    // ---------- 规则 15：顶部安全区（状态栏 / 灵动岛） ----------
+    var topInset = pgKey === '02' ? 47 : (pgKey === '03' ? 24 : 0);
+    if (topInset > 0) {
+      var topBad = [];
+      var frAbsT = absPos(fr);
+      for (var tki = 0; tki < kids0.length; tki++) {
+        var tk0 = kids0[tki];
+        if (tk0.visible === false) continue;
+        var tw0 = tk0.width || 0, th0 = tk0.height || 0;
+        if (tw0 >= fr.width * 0.99) continue; // 全宽背景/头部底条允许通栏延伸到 y=0
+        if (tk0.y <= 0) continue;             // 从屏外延入的全出血媒体（地图瓦片/照片）
+        if (tk0.y >= topInset - 1) continue;
+        if (th0 > 120 || tw0 > fr.width * 0.9) continue;
+        topBad.push(tk0.id + '|' + String(tk0.name).slice(0, 14) + '|y=' + Math.round(tk0.y) + '<inset=' + topInset);
+      }
+      if (topBad.length && violations.length < MAX_ITEMS) {
+        violations.push({ rule: 'safe-area-top', page: page.name, screen: fr.name, count: topBad.length, samples: topBad.slice(0, 6), hint: '顶部元素进入状态栏/灵动岛安全区（移动端 47px、平板 24px）：标准页扩高背景并把内容整体下移，沉浸页（地图/照片）仅下移顶部悬浮控件' });
       }
     }
 
