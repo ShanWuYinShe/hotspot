@@ -93,15 +93,19 @@ function isBlackPillRect(n) {
   var f = (n.fills || [])[0];
   if (!f || f.type !== 'SOLID' || !f.color) return false;
   if (f.opacity === undefined || f.opacity < 0.25 || f.opacity > 0.85) return false;
-  return f.color.r < 0.25 && f.color.g < 0.25 && f.color.b < 0.25 && n.width < 220 && n.height < 40;
+  // 任意深色底（r/g/b 均 < 0.35，含 surface-overlay 类深色 token 的 fallback）小尺寸矩形均视为胶囊承托
+  return f.color.r < 0.35 && f.color.g < 0.35 && f.color.b < 0.35 && n.width < 220 && n.height < 40;
 }
 
-// 节点是否被某个黑胶囊背景覆盖（胶囊与文字在生成稿里是兄弟节点）
+// 节点是否被某个胶囊背景覆盖（胶囊与文字在生成稿里是兄弟节点；中心点落在胶囊内即算，含边距 6/4px）
 function insideAnyPill(node, pills) {
   for (var i = 0; i < pills.length; i++) {
     var p = pills[i];
-    if (node.x >= p.x - 6 && node.x + node.width <= p.x + p.width + 6 &&
-        node.y >= p.y - 4 && node.y + node.height <= p.y + p.height + 4) return true;
+    var cx = node.x + node.width / 2, cy = node.y + node.height / 2;
+    var fullyIn = node.x >= p.x - 6 && node.x + node.width <= p.x + p.width + 6 &&
+        node.y >= p.y - 4 && node.y + node.height <= p.y + p.height + 4;
+    var centerIn = cx >= p.x && cx <= p.x + p.width && cy >= p.y && cy <= p.y + p.height;
+    if (fullyIn || centerIn) return true;
   }
   return false;
 }
