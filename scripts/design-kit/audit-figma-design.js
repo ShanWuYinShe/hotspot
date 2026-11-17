@@ -166,6 +166,12 @@ for (var pi = 0; pi < figma.root.children.length; pi++) {
   if (figma.root.children[pi].type === 'PAGE') allPages.push(figma.root.children[pi]);
 }
 
+// 设计规范页（01）是规范区块不是应用截图页：其顶层 FRAME 是「概览/主题/语义色…」等区块，
+// 不参与屏幕级巡检（胶囊行/页头/卡片/叠字/导航规则都按截图页语义判定，规范页会误报）。
+for (var pd = allPages.length - 1; pd >= 0; pd--) {
+  if (String(allPages[pd].name).indexOf('01') >= 0) allPages.splice(pd, 1);
+}
+
 for (var pi2 = 0; pi2 < allPages.length; pi2++) {
   var page = allPages[pi2];
   await figma.setCurrentPageAsync(page);
