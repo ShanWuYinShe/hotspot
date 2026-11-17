@@ -3,7 +3,9 @@
 // 依赖全局 SPEC：{ meta, variables, svgDict, imageDict, gradientDict, shadowDict, screens }
 // ============================================================================
 var FAMILY_LATIN = 'Inter';
-var FAMILY_CJK = 'PingFang SC';
+// 插件沙盒（云端 use_figma / 本地插件运行时）加载不到系统字体 PingFang SC，
+// CJK 统一用可加载且与设计稿其它中文一致的 Noto Sans SC；fontName 解析失败时仍有 loadFont 兜底。
+var FAMILY_CJK = 'Noto Sans SC';
 
 var _fontsLoaded = {};
 var _varMap = null;
@@ -187,9 +189,10 @@ function applyCommon(node, n) {
   if (n.o !== undefined) node.opacity = n.o;
 }
 
-function weightStyle(weight) {
+function weightStyle(weight, family) {
   if (weight >= 700) return 'Bold';
-  if (weight >= 600) return 'SemiBold';
+  // Noto Sans SC 没有 SemiBold，600 档退到 Medium；其它字族保持 SemiBold
+  if (weight >= 600) return family === 'Noto Sans SC' ? 'Medium' : 'SemiBold';
   if (weight >= 500) return 'Medium';
   return 'Regular';
 }
@@ -288,8 +291,8 @@ function addSwatch(parent, x, y, name, colorName, size) {
 
 // ---------- 文本与节点 ----------
 async function addText(parent, opts) {
-  var family = opts.cjk ? FAMILY_CJK : FAMILY_LATIN;
-  var font = await loadFont(family, weightStyle(opts.weight || 400));
+  var family = (opts.cjk || /[\u4e00-\u9fff]/.test(String(opts.text))) ? FAMILY_CJK : FAMILY_LATIN;
+  var font = await loadFont(family, weightStyle(opts.weight || 400, family));
   var text = figma.createText();
   parent.appendChild(text);
   text.fontName = font;
@@ -318,7 +321,10 @@ async function addText(parent, opts) {
   } else {
     // 多行段落：宽度限制在安全边界内，高度自适应换行
     text.textAutoResize = 'HEIGHT';
-    var maxAllowedW = Math.max(24, (opts.parentW || 390) - opts.x - 16);
+    // 页面级多行文案（如设计规范页的动效说明）没有父容器宽度约束：默认按 1600 版心，
+    // 否则环境默认 390 会让 x 偏右的段落可用宽度被压到 24px、整段变成竖排单字。
+    var parentDefaultW = (parent && parent.type === 'PAGE') ? 1600 : 390;
+    var maxAllowedW = Math.max(24, (opts.parentW || parentDefaultW) - opts.x - 16);
     var finalW = Math.min(Math.max(1, opts.w), maxAllowedW);
     text.resize(finalW, Math.max(1, opts.h));
     text.x = opts.x;
