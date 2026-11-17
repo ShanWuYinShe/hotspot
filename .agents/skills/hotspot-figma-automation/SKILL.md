@@ -1,6 +1,6 @@
 ---
 name: hotspot-figma-automation
-description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、全站配色 token 化（叠字卡片玻璃条/管理后台/图标随 6 个颜色模式自适应）、细节巡检（中文缺字/文字重叠/文字溢出/顶部与底部安全区）、平板页面一致性对齐、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
+description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、全站配色 token 化（叠字卡片玻璃条/管理后台/图标随 6 个颜色模式自适应）、细节巡检（中文缺字/文字重叠/文字溢出/顶部与底部安全区）、平板页面一致性对齐、可交互原型演示（变体组件 + 原型反应）、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
 ---
 
 # hotspot-figma-automation
@@ -227,6 +227,22 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
   - `safe-area-top`：直连子元素（非全宽背景、非屏外延入媒体、`0 < y < inset−1`、h ≤ 120）进入顶部安全区即违规；
   - `screen-cut` 语义已改为「底部固定容器被裁切」：只查 `FRAME && w ≥ 0.5W && h ≤ 200` 且 bottom 超出屏幕的容器（滚动内容列贴底裁切属正常滚动状态，不检查；固定条容器化后此规则才可这样收窄）。
 - **坑**：容器内故意出血的衬底矩形（如地图面板底衬）会撑大容器 bounds 导致误报，把衬底收齐到屏幕底边即可；「扩高」方案比「同高度硬移内容」安全——后者会让表单页底部内容（如兴趣标签最后一行）被底部 CTA 盖掉。
+
+### 25. 可交互原型演示（Figma Motion / 变体交互组件）
+
+- **用途**：把规范页的「交互动效模式」做成真正可点/可悬停的原型演示，而不是静态示意图；画布上放组件集与默认变体实例，动效在 ▶ 演示模式中播放。
+- **结构**：每个演示 = 一个变体组件集（`figma.combineAsVariants`，变体命名 `State=Xxx`）+ 卡片内一个默认变体实例；组件集统一放页面底部「原型演示组件」区，命名 `动效演示/序号 名称`。
+- **反应 schema（当前运行时实测）**——注意与旧 typings 差异很大：
+  - 字段是 `actions`（数组），**不是** `action`（会报「update the actions field」）；
+  - 触发器枚举：`ON_CLICK` / `MOUSE_ENTER` / `MOUSE_LEAVE`（后两个 `delay: 0` 必填）/ `ON_HOVER` / `ON_PRESS` / `AFTER_TIMEOUT`（需 `timeout`）等；**没有** `CLICK`；
+  - 节点动作：`{ type: 'NODE', destinationId, navigation: 'CHANGE_TO', transition: { type: 'SMART_ANIMATE', easing, duration } }` —— `navigation` 是**字符串枚举**（`NAVIGATE | SWAP | OVERLAY | SCROLL_TO | CHANGE_TO`），不是对象；
+  - 自定义贝塞尔缓动：`{ type: 'CUSTOM_CUBIC_BEZIER', easingFunctionCubicBezier: { x1, y1, x2, y2 } }` —— **对象**，不是数组；枚举缓动还有 `GENTLE / QUICK / BOUNCY / SLOW / CUSTOM_SPRING` 与 `EASE_OUT_BACK` 等；
+  - **destination 必须是同一组件集内的变体**：指向松散组件会报「destination rejected」。
+- **动效参数对齐 token**：演示的 duration/easing 直接用规范页 token（100ms EASE_OUT 按压、180ms 贝塞尔(0.34,1.56,0.64,1) 开关与指示器、220ms EASE_OUT_BACK 状态弹跳、220ms EASE_OUT 悬浮、260ms EASE_OUT/EASE_IN_AND_OUT 抽屉）。
+- **SMART_ANIMATE 前提**：两个变体的图层同名同结构（如 `Track` / `Thumb` / `Pill` / `Card` / `Sheet` / `Scrim`），名字对不上就不补间；文字内容不同会直接切换不参与动画。
+- **Closed/隐藏初态必须有可见触发物**：如底部抽屉 Closed 态放「打开抽屉」按钮（Open 态把它移出裁切区），否则演示区看起来是空的（用户会以为没做动效）。
+- **画布静帧看不出动画**：给每张演示卡配提示文案（如「▶ 点击体验…」），并在区块副标题注明「演示模式可点击」；`flowStartingPoints` 在当前运行时不受支持，查看入口是选中画板或组件集后 ▶ 演示。
+- **已建演示**：01 按钮按压 / 02 弹簧开关 / 03 分段选项 / 04 状态弹跳(点赞) / 05 悬浮抬升(hover) / 06 底部抽屉，位于设计规范页「05 动效」区块与页面底部组件区。
 
 ## 命令 / 脚本通道
 
