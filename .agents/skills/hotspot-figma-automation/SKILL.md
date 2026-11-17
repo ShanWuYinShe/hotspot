@@ -1,6 +1,6 @@
 ---
 name: hotspot-figma-automation
-description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
+description: Figma 设计稿无感云端审查与自动化同步工作流：MCP session 维护、use_figma 执行脚本、Google Fonts 预加载防崩溃、数学级中心线重构公式、移动端去系统化与无菌化准则、图片叠字卡片的主题玻璃条（浅色/深色自适应）、侧边栏导航项对齐、卡片内文案溢出与方形行带治理、设计规范页分区块整理与生成器字体/排版修正、全站配色 token 化（叠字卡片玻璃条/管理后台/图标随 6 个颜色模式自适应）、截图视觉闭环验证、同步后自动巡检门禁。触发：自动化审查/修改 Figma 设计稿；同步后跑巡检、排查同行标签基线或页头居中偏差；状态栏/时钟清理；图层错位重构；use_figma 字体报错；同步设计稿至 Figma；Figma MCP 调试。
 ---
 
 # hotspot-figma-automation
@@ -169,6 +169,20 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
 - **生成器约定**：CJK 文案一律用 `Noto Sans SC`（插件沙盒加载不到系统字体 `PingFang SC`；600 字重映射 Medium，700 映射 Bold）；`addText` 自动按是否含 CJK 选字族；页面级多行文案默认版心 1600（否则 x 偏右时可用宽度会被压到 24px、整段变竖排单字）。
 - **重生成后必跑整理脚本**：`scripts/design-kit/organize-design-system.js`（MCP 通道执行）。脚本幂等：已分组的区块/token/组件会跳过，只补齐缺失分组、修正 CJK 字体与异常窄文本、按 96 间距统一堆叠区块。
 - **整理脚本只做移动与分组**：不改文案内容、不改色值；重生成与整理应作为「生成 → 整理 → 巡检」流水线连续执行。
+
+### 21. 全站配色 token 化（颜色模式 / 主题自适应）
+
+- **硬规则**：应用页（02/03/04）画布上所有 SOLID 填充与描边都必须绑定 HotSpot Tokens 变量（`paint.boundVariables.color`），不得写死 hex；否则切换 vibrant/forest/inkwash × 明暗共 6 个模式时不会跟随。巡检规则 `hardcoded-color` 会逐屏统计并拦截（summary 的 `checkedColorPaints` 为已检查的纯色数量）。
+- **叠字卡片（图片叠字）映射**：玻璃条 → `surface-nav-glass`（保留 `BACKGROUND_BLUR` 18 与原透明度，浅色解析为白、深色解析为深底）；条内深色药丸 → `surface-overlay`；标题/正文 → `text-primary`；时间/标签/计数 → `text-secondary`；药丸内文字与图标 → `content-inverse`；图标矢量描边 → `text-secondary`（药丸内 `content-inverse`）。
+- **管理后台（Web 抓取稿）映射**：表格底/卡片 → `surface-primary`，表头/分割线 → `surface-subtle`，文字灰阶 → `text-primary / text-secondary`，状态徽章 → `status-*-bg`（10~14% 透明）+ `text-status-*-on-soft`，按钮/链接 → `accent-default`，删除/封禁 → `destructive`，输入框 → `field-bg / field-border`，图标框透明化 + 描边 `text-secondary`，导航/筛选激活 pill → `accent-soft` @16% + `text-accent-on-soft`。
+- **实现要点（踩过的坑）**：
+  - **只处理未绑定的 paint**，不要「先重置再重绑」：重置会丢掉原有 token 绑定并让 fallback 色参与渲染，画面会花；保留已绑定 paint 是最安全的增量方式。
+  - 绑定用 `figma.variables.setBoundVariableForPaint(paint, 'color', variable)`，并把 paint.color 设为**当前模式的解析色**作为 fallback，避免黑色 fallback 参与渲染。
+  - 模式识别：沿父链读 `resolvedVariableModes[collection.id]`；按页面兜底（02 vibrant-light / 03 forest-light / 04 vibrant-dark）；禁止 `getLocalVariableCollectionByIdAsync`（部分运行时不存在，用 `getLocalVariableCollectionsAsync`）。
+  - 循环里声明 `var alpha;` 不会自动重置（var 提升），必须在每次 paint 迭代显式 `alpha = undefined`，否则浅色 tint 的透明度会泄漏到文字上导致整屏发灰。
+  - 不要同时对 TEXT 写 `characters`：字体未加载会抛 `Cannot write to node with unloaded font`；只改 fills 是安全的。
+- **主题自适应验证**：对代表屏临时 `setExplicitVariableModeForCollection(coll, '5:3')`（forest-dark 等）→ 截图确认玻璃条/文字/药丸/后台表格全部翻转 → 再切回原模式（5:2 等），过程中不要留下残留模式。
+- **收口标准**：巡检 `hardcoded-color` / `overlay-glass-theme` / `overlay-text-theme` 全部 0 违规；三端抽样截图在浅色与深色下均无不可读文字、无刺眼残留亮/暗块。
 
 ## 命令 / 脚本通道
 
