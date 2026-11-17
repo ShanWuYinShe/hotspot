@@ -219,6 +219,80 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
       });
     }
 
+    // ---------- 规则 10：CJK 文案字体必须是 Noto Sans SC ----------
+    var checkTexts = fr.findAll ? fr.findAll(function (n) { return n.type === 'TEXT' && n.visible !== false; }) : [];
+    stats.checkTexts = (stats.checkTexts || 0) + checkTexts.length;
+    var cjkBad = [];
+    for (var cti = 0; cti < checkTexts.length; cti++) {
+      if (!/[\u4e00-\u9fff]/.test(String(checkTexts[cti].characters || ''))) continue;
+      var cfam = (checkTexts[cti].fontName || {}).family;
+      if (cfam !== 'Noto Sans SC' && cfam !== 'PingFang SC') cjkBad.push(checkTexts[cti].id + '|' + cfam + '|' + String(checkTexts[cti].characters).slice(0, 12));
+    }
+    if (cjkBad.length && violations.length < MAX_ITEMS) {
+      violations.push({ rule: 'cjk-font-missing', page: page.name, screen: fr.name, count: cjkBad.length, samples: cjkBad.slice(0, 6), hint: '中文文案统一用 Noto Sans SC：其它字族在插件沙盒缺中文字形，会出现缺字或字距错乱' });
+    }
+
+    // ---------- 规则 11：文字溢出自身文本框（可能被裁切） ----------
+    var overflowSamples = [];
+    for (var oti = 0; oti < checkTexts.length; oti++) {
+      var ot = checkTexts[oti];
+      if (ot.textAutoResize !== 'NONE' && ot.textAutoResize !== 'HEIGHT') continue;
+      var orb = renderBox(ot);
+      var obb = null;
+      try { obb = ot.absoluteBoundingBox; } catch (e) { obb = null; }
+      if (!orb || !obb) continue;
+      var oox = (orb.x + orb.w) - (obb.x + obb.width);
+      var ooy = (orb.y + orb.h) - (obb.y + obb.height);
+      if (oox > 2 || ooy > 2) overflowSamples.push(ot.id + '|overX=' + Math.round(oox) + ',overY=' + Math.round(ooy) + '|' + String(ot.characters).slice(0, 14));
+    }
+    if (overflowSamples.length && violations.length < MAX_ITEMS) {
+      violations.push({ rule: 'text-overflow-box', page: page.name, screen: fr.name, count: overflowSamples.length, samples: overflowSamples.slice(0, 6), hint: '文案渲染尺寸超出自身文本框（NONE/HEIGHT 自适应），会压到相邻元素；请截断或调整文本框宽度' });
+    }
+
+    // ---------- 规则 12：同父级「标题 + 副标题」纵向重叠 ----------
+    var byParent = {};
+    for (var pti = 0; pti < checkTexts.length; pti++) {
+      var pt = checkTexts[pti];
+      if ((pt.fontSize || 0) < 8) continue;
+      var ppid = pt.parent ? pt.parent.id : 'none';
+      if (!byParent[ppid]) byParent[ppid] = [];
+      byParent[ppid].push(pt);
+    }
+    var overlapPairs = [];
+    for (var ppid2 in byParent) {
+      var arr2 = byParent[ppid2];
+      for (var pi3 = 0; pi3 < arr2.length; pi3++) {
+        for (var pj3 = pi3 + 1; pj3 < arr2.length; pj3++) {
+          var A2 = arr2[pi3], B2 = arr2[pj3];
+          var first2 = A2.y <= B2.y ? A2 : B2;
+          var second2 = A2.y <= B2.y ? B2 : A2;
+          var dy2 = second2.y - first2.y;
+          if (dy2 < 0 || dy2 >= (first2.height || 0)) continue;
+          if (Math.abs(first2.x - second2.x) > 2) continue;
+          var oy2 = Math.min(first2.y + first2.height, second2.y + second2.height) - Math.max(first2.y, second2.y);
+          if (oy2 <= 2) continue;
+          overlapPairs.push(first2.id + ' y=' + Math.round(first2.y) + 'h=' + Math.round(first2.height) + ' fs=' + first2.fontSize + ' || ' + second2.id + ' y=' + Math.round(second2.y) + 'h=' + Math.round(second2.height) + ' fs=' + second2.fontSize + ' | overlapY=' + Math.round(oy2));
+        }
+      }
+    }
+    if (overlapPairs.length && violations.length < MAX_ITEMS) {
+      violations.push({ rule: 'text-row-overlap', page: page.name, screen: fr.name, count: overlapPairs.length, samples: overlapPairs.slice(0, 6), hint: '同一父级下标题/副标题字盒重叠（行距小于字高）：把副标题下移或缩小行高，避免文字相撞' });
+    }
+
+    // ---------- 规则 13：直接子元素被屏幕底边裁切 ----------
+    var kids0 = fr.children || [];
+    var cutSamples = [];
+    for (var cki = 0; cki < kids0.length; cki++) {
+      var ck0 = kids0[cki];
+      if (ck0.visible === false) continue;
+      var ckh = ck0.height || 0;
+      if (ckh < 8 || ckh > 80) continue;
+      if (ck0.y < fr.height && ck0.y + ckh > fr.height + 1) cutSamples.push(ck0.id + '|' + String(ck0.name).slice(0, 16) + '|bottom=' + Math.round(ck0.y + ckh) + '>screenH=' + Math.round(fr.height));
+    }
+    if (cutSamples.length && violations.length < MAX_ITEMS) {
+      violations.push({ rule: 'screen-cut', page: page.name, screen: fr.name, count: cutSamples.length, samples: cutSamples.slice(0, 6), hint: '底部元素被屏幕底边裁切：上移到安全区内（留 8~16px 边距），或改用可滚动容器' });
+    }
+
     var kids = fr.children || [];
     var texts = [];
     var pills = [];
@@ -678,6 +752,7 @@ return {
     checkedNavGroups: stats.navGroups,
     checkedCardTexts: stats.cardTexts,
     checkedColorPaints: stats.colorPaints || 0,
+    checkedTexts: stats.checkTexts || 0,
     violations: violations.length,
     warnings: warnings.length,
     byRule: { violations: countBy(violations, 'rule'), warnings: countBy(warnings, 'rule') },
