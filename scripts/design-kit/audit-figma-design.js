@@ -66,6 +66,12 @@ function isPillRect(n) {
 
 function round1(v) { return Math.round(v * 10) / 10; }
 
+function colorHex(c) {
+  if (!c) return '#000000';
+  function h(v) { var s = Math.round(Math.max(0, Math.min(1, v)) * 255).toString(16); return s.length < 2 ? '0' + s : s; }
+  return '#' + h(c.r) + h(c.g) + h(c.b);
+}
+
 function relLum(c) { return c.r * 0.299 + c.g * 0.587 + c.b * 0.114; }
 
 function isWhiteFill(n) {
@@ -181,6 +187,38 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
     var fr = screens[si];
     if (fr.type !== 'FRAME') continue;
     stats.screens++;
+
+    // ---------- 规则 9：禁止硬编码纯色（颜色必须绑定变量，才能随 6 个颜色模式/主题自适应） ----------
+    var colorPaints = 0;
+    var hardcoded = [];
+    var colorNodes = fr.findAll ? fr.findAll(function (n) { return (n.fills && n.fills.length) || (n.strokes && n.strokes.length); }) : [fr];
+    for (var cni = 0; cni < colorNodes.length; cni++) {
+      var cnode = colorNodes[cni];
+      var groups = [{ list: cnode.fills || [], role: 'fill' }, { list: cnode.strokes || [], role: 'stroke' }];
+      for (var cgi = 0; cgi < groups.length; cgi++) {
+        for (var cpi = 0; cpi < groups[cgi].list.length; cpi++) {
+          var cpaint = groups[cgi].list[cpi];
+          if (cpaint.type !== 'SOLID') continue;
+          colorPaints++;
+          var cBound = false;
+          try { cBound = !!(cpaint.boundVariables && cpaint.boundVariables.color && cpaint.boundVariables.color.id); } catch (e) { cBound = false; }
+          if (cBound) continue;
+          if (hardcoded.length < 8) hardcoded.push(cnode.id + '|' + groups[cgi].role + '|' + colorHex(cpaint.color) + '|' + String(cnode.name || cnode.type).slice(0, 18));
+        }
+      }
+    }
+    stats.colorPaints = (stats.colorPaints || 0) + colorPaints;
+    if (hardcoded.length && violations.length < MAX_ITEMS) {
+      violations.push({
+        rule: 'hardcoded-color',
+        page: page.name,
+        screen: fr.name,
+        count: hardcoded.length,
+        samples: hardcoded,
+        hint: '颜色必须绑定 HotSpot Tokens 变量（paint.boundVariables.color），写死 hex 在其它颜色模式/主题下不会自适应；新增色请先加变量再绑定'
+      });
+    }
+
     var kids = fr.children || [];
     var texts = [];
     var pills = [];
@@ -639,6 +677,7 @@ return {
     checkedOverlayCards: stats.overlays,
     checkedNavGroups: stats.navGroups,
     checkedCardTexts: stats.cardTexts,
+    checkedColorPaints: stats.colorPaints || 0,
     violations: violations.length,
     warnings: warnings.length,
     byRule: { violations: countBy(violations, 'rule'), warnings: countBy(warnings, 'rule') },
