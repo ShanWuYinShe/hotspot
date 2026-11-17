@@ -250,6 +250,30 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
     }
 
     // ---------- 规则 12：同父级「标题 + 副标题」纵向重叠 ----------
+    // 底部固定浮层（全宽条）会盖住滚动内容，两者叠压属正常层级，不计入
+    var bottomBarsR = [];
+    var frH = fr.height, frW = fr.width;
+    var frKids = fr.children || [];
+    for (var bb0 = 0; bb0 < frKids.length; bb0++) {
+      var bk0 = frKids[bb0];
+      if (bk0.visible === false) continue;
+      if (bk0.width < frW * 0.9) continue;
+      if (bk0.height < 40) continue;
+      if (Math.abs((bk0.y + bk0.height) - frH) > 2) continue;
+      bottomBarsR.push({ x: bk0.x, y: bk0.y, w: bk0.width, h: bk0.height });
+    }
+    function underBottomBar(n) {
+      var bb = null;
+      try { bb = n.absoluteBoundingBox; } catch (e) { return false; }
+      if (!bb) return false;
+      var cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+      for (var bi2 = 0; bi2 < bottomBarsR.length; bi2++) {
+        var r = bottomBarsR[bi2];
+        var ax = absPos(fr).x, ay = absPos(fr).y;
+        if (cx >= ax + r.x && cx <= ax + r.x + r.w && cy >= ay + r.y && cy <= ay + r.y + r.h) return true;
+      }
+      return false;
+    }
     var byParent = {};
     for (var pti = 0; pti < checkTexts.length; pti++) {
       var pt = checkTexts[pti];
@@ -271,6 +295,7 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
           if (Math.abs(first2.x - second2.x) > 2) continue;
           var oy2 = Math.min(first2.y + first2.height, second2.y + second2.height) - Math.max(first2.y, second2.y);
           if (oy2 <= 2) continue;
+          if (underBottomBar(first2) && underBottomBar(second2)) continue;
           overlapPairs.push(first2.id + ' y=' + Math.round(first2.y) + 'h=' + Math.round(first2.height) + ' fs=' + first2.fontSize + ' || ' + second2.id + ' y=' + Math.round(second2.y) + 'h=' + Math.round(second2.height) + ' fs=' + second2.fontSize + ' | overlapY=' + Math.round(oy2));
         }
       }
@@ -291,6 +316,66 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
     }
     if (cutSamples.length && violations.length < MAX_ITEMS) {
       violations.push({ rule: 'screen-cut', page: page.name, screen: fr.name, count: cutSamples.length, samples: cutSamples.slice(0, 6), hint: '底部元素被屏幕底边裁切：上移到安全区内（留 8~16px 边距），或改用可滚动容器' });
+    }
+
+    // ---------- 规则 14：底部安全区（小白条 / home indicator） ----------
+    var pgKey = page.name.slice(0, 2);
+    var safeInset = pgKey === '02' ? 34 : (pgKey === '03' ? 20 : 0);
+    if (safeInset > 0) {
+      var safeBad = [];
+      // ① 底部导航条必须在安全区之上（留出 home indicator）
+      var navLabelSet = { '首页': 1, '附近': 1, '消息': 1, '我的': 1 };
+      var navAnchors = {};
+      for (var snt = 0; snt < checkTexts.length; snt++) {
+        var sntx = checkTexts[snt];
+        if (!navLabelSet[String(sntx.characters).trim()]) continue;
+        var sntb = null;
+        try { sntb = sntx.absoluteBoundingBox; } catch (e) { sntb = null; }
+        if (!sntb || sntb.y < absPos(fr).y + frH - 140) continue;
+        var sanc = sntx, sdep = 0;
+        while (sanc && sanc.parent && sanc.parent.id !== fr.id && sdep < 8) { sanc = sanc.parent; sdep++; }
+        if (sanc && sanc.parent && sanc.parent.id === fr.id) navAnchors[sanc.id] = sanc;
+      }
+      var sancIds = Object.keys(navAnchors);
+      if (sancIds.length >= 3) {
+        var snx1 = 1e9, sny1 = 1e9, snx2 = -1e9, sny2 = -1e9;
+        for (var snk = 0; snk < sancIds.length; snk++) {
+          var snb = null;
+          try { snb = navAnchors[sancIds[snk]].absoluteBoundingBox; } catch (e) { snb = null; }
+          if (!snb) continue;
+          snx1 = Math.min(snx1, snb.x); sny1 = Math.min(sny1, snb.y); snx2 = Math.max(snx2, snb.x + snb.width); sny2 = Math.max(sny2, snb.y + snb.height);
+        }
+        var navBar = null;
+        for (var nb = 0; nb < kids0.length; nb++) {
+          var nbk = kids0[nb];
+          if (nbk.type !== 'RECTANGLE' && nbk.type !== 'FRAME') continue;
+          if (nbk.height < 55 || nbk.height > 100) continue;
+          if (nbk.width < frW * 0.45 || nbk.width >= frW) continue;
+          var nbc = (snx1 + snx2) / 2, nby = (sny1 + sny2) / 2;
+          var nbr = null;
+          try { nbr = nbk.absoluteBoundingBox; } catch (e) { nbr = null; }
+          if (!nbr) continue;
+          if (nbc < nbr.x - 10 || nbc > nbr.x + nbr.width + 10) continue;
+          if (nby < nbr.y - 30 || nby > nbr.y + nbr.height + 10) continue;
+          navBar = nbr; break;
+        }
+        if (navBar) {
+          var navBottomGap = (absPos(fr).y + frH) - (navBar.y + navBar.height);
+          if (navBottomGap < safeInset - 1) safeBad.push('nav-bar|bottomGap=' + Math.round(navBottomGap) + '<inset=' + safeInset);
+        }
+      }
+      // ② 底部输入条里的占位文案不能进入安全区
+      for (var ibt = 0; ibt < checkTexts.length; ibt++) {
+        var ibtx = checkTexts[ibt];
+        if (!/写下你的评论|发消息|回复 @/.test(String(ibtx.characters))) continue;
+        var ibb = null;
+        try { ibb = ibtx.absoluteBoundingBox; } catch (e) { ibb = null; }
+        if (!ibb) continue;
+        if (ibb.y + ibb.height > absPos(fr).y + frH - safeInset + 2) safeBad.push('input-below-safe|' + ibtx.id + '|textBottom=' + Math.round(ibb.y + ibb.height - absPos(fr).y));
+      }
+      if (safeBad.length && violations.length < MAX_ITEMS) {
+        violations.push({ rule: 'safe-area-bottom', page: page.name, screen: fr.name, count: safeBad.length, samples: safeBad.slice(0, 6), hint: '底部导航/输入条未留出 home indicator 安全区（移动端 34px、平板 20px）：导航整体上移、输入条加高并把内容上移' });
+      }
     }
 
     var kids = fr.children || [];
