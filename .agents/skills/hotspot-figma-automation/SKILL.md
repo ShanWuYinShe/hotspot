@@ -305,43 +305,57 @@ bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
 - `violations` 条目含 `rule`、`page`、`screen`、节点 id、偏差值与 `hint`；修完重跑，直到 `violations` 为空。
 - `warnings` 不阻塞同步，但同类（如 `tab-row-va-mixed`）应在下一次改动中收敛，避免后续漂移。
 
-### 5. 打里程碑标记（saveVersionHistoryAsync）
+### 5. 打里程碑标记（每次改动后必须执行，用户硬性要求）
 
-同步或批量修复完成后，用脚本在 Figma 侧打里程碑标记（不需要桌面 UI）：
+每次修改设计稿（哪怕只改一个节点）后，都要打一条**带名字和描述**的 version history。
 
-```js
-// vh.js —— 通过 use-figma.sh 在服务端沙盒执行
-var now = new Date();
-var timeStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' +
-              String(now.getHours()).padStart(2, '0') + ':' +
-              String(now.getMinutes()).padStart(2, '0');
-await figma.saveVersionHistoryAsync(
-  '细节精修版 · <主题> (' + timeStr + ')',
-  '【本次版本更新内容摘要】\n\n1. <模块>：<要点>\n2. <模块>：<要点>'
-);
-return { ok: true, title: '...' };
-```
+- **云端通道已失效**：`use_figma` 沙盒里 `figma.saveVersionHistoryAsync` 返回 `not a supported API`（带 `X-Figma-Plugin-Bundle` 头也一样，该 API 已从远程插件运行时移除）；Figma REST API `/v1/files/:key/versions` 对 OAuth token 返回 404（scope 不含 `files:read`），不能读也不能写。不要浪费时间试 bundle 版本号或 REST。
+- **唯一可用通道：Figma 桌面端 UI（CUA 自动化，已实测闭环）**：
+  1. `cua.getApp("Figma")` → 确认窗口标题是目标设计稿（Version history 面板可能已开）；
+  2. `app.activate()` 前台化（打版本必须操作桌面 UI，属正当必要）；
+  3. `pressKey("/", ["cmd"])` 打开快速操作面板 → `Cmd+A` 全选 → `typeText("save to version history")` → `Down` 选中「Save to version history…」→ `Return`；
+  4. 对话框 Title 已聚焦：`typeText("细节精修版 · <主题> (M月D日 HH:MM)")`；`Tab` 到描述框，多行描述用 `Enter` 换行 + 逐行 `typeText`；
+  5. **提交只能用键盘**：`Tab`（到 Cancel）→ `Tab`（到 Save）→ `Space`。对话框按钮的合成鼠标点击（`win.click`）实测无效，不要反复重试点击；
+  6. 验证：Version history 面板列表有缓存，新条目不会实时出现——用快速操作执行两次「Show version history」（关+开）强制刷新，顶部应出现新标题条目。
+- 桌面会话锁定（SESSION_LOCKED）时停止 UI 操作，解锁后恢复；锁屏不影响云端 MCP 脚本通道的读写。
+- 标题沿用 design-kit 插件同步时的命名：`细节精修版 · <主题> (M月D日 HH:MM)`；描述用「1. 模块：要点」结构，一条记录覆盖本轮全部改动，含巡检结论（0 违规）。
+
+### 6. 全库截图与三端拼图审阅（审美一致性走查）
+
+规则巡检 0 违规 ≠ 视觉完美；深度走查用「逐屏截图 → 单端网格总览 → 三端同屏横排对比」三层拼图：
 
 ```bash
-FILE_KEY="<fileKey>" \
-SESSION_ID="<UUID>" \
-bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
-  vh.js "save version history" "resource:figma-use"
+# 批量截图（按端，断点续传：已存在且 >10KB 跳过）
+bash /Users/liyou/work/hotspot/.workwork/figma-capture/shoot-batch.sh <mobile|tablet|desktop>   /Users/liyou/work/hotspot/.workwork/figma-capture/shots/<端>
+# 规范页 7 区块截图
+bash /Users/liyou/work/hotspot/.workwork/figma-capture/shoot-spec.sh
+# 单端总览网格（35 屏一张图）
+PYTHONPATH=/Users/liyou/work/hotspot/.workwork/pylib python3   /Users/liyou/work/hotspot/.workwork/figma-capture/make-grid.py <端> <列数>
+# 三端同屏横排对比（同一路由三端按高度归一化并排）
+PYTHONPATH=/Users/liyou/work/hotspot/.workwork/pylib python3   /Users/liyou/work/hotspot/.workwork/figma-capture/make-triptych.py [路由过滤]
 ```
 
-- 标题沿用 design-kit 插件同步时的命名：`细节精修版 · <主题> (M月D日 HH:MM)`；
-- 描述用「1. 模块：要点」结构，一条记录覆盖本轮全部改动，含巡检结论（0 违规）；
-- 通道限制：Figma REST API 的 `/v1/files/:key/versions` 只读、MCP 工具列表里没有版本工具，唯一可写通道就是插件 API `saveVersionHistoryAsync`（选区外无需桌面端插件）。
+- 依赖 pillow：沙盒不允许 `pip install --user`（`~/Library/Python` 不可写），装到工作区 `python3 -m pip install --target /Users/liyou/work/hotspot/.workwork/pylib pillow`，运行时带 `PYTHONPATH`。
+- 走查基线：三端主题刻意区分（02 vibrant-light / 03 forest-light / 04 vivid-dark 即 inkwash）不算不一致；浅红条 = destructive 危险操作区（注销账号/退出登录）是合规设计；滚动态画板内容延伸出屏底属正常滚动表现，「没有更多了」类列表尾提示应锚定内容流末尾而非屏内固定点。
+- 截图 URL 短时效，`get_screenshot` 后立即 `curl -sfL -o` 下载；批量脚本已内置下载。
+- Figma 桌面端打开同一文件时可顺带人工比对；桌面端窗口截图（`win.getScreenshot`）不含系统菜单栏，File 菜单类验证用截图看不到。
 
 ## 陷阱 / 限制
 
-- **陷阱：远程 MCP 缺 `X-Figma-Plugin-Bundle` 头会落到受限插件运行时**：`use_figma` 的默认插件 bundle 缺少部分编辑器 API（例：`figma.saveVersionHistoryAsync` 报 `not a supported API`）。请求头必须带 `X-Figma-Plugin-Bundle: figma_prod@2_2_208`（与官方 Gemini / Claude 客户端一致）；本地 `.workwork/figma-mcp/mcp.ts` 已内置该头并支持 `FIGMA_PLUGIN_BUNDLE` 环境变量覆盖。遇到「编辑器 API 不存在」先核对这个头，不要改用桌面 UI 自动化绕行。
+- **陷阱：远程 MCP 缺 `X-Figma-Plugin-Bundle` 头会落到受限插件运行时**：`use_figma` 的默认插件 bundle 缺少部分编辑器 API。请求头必须带 `X-Figma-Plugin-Bundle: figma_prod@2_2_208`（本地 `.workwork/figma-mcp/mcp.ts` 已内置并支持 `FIGMA_PLUGIN_BUNDLE` 环境变量覆盖）。注意：该头只解决一般编辑器 API 的可用性，`saveVersionHistoryAsync` 在远程沙盒已整体移除（见「打里程碑标记」一节），走桌面端通道。
 - **陷阱：`figma.mixed` Symbol 类型与数值比较**：Figma 中多角不同的矩形其 `cornerRadius` 为 `Symbol(figma.mixed)`。执行 `n.cornerRadius > 3` 会触发致命异常 `cannot convert symbol to number`。筛选条件必须加类型防御：`typeof n.cornerRadius === 'number' && n.cornerRadius > 3`。
 - **陷阱：`textAlignVertical` 触发字体未加载报错**：很多人误以为只有改 `characters` 才需要加载字体，实际上修改 `textAlignVertical` 也会促使引擎重算排版，遇到未加载字形会直接抛错。必须在修改前先为文本赋值已加载的字体（`Noto Sans SC`）。
 - **陷阱：遍历删除引发级联失效**：删除父节点后，其包含的所有子节点会被 Figma 底层自动级联销毁。如果遍历列表仍引用了已被销毁的子节点，会抛出 `The node with id "..." does not exist`。必须按树层级自顶向下整块删除，或将遍历逻辑包裹 `try { node.remove(); } catch (e) {}`。
 - **陷阱：非活跃孤立画板混淆**：画布中可能存在未连入主视口的独立测试画板。遍历或修改前必须确认节点挂载在当前活跃画板列表（`figma.currentPage.children`），避免改动脱离主屏的游离图层。
 - **陷阱：生成端「选中居中、未选中顶对齐」造成同行基线漂移**：`figma-runtime.js` 的 `addText` 只对 `align === 'center'` 或徽章文本做垂直居中，同一行里选中项（居中）与未选中项（顶对齐）因此相差约 6px。巡检的 `tab-row-baseline` 会直接报出；根治需在生成端统一单行文本的垂直居中策略（影响所有单行文本，须全量截图回归），未根治前以巡检兜底。
 - **陷阱：下拉框占位符图层叠加**：在重构筛选区域时，下拉框背景、文字占位符与下方 Tab 栏坐标容易计算偏差导致重叠。必须准确测量筛选容器实际高度，按容器内部相对坐标（如 `Y = container.y + (container.height - text.height) / 2`）精确定位。
+- **陷阱：胶囊底「中间态透明度」造成浅底白字（生成端系统性缺陷，已有巡检规则拦截）**：小胶囊底若写成「深色变量绑定 + 38%/55% 透明度」，在浅色玻璃条/白条上渲染成浅灰底，配 content-inverse 反白文字几乎不可读。规范口径：胶囊底**要么不透明**（深底用 `surface-overlay` opacity=1，白字 `content-inverse`），**要么走 on-soft 档**（opacity ≤ 0.2 + 深色 on-soft 文字）；20%~70% 的中间态一律违规。巡检规则 `pill-bg-translucent` 按「透明度 0.2~0.7 且几何相交内存在 L>0.75 浅色文字」判定，`isBlackPillRect` 已兼容不透明深底。
+- **陷阱：语义绑定张冠李戴**：`content-inverse` 只允许出现在深色承托（黑胶囊/深玻璃条）内；位置标签、时间戳等浅底辅助文字必须绑 `text-secondary`。生成端常把反白误用到浅底元素上（位置标签白字在白卡上完全不可见），修复时按「绑定变量 + 几何宿主底色」双向核对，不要只看 fallback 色渲染。
+- **陷阱：远程沙盒崩溃「Aborted(). Build with -sASSERTIONS」**：`use_figma` 里对大屏做全树深遍历（尤其触碰 `absoluteTransform`/图片填充节点）可能触发沙盒崩溃。排查脚本改为「先列屏 FRAME 直接子级 → 锁定目标区块 → 受限深度（≤7）定向遍历」，或改用截图取色（PIL 读像素）反推真实渲染颜色再回文档定位节点。
+- **陷阱：截图坐标 vs 文档坐标混用**：放大裁剪验证时，桌面端截图宽 1024 对应文档 1440（比例 0.711），移动端 1:1。从截图读出的坐标换算回文档坐标再定位节点，避免找错元素。
+- **陷阱：桌面 Figma app 与云端脚本并发编辑会互相覆盖**：桌面端开着同一文件时，云端 `use_figma` 改过的属性（实测：胶囊 opacity 修复）可能在若干分钟后被桌面端会话回退。**每轮批量修复后必须复跑巡检**；发现回退直接重跑修复脚本（修复脚本按节点 ID 幂等，重跑安全）。跨端同时编辑同一屏的时段尽量错开。
+- **陷阱：远程沙盒 API 白名单以官方文档为准**：`figma/mcp-server-guide` 仓库 `skills/figma-use/references/api-reference.md` 维护了「Not implemented」清单（`saveVersionHistoryAsync`/`loadAllPagesAsync`/`currentUser`/`getLocalComponents*` 等）。`typeof figma.xxx === 'function'` 只说明对象存在，调用仍会被拦截；判断可用性先查这份清单，不要靠试错。
+- **用户指令红线：能脚本/插件完成的不走 CUA**：设计修改、巡检、截图一律走云端 `use_figma` 脚本通道；批量截图下载、拼图对比均为本地脚本。CUA 仅允许用于「无任何脚本通道」的操作（当前唯一场景 = 打 version history，且优先把桌面插件 `save-version-plugin` 交给用户手动运行，内容改 code.js 的 TITLE/DESCRIPTION 两处即可；老版 Gemini 扩展能打版本是因为走桌面插件桥，新版云端沙盒已砍掉该 API——官方 api-reference.md「Not implemented」清单为权威依据）。
 
 ## 权威源
 

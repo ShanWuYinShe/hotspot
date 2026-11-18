@@ -1,0 +1,7 @@
+{
+  "name": "HotSpot Save Design Version",
+  "id": "hotspot-save-design-version",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": ["figma"]
+}

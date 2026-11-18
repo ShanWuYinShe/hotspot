@@ -1,0 +1,9 @@
+{
+  "name": "HotSpot Figma Bridge",
+  "id": "hotspot-figma-bridge",
+  "api": "1.0.0",
+  "main": "code.js",
+  "editorType": [
+    "figma"
+  ]
+}

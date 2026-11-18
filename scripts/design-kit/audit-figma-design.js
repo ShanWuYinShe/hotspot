@@ -92,7 +92,8 @@ function isBlackPillRect(n) {
   if (n.type !== 'RECTANGLE') return false;
   var f = (n.fills || [])[0];
   if (!f || f.type !== 'SOLID' || !f.color) return false;
-  if (f.opacity === undefined || f.opacity < 0.25 || f.opacity > 0.85) return false;
+  // 承托胶囊允许半透明深底（on-soft 变体）与不透明深底（新规范：surface-overlay opacity=1）；只排除过透明
+  if (f.opacity === undefined || f.opacity < 0.25) return false;
   // 任意深色底（r/g/b 均 < 0.35，含 surface-overlay 类深色 token 的 fallback）小尺寸矩形均视为胶囊承托
   return f.color.r < 0.35 && f.color.g < 0.35 && f.color.b < 0.35 && n.width < 220 && n.height < 40;
 }
@@ -220,6 +221,68 @@ for (var pi2 = 0; pi2 < allPages.length; pi2++) {
         count: hardcoded.length,
         samples: hardcoded,
         hint: '颜色必须绑定 HotSpot Tokens 变量（paint.boundVariables.color），写死 hex 在其它颜色模式/主题下不会自适应；新增色请先加变量再绑定'
+      });
+    }
+
+    // ---------- 规则 9b：胶囊底半透明 + 浅色文字 = 对比度不足（pill-bg-translucent） ----------
+    // 按设计系统语义区分半透明胶囊：
+    //   合法：状态色 on-soft 档（底 opacity ≤ 0.2 + 深色 on-soft 文字），规范档位就是 10~14%；
+    //   违规：底 opacity 0.2~0.7 的「中间态」（通常是变量绑定深色 + 38%/55% 透明度），
+    //         在浅色玻璃条上渲染成浅灰底 + 反白文字（content-inverse），几乎不可读。
+    // 修法：胶囊底改为 surface-overlay 不透明填充（opacity=1，全模式深色），白字保持反白。
+    var translucentPills = [];
+    var pillShapeNodes = fr.findAll ? fr.findAll(function (n) {
+      if (n.type !== 'RECTANGLE' || n.visible === false) return false;
+      var cr2 = n.cornerRadius;
+      if (typeof cr2 !== 'number' || cr2 < 6) return false;
+      if (!(n.height >= 16 && n.height <= 40)) return false;
+      if (!(n.width >= 24 && n.width <= 220)) return false;
+      var f = (n.fills || [])[0];
+      if (!f || f.type !== 'SOLID') return false;
+      if (f.opacity === undefined) return false;
+      return f.opacity >= 0.2 && f.opacity < 0.7;
+    }) : [];
+    function textLum(tnode) {
+      var tf = (tnode.fills || [])[0];
+      if (!tf || tf.type !== 'SOLID' || !tf.color) return null;
+      return (0.2126 * tf.color.r + 0.7152 * tf.color.g + 0.0722 * tf.color.b);
+    }
+    function overlaps(ab, bb) {
+      return !(ab.x + ab.width < bb.x || bb.x + bb.width < ab.x || ab.y + ab.height < bb.y || bb.y + bb.height < ab.y);
+    }
+    for (var tpi = 0; tpi < pillShapeNodes.length; tpi++) {
+      var tpn = pillShapeNodes[tpi];
+      var tpf = tpn.fills[0];
+      var pb = renderBox(tpn);
+      if (!pb) continue;
+      // 找与胶囊几何相交的浅色文字（父级与子级都查）
+      var hasLightText = false;
+      var host = tpn.parent;
+      var cand = [];
+      if (host) cand = cand.concat(host.children || []);
+      cand = cand.concat(tpn.children || []);
+      for (var ci = 0; ci < cand.length; ci++) {
+        var ct = cand[ci];
+        if (ct.type !== 'TEXT' || ct.visible === false) continue;
+        var cb = renderBox(ct);
+        if (!cb || !overlaps(pb, cb)) continue;
+        var tl = textLum(ct);
+        if (tl !== null && tl > 0.75) { hasLightText = true; break; }
+      }
+      stats.translucentPills = (stats.translucentPills || 0) + 1;
+      if (!hasLightText) continue; // 深色文字的 soft 档：合法
+      if (translucentPills.length < 12) {
+        translucentPills.push(tpn.id + '|' + Math.round(tpf.opacity * 100) + '%op|' + String(tpn.name || 'pill').slice(0, 14));
+      }
+    }
+    if (translucentPills.length && violations.length < MAX_ITEMS) {
+      violations.push({
+        rule: 'pill-bg-translucent',
+        page: page.name,
+        screen: fr.name,
+        count: translucentPills.length,
+        samples: translucentPills,
+        hint: '胶囊底半透明且内含反白文字：浅色主题下渲染成浅灰底白字几乎不可读；底改 surface-overlay 不透明填充（opacity=1），白字保持 content-inverse；浅底深字的状态 soft 档（10~14% 透明）不受影响'
       });
     }
 
