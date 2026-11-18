@@ -10,7 +10,16 @@ import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const code = readFileSync(join(ROOT, 'docs', 'design-kit', 'figma-plugin', 'code.js'), 'utf8');
+const codePath = join(ROOT, 'docs', 'design-kit', 'figma-plugin', 'code.js');
+const runtimePath = join(ROOT, 'scripts', 'design-kit', 'figma-runtime.js');
+const code = readFileSync(codePath, 'utf8');
+const runtimeSource = readFileSync(runtimePath, 'utf8');
+
+// 校验打包产物与 runtime 源码一致性，杜绝未 build 漂移
+if (!code.endsWith(runtimeSource)) {
+  console.error('CRITICAL: docs/design-kit/figma-plugin/code.js 与 scripts/design-kit/figma-runtime.js 存在未打包漂移！请先执行 node scripts/design-kit/build-figma-plugin.mjs');
+  process.exit(1);
+}
 
 const stats = { nodes: 0, texts: 0, images: 0, components: 0, svgs: 0, variables: 0, notify: [], errors: [] };
 
@@ -101,11 +110,24 @@ try {
 setTimeout(() => {
   const pages = figma.root.children.map((p) => p.name);
   const screenNames = [];
-  for (const page of figma.root.children) for (const child of page.children) if (child.type === 'FRAME' && child.name.indexOf(' · ') > 0) screenNames.push(child.name);
+  const statusBars = [];
+  for (const page of figma.root.children) {
+    for (const child of page.children) {
+      if (child.type === 'FRAME' && child.name.indexOf(' · ') > 0) {
+        screenNames.push(child.name);
+        const forbidden = child.findAll((n) => n.name && (n.name.indexOf('Status Bar') >= 0 || n.characters === '9:41'));
+        if (forbidden.length) statusBars.push({ screen: child.name, count: forbidden.length });
+      }
+    }
+  }
+  if (statusBars.length > 0) {
+    stats.errors.push('违规包含系统状态栏（准则 §7 去系统化）：' + JSON.stringify(statusBars));
+  }
   console.log(JSON.stringify({
     closed: !!globalThis.__closed,
     pages,
     screens: screenNames.length,
+    statusBars: statusBars.length,
     components: stats.components,
     texts: stats.texts,
     images: stats.images,

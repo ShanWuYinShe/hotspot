@@ -1,30 +1,46 @@
-# Figma 桌面插件：HotSpot Figma Bridge
+# 通用 Figma 桌面桥：Figma Local Bridge
 
-与 Figma 设计稿（fileKey 见 use-figma.sh，不入库）配套的本地开发插件，**只有一个**：
-桌面插件内常驻 WebSocket 客户端 + 本地 bun 服务端，把云端 MCP 沙盒执行不了的 Plugin API
-代码转发到桌面运行时执行（桌面侧字体、`saveVersionHistoryAsync` 等完整可用）。
-与旧版 Gemini CLI 扩展的桌面桥同原理。
+通用的本地开发与 AI Agent 桥接插件：
+桌面插件由 UI iframe（WebSocket 客户端）与主线程沙盒（Plugin API 执行器）组成，
+配合本地服务端，把云端 MCP 沙盒执行不了的 Plugin API 代码转发到桌面运行时执行（桌面侧字体、`saveVersionHistoryAsync` 版本历史等完整可用）。
+
+**一次安装，跨项目通用**：只需在 Figma 桌面端导入一次，以后在任何项目中启动 Bridge 服务，该插件均可自动直连。
 
 ## 安装（一次性）
 
-1. Figma 桌面端 → Plugins → Development → **Import plugin from manifest…** → 选本目录 `manifest.json`
-2. 运行「HotSpot Figma Bridge」，保持画布上的绿色小窗口开启（关闭即断，重开自动重连）
-3. 本地启动服务端（常驻）：`bun scripts/design-kit/plugins/bridge/server.mjs`（监听 127.0.0.1:8787）
+1. Figma 桌面端 → Plugins → Development → **Import plugin from manifest…** → 选 `scripts/design-kit/plugins/bridge/manifest.json`
+2. 运行「Figma Local Bridge」，保持画布上的状态小窗口开启（显示绿色已连接；关闭即断，重开自动重连）
 
-## 用法
+## 一键自动化 CLI（推荐）
+
+项目内置了全自动化控制脚本 `figma-bridge.mjs`，支持自动后台拉起服务、管理进程与收发指令：
 
 ```bash
-# 打版本历史（内置命令；每次设计改动后必须打，纪律见 .agents/skills/hotspot-figma-automation/SKILL.md）
-curl -s -X POST http://127.0.0.1:8787/save-version -H 'Content-Type: application/json' \
-  -d '{"title":"细节精修版 · 主题 (M月D日 HH:MM)","description":"【本次版本更新内容摘要】…"}'
+# 1. 查看状态（服务是否启动、桌面插件是否连接、打开的 Figma 文件名）
+node scripts/design-kit/figma-bridge.mjs status
 
-# 执行任意 Plugin API 代码（支持 await/return，同云端 use_figma 写法；如迁移 PingFang → Noto）
-curl -s -X POST http://127.0.0.1:8787/eval -H 'Content-Type: application/json' \
-  -d '{"code":"return {name: figma.root.name}"}'
+# 2. 执行任意 Figma Plugin API 代码（若后台服务未启动，将自动在后台拉起！）
+node scripts/design-kit/figma-bridge.mjs eval "figma.root.name"
+node scripts/design-kit/figma-bridge.mjs eval -f path/to/script.js
 
-# 查连接态
-curl -s http://127.0.0.1:8787/status
+# 3. 打版本历史里程碑（自动拉起服务）
+node scripts/design-kit/figma-bridge.mjs save-version -t "版本标题" -d "更新内容摘要..."
+
+# 4. 后台服务启停管理
+node scripts/design-kit/figma-bridge.mjs start     # 后台常驻启动
+node scripts/design-kit/figma-bridge.mjs stop      # 停止后台服务
+node scripts/design-kit/figma-bridge.mjs restart   # 重启服务
+
+# 5. 协议与通信自检（CI / 本地秒级验证）
+node scripts/design-kit/figma-bridge.mjs verify
 ```
+
+## 跨项目复用指南（Other Projects）
+
+其他项目想要接入本套 Bridge 通道，只需：
+1. **直接复用已安装的桌面插件**：桌面端已导入的「Figma Local Bridge」默认监听 `ws://127.0.0.1:8787`，无需在每个项目重复导入！
+2. **复制服务与 CLI**：将 `scripts/design-kit/plugins/bridge/server.mjs` 和 `scripts/design-kit/figma-bridge.mjs` 复制到新项目中（或放入通用 npm 工具库）。
+3. 新项目直接运行 `node figma-bridge.mjs eval "..."` 即可操控当前正在编辑的任何 Figma 设计稿。
 
 ## 背景
 

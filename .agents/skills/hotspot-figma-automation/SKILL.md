@@ -309,15 +309,17 @@ bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
 
 每次修改设计稿（哪怕只改一个节点）后，都要打一条**带名字和描述**的 version history。
 
-- **云端通道已失效**：`use_figma` 沙盒里 `figma.saveVersionHistoryAsync` 返回 `not a supported API`（带 `X-Figma-Plugin-Bundle` 头也一样，该 API 已从远程插件运行时移除）；Figma REST API `/v1/files/:key/versions` 对 OAuth token 返回 404（scope 不含 `files:read`），不能读也不能写。不要浪费时间试 bundle 版本号或 REST。
-- **唯一可用通道：Figma 桌面端 UI（CUA 自动化，已实测闭环）**：
-  1. `cua.getApp("Figma")` → 确认窗口标题是目标设计稿（Version history 面板可能已开）；
-  2. `app.activate()` 前台化（打版本必须操作桌面 UI，属正当必要）；
-  3. `pressKey("/", ["cmd"])` 打开快速操作面板 → `Cmd+A` 全选 → `typeText("save to version history")` → `Down` 选中「Save to version history…」→ `Return`；
-  4. 对话框 Title 已聚焦：`typeText("细节精修版 · <主题> (M月D日 HH:MM)")`；`Tab` 到描述框，多行描述用 `Enter` 换行 + 逐行 `typeText`；
-  5. **提交只能用键盘**：`Tab`（到 Cancel）→ `Tab`（到 Save）→ `Space`。对话框按钮的合成鼠标点击（`win.click`）实测无效，不要反复重试点击；
-  6. 验证：Version history 面板列表有缓存，新条目不会实时出现——用快速操作执行两次「Show version history」（关+开）强制刷新，顶部应出现新标题条目。
-- 桌面会话锁定（SESSION_LOCKED）时停止 UI 操作，解锁后恢复；锁屏不影响云端 MCP 脚本通道的读写。
+- **云端沙盒限制**：`use_figma` 沙盒里 `figma.saveVersionHistoryAsync` 返回 `not a supported API`（该 API 在远程沙盒未开放）；Figma REST API `/v1/files/:key/versions` 仅只读。
+- **自动化通道：Figma Local Bridge 自动化控制台（首选，秒级静默完成）**：
+  保持桌面端打开设计稿并运行「Figma Local Bridge」插件窗口，直接执行 CLI：
+  ```bash
+  node scripts/design-kit/figma-bridge.mjs save-version \
+    -t "细节精修版 · <主题> (M月D日 HH:MM)" \
+    -d "【本次版本更新内容摘要】\n1. 模块：要点..."
+  ```
+  （服务未启动时 CLI 会自动后台拉起，无需手动启停）。
+- **备用通道：Figma 桌面端快速操作手动录入**：
+  若桌面插件未开启，在桌面端按快捷键 `Cmd+/` 输入 `save to version history` 回车，填入标题与描述后保存。
 - 标题沿用 design-kit 插件同步时的命名：`细节精修版 · <主题> (M月D日 HH:MM)`；描述用「1. 模块：要点」结构，一条记录覆盖本轮全部改动，含巡检结论（0 违规）。
 
 ### 6. 全库截图与三端拼图审阅（审美一致性走查）
@@ -355,11 +357,13 @@ PYTHONPATH=/Users/liyou/work/hotspot/.workwork/pylib python3   /Users/liyou/work
 - **陷阱：截图坐标 vs 文档坐标混用**：放大裁剪验证时，桌面端截图宽 1024 对应文档 1440（比例 0.711），移动端 1:1。从截图读出的坐标换算回文档坐标再定位节点，避免找错元素。
 - **陷阱：桌面 Figma app 与云端脚本并发编辑会互相覆盖**：桌面端开着同一文件时，云端 `use_figma` 改过的属性（实测：胶囊 opacity 修复）可能在若干分钟后被桌面端会话回退。**每轮批量修复后必须复跑巡检**；发现回退直接重跑修复脚本（修复脚本按节点 ID 幂等，重跑安全）。跨端同时编辑同一屏的时段尽量错开。
 - **陷阱：远程沙盒 API 白名单以官方文档为准**：`figma/mcp-server-guide` 仓库 `skills/figma-use/references/api-reference.md` 维护了「Not implemented」清单（`saveVersionHistoryAsync`/`loadAllPagesAsync`/`currentUser`/`getLocalComponents*` 等）。`typeof figma.xxx === 'function'` 只说明对象存在，调用仍会被拦截；判断可用性先查这份清单，不要靠试错。
-- **用户指令红线：能脚本/插件完成的不走 CUA**：设计修改、巡检、截图一律走云端 `use_figma` 脚本通道；批量截图下载、拼图对比均为本地脚本。CUA 仅允许用于「无任何脚本通道」的操作（当前唯一场景 = 打 version history，且优先把桌面插件 `save-version-plugin` 交给用户手动运行，内容改 code.js 的 TITLE/DESCRIPTION 两处即可；老版 Gemini 扩展能打版本是因为走桌面插件桥，新版云端沙盒已砍掉该 API——官方 api-reference.md「Not implemented」清单为权威依据）。
+- **用户指令红线：能脚本/插件完成的不走 CUA**：设计修改、巡检、截图一律走云端 `use_figma` 脚本通道；打 version history 由本地桌面桥接管（`node scripts/design-kit/figma-bridge.mjs save-version`，调用桌面插件的 `saveVersionHistoryAsync` 原生接口）；批量截图下载、拼图对比均为本地脚本。全链路均有代码与 CLI 自动化覆盖，禁止绕道 CUA。
 
 ## 权威源
 
 - **Figma 执行脚本入口**：`/Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh`
 - **MCP 客户端桥接器**：`/Users/liyou/work/hotspot/.workwork/figma-mcp/mcp.ts`
+- **桌面桥与版本控制 CLI**：`scripts/design-kit/figma-bridge.mjs`（守护进程服务：`scripts/design-kit/plugins/bridge/server.mjs`）
+- **同步后巡检脚本**：`scripts/design-kit/audit-figma-design.js`
 - **同步后巡检脚本**：`scripts/design-kit/audit-figma-design.js`
 - **Figma 设计稿目标**：HotSpot UI Design Kit（`fileKey` 取自设计稿链接的 `/design/<fileKey>/` 段，不写入仓库）
