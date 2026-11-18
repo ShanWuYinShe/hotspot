@@ -26,6 +26,7 @@
 | `hotspot-harmony-device-verify` | 鸿蒙端端上实测：hdc + uitest 走查流程、本机坐标、走查账号与陷阱 |
 | `hotspot-worktree-debug` | worktree 内 compose 隔离调试、端口重映射与清理 |
 | `hotspot-reception-bot` | 接待机器人运行、人格与线上接入（运行时位置见该 skill 内说明） |
+| `hotspot-figma-automation` | Figma 设计稿云端自动化修改、清洗、去系统化与闭环截图同步规程 |
 
 ## 构建 & 验证
 
