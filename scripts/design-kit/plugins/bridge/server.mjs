@@ -1,28 +1,37 @@
 // HotSpot Figma Bridge —— 本地 server（bun）
-// ws://127.0.0.1:8787 给插件连；HTTP POST /eval {code} 转发执行并回传结果；GET /status 查连接态。
+// ws://127.0.0.1:8787 给插件连；HTTP 端点：
+//   POST /eval {code}                     → 插件沙盒执行任意 Plugin API 代码
+//   POST /save-version {title,description} → 打版本历史（插件内置命令）
+//   GET  /status                           → 连接态
 import { writeFileSync } from 'node:fs';
 const PENDING = new Map();
 let pluginWs = null;
 let seq = 0;
 
+function forward(payload, timeoutMs) {
+  if (!pluginWs || pluginWs.readyState !== 1) {
+    return Promise.resolve({ ok: false, error: 'plugin not connected' });
+  }
+  const id = 'e' + (++seq);
+  return new Promise((resolve) => {
+    PENDING.set(id, resolve);
+    setTimeout(() => {
+      if (PENDING.has(id)) { PENDING.delete(id); resolve({ ok: false, error: 'timeout' }); }
+    }, timeoutMs || 60000);
+  });
+  pluginWs.send(JSON.stringify({ ...payload, id }));
+}
+
 Bun.serve({
   port: 8787,
   async fetch(req, server) {
     const url = new URL(req.url);
-    if (url.pathname === '/eval' && req.method === 'POST') {
+    if (req.method === 'POST' && (url.pathname === '/eval' || url.pathname === '/save-version')) {
       const body = await req.json().catch(() => ({}));
-      if (!pluginWs || pluginWs.readyState !== 1) {
-        return Response.json({ ok: false, error: 'plugin not connected' }, { status: 503 });
-      }
-      const id = 'e' + (++seq);
-      const p = new Promise((resolve) => {
-        PENDING.set(id, resolve);
-        setTimeout(() => {
-          if (PENDING.has(id)) { PENDING.delete(id); resolve({ ok: false, error: 'timeout' }); }
-        }, body.timeoutMs || 60000);
-      });
-      pluginWs.send(JSON.stringify({ type: 'eval', id, code: body.code }));
-      const result = await p;
+      const payload = url.pathname === '/eval'
+        ? { type: 'eval', code: body.code }
+        : { type: 'save-version', title: body.title, description: body.description };
+      const result = await forward(payload, body.timeoutMs);
       return Response.json(result);
     }
     if (url.pathname === '/status') {

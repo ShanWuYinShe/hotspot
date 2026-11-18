@@ -1,5 +1,7 @@
 // HotSpot Figma Bridge —— 桌面插件内 WebSocket 客户端
-// 与本地 server (ws://127.0.0.1:8787) 保持连接，接收 {type:'eval', id, code} 并在插件沙盒执行，
+// 与本地 server (ws://127.0.0.1:8787) 保持连接，支持两种指令：
+//   {type:'eval', id, code}                    执行任意 Plugin API 代码（async/return 同云端 use_figma 写法）
+//   {type:'save-version', id, title, description}  打版本历史（saveVersionHistoryAsync 云端沙盒未实现，仅桌面可用）
 // 回传 {type:'result', id, ok, result|error}。断线自动重连。窗口保持开启即保持桥接。
 var WS_URL = 'ws://127.0.0.1:8787';
 var ws = null;
@@ -21,7 +23,22 @@ function safe(v) {
 }
 
 function handle(data) {
-  if (!data || data.type !== 'eval' || !data.id) return;
+  if (!data || !data.id) return;
+  if (data.type === 'save-version') {
+    var title = String(data.title || '');
+    var desc = String(data.description || '');
+    if (typeof figma.saveVersionHistoryAsync !== 'function') {
+      send({ type: 'result', id: data.id, ok: false, error: 'saveVersionHistoryAsync not supported in this runtime' });
+      return;
+    }
+    figma.saveVersionHistoryAsync(title, desc).then(function () {
+      send({ type: 'result', id: data.id, ok: true, result: 'version saved: ' + title });
+    }, function (e) {
+      send({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
+    });
+    return;
+  }
+  if (data.type !== 'eval') return;
   try {
     var fn = new Function('return (async () => {' + data.code + '})()');
     Promise.resolve(fn()).then(function (v) {
