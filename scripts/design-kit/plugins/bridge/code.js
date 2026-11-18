@@ -1,14 +1,8 @@
-// HotSpot Figma Bridge —— 桌面插件内 WebSocket 客户端
-// 与本地 server (ws://127.0.0.1:8787) 保持连接，支持两种指令：
-//   {type:'eval', id, code}                    执行任意 Plugin API 代码（async/return 同云端 use_figma 写法）
-//   {type:'save-version', id, title, description}  打版本历史（saveVersionHistoryAsync 云端沙盒未实现，仅桌面可用）
-// 回传 {type:'result', id, ok, result|error}。断线自动重连。窗口保持开启即保持桥接。
-var WS_URL = 'ws://127.0.0.1:8787';
-var ws = null;
-
-function send(msg) {
-  try { ws.send(JSON.stringify(msg)); } catch (e) {}
-}
+// Figma Local Bridge —— 通用桌面插件运行在 Figma 主线程
+// 通过 UI iframe (ui.html) 建立 WebSocket 连接，转发 Plugin API 执行与版本历史保存。
+// 支持指令：
+//   {type:'eval', id, code}                     执行任意 Plugin API 代码（支持单行表达式或 async 块）
+//   {type:'save-version', id, title, description}  打版本历史（saveVersionHistoryAsync 云端沙盒未实现，桌面可用）
 
 function safe(v) {
   try {
@@ -22,48 +16,64 @@ function safe(v) {
   } catch (e) { return String(v); }
 }
 
-function handle(data) {
+function sendToWs(msg) {
+  figma.ui.postMessage({ type: 'send', data: msg });
+}
+
+function updateActivity(text) {
+  figma.ui.postMessage({ type: 'activity', text: text });
+}
+
+async function handleCommand(data) {
   if (!data || !data.id) return;
   if (data.type === 'save-version') {
     var title = String(data.title || '');
     var desc = String(data.description || '');
+    updateActivity('保存版本: ' + title.slice(0, 24));
     if (typeof figma.saveVersionHistoryAsync !== 'function') {
-      send({ type: 'result', id: data.id, ok: false, error: 'saveVersionHistoryAsync not supported in this runtime' });
+      sendToWs({ type: 'result', id: data.id, ok: false, error: 'saveVersionHistoryAsync not supported in this runtime' });
       return;
     }
-    figma.saveVersionHistoryAsync(title, desc).then(function () {
-      send({ type: 'result', id: data.id, ok: true, result: 'version saved: ' + title });
-    }, function (e) {
-      send({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
-    });
+    try {
+      await figma.saveVersionHistoryAsync(title, desc);
+      sendToWs({ type: 'result', id: data.id, ok: true, result: 'version saved: ' + title });
+      figma.notify('Figma Bridge: 版本已保存 (' + title + ')');
+    } catch (e) {
+      sendToWs({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
+    }
     return;
   }
-  if (data.type !== 'eval') return;
-  try {
-    var fn = new Function('return (async () => {' + data.code + '})()');
-    Promise.resolve(fn()).then(function (v) {
-      send({ type: 'result', id: data.id, ok: true, result: safe(v) });
-    }, function (e) {
-      send({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
-    });
-  } catch (e) {
-    send({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
+  if (data.type === 'eval') {
+    updateActivity('执行代码 (' + data.id + ')');
+    try {
+      var codeToRun = String(data.code || '');
+      var fn;
+      // 优先尝试单行表达式自动 return，若为语句块语法错误则回退为语句块执行
+      try {
+        fn = new Function('return (async () => { return (' + codeToRun + '); })()');
+      } catch (syntaxErr) {
+        fn = new Function('return (async () => {' + codeToRun + '})()');
+      }
+      var val = await Promise.resolve(fn());
+      sendToWs({ type: 'result', id: data.id, ok: true, result: safe(val) });
+    } catch (e) {
+      sendToWs({ type: 'result', id: data.id, ok: false, error: String(e && e.message || e).slice(0, 800) });
+    }
+    return;
   }
 }
 
-function connect() {
-  try {
-    ws = new WebSocket(WS_URL);
-  } catch (e) { setTimeout(connect, 3000); return; }
-  ws.onopen = function () { send({ type: 'hello', plugin: 'hotspot-bridge', file: figma.root.name, at: Date.now() }); };
-  ws.onmessage = function (ev) {
-    var data;
-    try { data = JSON.parse(ev.data); } catch (e) { return; }
-    handle(data);
-  };
-  ws.onclose = function () { setTimeout(connect, 2000); };
-  ws.onerror = function () { try { ws.close(); } catch (e) {} };
-}
-connect();
+figma.ui.onmessage = function (msg) {
+  if (!msg) return;
+  if (msg.type === 'ws-open') {
+    sendToWs({ type: 'hello', plugin: 'figma-bridge', file: figma.root ? figma.root.name : '', at: Date.now() });
+    return;
+  }
+  if (msg.type === 'ws-message') {
+    handleCommand(msg.data);
+    return;
+  }
+};
 
-figma.showUI('<body style="margin:0;font:12px -apple-system,sans-serif;padding:10px 12px;color:#1a7f37">● HotSpot Bridge 运行中<br><span style="color:#888">保持此窗口开启即保持自动通道</span></body>', { width: 230, height: 64 });
+var fallbackHtml = '<body style="margin:0;font:12px -apple-system,sans-serif;padding:10px 12px;color:#1a7f37">● Figma Local Bridge 运行中<br><span style="color:#888">保持此窗口开启即保持自动通道</span></body>';
+figma.showUI(typeof __html__ !== 'undefined' ? __html__ : fallbackHtml, { width: 250, height: 74 });

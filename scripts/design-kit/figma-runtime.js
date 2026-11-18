@@ -1,11 +1,14 @@
 // ============================================================================
-// HotSpot Design Kit — Figma 插件运行时（由 build-figma-plugin.mjs 打包进 code.js）
-// 依赖全局 SPEC：{ meta, variables, svgDict, imageDict, gradientDict, shadowDict, screens }
+// 通用 Design Kit — Figma 插件运行时（由 build-figma-plugin.mjs 打包进 code.js）
+// 依赖全局 SPEC：{ meta, config, variables, svgDict, imageDict, gradientDict, shadowDict, screens }
 // ============================================================================
-var FAMILY_LATIN = 'Inter';
+var CONFIG = (typeof SPEC !== 'undefined' && SPEC.config) || {};
+var BRAND_NAME = CONFIG.brandName || 'HotSpot';
+var COLLECTION_NAME = CONFIG.collectionName || 'HotSpot Tokens';
+var FAMILY_LATIN = CONFIG.latinFont || 'Inter';
 // 插件沙盒（云端 use_figma / 本地插件运行时）加载不到系统字体 PingFang SC，
-// CJK 统一用可加载且与设计稿其它中文一致的 Noto Sans SC；fontName 解析失败时仍有 loadFont 兜底。
-var FAMILY_CJK = 'Noto Sans SC';
+// CJK 统一用可加载且与设计稿其它中文一致的 Noto Sans SC（或经 SPEC.config.cjkFont 自定义）
+var FAMILY_CJK = CONFIG.cjkFont || 'Noto Sans SC';
 
 var _fontsLoaded = {};
 var _varMap = null;
@@ -35,8 +38,8 @@ function parseColorValue(value) {
 function getOrCreateCollection() {
   try {
     var collections = figma.variables.getLocalVariableCollections();
-    for (var i = 0; i < collections.length; i++) if (collections[i].name === 'HotSpot Tokens') return collections[i];
-    return figma.variables.createVariableCollection('HotSpot Tokens');
+    for (var i = 0; i < collections.length; i++) if (collections[i].name === COLLECTION_NAME) return collections[i];
+    return figma.variables.createVariableCollection(COLLECTION_NAME);
   } catch (e) {
     console.warn('getOrCreateCollection failed:', e);
     return null;
@@ -821,7 +824,7 @@ async function buildScreen(parent, screen, x, y) {
     if (i % 120 === 119) await new Promise(function (r) { setTimeout(r, 0); });
   }
 
-  // 移动端挂载系统 Safe Area 视觉标杆（置于画板最顶层，永不被大图遮盖）
+  // 移动端挂载系统 Safe Area 视觉标杆（遵循准则 §7 去系统化与无菌化，严禁侵入 9:41 状态栏，仅保留底部 Home Indicator）
   if (screen.device === 'mobile') {
     var isDarkHeader = false;
     for (var n = 0; n < sortedNodes.length; n++) {
@@ -831,7 +834,6 @@ async function buildScreen(parent, screen, x, y) {
         break;
       }
     }
-    await addStatusBar(frame, isDarkHeader);
     await addHomeIndicator(frame, isDarkHeader);
   }
 
@@ -923,18 +925,16 @@ async function buildScreensPage(page, device) {
           }
         }
 
-        // 3. 补齐顶部 44px 状态栏与 34px 底部手势条（若不存在）
-        var hasStatus = false;
+        // 3. 清理历史遗留系统状态栏并按需补齐底部手势条（遵循准则 §7 去系统化）
         var hasHome = false;
         if (existing.children) {
-          for (var ci = 0; ci < existing.children.length; ci++) {
+          for (var ci = existing.children.length - 1; ci >= 0; ci--) {
             var ch = existing.children[ci];
-            if (ch.name && ch.name.indexOf('Status Bar') >= 0) hasStatus = true;
+            if (ch.name && (ch.name.indexOf('Status Bar') >= 0 || ch.name === '9:41')) {
+              try { ch.remove(); } catch (e) {}
+            }
             if (ch.name && ch.name.indexOf('Home Indicator') >= 0) hasHome = true;
           }
-        }
-        if (!hasStatus && screen.device === 'mobile') {
-          await addStatusBar(existing, false);
         }
         if (!hasHome && screen.device === 'mobile') {
           await addHomeIndicator(existing, false);
@@ -1409,21 +1409,15 @@ async function buildComponents(page, startY) {
           var timeStr = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' +
                         String(now.getHours()).padStart(2, '0') + ':' +
                         String(now.getMinutes()).padStart(2, '0');
-          var versionTitle = '细节精修版 · 灵动岛交互与状态徽章对齐 (' + timeStr + ')';
-          var versionDesc =
-            '【本次版本更新内容摘要】\n\n' +
-            '1. 灵动岛微交互优化：\n' +
-            '   • 修复灵动岛内「编辑资料」等按钮图标与文字重叠问题，建立复合排布器，保持 5px 优雅间隙并居中；\n' +
-            '   • 规范灵动岛内「返回概览」等次级操作按钮尺寸为 26px 微胶囊，上下保留 5px 呼吸空间，全圆角 pill 融入 36px 外壳。\n\n' +
-            '2. 状态徽章与色彩语义（举一反三）：\n' +
-            '   • 用户管理等页面的「正常」状态从发灰无语义底色升级为 status-online 柔和薄荷绿背景与深绿文字；\n' +
-            '   • 全量 Badge 开启双向几何严格居中，彻底消除文字偏右与留白不对称；\n' +
-            '   • 修复「举报 16」等数字标签因宽度不足被截断换成两行的问题。\n\n' +
-            '3. 全站图文混排避让：\n' +
-            '   • 全量卡片操作按钮（设置/关注/私信等）启用图文自动排布，杜绝压盖；\n' +
-            '   • 修复底部 TabBar 文字与图标纵向重叠，顶层 Header 浮层权重置顶。\n\n' +
-            '4. 智能保护与增量安全：\n' +
-            '   • 完整保留「首页信息流」等画板的 Figma AI 自定义滚动结构（25:2/25:3），实现无侵入式渐进式更新。';
+          var commitTag = SPEC.meta && SPEC.meta.commit ? SPEC.meta.commit : 'dev';
+          var versionTitle = (SPEC.meta && SPEC.meta.versionTitle) ||
+            ('细节精修版 · 设计稿同步 (' + commitTag + ' · ' + timeStr + ')');
+          var versionDesc = (SPEC.meta && SPEC.meta.versionDesc) ||
+            ('【HotSpot Design Kit 自动同步】\n\n' +
+             '• 页面与画板：同步 ' + (SPEC.meta && SPEC.meta.screenCount ? SPEC.meta.screenCount : 105) + ' 个应用画板与设计规范页；\n' +
+             '• 设计 Token：同步 ' + (SPEC.variables ? SPEC.variables.length : 127) + ' 个颜色变量（跨 ' + (SPEC.meta && SPEC.meta.modes ? SPEC.meta.modes.length : 6) + ' 个模式）；\n' +
+             '• 基础字族与排版：Noto Sans SC 中文支持与自适应排版；\n' +
+             '• 源码版本：commit ' + commitTag + '，构建于 ' + ((SPEC.meta && SPEC.meta.builtAt) || timeStr) + '。');
 
           await figma.saveVersionHistoryAsync(versionTitle, versionDesc);
           log('HotSpot：已成功在 Figma 版本历史记录中保存里程碑「' + versionTitle + '」');
