@@ -230,7 +230,7 @@
 							<span class="min-w-0 flex-1 truncate text-sm font-medium text-text-primary">
 								举报{TARGET_LABELS[item.target_type]} · {REASON_LABELS[item.reason]}
 							</span>
-							<Badge class="ml-auto shrink-0" tone={STATUS_TONE[item.status]}>{STATUS_LABELS[item.status]}</Badge>
+							<Badge size="status" class="ml-auto shrink-0" tone={STATUS_TONE[item.status]}>{STATUS_LABELS[item.status]}</Badge>
 						</div>
 						{#if item.description}
 							<p class="text-xs text-text-secondary line-clamp-2">{item.description}</p>

@@ -26,7 +26,7 @@
 
 <div class={cn('flex items-center', shell)}>
 	<Avatar src={auth.user?.avatar_url} name={auth.user?.nickname} size="md" class="shrink-0" />
-	<div class="group flex flex-1 items-center rounded-full bg-surface-subtle/50 hover:bg-surface-subtle/70 focus-within:bg-surface-primary focus-within:ring-2 focus-within:ring-accent-default/30 border border-border-default/50 px-3.5 sm:px-4 py-1.5 sm:py-2 transition-all">
+	<div class="group flex flex-1 items-center rounded-md bg-surface-subtle/50 hover:bg-surface-subtle/70 focus-within:bg-surface-primary focus-within:ring-2 focus-within:ring-accent-default/30 border border-border-default/50 px-3.5 sm:px-4 py-1.5 sm:py-2 transition-all">
 		<input
 			bind:this={inputEl}
 			bind:value={input}
@@ -41,7 +41,7 @@
 	</div>
 	<button
 		type="button"
-		class="hover-btn hit-slop scale-btn flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-standard ease-standard focus-ring
+		class="hover-btn hit-slop scale-btn flex size-10 shrink-0 items-center justify-center rounded-full transition-all duration-standard ease-standard focus-ring
 			{canSend ? 'bg-accent-default text-text-on-accent shadow-raised-sm hover:shadow-raised-md active:scale-95' : 'bg-surface-subtle text-text-secondary cursor-not-allowed'}"
 		onclick={() => onSend()}
 		aria-label="发送评论"

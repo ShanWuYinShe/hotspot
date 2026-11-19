@@ -26,7 +26,11 @@
 	// - 作者行 昵称 14px semibold、头像 44/36、位置+时间 11px 次级；正文 14px/1.75 阅读行高；
 	// - 标签回归标准胶囊（h-6，无描边无投影，避免「底色+描边+投影」三层堆叠）；
 	// - 操作行图标 18 + 计数 12px tabular，点赞态用 accent（与卡片一致，不再用 danger 红）；
-	// - 评论行昵称 14 semibold / 正文 14 / 时间 11，回复块落在 soft 底内；
+	// - 评论行昵称 14 semibold / 正文 14 / 时间 11；
+	// - 评论区「方案 B」（设计稿 748:48）：楼中楼去掉灰底卡片/描边/内距（回复块与主评论文字列
+	//   同轴 x=48），回复头像 20 + 头像右 8px 内容列（回复头/正文/动作 x=28）；主评论头像底中心
+	//   到首条回复头像左缘画 1.25px/0.35 建筑导引线（纯静态 CSS 装饰，随主评论行高自适应）；
+	//   动作行 点赞组 14+4+11 Medium、与「回复」间距 16、整行 44px 有效热区；作者徽章 28×16/r4/10px；
 	// - 评论区分区标题改用全站 SectionHead 原语，空态走 EmptyState（裸图标 28）。
 
 	export interface MomentComment {
@@ -406,127 +410,152 @@
 		{/if}
 		<div class="flex flex-col divide-y divide-border-subtle/30">
 			{#each comments as c (c.id)}
-				<div class="flex gap-3 py-4 first:pt-0 last:pb-0" use:enterOnce={c.id === newCommentId}>
-					<button
-						type="button"
-						class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring self-start"
-						aria-label={`查看${c.user}的个人主页`}
-						onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
-					>
-						<Avatar src={c.avatar} name={c.user} size="md" />
-					</button>
-					<div class="min-w-0 flex-1">
-						<div class="flex items-center justify-between gap-2">
-							<div class="flex items-center gap-1.5 min-w-0">
-								<button
-									type="button"
-									class="link-btn hit-slop-44 truncate rounded-sm py-1 text-left text-sm font-semibold text-text-primary hover:text-accent-default focus-ring transition-colors"
-									onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
-								>{c.user}</button>
-								{#if c.userId && c.userId === moment.authorId}
-									<Badge tone="accent" size="sm">作者</Badge>
-								{/if}
-							</div>
-							<span class="shrink-0 text-xs tabular-nums text-text-secondary">{c.time}</span>
+				<div class="py-4 first:pt-0 last:pb-0" use:enterOnce={c.id === newCommentId}>
+					<div class="flex gap-3">
+						<div class="relative shrink-0">
+							{#if c.replies.length > 0}
+								<!-- 楼中楼建筑导引线（方案 B）：从主评论头像底部中心 (x=18) 垂直下探，
+								     以圆角 sm 档（12px）圆弧右转、收敛于首条回复头像左缘左侧 6px（x=42）。
+								     1.25px 描边 / 0.35 透明度 / text-secondary；纯静态装饰（无动效，
+								     reduced-motion 天然无影响），不参与读屏与命中测试。
+								     -bottom = 回复块 mt-3.5（0.875rem）+ 回复头像半高（0.625rem）：末端始终
+								     落在首条回复头像的垂直中心，主评论正文换行时随行高自然拉长（与端上实测同口径）。 -->
+								<div
+									data-thread-line
+									class="pointer-events-none absolute left-[1.125rem] top-[2.625rem] -bottom-[1.5rem] w-[1.5rem] rounded-bl-sm border-b-[1.25px] border-l-[1.25px] border-text-secondary opacity-35"
+									aria-hidden="true"
+								></div>
+							{/if}
+							<button
+								type="button"
+								class="hover-btn hit-slop-44 rounded-full focus-ring"
+								aria-label={`查看${c.user}的个人主页`}
+								onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
+							>
+								<Avatar src={c.avatar} name={c.user} size="md" />
+							</button>
 						</div>
-						{#if c.isDeleted}
-							<p class="mt-1 text-sm italic leading-relaxed text-text-secondary">该评论已删除</p>
-						{:else}
-							<p class="mt-1.5 break-words text-sm leading-relaxed text-text-primary">{c.text}</p>
-							<div class="mt-2.5 flex items-center gap-4">
-								<button
-									type="button"
-									class="hover-action hit-slop-44 -my-2 flex items-center gap-1.5 py-2 focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
-									aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
-									aria-pressed={c.liked}
-									onclick={() => {
-										if (!c.liked) commentPops = { ...commentPops, [c.id]: (commentPops[c.id] ?? 0) + 1 };
-										onToggleCommentLike(c.id);
-									}}
-								>
-									<span class="inline-flex" use:popOn={commentPops[c.id] ?? 0}>
-										<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
-									</span>
-									<span use:countPop={commentPops[c.id] ?? 0} class="text-xs tabular-nums">{c.likes}</span>
-								</button>
-								<button
-									type="button"
-									class="hover-action hit-slop-44 -my-2 py-2 text-xs text-text-secondary transition-colors hover:text-text-primary focus-ring"
-									onclick={() => onReply(c.user, c.id)}
-								>回复</button>
-								{#if c.userId && c.userId === auth.user?.user_id}
+						<div class="min-w-0 flex-1">
+							<div class="flex items-center justify-between gap-2">
+								<div class="flex items-center gap-1.5 min-w-0">
 									<button
 										type="button"
-										class="hover-action hit-slop-44 -my-2 py-2 text-xs text-text-secondary transition-colors hover:text-status-danger focus-ring"
-										aria-label="删除我的评论"
-										onclick={() => onDeleteComment(c.id)}
-									>删除</button>
-								{:else if c.userId && c.userId !== auth.user?.user_id}
-									<button
-										type="button"
-										class="hover-action desktop-reveal hit-slop-44 -my-2 py-2 text-xs text-text-secondary transition-colors hover:text-status-danger focus-ring"
-										aria-label={`举报 ${c.user} 的评论`}
-										onclick={() => onReportComment(c.id)}
-									>举报</button>
-								{/if}
+										class="link-btn hit-slop-44 truncate rounded-sm py-1 text-left text-sm font-semibold text-text-primary hover:text-accent-default focus-ring transition-colors"
+										onclick={() => { if (c.userId) void goto(ROUTES.user(c.userId)); }}
+									>{c.user}</button>
+									{#if c.userId && c.userId === moment.authorId}
+										<!-- 作者微徽章 28×16 / r4 / 10px（与昵称间距 6px） -->
+										<Badge tone="accent" size="author">作者</Badge>
+									{/if}
+								</div>
+								<span class="shrink-0 text-xs tabular-nums text-text-secondary">{c.time}</span>
 							</div>
-						{/if}
-						{#if c.replies.length > 0}
-							<!-- 楼中楼回复区：清透层级、对齐呼吸感、高可读性 -->
-							<div class="mt-3 flex flex-col gap-2.5 rounded-lg bg-surface-subtle/30 border border-border-subtle/25 p-3">
-								{#each c.replies as r (r.id)}
-									<div class="flex flex-col gap-1" use:enterOnce={r.id === newReplyId}>
+							{#if c.isDeleted}
+								<p class="mt-1 text-sm italic leading-relaxed text-text-secondary">该评论已删除</p>
+							{:else}
+								<p class="mt-1.5 break-words text-sm leading-relaxed text-text-primary">{c.text}</p>
+								<!-- 动作行（设计稿 top=54 / 行高 15）：点赞组 = 心形 14 + 间距 4 + 计数 11px Medium；
+								     点赞组与「回复」间距 16；整行垂直居中。h-[18px]（18px）+ hit-slop-44 = 44px 有效热区，
+								     去掉旧的 -my-2/py-2 垂直偏移 hack（不靠负边距撑热区）。 -->
+								<div class="mt-1 flex items-center gap-4">
+									<button
+										type="button"
+										class="hover-action hit-slop-44 flex h-[18px] items-center gap-1 leading-none focus-ring transition-colors {c.liked ? 'text-accent-default' : 'text-text-secondary hover:text-text-primary'}"
+										aria-label={c.liked ? '取消点赞评论' : '点赞评论'}
+										aria-pressed={c.liked}
+										onclick={() => {
+											if (!c.liked) commentPops = { ...commentPops, [c.id]: (commentPops[c.id] ?? 0) + 1 };
+											onToggleCommentLike(c.id);
+										}}
+									>
+										<span class="inline-flex" use:popOn={commentPops[c.id] ?? 0}>
+											<Heart class="size-3.5" strokeWidth={1.5} fill={c.liked ? 'currentColor' : 'none'} />
+										</span>
+										<span use:countPop={commentPops[c.id] ?? 0} class="text-xs font-medium tabular-nums">{c.likes}</span>
+									</button>
+									<button
+										type="button"
+										class="hover-action hit-slop-44 flex h-[18px] items-center text-xs font-medium leading-none text-text-secondary transition-colors hover:text-text-primary focus-ring"
+										onclick={() => onReply(c.user, c.id)}
+									>回复</button>
+									{#if c.userId && c.userId === auth.user?.user_id}
+										<button
+											type="button"
+											class="hover-action hit-slop-44 flex h-[18px] items-center text-xs leading-none text-text-secondary transition-colors hover:text-status-danger focus-ring"
+											aria-label="删除我的评论"
+											onclick={() => onDeleteComment(c.id)}
+										>删除</button>
+									{:else if c.userId && c.userId !== auth.user?.user_id}
+										<button
+											type="button"
+											class="hover-action desktop-reveal hit-slop-44 flex h-[18px] items-center text-xs leading-none text-text-secondary transition-colors hover:text-status-danger focus-ring"
+											aria-label={`举报 ${c.user} 的评论`}
+											onclick={() => onReportComment(c.id)}
+										>举报</button>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					</div>
+					{#if c.replies.length > 0}
+						<!-- 楼中楼回复区（方案 B）：去掉灰底卡片/描边/内距改透明，回复块与主评论文字列同轴（x=48）；
+						     回复头像 20 + 头像右 8px 内容列 → 回复头/正文/回复动作统一 x=28。 -->
+						<div class="mt-3.5 flex flex-col gap-2.5 pl-12">
+							{#each c.replies as r (r.id)}
+								<div class="flex items-start gap-2" use:enterOnce={r.id === newReplyId}>
+									<button
+										type="button"
+										class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
+										aria-label={`查看${r.user}的个人主页`}
+										onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
+									>
+										<Avatar src={r.avatar} name={r.user} size="xs" />
+									</button>
+									<div class="min-w-0 flex-1">
 										<div class="flex items-center justify-between gap-2">
-											<div class="flex items-center gap-2 min-w-0">
-												<button
-													type="button"
-													class="hover-btn hit-slop-44 shrink-0 rounded-full focus-ring"
-													aria-label={`查看${r.user}的个人主页`}
-													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
-												>
-													<Avatar src={r.avatar} name={r.user} size="xs" />
-												</button>
-												<button
-													type="button"
-													class="link-btn hit-slop-44 truncate rounded-sm py-0.5 text-left text-xs font-semibold text-text-primary hover:text-accent-default focus-ring transition-colors"
-													onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
-												>{r.user}</button>
-												{#if r.userId && r.userId === moment.authorId}
-													<Badge tone="accent" size="sm">作者</Badge>
-												{/if}
+											<div class="flex min-w-0 items-center gap-2">
+												<!-- 昵称 + 作者微徽章（间距 6px）为一组，与「回复/@对方」组间 8px -->
+												<div class="flex min-w-0 items-center gap-1.5">
+													<button
+														type="button"
+														class="link-btn hit-slop-44 truncate rounded-sm py-0.5 text-left text-xs font-semibold text-text-primary hover:text-accent-default focus-ring transition-colors"
+														onclick={() => { if (r.userId) void goto(ROUTES.user(r.userId)); }}
+													>{r.user}</button>
+													{#if r.userId && r.userId === moment.authorId}
+														<Badge tone="accent" size="author">作者</Badge>
+													{/if}
+												</div>
 												{#if !r.isDeleted}
-													<span class="text-xxs text-text-secondary">回复</span>
-													<span class="text-xxs font-medium text-text-secondary">@{c.user}</span>
+													<span class="shrink-0 text-xxs text-text-secondary">回复</span>
+													<span class="shrink-0 text-xxs font-medium text-text-secondary">@{c.user}</span>
 												{/if}
 											</div>
 											<span class="shrink-0 text-xxs tabular-nums text-text-secondary">{r.time}</span>
 										</div>
-										<div class="pl-7">
-											{#if r.isDeleted}
-												<p class="text-xs italic leading-relaxed text-text-secondary">该评论已删除</p>
-											{:else}
-												<p class="break-words text-xs sm:text-sm leading-relaxed text-text-primary">{r.text}</p>
-												<div class="mt-1.5 flex items-center gap-3">
-													<button
-														type="button"
-														class="hover-action hit-slop-44 -my-1 py-1 text-xxs text-text-secondary transition-colors hover:text-text-primary focus-ring"
-														onclick={() => onReply(r.user, c.id)}
-													>回复</button>
-												</div>
-											{/if}
-										</div>
+										{#if r.isDeleted}
+											<p class="mt-1 text-xs italic leading-relaxed text-text-secondary">该评论已删除</p>
+										{:else}
+											<p class="mt-1 break-words text-xs leading-relaxed text-text-primary">{r.text}</p>
+											<div class="mt-1.5 flex items-center gap-3">
+												<button
+													type="button"
+													class="hover-action hit-slop-44 flex h-[18px] items-center text-xs font-medium leading-none text-text-secondary transition-colors hover:text-text-primary focus-ring"
+													onclick={() => onReply(r.user, c.id)}
+												>回复</button>
+											</div>
+										{/if}
 									</div>
-								{/each}
-								{#if c.repliesCount > c.replies.length}
-									<button
-										type="button"
-										class="link-btn self-start rounded-sm pt-1 pl-7 text-xs font-medium text-accent-default hover:underline focus-ring"
-										onclick={() => onExpandReplies(c.id)}
-									>查看全部 {c.repliesCount} 条回复</button>
-								{/if}
-							</div>
-						{/if}
-					</div>
+								</div>
+							{/each}
+							{#if c.repliesCount > c.replies.length}
+								<button
+									type="button"
+									class="link-btn self-start pl-7 text-xs font-medium text-accent-default hover:underline focus-ring"
+									onclick={() => onExpandReplies(c.id)}
+								>查看全部 {c.repliesCount} 条回复</button>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
