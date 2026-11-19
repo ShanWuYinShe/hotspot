@@ -77,3 +77,15 @@ frontend/static/version.json
 reception-bot/state/*.json
 reception-bot/state/
 .agents/skills/hotspot-reception-bot/state/
+
+# ============================================
+# Android（androidapp/）
+# ============================================
+androidapp/.gradle/
+androidapp/build/
+androidapp/app/build/
+androidapp/local.properties
+androidapp/.kotlin/
+androidapp/captures/
+androidapp/*.iml
+

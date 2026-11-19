@@ -18,6 +18,7 @@
 | `backend-go/` | Go 主后端（当前活跃） | Go / Chi / PostgreSQL / S2 |
 | `frontend/` | Web 主前端 | SvelteKit / Svelte 5 / TypeScript / Tailwind CSS |
 | `harmonyapp/` | HarmonyOS 客户端 | HarmonyOS ArkTS |
+| `androidapp/` | Android 客户端（首版，设计稿对齐中） | Kotlin / Jetpack Compose |
 | `spec/` | API 契约（只读权威） | — |
 
 ## 快速开始
@@ -42,6 +43,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 | Web 前端 | `GET /version.json`（构建产物静态文件）；设置页「关于 HotSpot」徽标对用户可见 |
 | Docker 镜像 | `IMAGE_TAG` 即版本串；OCI label（`org.opencontainers.image.revision`）含完整 commit |
 | 鸿蒙客户端 | 设置页「关于」行显示 `AppScope/app.json5` 的 `versionName`（发版约定见 `harmonyapp/AGENTS.md`） |
+| Android 客户端 | 设置页「关于」行显示 `androidapp/app/build.gradle.kts` 的 `versionName`（独立版本，暂未与 tag 联动） |
 
 发布为**产物分发模式**：tag 触发 Release 工作流构建前后端镜像（注入版本指纹）并附 `.sha256` 挂 GitHub Release，
 本地 `./scripts/deploy-production.sh vX.Y.Z` 完成校验和核验 → 配置导出 → 服务器 `docker load` → OCI 指纹核对 →
