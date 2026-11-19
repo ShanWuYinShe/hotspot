@@ -85,19 +85,37 @@
   （`music_note`→`music`、sparkles 无对应→`wand_and_stars`）。
 - 客户端独有、前端没有的系统能力（触感、字体缩放、无障碍标签）是加分项，按平台惯例加。
 
-### Android 迁移对照（后续建 `androidapp/` 时）
+### Android 端（`androidapp/`，Kotlin + Jetpack Compose）
 
-| 概念 | Web | HarmonyOS | Android（计划） |
+**对齐口径与前两端一致：token 值以 Web CSS 为源、结构/几何以 Figma 设计稿为准。**
+
+- **token 链路（唯一事实源，禁止手改生成物）**：
+  `frontend/src/styles/theme/themes/*.css` + `shared.css`
+  → `node scripts/design-tokens/gen-android.mjs`（解析 3 主题 × 明暗）
+  → `androidapp/app/src/main/java/com/hotspot/app/ui/theme/Tokens.kt`（Compose 常量）
+  + `app/src/main/assets/design-tokens.json`（生成清单）。
+  `node frontend/scripts/check-cross-platform-android.mjs` 逐值断言一致，已挂入
+  `bun run check:theme` 与 CI `Android (Compose Build)`；**改 Web 主题色必须重跑生成器并提交生成物**。
+- **组件语言**：原语与 Web/harmony 同构——`SystemButton`（primary/secondary/soft/ghost/danger ×
+  SM32/MD42/LG48，全圆角）、`SystemInput`（43 高 / 圆角 16 / 焦点环）、`Badge`（sm20/md24）、
+  `TabBar`（34 胶囊）、`ListGroup`（无描边软岛 + 20 圆角）、`PageHeader`、`BottomNav`（5 tab）。
+  禁止页面内硬编码颜色/字号/间距；新档位先在 token 层合并档位再落组件。
+- **构建验证**：本地 `./gradlew --no-daemon assembleDebug testDebugUnitTest`（JAVA_HOME 用
+  Android Studio JBR、ANDROID_HOME=`~/Library/Android/sdk`）；CI `Android (Compose Build)` 兜底。
+- **调试拓扑**：模拟器 baseUrl `http://10.0.2.2:8888`（宿主 nginx 网关）；真机
+  `adb reverse tcp:8888 tcp:8888` + `http://127.0.0.1:8888`；debug 放开 cleartext、release 禁止。
+
+| 概念 | Web | HarmonyOS | Android（现行） |
 |---|---|---|---|
-| 调色板 | `--cst-palette-*` | `ThemeConstants` ColorConfig | `themes.xml` + `MaterialTheme`(colorScheme) |
-| 语义色 | `--cst-text-primary` 等 | palette.textPrimary | `?attr/colorOnSurface` / 自定义 semantic attr |
-| 字号档 | Tailwind text-* | `FONT.SIZE`（10/11/12/14/16/20/24/30/36） | `dimens.xml` 同刻度 |
-| 底部导航 | MobilePortrait nav + NavTab | Tabs + TabBarBuilder | `BottomNavigationView`/`NavigationBar` |
-| 图标 | lucide svelte | SymbolGlyph | Material Symbols（同名系） |
-| 半屏发布 | Radix Dialog bottom | sheet 28 圆角 | `ModalBottomSheet` |
+| 调色板 | `--cst-palette-*` | `ThemeConstants` ColorConfig | 生成的 `Tokens.kt`（`HotSpotPalette` 3 主题 × 2 明暗） |
+| 语义色 | `--cst-text-primary` 等 | palette.textPrimary | `HotSpotColors` CompositionLocal（同语义命名） |
+| 字号档 | Tailwind text-* | `FONT.SIZE`（10/11/12/14/16/20/24/30/36） | Compose `HotSpotType` 同刻度 |
+| 底部导航 | MobilePortrait nav + NavTab | Tabs + TabBarBuilder | Compose `NavigationBar` + 自绘 34 胶囊指示 |
+| 图标 | lucide svelte | SymbolGlyph | Material Icons（同名系，`Icons.*`） |
+| 半屏发布 | Radix Dialog bottom | sheet 28 圆角 | `ModalBottomSheet`（28 圆角） |
 | 反向转发 | — | `hdc fport` | `adb reverse tcp:8888 tcp:8888` |
-| 布局实测 | computed style | `uitest dumpLayout` | `uiautomator dump` |
-| 校验防线 | `check:theme`（已覆盖三主题） | 同左 | 同一脚本加 Android 资源解析分支 |
+| 布局实测 | computed style | `uitest dumpLayout` | `uiautomator dump` / `adb exec-out screencap` |
+| 校验防线 | `check:theme`（三主题） | 同左 | `check-cross-platform-android.mjs`（生成值逐值相等） |
 
 ## 5. 踩坑实录（每条都真实付出过排查成本）
 
@@ -124,5 +142,6 @@
 2. 客户端同页截图 + dumpLayout
 3. 差异 → 归因到 token（改 ThemeConstants/DesignConstants，进 CI）或规格（改布局代码）
 4. 每修一批：构建 → 部署 → 截图回归 → check:theme 绿
-5. 新增的对应关系沉淀进两端 `AGENTS.md` 的映射表与 check 脚本 MAPPING
+5. 新增的对应关系沉淀进三端 `AGENTS.md` 的映射表、check 脚本 MAPPING 与 Android token 生成器
+   （改 Web token → 重跑 `node scripts/design-tokens/gen-android.mjs` 并提交生成物）
 ```

@@ -1,7 +1,7 @@
 # HotSpot 设计系统
 
-> **现行权威**：本文件是双端设计 token 数值的唯一权威文档，与
-> `frontend/scripts/check-cross-platform-*.mjs`（CI 强制执行）共同保证双端一致。
+> **现行权威**：本文件是三端（Web / HarmonyOS / Android）设计 token 数值的唯一权威文档，与
+> `frontend/scripts/check-cross-platform-*.mjs`（CI 强制执行）共同保证三端一致。
 > 改色、改字号、改间距、改圆角、改阴影、改动效时，两端必须同步，漂移由
 > `bun run check:theme` 在 CI 拦截。强制的同步流程与组件规则见两端 `AGENTS.md`
 > （根 `AGENTS.md` / `frontend/AGENTS.md` / `harmonyapp/AGENTS.md`）。
@@ -1380,3 +1380,53 @@ eager 图各 2 张且像素 diff 0 回归。
 - **不要手工编辑** `docs/design-kit/tokens.json` 与 `ui-kit.html`——改代码 token（`frontend/src/styles/theme`、`harmonyapp/.../DesignConstants.ets`）后重新生成；
 - 导入 Figma / Stitch 的步骤、设计约束与页面清单见 `docs/design-kit/README.md`；
 - 本文件仍是设计决策的权威来源；设计包只是同一事实源的机器可读/可视化副本。
+
+## 27. Android 端（`androidapp/`，Kotlin + Jetpack Compose）
+
+Android 是第三端实现，**不新增 token 事实源**：颜色/字号/圆角/动效全部从 Web CSS 生成，校验进 CI；
+结构/几何/交互对齐 Figma 设计稿移动端（390）并遵循本文档既有契约。
+
+### 27.1 token 链路（唯一事实源，禁止手改生成物）
+
+```
+frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + shared.css
+  └─ node scripts/design-tokens/gen-android.mjs
+       ├─ androidapp/app/src/main/java/com/hotspot/app/ui/theme/Tokens.kt      （Compose 常量）
+       └─ androidapp/app/src/main/assets/design-tokens.json                    （生成清单/校验基准）
+  └─ node frontend/scripts/check-cross-platform-android.mjs  ← 已挂 bun run check:theme 与 CI
+```
+
+- `Tokens.kt` 由 `scripts/design-tokens/gen-android.mjs` 生成，覆盖 palette 23 项、语义色 76 项、
+  字号 9 档、圆角 6 档、动效 16 档（3 主题 × 明暗）。改 Web token 后必须重跑生成器并提交生成物，
+  否则 `check:theme` / CI 直接红。
+- **透明色换算**：CSS 透明度不写进 8 位 hex，生成器按「premultiplied-alpha 合成到不透明底」求值
+  （与鸿蒙侧同一规则），避免两端「看着一样、实际通道不同」。
+- 消费面：`HotSpotTheme`（Material3 ColorScheme）+ `HotSpotTheme.colors`（`HotSpotColors`
+  CompositionLocal，承载 `--cst-surface-island` / 状态四色 / on-soft 文字 / 输入族 / 导航三态等
+  Material 覆盖不到的语义 token）；排版 `HotSpotTypography` + `HotSpotTextStyles`；圆角 `AppShapes`；
+  间距 `Spacing`/`Dimens`（4px 网格，与 Web 同一节奏）。
+
+### 27.2 组件原语（与 Web/harmony 同构，禁止页面内硬编码风格值）
+
+| 原语 | 规格（对齐设计规范页 `421:8`） |
+|---|---|
+| `SystemButton` | primary/secondary/soft/ghost/danger × SM 32 / MD 42 / LG 48，全圆角胶囊，按下缩放 + 状态色，热区 ≥44dp |
+| `SystemInput` | 43 高 / 圆角 16 / 三态边框（默认·焦点 accent 22% 环·错误 danger 24% 环） |
+| `Badge` | sm 20 / md 24 + 语义 tone（accent/online/warning/danger/neutral），数字未读用同族 accent |
+| `SegmentedTabs` / `Tabs` | 34 高胶囊分段 / 34 高 Tab 行，选中态底色 + 文字色切换，垂直居中 |
+| `MomentCard` / `Surfaces` / `ListGroup` | 无描边软岛（`--cst-surface-island`）+ 圆角 20 + 轻投影，行 64 |
+| `PageHeader` / `BottomNav` | 页头返回 42 圆钮 + 标题；底部 5 tab（首页/附近/发布+/消息/我的），34 图标 + 11fp 标签 + 选中指示条 |
+| `Avatar` / `States` / `AmbientCanvas` | 首字母占位 + 图片渐显；加载/空/错误三态；主题氛围画布 |
+
+要求：颜色/字号/间距/圆角/动效一律走 token；触控热区 ≥44dp；焦点可见；尊重系统
+`animator_duration_scale`（减弱动态时位移/缩放归零）。
+
+### 27.3 数据与调试
+
+- API：RPC + JSON（仅 POST），路径由 `data/api/Endpoints.kt` 统一维护，成功判定 `code === 0`，
+  Bearer token 持久化，`10100` 触发登录态失效。
+- 调试拓扑：模拟器 `http://10.0.2.2:8888`（宿主 nginx 网关）；真机 `adb reverse tcp:8888 tcp:8888`
+  + 覆盖 `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`；debug 允许明文、release 仅 HTTPS。
+- 验证：`cd androidapp && JAVA_HOME="<Android Studio JBR>" ANDROID_HOME="$HOME/Library/Android/sdk"
+  ./gradlew --no-daemon assembleDebug testDebugUnitTest`；CI job `Android (Compose Build)` 兜底。
+

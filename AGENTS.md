@@ -8,6 +8,7 @@
 - `backend-go/`：Go 主后端，模块化单体 + S2 地理索引，当前所有后端开发在此进行。
 - `frontend/`：Svelte Web 主前端，SvelteKit 2 + Svelte 5 + TypeScript + Tailwind CSS，当前所有前端开发在此进行。
 - `harmonyapp/`：HarmonyOS ArkTS 客户端。
+- `androidapp/`：Android Kotlin + Jetpack Compose 客户端。设计 token 不手写：由 `scripts/design-tokens/gen-android.mjs` 从 Web CSS（`frontend/src/styles/theme/`）生成 `ui/theme/Tokens.kt`，`frontend/scripts/check-cross-platform-android.mjs` 在 `bun run check:theme` 与 CI 中逐值校验，漂移即失败。
 - `spec/`：API 契约的唯一权威来源（只读）。
 - `reception-bot/`：社区温度接待机器人（多人格拟真人账号：欢迎/关怀/收件箱回复），**定位为本地调试/联调用途，不做常驻服务**，按需手动启停；运行规程见 `.agents/skills/hotspot-reception-bot/SKILL.md`（唯一事实源）；`state/` 为运行时状态（git 已忽略，含口令归档文件，勿入库）。
 
@@ -39,15 +40,18 @@
 全绿 → `gh pr merge --rebase --delete-branch` → 本地 `git pull --ff-only` 并清理 worktree。
 
 - 本地（提交前，秒级）：`git commit` 的 husky 钩子按改动路径跑对应门禁（`frontend/` → `bun run check`；`backend-go/` → gofmt + 受影响包 `go build`/`go vet`/`go test -short`；`harmonyapp/` → hvigor `assembleApp`，工具链缺失时告警跳过），另有 `gofmt -l backend-go`、`go vet -C backend-go ./...` 等秒级复核命令。**不跑**：`go test ./...`（全量/含 `-race`）、`bun run test`、`bun run build`、生产镜像构建（`docker compose --profile prod build`）；本地 dev 容器（`docker-compose.dev.yml`）仅在交互式调试时按需构建/启动。
-- CI 覆盖（`.github/workflows/ci.yml`，`push: main` + `pull_request: main`，共 7 个 job）：
+- CI 覆盖（`.github/workflows/ci.yml`，`push: main` + `pull_request: main`，共 9 个 job）：
   - `Go Backend (Unit Tests)`：go build、gofmt、go vet、govulncheck、staticcheck、gosec、迁移序号校验、`go test` + 覆盖率门禁。
   - `Go Backend (Postgres Integration)`：真实 Postgres 迁移与 schema/索引校验、迁移幂等、真实库 repository 集成测试、模块覆盖率 ≥90%、SeaweedFS、后端 + nginx 网关 HTTP E2E。
   - `Frontend (SvelteKit)`：`bun install`、svelte-check、vitest、`bun build`。
   - `Infra (Compose & Nginx Config)`：`docker compose config`（base / dev / prod）、Prometheus 配置校验、`nginx -t`（base / dev / prod-tls）。
   - `Contract Prefix Guard`：禁止 legacy 管理节点前缀回归（现行前缀为 `/admin/api/v1`，见 `spec/api_spec_base.md`）。
   - `Secret scan (gitleaks)`：全量历史密钥扫描。
+  - `Android (Compose Build)`：Android SDK 37 + JDK 21 环境跑 `./gradlew --no-daemon assembleDebug testDebugUnitTest`，并先跑 `node frontend/scripts/check-cross-platform-android.mjs` 校验 Android 设计 token 与 Web CSS 逐值一致。
   - `Docker Build + Runtime Smoke (Prod Images)`：生产后端/前端镜像构建 + 生产后端镜像运行时冒烟。
-- CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上真机/模拟器走查（见 skill `hotspot-harmony-device-verify`）；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
+- Android 端 `androidapp/` 的构建与 token 校验由 CI `Android (Compose Build)` 覆盖；本地改 UI/token 后可选跑（需本机 SDK）：`cd androidapp && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew --no-daemon assembleDebug`。
+
+CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上真机/模拟器走查（见 skill `hotspot-harmony-device-verify`）；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
 - 发版/发布门禁：日常验证以 CI 为准；打 tag 前只需确认 `origin/main` 最近一次 CI 全绿（含 `Docker Build + Runtime Smoke`），镜像构建与容器内集成由 CI 在 PR/main 上覆盖，本地不再构建生产镜像、不再核对本地镜像指纹。详见下节「版本号与发布」。
 
 ## 版本号与发布
