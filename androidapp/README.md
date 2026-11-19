@@ -1,0 +1,81 @@
+# androidapp — HotSpot Android 客户端（Kotlin + Jetpack Compose）
+
+按 Figma 设计稿移动端 390 屏幕实现的首版客户端。设计 token **不手写**：由
+`scripts/design-tokens/gen-android.mjs` 从 Web CSS（`frontend/src/styles/theme/`）生成，
+`frontend/scripts/check-cross-platform-android.mjs` 逐值校验（挂 `bun run check:theme` 与 CI）。
+
+## 技术栈
+
+- Kotlin 2.4.0 / AGP 9.2.1 / Gradle 9.7.0（wrapper 已提交）
+- Jetpack Compose（BOM 2025.12.01）+ material3 + navigation-compose 2.9.0
+- OkHttp 5.4.0 + kotlinx-serialization-json 1.11.0（API 层）
+- coil-compose 2.7.0（图片，渐显）
+- compileSdk / targetSdk 37，minSdk 26，JVM target 17，包名 `com.hotspot.app`
+
+## 构建与验证
+
+```bash
+cd androidapp
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+ANDROID_HOME="$HOME/Library/Android/sdk" \
+./gradlew --no-daemon assembleDebug        # 产物：app/build/outputs/apk/debug/app-debug.apk
+./gradlew --no-daemon testDebugUnitTest
+
+# 设计 token 链路（仓库根执行）
+node scripts/design-tokens/gen-android.mjs          # 重新生成 Tokens.kt + design-tokens.json
+node scripts/design-tokens/gen-android.mjs --check  # 只校验产物是否最新
+cd frontend && bun run check:theme                  # CSS ↔ JSON ↔ Tokens.kt 逐值校验
+```
+
+构建后不留常驻守护进程：`pgrep -fl 'GradleDaemon|KotlinCompileDaemon'` 应为空。
+
+## 调试地址
+
+- debug 默认 `http://10.0.2.2:8888`（模拟器访问宿主 nginx 网关）
+- 真机：`adb reverse tcp:8888 tcp:8888`，并通过 Gradle 属性覆盖
+  `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`
+- release：`-PHOTSPOT_BASE_URL=https://chaoset.com`（默认线上站点）
+- debug 允许明文 HTTP（network security config，仅本机地址）；release 禁止明文
+
+## 目录
+
+```
+app/src/main/java/com/hotspot/app/
+  MainActivity.kt              # edge-to-edge + 主题/系统栏
+  AppContainer.kt              # 依赖容器（无 DI 框架）
+  data/api/                    # OkHttp + kotlinx-serialization，端点表严格对齐 spec/
+  data/auth/TokenStore.kt      # Bearer 会话持久化（见「安全待办」）
+  data/model/                  # 与 spec/ 字段一一对应的 DTO
+  data/repo/                   # 认证 / 信息流 / 附近 / 搜索 / 消息 / 资料 / 通知
+  ui/theme/                    # Tokens.kt（自动生成）、Theme/Type/Shape/Motion/Dimens
+  ui/components/               # SystemButton / SystemInput / Badge / Tabs / ListGroup /
+                               # ListRow / SystemCard / Avatar / 三态 / PageHeader / BottomNav /
+                               # AmbientCanvas / MomentCard
+  ui/screens/                  # 登录注册 / 首页 / 附近 / 消息 / 私聊 / 我的 / 搜索 / 通知 / 设置 / 发布占位
+  navigation/                  # 路由 + 登录态门禁 + 底部 5 tab
+  util/                        # 媒体 URL 归一 / 时间格式化
+app/src/test/                  # token 结构不变量 + 业务错误码文案单测
+```
+
+## 首版范围与 TODO（明确占位，不造假数据）
+
+已实现（真实 API、loading / empty / error 三态齐全）：
+登录 / 注册（用户名型免验证码）、首页信息流（为你推荐 = `moments/search` 热门模式；
+正在关注 = `moments/fetch_following`；下拉刷新 + 无限滚动 + 到底提示）、附近枢纽
+（附近的人/群组/瞬间 + 地图占位）、消息列表、私聊（只读历史 + 简单文本发送）、我的（资料卡 +
+统计）、搜索（用户/瞬间/群组）、通知（列表 + 全部已读）、设置（3 主题 × 明暗三档 + 退出登录）、
+瞬间详情（只读）。
+
+已登记 TODO（首版占位，UI 显式标注）：
+- 地图原生渲染（附近页占位卡）
+- 图片上传 / 发布（`media/presign_upload` → `moments/create`）
+- WebSocket 实时消息（当前为懒加载 + 手动刷新）
+- 评论列表与评论输入条（详情页只读）
+- 管理后台（不在移动端首版范围）
+- 我的瞬间 / 我的群组列表（资料页占位）
+
+## 安全待办
+
+`TokenStore` 当前用普通 SharedPreferences 持久化 access/refresh token（依赖清单未含
+androidx.security:security-crypto）。上线前必须迁移 EncryptedSharedPreferences 或 Android
+Keystore 加密实现（`TokenStore` 文件内已登记 TODO，接口保持不变）。
