@@ -31,7 +31,7 @@
 
 ## 构建 & 验证
 
-各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`），此处不重复列出（一律以子项目为准）。
+各模块命令以子项目 `AGENTS.md` 为唯一维护处（`backend-go/AGENTS.md`、`frontend/AGENTS.md`、`harmonyapp/AGENTS.md`、`androidapp/AGENTS.md`），此处不重复列出（一律以子项目为准）。
 
 ## CI 门禁与本地验证分工
 
