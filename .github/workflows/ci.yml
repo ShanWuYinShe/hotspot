@@ -409,7 +409,9 @@ jobs:
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
 
       - name: Install Android SDK platform / build-tools
-        run: sdkmanager --install "platforms;android-37" "build-tools;37.0.0" > /dev/null
+        # 平台包名带小版本号：Google 仓库里 API 37 的包 id 是 platforms;android-37.0
+        # （platforms;android-37 会报 Failed to find package）
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
 
       - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
