@@ -1,0 +1,88 @@
+# HotSpot Android 客户端（Kotlin + Jetpack Compose）
+
+本文件是 androidapp 专属约束；通用原则（Git/CI/Docker/设计系统）以根 `AGENTS.md` 为准。
+
+## 定位与范围
+
+按 Figma 设计稿（多端 UI Design Kit 移动端 390 屏）实现的 Android 客户端，与 `frontend` / `harmonyapp`
+同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
+首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 / 瞬间详情只读已实现；地图原生渲染、图片上传/发布、
+WebSocket 实时、评论 UI、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）。
+
+API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
+后端 int64 字段按 spec 的 string 处理，不做数值运算。
+
+## 设计 token 链路（禁止手改生成物）
+
+```
+frontend/src/styles/theme/**  （Web CSS = 唯一事实源）
+  → node scripts/design-tokens/gen-android.mjs            # 生成
+      → app/src/main/java/com/hotspot/app/ui/theme/Tokens.kt
+      → app/src/main/assets/design-tokens.json
+  → node frontend/scripts/check-cross-platform-android.mjs # 逐值校验（挂 bun run check:theme + CI）
+```
+
+- 改颜色/字号/圆角/动效 → **先改 Web CSS，再跑生成器并提交生成物**；直接改 `Tokens.kt` 会被 CI 打红。
+- 生成物覆盖 3 主题 × 明暗：palette 23 项、语义色 76 项、氛围画布 12 项、字号 9 档、圆角 6 档、动效 16 档。
+- 消费面：`HotSpotTheme.colors`（`HotSpotColors` CompositionLocal，语义 token）、`HotSpotTypography`、
+  `AppShapes`、`Dimens`/`Spacing`、`Motion`。页面禁止硬编码颜色/字号/圆角/动效。
+
+## 技术栈与构建
+
+- Kotlin 2.4.0 / AGP 9.2.1 / Gradle 9.7.0（wrapper 已入库）/ Compose BOM 2025.12.01 + material3 /
+  navigation-compose 2.9.0 / OkHttp 5.4.0 + kotlinx-serialization-json 1.11.0 / coil-compose 2.7.0
+- compileSdk & targetSdk 37、minSdk 26、JVM target 17、包名 `com.hotspot.app`
+
+```bash
+cd androidapp
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
+ANDROID_HOME="$HOME/Library/Android/sdk" \
+./gradlew --no-daemon assembleDebug          # APK: app/build/outputs/apk/debug/app-debug.apk
+JAVA_HOME=... ANDROID_HOME=... ./gradlew --no-daemon testDebugUnitTest
+# token：仓库根 node scripts/design-tokens/gen-android.mjs [--check]
+```
+
+- **一律 `--no-daemon`**，收尾确认 `pgrep -fl 'GradleDaemon|KotlinCompileDaemon'` 为空。
+- 本机不要提交 `local.properties`（已在 .gitignore）；`ANDROID_HOME` 走环境变量。
+- CI 覆盖：`.github/workflows/ci.yml` 的 `Android (Compose Build)`（JDK 21 + SDK 37 + token 校验 +
+  assembleDebug/testDebugUnitTest）；本地不必重复跑全量构建，但改 UI 后至少跑一次 assembleDebug。
+
+## 目录与分层（与 harmonyapp 对齐）
+
+```
+app/src/main/java/com/hotspot/app/
+  MainActivity.kt / HotSpotApplication.kt / AppContainer.kt   # 入口与依赖装配
+  data/api/        # ApiClient（OkHttp + 信封解析）、Endpoints（唯一路径定义处）
+  data/auth/       # TokenStore（Bearer 持久化）
+  data/model/      # spec 字段 DTO
+  data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/资料/通知）
+  navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
+  ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
+  ui/components/   # 原语：SystemButton/SystemInput/Badge/Tabs/Surfaces/Avatar/States/
+                   #       PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
+  ui/screens/      # 按业务页面（Home/Nearby/Messages/Chat/Me/Search/Notify/Settings/Login/...）
+  util/            # 格式化等纯函数
+```
+
+## API 与网络
+
+- 仅 POST + JSON（RPC 风格），路径必须经 `data/api/Endpoints.kt`（禁止页面硬编码路径）。
+- 成功判定只认 `code === 0`；`10100` 清会话回登录；MUST 幂等接口带 `Idempotency-Key`。
+- Base URL：debug 默认 `http://10.0.2.2:8888`（模拟器访问宿主 nginx 网关）；真机
+  `adb reverse tcp:8888 tcp:8888` 后以 `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖；
+  release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
+
+## UI 契约
+
+- 原语优先：按钮 `SystemButton`、输入 `SystemInput`、徽章 `Badge`、Tab `SegmentedTabs/TabPills`、
+  软岛 `Surfaces`、空/加载/错误态 `States`、页头 `PageHeader`、底部导航 `BottomNav`。禁止页面手写重复样式。
+- 触控热区 ≥44dp；焦点可见；尊重系统动画缩放（reduced-motion 直接终态）；图片统一 `Avatar`/coil 渐显。
+- 列表必须三态（loading/empty/error）；分页列表有到底提示；不得用假数据填充空态。
+- 主题：3 主题（vibrant/forest/inkwash）× 明暗三档（跟随系统/浅/深），系统栏颜色随主题。
+- 新增页面前先对照设计稿（Figma）移动端对应画板与 `docs/ui-components.md` 的同类契约。
+
+## 已知待办（首版登记）
+
+1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
+2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、评论 UI、管理后台、我的瞬间/群组列表。
+3. `assembleRelease`（R8 规则已配，CI 只跑 debug）与真机/模拟器截图走查。
