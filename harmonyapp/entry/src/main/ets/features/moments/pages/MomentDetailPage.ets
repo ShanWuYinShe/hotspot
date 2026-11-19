@@ -60,6 +60,18 @@ interface MomentDetailParams {
   moment_id?: string;
 }
 
+/** 楼中楼线程：主评论 + 其下回复（数据仍是扁平数组，渲染时按 parent_id 归组） */
+interface CommentThread {
+  comment: CommentItem;
+  replies: CommentItem[];
+}
+
+/** 线程主行实测高度（vp）：导引线终点依赖主评论实际内容高度 */
+interface ThreadRowHeight {
+  id: string;
+  height: number;
+}
+
 @Preview
 @Component
 export struct MomentDetailPage {
@@ -105,6 +117,8 @@ export struct MomentDetailPage {
   @State commentAdditions: number = 0;
   /** R6：已加载图片 URL（onComplete 渐显） */
   @State loadedImageUrls: string[] = [];
+  /** 评论区线程主行实测高度（导引线几何依赖；onAreaChange 回写、按变化才写避免测量回环） */
+  @State private threadRowHeights: ThreadRowHeight[] = [];
   /** 评论点赞 in-flight 去重（防连点双翻转） */
   private commentLikePending: Set<string> = new Set<string>();
   @StorageLink(KEY_CURRENT_USER) currentUser: AccountInfo | null = null;
@@ -112,6 +126,24 @@ export struct MomentDetailPage {
   private isDestroyed: boolean = false;
   /** 内容区滚动控制器（评论键点击滚动到评论区，对齐前端 focusComments） */
   private contentScroller: Scroller = new Scroller();
+
+  // ==================== 评论区设计稿几何（Figma 748:48 / 522:7）====================
+  // AVATAR_SIZE / RADIUS / BORDER_WIDTH 刻度里没有设计稿这几档（20、36、圆角 4、1.25 描边）；
+  // 按「缺档不新增近邻档位」纪律 + GroupCard.AVATAR_SIZE 既有范式，作为布局几何登记在组件内。
+  /** 楼中楼回复头像（设计稿 20；AVATAR_SIZE 22/32 为近邻档不再扩刻度） */
+  private static readonly REPLY_AVATAR_SIZE: number = 20;
+  /** 评论输入条头像（设计稿 36；AVATAR_SIZE 32/40 为近邻档不再扩刻度） */
+  private static readonly COMMENT_INPUT_AVATAR_SIZE: number = 36;
+  /** 作者微徽章几何（设计稿 28×16 / 圆角 4 / 10fp Medium；RADIUS 最小档 12 不适用） */
+  private static readonly AUTHOR_BADGE_WIDTH: number = 28;
+  private static readonly AUTHOR_BADGE_HEIGHT: number = 16;
+  private static readonly AUTHOR_BADGE_RADIUS: number = 4;
+  /** 楼中楼导引线装饰几何（设计稿 1.25 描边 / 0.35 透明度 / 冷灰 / 圆头）：
+   *  矢量装饰几何，与 AmbientBackdrop 画布参数同类，不占用主题刻度的近邻档 */
+  private static readonly THREAD_LINE_WIDTH: number = 1.25;
+  private static readonly THREAD_LINE_OPACITY: number = 0.35;
+  /** 主评论行 → 楼中楼回复块的垂直间距（对齐 web 方案 B 的 mt-3.5 = 14，导引线终点同源） */
+  private static readonly REPLY_BLOCK_GAP: number = DesignConstants.SPACING.MD3;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -1205,112 +1237,322 @@ export struct MomentDetailPage {
     return (moment.comments_count ?? 0) + this.commentAdditions;
   }
 
-  @Builder
-  private buildCommentRow(comment: CommentItem) {
-    Row({ space: DesignConstants.SPACING.MD }) {
-      // 次级回复：左侧发丝竖线 + 缩进，表达两级评论层级（web 的楼中楼软底卡的端上等价物）
-      if (comment.parent_id) {
-        Column()
-          .width(DesignConstants.BORDER_WIDTH.REGULAR)
-          .height('100%')
-          .backgroundColor(this.getCurrentThemePalette().floatingBorderColor)
+  // ==================== 评论区：楼中楼分组 / 导引线几何 ====================
+
+  /** 主评论内容列缩进 = 主评论头像宽 + 头像与内容间距（楼中楼与主评论内容列同轴） */
+  private getThreadIndent(): number {
+    return DesignConstants.COMPONENT.AVATAR_SIZE.SMALL + DesignConstants.SPACING.MD;
+  }
+
+  /** 是否为瞬间作者（作者微徽章：主评论与楼中楼回复同口径） */
+  private isMomentAuthor(comment: CommentItem): boolean {
+    const authorId: string = this.moment?.user?.user_id ?? '';
+    return authorId.length > 0 && comment.user?.user_id === authorId;
+  }
+
+  /** 扁平评论按 parent_id 归组（父评论不在列表时该回复降级为独立项，保持「不丢回复」） */
+  private getCommentThreads(): CommentThread[] {
+    const threads: CommentThread[] = [];
+    const parentIndex: Map<string, number> = new Map<string, number>();
+    this.comments.forEach((comment: CommentItem) => {
+      const parentId: string = comment.parent_id ?? '';
+      if (parentId.length === 0) {
+        parentIndex.set(comment.comment_id, threads.length);
+        threads.push({ comment: comment, replies: [] } as CommentThread);
+        return;
       }
+      const index: number | undefined = parentIndex.get(parentId);
+      if (index === undefined) {
+        parentIndex.set(comment.comment_id, threads.length);
+        threads.push({ comment: comment, replies: [] } as CommentThread);
+        return;
+      }
+      threads[index].replies.push(comment);
+      // 回复的 id 也登记到所属线程：对「回复的回复」（parent_id 指向楼中楼回复）仍归入同一线程，
+      // 不因两级模型边界降级成独立项
+      parentIndex.set(comment.comment_id, index);
+    });
+    return threads;
+  }
+
+  /** onAreaChange 回写主行高度：仅数值变化才写状态（避免布局测量回环） */
+  private recordThreadRowHeight(commentId: string, height: number): void {
+    if (!(height > 0)) {
+      return;
+    }
+    const previous: ThreadRowHeight | undefined =
+      this.threadRowHeights.find((item: ThreadRowHeight) => item.id === commentId);
+    if (previous !== undefined && Math.abs(previous.height - height) < 0.5) {
+      return;
+    }
+    const next: ThreadRowHeight[] =
+      this.threadRowHeights.filter((item: ThreadRowHeight) => item.id !== commentId);
+    next.push({ id: commentId, height: height } as ThreadRowHeight);
+    this.threadRowHeights = next;
+  }
+
+  /** 线程主行实测高度（0 = 尚未测量） */
+  private getThreadRowHeight(commentId: string): number {
+    const found: ThreadRowHeight | undefined =
+      this.threadRowHeights.find((item: ThreadRowHeight) => item.id === commentId);
+    return found === undefined ? 0 : found.height;
+  }
+
+  /** 导引线 Path 高度（主评论行底 → 首条回复头像中心） */
+  private getThreadPathHeight(thread: CommentThread): number {
+    return this.getThreadRowHeight(thread.comment.comment_id)
+      + MomentDetailPage.REPLY_BLOCK_GAP
+      + MomentDetailPage.REPLY_AVATAR_SIZE / 2;
+  }
+
+  /** ForEach 键：含点赞态 / 回复数 / 主行实测高度——ArkUI 同键复用不刷新按值数据，
+   *  对齐 TabsPillGroup「count 必须进 key」口径；行高进 key 让导引线在测量后按真实高度重建 */
+  private getCommentThreadKey(thread: CommentThread): string {
+    const liked: number = this.isCommentLiked(thread.comment) ? 1 : 0;
+    let key: string = `${thread.comment.comment_id}_${this.getCommentLikesCount(thread.comment)}_${liked}_${thread.replies.length}_h${Math.round(this.getThreadRowHeight(thread.comment.comment_id))}`;
+    thread.replies.forEach((reply: CommentItem) => {
+      key += `_${reply.comment_id}_${this.getCommentLikesCount(reply)}_${this.isCommentLiked(reply) ? 1 : 0}`;
+    });
+    return key;
+  }
+
+  /**
+   * 楼中楼导引线（静态装饰，无动效）：从主评论头像底中心垂直下探，圆角右转、止于回复头像左缘
+   * 左侧 6vp（留呼吸，对齐设计稿 748:48 的 ThreadLine；设计稿的 24×55 是单条短评论的静态取样，
+   * 这里按主评论实测行高计算长度，长评论同样能连到首条回复）。
+   * Path commands 单位为 px（ArkUI 契约），坐标统一经 vp2px 换算。
+   */
+  private buildThreadLineCommands(thread: CommentThread): string {
+    const mainRowHeight: number = this.getThreadRowHeight(thread.comment.comment_id);
+    if (mainRowHeight <= 0 || thread.replies.length === 0) {
+      return '';
+    }
+    const avatarSize: number = DesignConstants.COMPONENT.AVATAR_SIZE.SMALL;
+    const centerX: number = avatarSize / 2;
+    const startY: number = avatarSize + DesignConstants.SPACING.SM2;
+    // 转弯圆角用圆角刻度 SM(12)，与 web ThreadLine 的 arc r=11 同量级
+    const cornerRadius: number = DesignConstants.RADIUS.SM;
+    const endY: number = this.getThreadPathHeight(thread);
+    const indent: number = this.getThreadIndent();
+    // 水平段终点留 6vp 呼吸：设计稿 748:48 的 ThreadLine 止于回复头像左缘左侧 6px，web ThreadLine 同口径
+    const lineEndX: number = indent - DesignConstants.SPACING.SM2;
+    const cornerStartY: number = Math.max(startY, endY - cornerRadius);
+    // Path commands 以 px 计，按当前窗口密度换算（UIContext.vp2px；全局 vp2px 已废弃）
+    const ui = this.getUIContext();
+    let commands: string = `M${ui.vp2px(centerX)} ${ui.vp2px(startY)} L${ui.vp2px(centerX)} ${ui.vp2px(cornerStartY)}`;
+    if (cornerStartY < endY) {
+      commands += ` Q${ui.vp2px(centerX)} ${ui.vp2px(endY)} ${ui.vp2px(centerX + cornerRadius)} ${ui.vp2px(endY)}`;
+      commands += ` L${ui.vp2px(lineEndX)} ${ui.vp2px(endY)}`;
+    }
+    return commands;
+  }
+
+  /** 作者微徽章（设计稿：28×16 / 圆角 4 / 10fp Medium / accent-soft 底 + on-soft 字 / 与昵称间距 6） */
+  @Builder
+  private buildAuthorBadge() {
+    Row() {
+      Text('作者')
+        .fontSize(DesignConstants.FONT.SIZE.XS2)
+        .lineHeight(DesignConstants.FONT.SIZE.XS2)
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getCurrentThemePalette().textAccentOnSoft)
+        .maxLines(1)
+        .minFontScale(0.8)
+    }
+    .width(MomentDetailPage.AUTHOR_BADGE_WIDTH)
+    .height(MomentDetailPage.AUTHOR_BADGE_HEIGHT)
+    .justifyContent(FlexAlign.Center)
+    .alignItems(VerticalAlign.Center)
+    .borderRadius(MomentDetailPage.AUTHOR_BADGE_RADIUS)
+    .backgroundColor(this.getCurrentThemePalette().accentMuted)
+  }
+
+  /** 评论头行：昵称 + 作者微徽章 + 时间（主评论昵称 12 / 时间 11；楼中楼回复昵称 11 / 时间 10） */
+  @Builder
+  private buildCommentHeadRow(comment: CommentItem, isReply: boolean) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
+      Text(comment.user?.nickname ?? '匿名')
+        .fontSize(isReply ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.SM)
+        .lineHeight(textLineHeight(isReply ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.SM))
+        .maxLines(1)
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+      if (this.isMomentAuthor(comment)) {
+        this.buildAuthorBadge()
+      }
+      Blank()
+      Text(this.formatTime(comment.created_at))
+        .fontSize(isReply ? DesignConstants.FONT.SIZE.XS2 : DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(isReply ? DesignConstants.FONT.SIZE.XS2 : DesignConstants.FONT.SIZE.XS))
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  /** 评论动作行：点赞组（图标 14 + 间距 4 + 计数 11 Medium）+「回复」11 Medium（间距 16）+ 举报，整行垂直居中 */
+  @Builder
+  private buildCommentActions(comment: CommentItem) {
+    Row({ space: DesignConstants.SPACING.LG }) {
+      Pressable({
+        onPress: () => { this.toggleCommentLike(comment.comment_id); },
+        pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
+        fillWidth: false
+      }) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          LucideIcon({
+            icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
+          })
+          Text(formatCount(this.getCommentLikesCount(comment)))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
+        }
+        .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+        .alignItems(VerticalAlign.Center)
+        .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
+      }
+
+      Text('回复')
+        .fontSize(DesignConstants.FONT.SIZE.XS)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+        .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+        .fontColor(this.getCurrentThemePalette().textSecondary)
+        .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+        .onClick(() => { this.replyToComment(comment); })
+        .accessibilityText('回复评论')
+
+      // 举报评论：仅非本人评论展示（对齐 web 评论行「举报」）
+      if (comment.user?.user_id &&
+        comment.user.user_id !== (GlobalStateManager.getInstance().getCurrentUser()?.user_id ?? '')) {
+        Text('举报')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
+          .onClick(() => {
+            this.reportCommentId = comment.comment_id;
+            this.showCommentReportConfirm = true;
+          })
+          .accessibilityText('举报评论')
+      }
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  /** 楼中楼回复行（方案 B）：无灰底卡片/描边/卡片内距；头像 20 与主评论内容列同轴，
+   *  回复头/正文/动作统一在头像右 8vp；回复字号 11 / 时间 10 与主评论（12/11）拉开层级 */
+  @Builder
+  private buildReplyRow(reply: CommentItem) {
+    Row({ space: DesignConstants.SPACING.SM }) {
       SystemAvatar({
         decorative: true,
-        avatarUrl: comment.user?.avatar_url ?? '',
-        name: comment.user?.nickname ?? '匿名',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+        avatarUrl: reply.user?.avatar_url ?? '',
+        name: reply.user?.nickname ?? '匿名',
+        avatarSize: MomentDetailPage.REPLY_AVATAR_SIZE,
         shape: 'circle'
       })
       Column({ space: DesignConstants.SPACING.SM2 }) {
-        Row({ space: DesignConstants.SPACING.SM2 }) {
-          Text(comment.user?.nickname ?? '匿名')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-            .maxLines(1)
-            .textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
-            .fontColor(this.getCurrentThemePalette().textPrimary)
-          if (comment.user?.user_id && comment.user.user_id === (this.moment?.user?.user_id ?? '')) {
-            Text('作者')
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getCurrentThemePalette().textAccentOnSoft)
-              .backgroundColor(this.getCurrentThemePalette().accentMuted)
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .padding({ left: DesignConstants.SPACING.SM2, right: DesignConstants.SPACING.SM2 })
-          }
-          Blank()
-          Text(this.formatTime(comment.created_at))
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
+        this.buildCommentHeadRow(reply, true)
 
-        Text(cleanPlainText(comment.content))
-          .fontSize(DesignConstants.FONT.SIZE.MD)
-          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
+        Text(cleanPlainText(reply.content))
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, DesignConstants.FONT.LINE_RATIO.CARD))
           .fontColor(this.getCurrentThemePalette().textPrimary)
           .width('100%')
           .textAlign(TextAlign.Start)
 
-        // 评论点赞 + 回复（web：心形 14 + 计数 12、回复 11 次级）
-        Row({ space: DesignConstants.SPACING.LG }) {
-          Pressable({
-            onPress: () => { this.toggleCommentLike(comment.comment_id); },
-            pressScale: DesignConstants.INTERACTION.SCALE_PRESSED_ICON,
-            fillWidth: false
-          }) {
-            Row({ space: DesignConstants.SPACING.SM2 }) {
-              LucideIcon({
-                icon: this.isCommentLiked(comment) ? AppIcon.HEART_FILL : AppIcon.HEART,
-                iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                color: this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary
-              })
-              Text(formatCount(this.getCommentLikesCount(comment)))
-                .fontSize(DesignConstants.FONT.SIZE.SM)
-                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-                .fontColor(this.isCommentLiked(comment) ? this.getCurrentThemePalette().accentBackground : this.getCurrentThemePalette().textSecondary)
-            }
-            .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
-            .alignItems(VerticalAlign.Center)
-            .accessibilityText(this.isCommentLiked(comment) ? '取消点赞评论' : '点赞评论')
-          }
-
-          Text('回复')
-            .fontSize(DesignConstants.FONT.SIZE.XS)
-            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-            .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
-            .onClick(() => { this.replyToComment(comment); })
-            .accessibilityText('回复评论')
-
-          // 举报评论：仅非本人评论展示（对齐 web 评论行「举报」）
-          if (comment.user?.user_id &&
-            comment.user.user_id !== (GlobalStateManager.getInstance().getCurrentUser()?.user_id ?? '')) {
-            Text('举报')
-              .fontSize(DesignConstants.FONT.SIZE.XS)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-              .height(DesignConstants.LAYOUT.MIN_HIT_TARGET)
-              .onClick(() => {
-                this.reportCommentId = comment.comment_id;
-                this.showCommentReportConfirm = true;
-              })
-              .accessibilityText('举报评论')
-          }
-        }
-        .width('100%')
-        .alignItems(VerticalAlign.Center)
+        this.buildCommentActions(reply)
       }
       .alignItems(HorizontalAlign.Start)
       .layoutWeight(1)
     }
     .width('100%')
     .alignItems(VerticalAlign.Top)
+  }
+
+  /**
+   * 线程项（主评论 + 楼中楼）：背景透明、无描边、无卡片内距（方案 B 去卡片化）。
+   * 导引线从主评论头像底部中心下探、圆角右转接入首条回复头像左缘（静态装饰）。
+   */
+  @Builder
+  private buildCommentThread(thread: CommentThread) {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Column() {
+        // 主评论行（头像 40 + 内容列 x=52；主评论文本字号对齐 web 12/11）
+        Row({ space: DesignConstants.SPACING.MD }) {
+          SystemAvatar({
+            decorative: true,
+            avatarUrl: thread.comment.user?.avatar_url ?? '',
+            name: thread.comment.user?.nickname ?? '匿名',
+            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+            shape: 'circle'
+          })
+          Column({ space: DesignConstants.SPACING.SM2 }) {
+            this.buildCommentHeadRow(thread.comment, false)
+
+            Text(cleanPlainText(thread.comment.content))
+              .fontSize(DesignConstants.FONT.SIZE.SM)
+              .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.SM, DesignConstants.FONT.LINE_RATIO.CARD))
+              .fontColor(this.getCurrentThemePalette().textPrimary)
+              .width('100%')
+              .textAlign(TextAlign.Start)
+
+            this.buildCommentActions(thread.comment)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Top)
+        .onAreaChange((_oldValue: Area, newValue: Area) => {
+          // 仅「有楼中楼」的线程需要行高（导引线终点）；普通评论不写状态，避免无谓重渲染
+          if (thread.replies.length > 0) {
+            this.recordThreadRowHeight(thread.comment.comment_id, Number(newValue.height));
+          }
+        })
+
+        // 楼中楼：与主评论内容列同轴（无背景、无描边、无卡片 padding）
+        if (thread.replies.length > 0) {
+          Column({ space: DesignConstants.SPACING.MD2 }) {
+            ForEach(thread.replies, (reply: CommentItem) => {
+              this.buildReplyRow(reply)
+            }, (reply: CommentItem) =>
+              `${reply.comment_id}_${this.getCommentLikesCount(reply)}_${this.isCommentLiked(reply) ? 1 : 0}`)
+          }
+          .width('100%')
+          .padding({ left: this.getThreadIndent() })
+          .margin({ top: MomentDetailPage.REPLY_BLOCK_GAP })
+          .alignItems(HorizontalAlign.Start)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+
+      if (thread.replies.length > 0) {
+        // 导引线：1.25vp / opacity 0.35 / textSecondary 冷灰 / 圆头（静态装饰，不进读屏、不拦截触摸）
+        Path({
+          // 画布比路径几何多让 1 个描边宽：右/下端点圆头不被裁切
+          width: this.getThreadIndent() + MomentDetailPage.THREAD_LINE_WIDTH,
+          height: this.getThreadPathHeight(thread) + MomentDetailPage.THREAD_LINE_WIDTH,
+          commands: this.buildThreadLineCommands(thread)
+        })
+          .fill(DesignConstants.COLOR.TRANSPARENT)
+          .stroke(this.getCurrentThemePalette().textSecondary)
+          .strokeWidth(MomentDetailPage.THREAD_LINE_WIDTH)
+          .strokeOpacity(MomentDetailPage.THREAD_LINE_OPACITY)
+          .strokeLineCap(LineCapStyle.Round)
+          .strokeLineJoin(LineJoinStyle.Round)
+          .hitTestBehavior(HitTestMode.None)
+          .accessibilityLevel('no')
+      }
+    }
+    .width('100%')
   }
 
   @Builder
@@ -1356,10 +1598,11 @@ export struct MomentDetailPage {
         })
           .width('100%')
       } else {
+        // 线程列表：主评论 + 楼中楼（两级展示；线程键含点赞态/回复数/实测行高，见 getCommentThreadKey）
         Column({ space: DesignConstants.SPACING.LG }) {
-          ForEach(this.comments, (comment: CommentItem) => {
-            this.buildCommentRow(comment)
-          }, (comment: CommentItem) => comment.comment_id)
+          ForEach(this.getCommentThreads(), (thread: CommentThread) => {
+            this.buildCommentThread(thread)
+          }, (thread: CommentThread) => this.getCommentThreadKey(thread))
         }
         .width('100%')
       }
@@ -1372,8 +1615,9 @@ export struct MomentDetailPage {
 
   @Builder
   /**
-   * 常驻贴底评论输入条（对齐 web CommentInputBar）：
-   * 头像 32 + 胶囊输入框 39 + 发送圆钮 40；点赞/收藏/分享已回到内容内操作行。
+   * 常驻贴底评论输入条（对齐 web CommentInputBar / 设计稿 522:7）：
+   * 头像 36 + 输入框 39（圆角 16）+ 发送圆钮 40（图标 16），各元素垂直居中；
+   * 点赞/收藏/分享已回到内容内操作行。
    */
   private buildUnifiedBottomBar(moment: MomentItem) {
     Column() {
@@ -1410,11 +1654,11 @@ export struct MomentDetailPage {
           decorative: false,
           avatarUrl: this.currentUser?.avatar_url ?? '',
           name: this.currentUser?.nickname ?? '我',
-          avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+          avatarSize: MomentDetailPage.COMMENT_INPUT_AVATAR_SIZE,
           shape: 'circle'
         })
 
-        // 单行输入条（占主要宽度）：外层胶囊裁切出搜索式圆角
+        // 单行输入条（占主要宽度）：圆角 16（设计稿 522:7；原胶囊档已按设计稿收敛）
         Row() {
           SystemInput({
             value: this.commentText,
@@ -1429,9 +1673,10 @@ export struct MomentDetailPage {
             .layoutWeight(1)
         }
         .layoutWeight(1)
-        .borderRadius(DesignConstants.RADIUS.FULL)
+        .borderRadius(DesignConstants.SHAPE.INPUT)
         .clip(true)
 
+        // 发送钮 40×40 + 图标 16（设计稿 522:7；ACTION_BUTTON_HEIGHT_MD=40 / ICON_SIZE_XS=16）
         SurfaceIconButton({
           icon: AppIcon.SEND,
           kind: this.commentText.trim().length > 0 ? 'primary' : 'surface',

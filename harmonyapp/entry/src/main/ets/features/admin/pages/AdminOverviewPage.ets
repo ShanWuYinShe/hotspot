@@ -480,20 +480,23 @@ struct AdminOverviewPage {
             .fontColor(this.getPalette().textPrimary)
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis })
-          // 对齐 web 举报卡「待处理 N」软色角标
+          // 对齐 web 举报卡「待处理 N」软色角标（SPEC §1.3：h20 药丸 / 圆角 10 / 11fp Medium / warning 语义档）
           if (m.title === '举报审核' && this.pendingReports !== null && this.pendingReports > 0) {
-            Text(`待处理 ${this.pendingReports}`)
-              .fontSize(DesignConstants.FONT.SIZE.XS2)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
-              .fontColor(this.getPalette().textStatusWarningOnSoft)
-              .padding({
-                left: DesignConstants.SPACING.SM,
-                right: DesignConstants.SPACING.SM,
-                top: DesignConstants.SPACING.HALF,
-                bottom: DesignConstants.SPACING.HALF
-              })
-              .borderRadius(DesignConstants.RADIUS.FULL)
-              .backgroundColor(this.getPalette().warningSoft)
+            Row() {
+              Text(`待处理 ${this.pendingReports}`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(this.getPalette().textStatusWarningOnSoft)
+                .maxLines(1)
+            }
+            .height(DesignConstants.SPACING.LG2)
+            // 水平内距对齐 web Badge status 档 px-2.5(10)
+            .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2 })
+            .borderRadius(DesignConstants.RADIUS.FULL)
+            .backgroundColor(this.getPalette().warningSoft)
+            .justifyContent(FlexAlign.Center)
+            .alignItems(VerticalAlign.Center)
           }
         }
         .alignItems(VerticalAlign.Center)

@@ -301,19 +301,23 @@ export struct MyReportsPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(1)
 
-        // 状态胶囊（对齐 web Badge tone：待处理 warning / 已处理 online / 已驳回 neutral）
-        Text(this.statusLabel(item.status))
-          .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .lineHeight(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.statusChipTextColor(item.status))
-          .padding({
-            left: DesignConstants.SPACING.SM2,
-            right: DesignConstants.SPACING.SM2,
-            top: DesignConstants.SPACING.XS,
-            bottom: DesignConstants.SPACING.XS
-          })
-          .borderRadius(DesignConstants.RADIUS.FULL)
-          .backgroundColor(this.statusChipBackground(item.status))
+        // 状态徽标（SPEC §1.3：h20 药丸 / 圆角 10 / 11fp Medium / 水平垂直居中；
+        // 语义档对齐 web Badge tone：待处理 warning / 已处理 online / 已驳回 neutral）
+        Row() {
+          Text(this.statusLabel(item.status))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+            .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+            .fontColor(this.statusChipTextColor(item.status))
+            .maxLines(1)
+        }
+        .height(DesignConstants.SPACING.LG2)
+        // 水平内距对齐 web Badge status 档 px-2.5(10)
+        .padding({ left: DesignConstants.SPACING.MD2, right: DesignConstants.SPACING.MD2 })
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.statusChipBackground(item.status))
+        .justifyContent(FlexAlign.Center)
+        .alignItems(VerticalAlign.Center)
       }
       .width('100%')
       .alignItems(VerticalAlign.Center)
