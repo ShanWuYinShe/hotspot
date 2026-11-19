@@ -60,11 +60,15 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
   $$X_{num} = \text{round}\left(X_{center} - \frac{W_{num}}{2}\right)$$
   或为两者设置等宽列框（`width = colWidth`），均开启 `textAlignHorizontal = 'CENTER'`，确保垂直中轴绝对重合。
 
-### 6. 桌面端侧边栏 Logo 区域三段式防撞规约
-- 桌面端侧边栏头部必须严格遵循三段式间距，禁止折叠按钮图标侵入品牌 Logo：
-  - 品牌图标：$X = 33$（宽 24，右边界 57）
-  - 品牌文字「HotSpot」：$X = 65$
-  - 折叠展开图标：$X = 140$
+### 6. 品牌标志（BrandLogo）语义 Frame 封装与三段式防撞规约
+- **禁止顶层散落子节点**：品牌 Logo 图标、胶囊底衬背景、品牌文字「HotSpot」、侧栏展开指示器等强关联元素，必须统一包装为命名语义 Frame 容器（`品牌标志 / BrandLogo`），禁止作为画板顶层的松散子节点通过独立绝对坐标平铺，避免视口调整或字宽变化时产生物理重叠、踩踏与漂移。
+- **桌面端 BrandLogo Frame 规格**：
+  - 容器尺寸：$W = 149\text{px}, H = 38\text{px}$，圆角 $r = 19\text{px}$。
+  - 胶囊底衬（`矩形 / CapsuleBg`）：$(X=0, Y=0)$，尺寸 $149 \times 38\text{px}$。
+  - 品牌图标（`图标 / LogoIcon`）：$(X=13, Y=7)$，尺寸 $24 \times 24\text{px}$（右边缘 $X=37$）。
+  - 品牌文字「HotSpot」（`文本 / BrandName`）：$(X=45, Y=0)$，全高居中（字号 15px Bold，文字左边缘与图标保持 8px 留白）。
+  - 侧边栏折叠/展开指示器（`图标 / SidebarToggle`）：$(X=120, Y=12)$，尺寸 $16 \times 16\text{px}$。
+- **移动端与平板端首页统一**：移动端与平板端的头部品牌标识同样必须打包进 `品牌标志 / BrandLogo` Frame 容器，与胶囊和操作图标内聚管理。
 
 ### 7. 去系统化与无菌化准则
 - **全屏画板禁止系统状态栏**：移动端与平板端所有功能画板必须彻底剔除 iOS/Android 系统状态栏（如 `System / Status Bar (iOS)`）、系统时钟（`9:41`、`12:00`）及信号/WiFi/电池图标。状态栏属于系统层级，不得侵入业务画布。
@@ -246,14 +250,29 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
 
 ### 26. 三端审美一致性（跨页风格基线）
 
-- **基准字号**：页头大标题 20（三端统一；`fs=18/24` 的旧页头都是历史遗留）。移动端页头标题多为 PingFang 且不能直接改字号（沙盒不可加载），修法：新建 Noto Sans SC Medium 20 文本替换并删除原节点。
+- **基准字号**：页头大标题 20（三端统一）。移动端页头标题若需调整，在沙盒中新建 Noto Sans SC Medium 20 文本替换并删除原节点。
 - **段落标题**：fs=14 Regular 为正文体；fs=14 加权标题用 Medium（不用 Bold，Bold 仅保留品牌字标）。
 - **卡片圆角基线**：大卡片 20（绝对主导）；输入框/次级行 16；底部悬浮导航条 28；设置分组卡 24。巡检时可按「尺寸 ≥150×44 的圆角矩形」统计分布，少数派逐个核对是否为刻意设计。
 - **文案一致性**：跨端同名屏逐字段 diff（设置 / 个人中心 / 附近瞬间 / 首页信息流重点核对），发现「个人数据」vs「我的内容」这类同一概念不同名的，统一为多数派叫法。PingFang 节点改文案用「新建 Noto 替换 + 删原节点」。
 - **字体单一化**：中文文案只允许 Noto Sans SC（PingFang 在沙盒不可加载、Inter 缺中文字形）；扫描口径 `family==='PingFang SC' && 含CJK` → 按原字重映射 Regular/Medium/Bold 批量迁移。Inter 仅保留品牌字标（HotSpot logo：Inter Bold）。
 - **画布网格**：02 列宽 390 / 间距 73、03 列宽 834 / 间距 96、04 列宽 1440 / 间距 120；同名屏三端同序。01 规范页 7 区块统一宽 1650（主题区 1674 因 6 卡并排略宽），纵向顺排。
-- **安全区与画布联动**：顶部安全区使 02 屏高 891 / 03 屏高 1136（旧 844/1112 为历史值，属正常共存，不算不一致）。
+- **安全区与画布联动**：顶部安全区适配后，02 移动端屏高为 891px、03 平板端屏高为 1136px。
 - **收口验证**：巡检 `violations=0` + 细节扫描（`cjk=0 / overflow=0 / clipped=0`）+ 三端同名屏截图并排比对。
+
+### 27. Z 轴图层层级（Z-Order）防遮挡纪律
+- **图层数组顺序即渲染顺序**：Figma SceneNode 的 Z 轴堆叠严格遵从父节点的 `children` 数组索引（索引越大越靠上，越晚被绘制）。
+- **浮动操作栏置顶铁律**：页面顶部的浮动导航栏（`顶部导航栏 / TopNavBar`）、返回按钮胶囊、右上角操作胶囊（分享/更多/关闭）在父画板的 `children` 树中，其索引必须大于全出血媒体大图与正文卡片（`index > mediaCard.index`）。
+- **严禁全出血大图遮盖操作栏**：沉浸式详情页（如瞬间详情、大图选点）的照片卡片若位于浮动导航栏之后，会导致返回按钮与操作图标被不透明照片完全遮挡，视觉上缺失顶部操作。
+- **排查与校验**：修改或生成包含背景图/大图封面的画板后，必须检查图层顺序或通过截图核实：页头返回按钮与右侧操作胶囊必须清晰浮于图片之上。
+
+### 28. 吸底元素安全视距与画板规范尺寸
+- **画板规范基准尺寸**：
+  - 移动端：标准视口为 $390 \times 891\text{px}$（含顶部 47px 状态栏安全区，内容流高度 844px）。
+  - 平板端：标准视口为 $834 \times 1136\text{px}$（含顶部 24px 状态栏安全区，内容流高度 1112px）。
+  - 桌面端：标准视口为 $1440 \times 900\text{px}$（无顶部系统栏，全高 900px）。
+- **吸底组件（Dock / 评论输入栏）安全视距**：
+  - 列表与滚动容器底部必须预留至少 $16 \sim 32\text{px}$ 呼吸间距（Padding-Bottom），严禁滚动正文末尾或操作按钮被吸底悬浮栏（底部固定 TabBar、吸底评论发送条、底部操作 CTA）生硬截断或遮盖。
+  - 评论列表卡片末尾与吸底回复条之间需保持清晰视线分界，点赞/回复等互动操作行必须完整外露在吸底栏上方。
 
 ## 命令 / 脚本通道
 
@@ -309,17 +328,20 @@ bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
 
 每次修改设计稿（哪怕只改一个节点）后，都要打一条**带名字和描述**的 version history。
 
-- **云端沙盒限制**：`use_figma` 沙盒里 `figma.saveVersionHistoryAsync` 返回 `not a supported API`（该 API 在远程沙盒未开放）；Figma REST API `/v1/files/:key/versions` 仅只读。
+- **云端沙盒限制**：`use_figma` 远程沙盒内调用 `figma.saveVersionHistoryAsync` 会直接报错抛出 `Error: in saveVersionHistoryAsync: figma.saveVersionHistoryAsync is not yet supported`（Figma 官方云端沙盒未开放写入命名版本里程碑权限）；Figma REST API `/v1/files/:file_key/versions` 也仅为只读（GET only）。
 - **自动化通道：Figma Local Bridge 自动化控制台（首选，秒级静默完成）**：
   保持桌面端打开设计稿并运行「Figma Local Bridge」插件窗口，直接执行 CLI：
   ```bash
   node scripts/design-kit/figma-bridge.mjs save-version \
     -t "细节精修版 · <主题> (M月D日 HH:MM)" \
-    -d "【本次版本更新内容摘要】\n1. 模块：要点..."
+    -d "【改动内容摘要】\n1. 模块：要点..."
   ```
   （服务未启动时 CLI 会自动后台拉起，无需手动启停）。
 - **备用通道：Figma 桌面端快速操作手动录入**：
   若桌面插件未开启，在桌面端按快捷键 `Cmd+/` 输入 `save to version history` 回车，填入标题与描述后保存。
+- **双通道协同分工**：
+  1. 画布日常修改、对齐排版、批量样式与高清截图走 Figma MCP `use_figma`（远程静默、免桌面焦点）；
+  2. 命名版本里程碑（Version History）打标走 Figma Local Bridge（驱动桌面端插件执行原生 `saveVersionHistoryAsync`），或在桌面客户端手动按快捷键 `Cmd+Opt+S` 保存。
 - 标题沿用 design-kit 插件同步时的命名：`细节精修版 · <主题> (M月D日 HH:MM)`；描述用「1. 模块：要点」结构，一条记录覆盖本轮全部改动，含巡检结论（0 违规）。
 
 ### 6. 全库截图与三端拼图审阅（审美一致性走查）
@@ -355,7 +377,7 @@ PYTHONPATH=/Users/liyou/work/hotspot/.workwork/pylib python3   /Users/liyou/work
 - **陷阱：语义绑定张冠李戴**：`content-inverse` 只允许出现在深色承托（黑胶囊/深玻璃条）内；位置标签、时间戳等浅底辅助文字必须绑 `text-secondary`。生成端常把反白误用到浅底元素上（位置标签白字在白卡上完全不可见），修复时按「绑定变量 + 几何宿主底色」双向核对，不要只看 fallback 色渲染。
 - **陷阱：远程沙盒崩溃「Aborted(). Build with -sASSERTIONS」**：`use_figma` 里对大屏做全树深遍历（尤其触碰 `absoluteTransform`/图片填充节点）可能触发沙盒崩溃。排查脚本改为「先列屏 FRAME 直接子级 → 锁定目标区块 → 受限深度（≤7）定向遍历」，或改用截图取色（PIL 读像素）反推真实渲染颜色再回文档定位节点。
 - **陷阱：截图坐标 vs 文档坐标混用**：放大裁剪验证时，桌面端截图宽 1024 对应文档 1440（比例 0.711），移动端 1:1。从截图读出的坐标换算回文档坐标再定位节点，避免找错元素。
-- **陷阱：桌面 Figma app 与云端脚本并发编辑会互相覆盖**：桌面端开着同一文件时，云端 `use_figma` 改过的属性（实测：胶囊 opacity 修复）可能在若干分钟后被桌面端会话回退。**每轮批量修复后必须复跑巡检**；发现回退直接重跑修复脚本（修复脚本按节点 ID 幂等，重跑安全）。跨端同时编辑同一屏的时段尽量错开。
+- **陷阱：桌面 Figma app 与云端脚本并发编辑会互相覆盖**：桌面端开着同一文件时，云端 `use_figma` 改过的属性可能被桌面端未同步的本地状态回退。**每轮批量修改后必须复跑巡检**；发现属性偏离直接重跑对应修复脚本（脚本按节点 ID 幂等）。跨端同时编辑同一画板的时段尽量错开。
 - **陷阱：远程沙盒 API 白名单以官方文档为准**：`figma/mcp-server-guide` 仓库 `skills/figma-use/references/api-reference.md` 维护了「Not implemented」清单（`saveVersionHistoryAsync`/`loadAllPagesAsync`/`currentUser`/`getLocalComponents*` 等）。`typeof figma.xxx === 'function'` 只说明对象存在，调用仍会被拦截；判断可用性先查这份清单，不要靠试错。
 - **用户指令红线：能脚本/插件完成的不走 CUA**：设计修改、巡检、截图一律走云端 `use_figma` 脚本通道；打 version history 由本地桌面桥接管（`node scripts/design-kit/figma-bridge.mjs save-version`，调用桌面插件的 `saveVersionHistoryAsync` 原生接口）；批量截图下载、拼图对比均为本地脚本。全链路均有代码与 CLI 自动化覆盖，禁止绕道 CUA。
 
@@ -364,6 +386,5 @@ PYTHONPATH=/Users/liyou/work/hotspot/.workwork/pylib python3   /Users/liyou/work
 - **Figma 执行脚本入口**：`/Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh`
 - **MCP 客户端桥接器**：`/Users/liyou/work/hotspot/.workwork/figma-mcp/mcp.ts`
 - **桌面桥与版本控制 CLI**：`scripts/design-kit/figma-bridge.mjs`（守护进程服务：`scripts/design-kit/plugins/bridge/server.mjs`）
-- **同步后巡检脚本**：`scripts/design-kit/audit-figma-design.js`
 - **同步后巡检脚本**：`scripts/design-kit/audit-figma-design.js`
 - **Figma 设计稿目标**：HotSpot UI Design Kit（`fileKey` 取自设计稿链接的 `/design/<fileKey>/` 段，不写入仓库）
