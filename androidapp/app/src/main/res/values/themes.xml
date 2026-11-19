@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose 应用：XML 主题只负责窗口背景与系统栏透明，视觉全部在 Compose 层 -->
+    <style name="Theme.HotSpot" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/hotspot_window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>

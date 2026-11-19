@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动图标底色：与 Web vibrant 主题 accent primary 同源（#2B5EB2）。
+         仅 XML 启动图标使用；应用内颜色一律由 ui/theme/Tokens.kt（自动生成）提供。 -->
+    <color name="ic_launcher_background">#2B5EB2</color>
+    <!-- 冷启动窗口底色：vibrant 亮色画布 page bg（#EFF3F9），避免白屏闪烁 -->
+    <color name="hotspot_window_background">#EFF3F9</color>
+</resources>
