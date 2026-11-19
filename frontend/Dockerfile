@@ -4,7 +4,7 @@
 # 基础镜像版本:默认值以本仓 deploy/versions.env 为准,由 workwork 的
 # scripts/sync-versions.sh 按跨仓主本校验/刷写(此前用内联 :- 默认值,无法被治理)
 ARG BUN_VERSION=1.3.14
-ARG ALPINE_VERSION=3.24.1
+ARG ALPINE_VERSION=3.24.4
 
 # Stage 1: Build
 FROM oven/bun:${BUN_VERSION}-alpine AS build
