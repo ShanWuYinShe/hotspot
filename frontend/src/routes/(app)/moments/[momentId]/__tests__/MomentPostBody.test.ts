@@ -105,3 +105,87 @@ describe('MomentPostBody 详情媒体与布局契约', () => {
 		expect(currentImg.className).toContain('duration-rapid');
 	});
 });
+
+// 评论区「方案 B」契约（楼中楼无灰卡 + 建筑导引线 + 作者微徽章 + 动作行 44 热区）。
+describe('MomentPostBody 评论区方案 B', () => {
+	const comment = {
+		id: 'comment_1',
+		userId: 'user_lumos',
+		user: '阿禾',
+		avatar: '',
+		text: '光影真的好，求机位！',
+		time: '10月29日 22:09',
+		likes: 1,
+		liked: false,
+		isDeleted: false,
+		replies: [
+			{
+				id: 'reply_1',
+				userId: 'user_other',
+				user: '野原',
+				avatar: '',
+				text: '云龙湖北岸那个木栈道。',
+				time: '10月29日 22:19',
+				likes: 0,
+				liked: false,
+				isDeleted: false,
+				replies: [],
+				repliesCount: 0
+			}
+		],
+		repliesCount: 1
+	};
+
+	const props = { ...baseProps, comments: [comment], commentCount: 1 };
+
+	it('楼中楼回复块透明（无灰底/描边/内距），正文 11px，导引线为静态装饰', () => {
+		const { container } = render(MomentPostBody, { props });
+		const body = [...container.querySelectorAll('p')].find((p) => p.textContent?.includes('云龙湖北岸'));
+		expect(body).toBeTruthy();
+		expect(body?.className).toContain('text-xs');
+		expect(body?.className).not.toContain('sm:text-sm');
+		let node: HTMLElement | null = body as HTMLElement;
+		while (node && node !== container) {
+			expect(node.className).not.toContain('bg-surface-subtle/30');
+			expect(node.className).not.toContain('border-border-subtle/25');
+			node = node.parentElement;
+		}
+		const line = container.querySelector('[data-thread-line]') as HTMLElement;
+		expect(line).toBeTruthy();
+		expect(line.className).toContain('border-l-[1.25px]');
+		expect(line.className).toContain('border-b-[1.25px]');
+		expect(line.className).toContain('border-text-secondary');
+		expect(line.className).toContain('opacity-35');
+		expect(line.className).toContain('rounded-bl-sm');
+		expect(line.className).toContain('pointer-events-none');
+		expect(line.getAttribute('aria-hidden')).toBe('true');
+		// 回复块与主评论文字列同轴（pl-12 = 48px），且无灰卡/描边/内距
+		const wrapper = line.closest('div[class*="py-4"]') as HTMLElement;
+		expect(wrapper).toBeTruthy();
+		const replies = wrapper.querySelector('div[class*="pl-12"]') as HTMLElement;
+		expect(replies).toBeTruthy();
+		expect(replies.className).toContain('mt-3.5');
+		expect(replies.className).not.toContain('bg-surface-subtle');
+		expect(replies.className).not.toContain('border');
+	});
+
+	it('作者微徽章 h-4/r4/10px；动作行 44px 热区、无负边距 hack', () => {
+		const { container } = render(MomentPostBody, { props });
+		const badge = [...container.querySelectorAll('span')].find((s) => s.textContent?.trim() === '作者');
+		expect(badge?.className).toContain('h-4');
+		expect(badge?.className).toContain('rounded-[4px]');
+		expect(badge?.className).toContain('text-xxs');
+		const like = container.querySelector('button[aria-label="点赞评论"]') as HTMLElement;
+		expect(like.className).toContain('hit-slop-44');
+		expect(like.className).toContain('h-[18px]');
+		expect(like.className).not.toContain('-my-2');
+		expect(like.querySelector('.text-xs.font-medium')).toBeTruthy();
+	});
+
+	it('没有楼中楼回复时不渲染导引线', () => {
+		const { container } = render(MomentPostBody, {
+			props: { ...baseProps, comments: [{ ...comment, replies: [], repliesCount: 0 }], commentCount: 1 }
+		});
+		expect(container.querySelector('[data-thread-line]')).toBeNull();
+	});
+});

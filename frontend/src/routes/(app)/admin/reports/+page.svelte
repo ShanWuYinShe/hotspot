@@ -54,10 +54,10 @@
 		() => `${status}|${targetType}`
 	);
 
-	// 状态徽章 tone：待处理=accent（唯一强调）、已确认=online、已驳回=中性；
-	// 三档均走 Badge 软底语义档（§20.13），不使用实底抢视觉。
-	const statusTone: Record<ReportStatus, 'accent' | 'online' | 'neutral'> = {
-		pending: 'accent',
+	// 状态徽章 tone（设计稿规范化 §1.3）：待处理=warning 琥珀、已确认=online 翡翠、已驳回=中性；
+	// 类型徽章=accent 柔蓝。均走 Badge 软底语义档（§20.13），不使用实底抢视觉。
+	const statusTone: Record<ReportStatus, 'warning' | 'online' | 'neutral'> = {
+		pending: 'warning',
 		resolved: 'online',
 		dismissed: 'neutral'
 	};
@@ -165,7 +165,7 @@
 							<div class="flex flex-wrap items-center gap-x-2 gap-y-1.5">
 								<span class="flex items-center gap-1.5">
 									<TargetIcon class="size-3.5 shrink-0 text-text-secondary" strokeWidth={1.75} aria-hidden="true" />
-									<Badge>{REPORT_TARGET_LABELS[r.target_type]}</Badge>
+									<Badge size="status" tone="accent">{REPORT_TARGET_LABELS[r.target_type]}</Badge>
 								</span>
 								{#if target.href}
 									<a
@@ -176,7 +176,7 @@
 								{:else}
 									<span class={`${META_MONO}`} title="该类型暂无独立详情页">{r.target_id}</span>
 								{/if}
-								<Badge tone={statusTone[r.status]}>{REPORT_STATUS_LABELS[r.status]}</Badge>
+								<Badge size="status" tone={statusTone[r.status]}>{REPORT_STATUS_LABELS[r.status]}</Badge>
 								<time datetime={r.created_at} class="ml-auto text-xs tabular-nums text-text-secondary">
 									{formatDateTime(r.created_at)}
 								</time>
