@@ -53,7 +53,10 @@ private val SEARCH_TABS = listOf("用户", "瞬间", "群组")
  * 首版只取第一页；关键字为空时展示输入引导。
  */
 @Composable
-fun SearchScreen(onBack: () -> Unit) {
+fun SearchScreen(
+    onBack: () -> Unit,
+    onOpenGroup: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     var query by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf("") }
@@ -83,7 +86,7 @@ fun SearchScreen(onBack: () -> Unit) {
         when (tabIndex) {
             0 -> UserResults(query = submitted)
             1 -> MomentResults(query = submitted)
-            else -> GroupResults(query = submitted)
+            else -> GroupResults(query = submitted, onOpenGroup = onOpenGroup)
         }
     }
 }
@@ -180,7 +183,10 @@ private fun MomentResults(query: String) {
 }
 
 @Composable
-private fun GroupResults(query: String) {
+private fun GroupResults(
+    query: String,
+    onOpenGroup: (String) -> Unit,
+) {
     val state = rememberSingleLoadState<GroupItem>()
     var retryKey by remember { mutableIntStateOf(0) }
     LaunchedEffect(query, retryKey) {
@@ -216,6 +222,7 @@ private fun GroupResults(query: String) {
                             shape = AppShapes.compact,
                         )
                     },
+                    onClick = { onOpenGroup(group.group.groupId) },
                 )
             }
         }

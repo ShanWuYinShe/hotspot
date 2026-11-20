@@ -20,12 +20,20 @@ object ApiEndpoint {
     const val MOMENTS_FETCH_NEARBY = "/api/v1/moments/fetch_nearby"
     const val MOMENTS_FETCH_CREATED = "/api/v1/moments/fetch_created"
     const val MOMENTS_FETCH_FAVORITES = "/api/v1/moments/fetch_favorites"
+    const val MOMENTS_SET_FAVORITE = "/api/v1/moments/set_favorite"
 
     const val USERS_SEARCH = "/api/v1/users/search"
     const val USERS_ACCOUNT = "/api/v1/users/account"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
     const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"
+    // 群详情（spec/api_spec_group.md）：群组详情 / 加入 / 退出 / 成员列表（登录版）。
+    const val GROUPS_OPEN_THE_DOOR = "/api/v1/groups/open_the_door"
+    const val GROUPS_ENTER = "/api/v1/groups/enter"
+    const val GROUPS_EXIT = "/api/v1/groups/exit"
+    const val GROUPS_MEMBERS_FETCH = "/api/v1/groups/members/fetch"
+    // 群公告列表仅 public 版（spec/api_spec_public.md：无查看者字段、不设登录镜像）。
+    const val GROUPS_ANNOUNCEMENTS_FETCH = "/public/v1/groups/announcements/fetch"
 
     const val PRIVATE_CHATS_FETCH = "/api/v1/private_chats/fetch"
     const val PRIVATE_MESSAGES_FETCH = "/api/v1/private_messages/fetch"

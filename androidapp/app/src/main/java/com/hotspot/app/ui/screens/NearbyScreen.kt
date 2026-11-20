@@ -59,6 +59,7 @@ import com.hotspot.app.util.TimeFormat
 fun NearbyScreen(
     onOpenSearch: () -> Unit,
     onOpenMessages: () -> Unit,
+    onOpenGroup: (String) -> Unit,
 ) {
     var tabIndex by remember { mutableIntStateOf(0) }
     var refreshKey by remember { mutableIntStateOf(0) }
@@ -98,7 +99,7 @@ fun NearbyScreen(
             Spacer(Modifier.height(Spacing.md))
             when (tabIndex) {
                 0 -> NearbyPeopleList(refreshKey)
-                1 -> NearbyGroupsList(refreshKey)
+                1 -> NearbyGroupsList(refreshKey, onOpenGroup = onOpenGroup)
                 else -> NearbyMomentsList(refreshKey)
             }
             Spacer(Modifier.height(Spacing.xxl))
@@ -174,7 +175,10 @@ private fun NearbyPeopleList(refreshKey: Int) {
 }
 
 @Composable
-private fun NearbyGroupsList(refreshKey: Int) {
+private fun NearbyGroupsList(
+    refreshKey: Int,
+    onOpenGroup: (String) -> Unit,
+) {
     val state = rememberSingleLoadState<GroupItem>()
     var localKey by remember { mutableIntStateOf(0) }
     LaunchedEffect(refreshKey, localKey) {
@@ -197,6 +201,7 @@ private fun NearbyGroupsList(refreshKey: Int) {
                             shape = AppShapes.compact,
                         )
                     },
+                    onClick = { onOpenGroup(group.group.groupId) },
                 )
             }
         }

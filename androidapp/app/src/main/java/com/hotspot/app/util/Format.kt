@@ -55,6 +55,23 @@ object TimeFormat {
     }
 }
 
+/**
+ * 群详情指标「距你」：distance 由后端基于浏览锚点计算，客户端只做单位格式化
+ * （<1km 用 m、否则 km 保留一位小数，设计稿 87:1696 的「426m」样式）。
+ */
+fun formatDistanceShort(meters: Double?): String? = when {
+    meters == null || meters.isNaN() || meters < 0 -> null
+    meters < 1000 -> meters.toInt().toString() + "m"
+    else -> String.format(java.util.Locale.US, "%.1fkm", meters / 1000)
+}
+
+/** 群成员角色文案（spec → GroupRole）：owner→群主 / admin→管理员 / member 不显示徽章。 */
+fun groupRoleLabel(role: String?): String? = when (role) {
+    "owner" -> "群主"
+    "admin" -> "管理员"
+    else -> null
+}
+
 /** 主机名展示（设置页 About 用；URL 非法时原样返回）。 */
 fun originLabel(baseUrl: String): String = try {
     URI(baseUrl).host ?: baseUrl

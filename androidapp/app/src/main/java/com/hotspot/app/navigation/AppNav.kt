@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.ChatScreen
+import com.hotspot.app.ui.screens.GroupDetailScreen
 import com.hotspot.app.ui.screens.HomeScreen
 import com.hotspot.app.ui.screens.LoginScreen
 import com.hotspot.app.ui.screens.MeGroupsScreen
@@ -69,6 +70,7 @@ private fun MainScaffold() {
                     NearbyScreen(
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenMessages = { navController.navigate(Routes.MESSAGES) },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                     )
                 }
                 composable(Routes.PUBLISH) { PublishScreen() }
@@ -96,10 +98,16 @@ private fun MainScaffold() {
                     )
                 }
                 composable(Routes.ME_GROUPS) {
-                    MeGroupsScreen(onBack = { navController.popBackStack() })
+                    MeGroupsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                    )
                 }
                 composable(Routes.SEARCH) {
-                    SearchScreen(onBack = { navController.popBackStack() })
+                    SearchScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                    )
                 }
                 composable(Routes.NOTIFY) {
                     NotifyScreen(onBack = { navController.popBackStack() })
@@ -121,6 +129,15 @@ private fun MainScaffold() {
                     arguments = listOf(navArgument("userId") { type = NavType.StringType }),
                 ) {
                     ChatScreen(onBack = { navController.popBackStack() })
+                }
+                composable(
+                    route = Routes.GROUP,
+                    arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+                ) { entry ->
+                    GroupDetailScreen(
+                        groupId = entry.arguments?.getString("groupId").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                    )
                 }
             }
         }

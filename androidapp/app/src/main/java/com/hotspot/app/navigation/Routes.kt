@@ -15,6 +15,8 @@ object Routes {
     const val SETTINGS = "settings"
     const val CHAT = "chat/{userId}"
     const val MOMENT_DETAIL = "moment/{momentId}"
+    // 群详情（推入页；设计稿 87:1696，入口：我的群组 / 附近群组 / 搜索群组结果）
+    const val GROUP = "group/{groupId}"
 
     /** 底部导航 5 tab 的路由集合（仅这些路由显示底栏）。 */
     val tabRoutes: Set<String> = setOf(HOME, NEARBY, PUBLISH, MESSAGES, ME)
@@ -22,4 +24,6 @@ object Routes {
     fun chat(userId: String): String = "chat/" + userId
 
     fun moment(momentId: String): String = "moment/" + momentId
+
+    fun group(groupId: String): String = "group/" + groupId
 }
