@@ -9,6 +9,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -64,6 +65,17 @@ fun SystemButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     leadingIcon: (@Composable () -> Unit)? = null,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    /**
+     * 高度覆盖：仅用于设计稿登记的孤立档位（登录卡 CTA 44 高，Figma 87:1844）。
+     * 常规场景一律用 [ButtonSize] 的 SM32 / MD42 / LG48 三档，禁止在页面里散写高度。
+     */
+    height: Dp? = null,
+    /**
+     * 全宽拉伸：作用于「视觉壳」本身。仅把 Modifier.fillMaxWidth() 传给外层热区时，
+     * 内层视觉仍按内容宽居中（弹窗/行内按钮就此宽），需要设计登记的全宽 CTA 时置 true。
+     */
+    fillMaxWidth: Boolean = false,
 ) {
     val colors = HotSpotTheme.colors
     val motion = HotSpotTheme.motion
@@ -98,6 +110,7 @@ fun SystemButton(
 
     Box(
         modifier = modifier
+            .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
             .heightIn(min = Dimens.minTouchTarget)
             .scale(scale)
             .alpha(if (enabled) 1f else com.hotspot.app.ui.theme.OpacityTokens.DISABLED)
@@ -112,7 +125,8 @@ fun SystemButton(
     ) {
         Row(
             modifier = Modifier
-                .height(size.height)
+                .then(if (fillMaxWidth) Modifier.fillMaxWidth() else Modifier)
+                .height(height ?: size.height)
                 .clip(AppShapes.compact)
                 .background(animatedBackground, AppShapes.compact)
                 .then(
@@ -148,6 +162,10 @@ fun SystemButton(
                 color = foregroundColor,
                 maxLines = 1,
             )
+            if (trailingIcon != null) {
+                Spacer(Modifier.width(Spacing.sm2))
+                trailingIcon()
+            }
         }
     }
 }

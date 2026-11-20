@@ -20,6 +20,7 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
 ANDROID_HOME="$HOME/Library/Android/sdk" \
 ./gradlew --no-daemon assembleDebug        # 产物：app/build/outputs/apk/debug/app-debug.apk
 ./gradlew --no-daemon testDebugUnitTest
+./gradlew --no-daemon assembleRelease      # R8 + 资源压缩（未签名，产物 app-release-unsigned.apk）
 
 # 设计 token 链路（仓库根执行）
 node scripts/design-tokens/gen-android.mjs          # 重新生成 Tokens.kt + design-tokens.json
@@ -50,11 +51,12 @@ app/src/main/java/com/hotspot/app/
   data/model/                  # 与 spec/ 字段一一对应的 DTO
   data/repo/                   # 认证 / 信息流 / 附近 / 搜索 / 消息 / 资料 / 通知
   ui/theme/                    # Tokens.kt（自动生成）、Theme/Type/Shape/Motion/Dimens
-  ui/components/               # SystemButton / SystemInput / Badge / Tabs / ListGroup /
+  ui/components/               # SystemButton / SystemInput / SearchInput / Badge / Tabs / ListGroup /
                                # ListRow / SystemCard / Avatar / 三态 / PageHeader / BottomNav /
                                # AmbientCanvas / MomentCard / CommentThread / CommentInputBar /
                                # CommentAuthorBadge
-  ui/screens/                  # 登录注册 / 首页 / 附近 / 消息 / 私聊 / 我的 / 搜索 / 通知 / 设置 / 发布占位
+  ui/screens/                  # 登录注册访客 / 首页 / 附近 / 消息 / 私聊 / 我的 / 我的瞬间 /
+                               # 我的群组 / 搜索 / 通知 / 设置 / 发布占位
   navigation/                  # 路由 + 登录态门禁 + 底部 5 tab
   util/                        # 媒体 URL 归一 / 时间格式化
 app/src/test/                  # token 结构不变量 + 业务错误码文案单测
@@ -63,18 +65,23 @@ app/src/test/                  # token 结构不变量 + 业务错误码文案�
 ## 首版范围与 TODO（明确占位，不造假数据）
 
 已实现（真实 API、loading / empty / error 三态齐全）：
-登录 / 注册（用户名型免验证码）、首页信息流（为你推荐 = `moments/search` 热门模式；
+登录 / 注册 / 访客模式（按 390 设计稿重排：品牌行 + 表单卡 + 协议/链接行；用户名型注册免验证码，
+访客失败透传服务端 message）、首页信息流（为你推荐 = `moments/search` 热门模式；
 正在关注 = `moments/fetch_following`；下拉刷新 + 无限滚动 + 到底提示）、附近枢纽
 （附近的人/群组/瞬间 + 地图占位）、消息列表、私聊（只读历史 + 简单文本发送）、我的（资料卡 +
-统计）、搜索（用户/瞬间/群组）、通知（列表 + 全部已读）、设置（3 主题 × 明暗三档 + 退出登录）、
-瞬间详情（含评论楼中楼列表 + docked 评论输入条：发表/回复/点赞，方案 B 视觉与 Web/鸿蒙同口径）。
+统计 + 我的内容入口）、我的瞬间（`moments/fetch_created` 发布 / `moments/fetch_favorites` 收藏
+两个 tab，2 列网格、private 徽章与软删占位、网格分页）、我的群组（`groups/fetch_joined`：
+置顶/最近消息预览/在线数，按群名与标签本地过滤）、搜索（用户/瞬间/群组）、通知（列表 + 全部已读）、
+设置（3 主题 × 明暗三档 + 退出登录）、瞬间详情（含评论楼中楼列表 + docked 评论输入条：发表/回复/点赞，
+方案 B 视觉与 Web/鸿蒙同口径）。
 
 已登记 TODO（首版占位，UI 显式标注）：
 - 地图原生渲染（附近页占位卡）
 - 图片上传 / 发布（`media/presign_upload` → `moments/create`）
 - WebSocket 实时消息（当前为懒加载 + 手动刷新）
 - 管理后台（不在移动端首版范围）
-- 我的瞬间 / 我的群组列表（资料页占位）
+- 我的群组详情页（首版行不可点击，不做假跳转）
+- 我的瞬间「喜欢」tab（后端无列表端点，按设计稿登记不渲染）
 
 ## 安全待办
 

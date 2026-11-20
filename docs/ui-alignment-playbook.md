@@ -1,7 +1,7 @@
-# UI 跨端对齐 Playbook（Web 移动端 ↔ HarmonyOS ↔ 未来 Android）
+# UI 跨端对齐 Playbook（Web 移动端 ↔ HarmonyOS ↔ Android）
 
-> 本文回答「怎么做对齐」，与 token 权威（两端 `AGENTS.md` + `check-cross-platform-*.mjs`）互补（token 数值以 `docs/design-system.md` 为准）。
-> 经验来自 harmonyapp 与前端移动端的整轮实战对齐（2026-09），方法论可直接迁移到后续 Android 端。
+> 本文回答「怎么做对齐」，与 token 权威（各端 `AGENTS.md` + `check-cross-platform-*.mjs`）互补（token 数值以 `docs/design-system.md` 为准）。
+> 方法论来自 Web 移动端 ↔ HarmonyOS 的实战对齐，同样适用于 Android 端（落地差异见 §4.3）。
 
 ---
 
@@ -102,8 +102,10 @@
   禁止页面内硬编码颜色/字号/间距；新档位先在 token 层合并档位再落组件。
 - **构建验证**：本地 `./gradlew --no-daemon assembleDebug testDebugUnitTest`（JAVA_HOME 用
   Android Studio JBR、ANDROID_HOME=`~/Library/Android/sdk`）；CI `Android (Compose Build)` 兜底。
-- **调试拓扑**：模拟器 baseUrl `http://10.0.2.2:8888`（宿主 nginx 网关）；真机
-  `adb reverse tcp:8888 tcp:8888` + `http://127.0.0.1:8888`；debug 放开 cleartext、release 禁止。
+- **调试拓扑**：默认基址 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机联调统一
+  `adb reverse tcp:8888 tcp:8888` + 以 `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建
+  （本机 AVD 上端内直连 `10.0.2.2` 会超时且 nginx 无日志，判据与完整走查见
+  skill `hotspot-android-device-verify`）；debug 放开 cleartext、release 禁止。
 
 | 概念 | Web | HarmonyOS | Android（现行） |
 |---|---|---|---|
@@ -133,6 +135,9 @@
 7. **uitest 点击被手势条吞**：底部按钮热区要兜底安全区。
 8. **RegExp 用字符串构造时 `\s` 被 JS 字符串转义吃掉**（写成 `'\\s'`）→ 校验规则静默失效，
    「检查通过」≠「规则在跑」；新防线上线时先注入一个已知错值确认它能红。
+9. **「本机 shell 能连通」不等于「端内能连通」**：Android 模拟器上 `adb shell nc 10.0.2.2 8888`
+   可以通，但应用内 OkHttp 请求同一地址会连接超时（nginx 无访问日志）。判端上可达要看宿主
+   服务端日志 + 截图数据，拓扑统一走 `adb reverse`（见 skill `hotspot-android-device-verify`）。
 
 ## 6. 工作流（建议顺序）
 

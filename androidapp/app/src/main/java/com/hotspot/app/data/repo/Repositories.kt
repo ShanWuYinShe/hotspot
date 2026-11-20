@@ -69,6 +69,27 @@ class AuthRepository(
         )
     }
 
+    /**
+     * 访客模式（spec api_spec_public.md → POST /public/v1/auth/guest，MUST 幂等）：
+     * 每次调用创建独立访客账号（user_type=temp）；平台开关关闭时返回 10400
+     * （message「当前未开放访客模式」），由 ApiClient.businessErrorMessage 透传服务端 message。
+     */
+    suspend fun guest(nickname: String? = null): ApiResult<AuthSession> {
+        val body = buildJsonObject {
+            put("nickname", nickname)
+            put("client_type", "app")
+            put("device_id", tokens.deviceId())
+        }
+        return toSession(
+            api.post(
+                ApiEndpoint.GUEST,
+                body,
+                AuthTokenPair.serializer(),
+                idempotencyKey = UUID.randomUUID().toString(),
+            ),
+        )
+    }
+
     suspend fun signout(): ApiResult<Unit> {
         val result = api.postVoid(ApiEndpoint.SIGNOUT)
         tokens.clear()
@@ -297,10 +318,36 @@ class CommentRepository(private val api: ApiClient) {
     }
 }
 
-/** 个人中心：账户资料（含仅自己可见的 email/phone/stats）。 */
+/**
+ * 个人中心：账户资料（含仅自己可见的 email/phone/stats）+ 「我的内容」集合。
+ * 我的瞬间/收藏/群组均为成员视角端点（spec：fetch_created 含 private 与软删占位、
+ * fetch_favorites 含收藏时间、fetch_joined 含 viewer_state/last_message），
+ * 不属于公共发现域，故统一收敛在资料仓库。
+ */
 class ProfileRepository(private val api: ApiClient) {
     suspend fun account(): ApiResult<AccountData> =
         api.post(ApiEndpoint.USERS_ACCOUNT, emptyObject(), AccountData.serializer())
+
+    /** 我创建的瞬间（拥有者视角，spec/api_spec_moment.md → moments/fetch_created）。 */
+    suspend fun createdMoments(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
+        ApiEndpoint.MOMENTS_FETCH_CREATED,
+        buildJsonObject { put("pagination", pagination(cursor)) },
+        Page.serializer(MomentItem.serializer()),
+    )
+
+    /** 我的收藏（spec → moments/fetch_favorites）。 */
+    suspend fun favoriteMoments(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
+        ApiEndpoint.MOMENTS_FETCH_FAVORITES,
+        buildJsonObject { put("pagination", pagination(cursor)) },
+        Page.serializer(MomentItem.serializer()),
+    )
+
+    /** 我加入的群组（成员视角，spec/api_spec_group.md → groups/fetch_joined）。 */
+    suspend fun joinedGroups(cursor: String?): ApiResult<Page<GroupItem>> = api.post(
+        ApiEndpoint.GROUPS_FETCH_JOINED,
+        buildJsonObject { put("pagination", pagination(cursor)) },
+        Page.serializer(GroupItem.serializer()),
+    )
 }
 
 /** 通知中心：列表 / 未读摘要 / 全部已读。 */

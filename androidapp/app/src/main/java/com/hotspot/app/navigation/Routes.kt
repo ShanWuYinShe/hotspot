@@ -8,6 +8,8 @@ object Routes {
     const val PUBLISH = "publish"
     const val MESSAGES = "messages"
     const val ME = "me"
+    const val ME_MOMENTS = "me/moments"
+    const val ME_GROUPS = "me/groups"
     const val SEARCH = "search"
     const val NOTIFY = "notify"
     const val SETTINGS = "settings"

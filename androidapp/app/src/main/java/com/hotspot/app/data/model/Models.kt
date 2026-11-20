@@ -104,6 +104,11 @@ data class MomentItem(
     @SerialName("is_deleted") val isDeleted: Boolean = false,
     val location: RelativeLocation? = null,
     @SerialName("is_favorited") val isFavorited: Boolean = false,
+    // 拥有者视角扩展（spec api_spec_moment.md → OwnerMomentItem）：仅 moments/fetch_created、
+    // moments/create、moments/update 下发，其它端点恒缺省。取值 'public' / 'private'。
+    @SerialName("privacy_level") val privacyLevel: String? = null,
+    // 收藏视角扩展（spec → FavoritedMomentItem）：仅 moments/fetch_favorites 下发（UTC ISO 8601）。
+    @SerialName("favorited_at") val favoritedAt: String? = null,
 ) {
     /** 点赞数：Reaction 聚合里 emoji 点赞（👍 / ❤ 等）的总和；无反应时为 0。 */
     val likeCount: Int get() = reactions.sumOf { it.count }
@@ -142,12 +147,41 @@ data class GroupInfo(
     @SerialName("members_count") val membersCount: Int = 0,
 )
 
+/**
+ * 群组查看者状态（spec api_spec_types.md → GroupViewerState；GroupItem.viewer_state）。
+ * 非成员为 null；groups/fetch_joined 恒非 null。
+ */
+@Serializable
+data class GroupViewerState(
+    val role: String = "member",
+    @SerialName("unread_count") val unreadCount: Int = 0,
+    @SerialName("is_muted") val isMuted: Boolean = false,
+    @SerialName("muted_until") val mutedUntil: String? = null,
+    @SerialName("is_pinned") val isPinned: Boolean = false,
+    @SerialName("joined_at") val joinedAt: String = "",
+)
+
+/**
+ * 群组统一公开类型（spec api_spec_types.md → GroupItem）：形状恒定，含成员视角扩展
+ * viewer_state 与列表补充字段；groups/fetch_joined 另返回 last_message（GroupJoinedItem）。
+ */
 @Serializable
 data class GroupItem(
     val group: GroupInfo = GroupInfo(),
     val description: String? = null,
     val tags: List<String> = emptyList(),
     @SerialName("join_method") val joinMethod: String? = null,
+    @SerialName("requires_approval") val requiresApproval: Boolean = false,
+    val location: RelativeLocation? = null,
+    @SerialName("last_activity_at") val lastActivityAt: String? = null,
+    @SerialName("online_members_count") val onlineMembersCount: Int? = null,
+    @SerialName("next_activity_at") val nextActivityAt: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("owner_id") val ownerId: String? = null,
+    @SerialName("viewer_state") val viewerState: GroupViewerState? = null,
+    @SerialName("friends_in_group") val friendsInGroup: Int? = null,
+    // 仅 groups/fetch_joined 下发（spec → GroupJoinedItem）：最近一条消息预览，null = 无消息。
+    @SerialName("last_message") val lastMessage: MessageBrief? = null,
 )
 
 @Serializable

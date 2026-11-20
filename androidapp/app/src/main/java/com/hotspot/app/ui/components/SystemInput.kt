@@ -51,6 +51,7 @@ fun SystemInput(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     singleLine: Boolean = true,
+    leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
@@ -87,6 +88,10 @@ fun SystemInput(
                 .padding(horizontal = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(Spacing.sm))
+            }
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,

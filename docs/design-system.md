@@ -1411,7 +1411,8 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 | 原语 | 规格（对齐设计规范页 `421:8`） |
 |---|---|
 | `SystemButton` | primary/secondary/soft/ghost/danger × SM 32 / MD 42 / LG 48，全圆角胶囊，按下缩放 + 状态色，热区 ≥44dp |
-| `SystemInput` | 43 高 / 圆角 16 / 三态边框（默认·焦点 accent 22% 环·错误 danger 24% 环） |
+| `SystemInput` | 43 高 / 圆角 16 / 三态边框（默认·焦点 accent 22% 环·错误 danger 24% 环），支持前置图标槽 |
+| `SearchInput` | 39 高 / 全圆角胶囊（搜索派唯一壳）：左搜索图标 16 + 12 字号，焦点转 fieldRing；表单输入仍走 `SystemInput`，两派不在页面内互换 |
 | `Badge` | sm 20 / md 24 + 语义 tone（accent/online/warning/danger/neutral），数字未读用同族 accent |
 | `SegmentedTabs` / `Tabs` | 34 高胶囊分段 / 34 高 Tab 行，选中态底色 + 文字色切换，垂直居中 |
 | `MomentCard` / `Surfaces` / `ListGroup` | 无描边软岛（`--cst-surface-island`）+ 圆角 20 + 轻投影，行 64 |
@@ -1435,5 +1436,7 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
   `POST /public/v1/auth/signin`；改用 reverse + `127.0.0.1` 覆盖基址后请求即达。
 - 验证：`cd androidapp && JAVA_HOME="<Android Studio JBR>" ANDROID_HOME="$HOME/Library/Android/sdk"
   ./gradlew --no-daemon assembleDebug testDebugUnitTest`；CI job `Android (Compose Build)` 兜底。
+  发版前另跑 `./gradlew --no-daemon assembleRelease`（R8 + 资源压缩 + lintVital，产物未签名，
+  `app-release-unsigned.apk`；CI 只跑 debug，release 由本地/发版流程覆盖）。
 - 端上走查（AVD 创建/启动、登录、控件定位、截图与清理）：`.agents/skills/hotspot-android-device-verify/SKILL.md`。
 

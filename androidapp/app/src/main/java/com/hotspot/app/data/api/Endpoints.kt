@@ -8,6 +8,7 @@ object ApiEndpoint {
     // /public/v1（匿名节点；App 端也用它做登录/注册）
     const val SIGNIN = "/public/v1/auth/signin"
     const val REGISTER = "/public/v1/auth/register"
+    const val GUEST = "/public/v1/auth/guest"
     const val REFRESH_TOKEN = "/public/v1/auth/refresh_token"
 
     // /api/v1（必须 Bearer Token）
@@ -17,11 +18,14 @@ object ApiEndpoint {
     const val MOMENTS_OPEN = "/api/v1/moments/open_the_door"
     const val MOMENTS_FETCH_FOLLOWING = "/api/v1/moments/fetch_following"
     const val MOMENTS_FETCH_NEARBY = "/api/v1/moments/fetch_nearby"
+    const val MOMENTS_FETCH_CREATED = "/api/v1/moments/fetch_created"
+    const val MOMENTS_FETCH_FAVORITES = "/api/v1/moments/fetch_favorites"
 
     const val USERS_SEARCH = "/api/v1/users/search"
     const val USERS_ACCOUNT = "/api/v1/users/account"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
+    const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"
 
     const val PRIVATE_CHATS_FETCH = "/api/v1/private_chats/fetch"
     const val PRIVATE_MESSAGES_FETCH = "/api/v1/private_messages/fetch"

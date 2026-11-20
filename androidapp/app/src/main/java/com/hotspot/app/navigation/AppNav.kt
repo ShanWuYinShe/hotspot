@@ -19,6 +19,8 @@ import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.ChatScreen
 import com.hotspot.app.ui.screens.HomeScreen
 import com.hotspot.app.ui.screens.LoginScreen
+import com.hotspot.app.ui.screens.MeGroupsScreen
+import com.hotspot.app.ui.screens.MeMomentsScreen
 import com.hotspot.app.ui.screens.MeScreen
 import com.hotspot.app.ui.screens.MessagesScreen
 import com.hotspot.app.ui.screens.MomentDetailScreen
@@ -83,7 +85,18 @@ private fun MainScaffold() {
                     MeScreen(
                         onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                         onOpenNotify = { navController.navigate(Routes.NOTIFY) },
+                        onOpenMoments = { navController.navigate(Routes.ME_MOMENTS) },
+                        onOpenGroups = { navController.navigate(Routes.ME_GROUPS) },
                     )
+                }
+                composable(Routes.ME_MOMENTS) {
+                    MeMomentsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                    )
+                }
+                composable(Routes.ME_GROUPS) {
+                    MeGroupsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.SEARCH) {
                     SearchScreen(onBack = { navController.popBackStack() })
