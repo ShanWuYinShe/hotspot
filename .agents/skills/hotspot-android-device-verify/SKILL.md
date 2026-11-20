@@ -18,7 +18,7 @@ description: hotspot Android 端模拟器实测流程：AVD 创建与启动、ad
 | 走查账号 | `qa@hotspot.local` / `Qa12345678`（seed 普通用户；`moment_seed_01` 自带评论供评论区走查） |
 | 造数 | 主库；用 `client_type=web` 身份 curl 造评论，避免影响模拟器内的 App 会话 |
 | 截图 / dump 落盘 | `.workwork/android-verify/`（任务收尾删除） |
-| AVD | `HotSpotPhone`（`system-images;android-36;google_apis;arm64-v8a` + `pixel_7` 设备档） |
+| AVD | `HotSpotPhone`（`system-images;android-36;google_apis;arm64-v8a` + **`pixel_2` 设备档**，面板覆写为 1080×2400/420dpi；无挖孔） |
 
 ## 环境准备
 
@@ -29,10 +29,19 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "system-images;android-36;google_apis;arm64-v8a"
 echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd \
-  -n HotSpotPhone -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_7 --force
+  -n HotSpotPhone -k "system-images;android-36;google_apis;arm64-v8a" -d pixel_2 --force
+# 设备档 pixel_2 无挖孔；面板覆写为 1080×2400/420dpi（与设计 390 宽同密度）
+CFG=~/.android/avd/HotSpotPhone.avd/config.ini
+sed -i '' -E 's/^hw\.lcd\.height *=.*/hw.lcd.height = 2400/' "$CFG"
+sed -i '' -E 's/^hw\.lcd\.width *=.*/hw.lcd.width = 1080/' "$CFG"
+sed -i '' -E 's/^hw\.lcd\.density *=.*/hw.lcd.density = 420/' "$CFG"
 ```
 
 镜像解压后约 4.3G；同一时间只跑一个模拟器（与鸿蒙模拟器互斥，16G 内存机器上同时开会挤）。
+
+**设备档不要用 `pixel_7`**：其挖孔 cutout 会让系统把状态栏高度报成 136px（52dp），而 `-no-window` 又不渲染
+可见挖孔——截图会表现为「顶部安全区过大」的假象（App 本身是按系统 inset 布局的）。判据：
+`adb shell dumpsys window | grep "type=statusBars frame"` 应为 `[0,0][1080,63]`（24dp）；若为 136 则 AVD 档位不对。
 
 ### 启动与等待 boot
 

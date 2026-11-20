@@ -87,6 +87,9 @@ app/src/main/java/com/hotspot/app/
 - 原语优先：按钮 `SystemButton`、输入 `SystemInput`、徽章 `Badge`、Tab `SegmentedTabs/TabPills`、
   软岛 `Surfaces`、空/加载/错误态 `States`、页头 `PageHeader`、底部导航 `BottomNav`。禁止页面手写重复样式。
 - 触控热区 ≥44dp；焦点可见；尊重系统动画缩放（reduced-motion 直接终态）；图片统一 `Avatar`/coil 渐显。
+- **安全区一律取系统 `WindowInsets`**：根 `MainActivity` 统一注入 `safeDrawing` 的 Top/Horizontal；底部贴底组件
+  （BottomNav / CommentInputBar / GroupActionDock）自行使用 `navigationBars`/`ime`。**禁止在页面写死顶/底部安全区 dp 值**——
+  状态栏高度、挖孔、手势条因设备而异，写死会顶出多余留白或压到系统栏。
 - 列表必须三态（loading/empty/error）；分页列表有到底提示；不得用假数据填充空态。
 - 主题：3 主题（vibrant/forest/inkwash）× 明暗三档（跟随系统/浅/深），系统栏颜色随主题。
 - 新增页面前先对照设计稿（Figma）移动端对应画板与 `docs/ui-components.md` 的同类契约。

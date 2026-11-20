@@ -106,14 +106,6 @@ private fun BottomNavItemView(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // 选中指示条（形状线索，不依赖颜色 —— design-system §18）
-        Box(
-            modifier = Modifier
-                .width(Spacing.lg2)
-                .height(3.dp)
-                .background(if (selected) colors.accent else Color.Transparent, AppShapes.pill),
-        )
-        Spacer(Modifier.height(Spacing.xs))
         if (item.primary) {
             Box(
                 modifier = Modifier
@@ -144,6 +136,15 @@ private fun BottomNavItemView(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             color = tint,
             maxLines = 1,
+        )
+        // 选中指示条在「图标 + 文字」下方（设计稿 底部导航 522:2：首页 label 下方短横条），
+        // 形状线索不依赖颜色（design-system §18）；未选中保留同尺寸占位避免文字跳动。
+        Spacer(Modifier.height(Spacing.half))
+        Box(
+            modifier = Modifier
+                .width(Spacing.lg2)
+                .height(3.dp)
+                .background(if (selected) colors.accent else Color.Transparent, AppShapes.pill),
         )
     }
 }
