@@ -1367,9 +1367,10 @@ export struct MomentDetailPage {
     .backgroundColor(this.getCurrentThemePalette().accentMuted)
   }
 
-  /** 评论头行：昵称 + 作者微徽章 + 时间（主评论昵称 12 / 时间 11；楼中楼回复昵称 11 / 时间 10） */
+  /** 评论头行：昵称 + 作者微徽章 +（楼中楼）回复 @对方 + 时间
+   *  （主评论昵称 12 / 时间 11；楼中楼回复昵称 11 / 回复·@·时间 10；对齐设计稿 748:48 与 web 同口径） */
   @Builder
-  private buildCommentHeadRow(comment: CommentItem, isReply: boolean) {
+  private buildCommentHeadRow(comment: CommentItem, isReply: boolean, replyToNickname: string = '') {
     Row({ space: DesignConstants.SPACING.SM2 }) {
       Text(comment.user?.nickname ?? '匿名')
         .fontSize(isReply ? DesignConstants.FONT.SIZE.XS : DesignConstants.FONT.SIZE.SM)
@@ -1380,6 +1381,20 @@ export struct MomentDetailPage {
         .fontColor(this.getCurrentThemePalette().textPrimary)
       if (this.isMomentAuthor(comment)) {
         this.buildAuthorBadge()
+      }
+      if (isReply && replyToNickname.length > 0) {
+        // 楼中楼回复头「回复 @对方」：10fp；「回复」常规、「@对方」Medium（设计稿 748:48）
+        Text('回复')
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+        Text(`@${replyToNickname}`)
+          .fontSize(DesignConstants.FONT.SIZE.XS2)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS2))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+          .fontColor(this.getCurrentThemePalette().textSecondary)
       }
       Blank()
       Text(this.formatTime(comment.created_at))
@@ -1448,7 +1463,7 @@ export struct MomentDetailPage {
   /** 楼中楼回复行（方案 B）：无灰底卡片/描边/卡片内距；头像 20 与主评论内容列同轴，
    *  回复头/正文/动作统一在头像右 8vp；回复字号 11 / 时间 10 与主评论（12/11）拉开层级 */
   @Builder
-  private buildReplyRow(reply: CommentItem) {
+  private buildReplyRow(reply: CommentItem, parentNickname: string) {
     Row({ space: DesignConstants.SPACING.SM }) {
       SystemAvatar({
         decorative: true,
@@ -1458,7 +1473,7 @@ export struct MomentDetailPage {
         shape: 'circle'
       })
       Column({ space: DesignConstants.SPACING.SM2 }) {
-        this.buildCommentHeadRow(reply, true)
+        this.buildCommentHeadRow(reply, true, parentNickname)
 
         Text(cleanPlainText(reply.content))
           .fontSize(DesignConstants.FONT.SIZE.XS)
@@ -1521,7 +1536,7 @@ export struct MomentDetailPage {
         if (thread.replies.length > 0) {
           Column({ space: DesignConstants.SPACING.MD2 }) {
             ForEach(thread.replies, (reply: CommentItem) => {
-              this.buildReplyRow(reply)
+              this.buildReplyRow(reply, thread.comment.user?.nickname ?? '')
             }, (reply: CommentItem) =>
               `${reply.comment_id}_${this.getCommentLikesCount(reply)}_${this.isCommentLiked(reply) ? 1 : 0}`)
           }
