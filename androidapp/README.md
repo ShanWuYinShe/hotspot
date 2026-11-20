@@ -31,9 +31,11 @@ cd frontend && bun run check:theme                  # CSS ↔ JSON ↔ Tokens.kt
 
 ## 调试地址
 
-- debug 默认 `http://10.0.2.2:8888`（模拟器访问宿主 nginx 网关）
-- 真机：`adb reverse tcp:8888 tcp:8888`，并通过 Gradle 属性覆盖
+- 默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）
+- 模拟器/真机联调：`adb reverse tcp:8888 tcp:8888`，并通过 Gradle 属性覆盖
   `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`
+  （本机 API 36 AVD 上直接访问 `10.0.2.2` 会连接超时，且 `adb shell nc` 可连通不代表端内可达，
+  判据与走查流程见 `.agents/skills/hotspot-android-device-verify/SKILL.md`）
 - release：`-PHOTSPOT_BASE_URL=https://chaoset.com`（默认线上站点）
 - debug 允许明文 HTTP（network security config，仅本机地址）；release 禁止明文
 
@@ -50,7 +52,8 @@ app/src/main/java/com/hotspot/app/
   ui/theme/                    # Tokens.kt（自动生成）、Theme/Type/Shape/Motion/Dimens
   ui/components/               # SystemButton / SystemInput / Badge / Tabs / ListGroup /
                                # ListRow / SystemCard / Avatar / 三态 / PageHeader / BottomNav /
-                               # AmbientCanvas / MomentCard
+                               # AmbientCanvas / MomentCard / CommentThread / CommentInputBar /
+                               # CommentAuthorBadge
   ui/screens/                  # 登录注册 / 首页 / 附近 / 消息 / 私聊 / 我的 / 搜索 / 通知 / 设置 / 发布占位
   navigation/                  # 路由 + 登录态门禁 + 底部 5 tab
   util/                        # 媒体 URL 归一 / 时间格式化
@@ -64,13 +67,12 @@ app/src/test/                  # token 结构不变量 + 业务错误码文案�
 正在关注 = `moments/fetch_following`；下拉刷新 + 无限滚动 + 到底提示）、附近枢纽
 （附近的人/群组/瞬间 + 地图占位）、消息列表、私聊（只读历史 + 简单文本发送）、我的（资料卡 +
 统计）、搜索（用户/瞬间/群组）、通知（列表 + 全部已读）、设置（3 主题 × 明暗三档 + 退出登录）、
-瞬间详情（只读）。
+瞬间详情（含评论楼中楼列表 + docked 评论输入条：发表/回复/点赞，方案 B 视觉与 Web/鸿蒙同口径）。
 
 已登记 TODO（首版占位，UI 显式标注）：
 - 地图原生渲染（附近页占位卡）
 - 图片上传 / 发布（`media/presign_upload` → `moments/create`）
 - WebSocket 实时消息（当前为懒加载 + 手动刷新）
-- 评论列表与评论输入条（详情页只读）
 - 管理后台（不在移动端首版范围）
 - 我的瞬间 / 我的群组列表（资料页占位）
 

@@ -1417,6 +1417,7 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 | `MomentCard` / `Surfaces` / `ListGroup` | 无描边软岛（`--cst-surface-island`）+ 圆角 20 + 轻投影，行 64 |
 | `PageHeader` / `BottomNav` | 页头返回 42 圆钮 + 标题；底部 5 tab（首页/附近/发布+/消息/我的），34 图标 + 11fp 标签 + 选中指示条 |
 | `Avatar` / `States` / `AmbientCanvas` | 首字母占位 + 图片渐显；加载/空/错误三态；主题氛围画布 |
+| `CommentThread` / `CommentInputBar` / `CommentAuthorBadge` | 瞬间详情评论区（方案 B，与 Web/harmony 同契约）：楼中楼透明回复块 + Canvas 静态导引线（1.25dp / α0.35 / 圆头，随主评论实测行高自适应）、作者微徽章 28×16 / r4 / 10sp、docked 输入条（头像 36 + 16 圆角输入槽 + 发送 40，IME 避让、回复 chip）、`reactions/set` 乐观点赞；归组/分页/笛卡尔去重逻辑在 `util/CommentThreading.kt`（纯 JVM 单测覆盖） |
 
 要求：颜色/字号/间距/圆角/动效一律走 token；触控热区 ≥44dp；焦点可见；尊重系统
 `animator_duration_scale`（减弱动态时位移/缩放归零）。
@@ -1425,8 +1426,14 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 
 - API：RPC + JSON（仅 POST），路径由 `data/api/Endpoints.kt` 统一维护，成功判定 `code === 0`，
   Bearer token 持久化，`10100` 触发登录态失效。
-- 调试拓扑：模拟器 `http://10.0.2.2:8888`（宿主 nginx 网关）；真机 `adb reverse tcp:8888 tcp:8888`
-  + 覆盖 `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`；debug 允许明文、release 仅 HTTPS。
+- 调试拓扑：默认基址 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机联调统一
+  `adb reverse tcp:8888 tcp:8888` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`；debug 允许明文、
+  release 仅 HTTPS。
+- 本机 API 36 AVD（`HotSpotPhone`）实测：端内请求 `10.0.2.2:8888` 会在 connectTimeout 后报
+  「网络超时」且 nginx 无访问日志；同期 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能作为
+  端内可达判据**。复现：默认基址装包 → 登录页提交后看 `docker logs hotspot-nginx-1` 是否有
+  `POST /public/v1/auth/signin`；改用 reverse + `127.0.0.1` 覆盖基址后请求即达。
 - 验证：`cd androidapp && JAVA_HOME="<Android Studio JBR>" ANDROID_HOME="$HOME/Library/Android/sdk"
   ./gradlew --no-daemon assembleDebug testDebugUnitTest`；CI job `Android (Compose Build)` 兜底。
+- 端上走查（AVD 创建/启动、登录、控件定位、截图与清理）：`.agents/skills/hotspot-android-device-verify/SKILL.md`。
 

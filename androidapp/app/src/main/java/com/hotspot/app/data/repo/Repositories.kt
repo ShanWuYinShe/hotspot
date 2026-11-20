@@ -8,6 +8,7 @@ import com.hotspot.app.data.auth.AuthSession
 import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.data.model.AuthTokenPair
+import com.hotspot.app.data.model.CommentItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.MessageSentResult
 import com.hotspot.app.data.model.MomentItem
@@ -19,6 +20,8 @@ import com.hotspot.app.data.model.UnreadSummary
 import com.hotspot.app.data.model.UserItem
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.UUID
@@ -232,6 +235,66 @@ class ChatRepository(private val api: ApiClient) {
         MessageSentResult.serializer(),
         idempotencyKey = UUID.randomUUID().toString(),
     )
+}
+
+/**
+ * 评论：顶层列表（首屏 limit 50，cursor 透传）/ 创建（MUST 幂等）/ 评论点赞。
+ * 契约见 spec/api_spec_comment.md 与 spec/api_spec_reaction.md；回复归组在 UI 层按 parent_id 完成。
+ */
+class CommentRepository(private val api: ApiClient) {
+    suspend fun fetchComments(
+        momentId: String,
+        cursor: String?,
+        limit: Int = COMMENT_PAGE_SIZE,
+    ): ApiResult<Page<CommentItem>> = api.post(
+        ApiEndpoint.COMMENTS_FETCH,
+        buildJsonObject {
+            put("moment_id", momentId)
+            put("pagination", pagination(cursor, limit))
+        },
+        Page.serializer(CommentItem.serializer()),
+    )
+
+    /**
+     * 创建评论/回复（spec：客户端必须携带 Idempotency-Key）。
+     * parent_id 指向顶层评论（若指向二级回复，服务端自动挂到所属顶层评论）；mentions 为被 @ 的 user_id。
+     */
+    suspend fun createComment(
+        momentId: String,
+        content: String,
+        parentId: String?,
+        mentions: List<String>,
+        idempotencyKey: String,
+    ): ApiResult<CommentItem> = api.post(
+        ApiEndpoint.COMMENTS_CREATE,
+        buildJsonObject {
+            put("moment_id", momentId)
+            put("content", content)
+            put("parent_id", parentId)
+            put("mentions", buildJsonArray { mentions.forEach { add(JsonPrimitive(it)) } })
+        },
+        CommentItem.serializer(),
+        idempotencyKey = idempotencyKey,
+    )
+
+    /** 评论点赞/取消（reactions/set target_type=comment；emoji 须在服务端白名单内）。 */
+    suspend fun setCommentReaction(commentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.REACTIONS_SET,
+        buildJsonObject {
+            put("target_type", "comment")
+            put("target_id", commentId)
+            put("emoji", LIKE_EMOJI)
+            put("active", active)
+        },
+    )
+
+    companion object {
+        /** 首屏评论页大小（任务契约：limit 50）。 */
+        const val COMMENT_PAGE_SIZE = 50
+
+        /** 点赞 emoji：服务端白名单默认含 👍（与 Web / 鸿蒙同口径）。 */
+        const val LIKE_EMOJI = "👍"
+    }
 }
 
 /** 个人中心：账户资料（含仅自己可见的 email/phone/stats）。 */

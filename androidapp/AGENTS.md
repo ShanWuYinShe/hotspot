@@ -6,8 +6,8 @@
 
 按 Figma 设计稿（多端 UI Design Kit 移动端 390 屏）实现的 Android 客户端，与 `frontend` / `harmonyapp`
 同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
-首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 / 瞬间详情只读已实现；地图原生渲染、图片上传/发布、
-WebSocket 实时、评论 UI、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）。
+首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 / 瞬间详情（含评论楼中楼列表与常驻贴底评论输入条）已实现；
+地图原生渲染、图片上传/发布、WebSocket 实时、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
 后端 int64 字段按 spec 的 string 处理，不做数值运算。
@@ -55,22 +55,27 @@ app/src/main/java/com/hotspot/app/
   data/api/        # ApiClient（OkHttp + 信封解析）、Endpoints（唯一路径定义处）
   data/auth/       # TokenStore（Bearer 持久化）
   data/model/      # spec 字段 DTO
-  data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/资料/通知）
+  data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
   ui/components/   # 原语：SystemButton/SystemInput/Badge/Tabs/Surfaces/Avatar/States/
                    #       PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
+                   # 评论区：CommentThread（楼中楼+Canvas 导引线）/ CommentInputBar（docked+IME）
+                   #       / CommentAuthorBadge（作者微徽章）
   ui/screens/      # 按业务页面（Home/Nearby/Messages/Chat/Me/Search/Notify/Settings/Login/...）
-  util/            # 格式化等纯函数
+  util/            # 格式化等纯函数；CommentThreading（评论归组/分页去重/乐观点赞）
 ```
 
 ## API 与网络
 
 - 仅 POST + JSON（RPC 风格），路径必须经 `data/api/Endpoints.kt`（禁止页面硬编码路径）。
 - 成功判定只认 `code === 0`；`10100` 清会话回登录；MUST 幂等接口带 `Idempotency-Key`。
-- Base URL：debug 默认 `http://10.0.2.2:8888`（模拟器访问宿主 nginx 网关）；真机
-  `adb reverse tcp:8888 tcp:8888` 后以 `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖；
+- Base URL：默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机一律
+  `adb reverse tcp:8888 tcp:8888` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建；
   release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
+- **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
+  而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
+  `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
 
 ## UI 契约
 
@@ -84,5 +89,7 @@ app/src/main/java/com/hotspot/app/
 ## 已知待办（首版登记）
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、评论 UI、管理后台、我的瞬间/群组列表。
-3. `assembleRelease`（R8 规则已配，CI 只跑 debug）与真机/模拟器截图走查。
+2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、管理后台、我的瞬间/群组列表；
+   评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
+3. `assembleRelease`（R8 规则已配，CI 只跑 debug）与真机走查（模拟器走查流程见
+   skill `hotspot-android-device-verify`）。

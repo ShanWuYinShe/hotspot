@@ -28,6 +28,11 @@ object ApiEndpoint {
     const val PRIVATE_MESSAGES_SEND = "/api/v1/private_messages/send"
     const val PRIVATE_MESSAGES_MARK_READ = "/api/v1/private_messages/mark_read"
 
+    const val COMMENTS_FETCH = "/api/v1/comments/fetch"
+    const val COMMENTS_CREATE = "/api/v1/comments/create"
+
+    const val REACTIONS_SET = "/api/v1/reactions/set"
+
     const val NOTIFY_FETCH = "/api/v1/notify/fetch"
     const val NOTIFY_UNREAD_SUMMARY = "/api/v1/notify/unread_summary"
     const val NOTIFY_MARK_READ = "/api/v1/notify/mark_read"

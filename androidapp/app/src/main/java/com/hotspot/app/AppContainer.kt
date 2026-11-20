@@ -5,6 +5,7 @@ import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.repo.AuthRepository
 import com.hotspot.app.data.repo.ChatRepository
+import com.hotspot.app.data.repo.CommentRepository
 import com.hotspot.app.data.repo.FeedRepository
 import com.hotspot.app.data.repo.NearbyRepository
 import com.hotspot.app.data.repo.NotifyRepository
@@ -37,6 +38,8 @@ object AppContainer {
         private set
     lateinit var notifyRepository: NotifyRepository
         private set
+    lateinit var commentRepository: CommentRepository
+        private set
 
     @Volatile
     private var initialized = false
@@ -56,6 +59,7 @@ object AppContainer {
             chatRepository = ChatRepository(apiClient)
             profileRepository = ProfileRepository(apiClient)
             notifyRepository = NotifyRepository(apiClient)
+            commentRepository = CommentRepository(apiClient)
             initialized = true
         }
     }
