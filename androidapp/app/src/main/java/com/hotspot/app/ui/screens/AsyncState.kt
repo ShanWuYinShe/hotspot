@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -129,6 +130,25 @@ fun <T> InfiniteScrollHandler(
         derivedStateOf {
             val total = listState.layoutInfo.totalItemsCount
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+            total > 0 && lastVisible >= total - 3
+        }
+    }
+    LaunchedEffect(shouldLoadMore, state.items.size, state.endReached) {
+        if (shouldLoadMore) state.loadMore(loader)
+    }
+}
+
+/** 无限滚动（网格版）：2 列网格同样在距底 3 项内续载（我的瞬间页复用同一分页语义）。 */
+@Composable
+fun <T> InfiniteScrollHandler(
+    state: PagedListState<T>,
+    gridState: LazyGridState,
+    loader: suspend (String?) -> ApiResult<Page<T>>,
+) {
+    val shouldLoadMore by remember {
+        derivedStateOf {
+            val total = gridState.layoutInfo.totalItemsCount
+            val lastVisible = gridState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
             total > 0 && lastVisible >= total - 3
         }
     }

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 Figma 设计稿节点导出的 Lucide 线性图标；勿手改路径。
+     来源：groups-users.svg（viewBox 0 0）
+     渲染时由 Icon(tint=...) 统一着色，strokeColor 仅为兜底。 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path
+        android:pathData="M18.6667 24.5V22.1667C18.6667 20.929 18.175 19.742 17.2998 18.8668C16.4247 17.9917 15.2377 17.5 14 17.5H7C5.76232 17.5 4.57534 17.9917 3.70017 18.8668C2.825 19.742 2.33333 20.929 2.33333 22.1667V24.5"
+        android:strokeColor="#FF52647F"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M18.6667 3.64933C19.6674 3.90876 20.5536 4.49314 21.1863 5.31074C21.819 6.12834 22.1622 7.13287 22.1622 8.16667C22.1622 9.20046 21.819 10.205 21.1863 11.0226C20.5536 11.8402 19.6674 12.4246 18.6667 12.684"
+        android:strokeColor="#FF52647F"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M25.6667 24.5V22.1667C25.6659 21.1327 25.3217 20.1282 24.6883 19.311C24.0548 18.4938 23.1678 17.9102 22.1667 17.6517"
+        android:strokeColor="#FF52647F"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M10.5 12.8333C13.0773 12.8333 15.1667 10.744 15.1667 8.16667C15.1667 5.58934 13.0773 3.5 10.5 3.5C7.92267 3.5 5.83333 5.58934 5.83333 8.16667C5.83333 10.744 7.92267 12.8333 10.5 12.8333Z"
+        android:strokeColor="#FF52647F"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

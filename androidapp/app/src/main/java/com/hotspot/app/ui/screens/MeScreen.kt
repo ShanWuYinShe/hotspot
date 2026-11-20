@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
 fun MeScreen(
     onOpenSettings: () -> Unit,
     onOpenNotify: () -> Unit,
+    onOpenMoments: () -> Unit,
+    onOpenGroups: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val scope = rememberCoroutineScope()
@@ -154,13 +156,13 @@ fun MeScreen(
                     ListGroup {
                         ListRow(
                             title = "我的瞬间",
-                            subtitle = "TODO：首版占位，后续接入 moments/fetch_created",
-                            onClick = null,
+                            subtitle = "发布与收藏",
+                            onClick = onOpenMoments,
                         )
                         ListRow(
                             title = "我的群组",
-                            subtitle = "TODO：首版占位，后续接入 groups/fetch_joined",
-                            onClick = null,
+                            subtitle = "我加入的群组",
+                            onClick = onOpenGroups,
                         )
                     }
                     Spacer(Modifier.height(Spacing.xl))

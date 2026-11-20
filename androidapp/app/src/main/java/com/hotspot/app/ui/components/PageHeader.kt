@@ -2,6 +2,7 @@ package com.hotspot.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +56,8 @@ fun PageHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
+            // 返回钮：44 热区 + 42 圆钮（surface 底 + 轻投影，design-system §27.2「返回 42 圆钮」；
+            // 设计稿 87:3257 / 87:3219 均为白色圆形返回钮）
             Box(
                 modifier = Modifier
                     .size(Dimens.minTouchTarget)
@@ -66,12 +70,26 @@ fun PageHeader(
                     .hotSpotFocusRing(cornerRadius = 22.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.ArrowBack,
-                    contentDescription = "返回",
-                    modifier = Modifier.size(Dimens.iconMd),
-                    tint = colors.textPrimary,
-                )
+                Box(
+                    modifier = Modifier
+                        .size(Dimens.backButton)
+                        .shadow(
+                            elevation = 1.dp,
+                            shape = CircleShape,
+                            ambientColor = colors.shadowDark,
+                            spotColor = colors.shadowDark,
+                        )
+                        .clip(CircleShape)
+                        .background(colors.surface),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "返回",
+                        modifier = Modifier.size(Dimens.iconSm),
+                        tint = colors.textPrimary,
+                    )
+                }
             }
             Spacer(Modifier.width(Spacing.xs))
         }

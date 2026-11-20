@@ -56,6 +56,13 @@ fun LoadingState(
     }
 }
 
+/**
+ * 空态图标底色档（design-system §19 空态）：
+ * - SUBTLE：64 软底 + 20 圆角 + 中性图标（默认，多数页面）
+ * - ACCENT_SOFT：64 圆形 accent-soft 底 + accent 图标（Figma 我的群组空态 755:74）
+ */
+enum class EmptyStateIconTone { SUBTLE, ACCENT_SOFT }
+
 /** 空态：64 软底图标砖 + 14 semibold 标题 + 12 描述 + 可选动作。 */
 @Composable
 fun EmptyState(
@@ -64,8 +71,13 @@ fun EmptyState(
     description: String? = null,
     actionLabel: String? = null,
     onAction: (() -> Unit)? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Filled.Refresh,
+    iconTone: EmptyStateIconTone = EmptyStateIconTone.SUBTLE,
+    /** 自定义图标槽（矢量资源等 ImageVector 之外的图标）；提供时覆盖 [icon]。 */
+    iconContent: (@Composable () -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
+    val accentSoftTone = iconTone == EmptyStateIconTone.ACCENT_SOFT
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -76,15 +88,22 @@ fun EmptyState(
         Box(
             modifier = Modifier
                 .size(64.dp)
-                .background(colors.subtle, AppShapes.card),
+                .background(
+                    if (accentSoftTone) colors.accentSoftBg else colors.subtle,
+                    if (accentSoftTone) androidx.compose.foundation.shape.CircleShape else AppShapes.card,
+                ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.iconLg),
-                tint = colors.textSecondary,
-            )
+            if (iconContent != null) {
+                iconContent()
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.iconLg),
+                    tint = if (accentSoftTone) colors.accent else colors.textSecondary,
+                )
+            }
         }
         Spacer(Modifier.height(Spacing.md))
         Text(

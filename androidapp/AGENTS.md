@@ -6,7 +6,9 @@
 
 按 Figma 设计稿（多端 UI Design Kit 移动端 390 屏）实现的 Android 客户端，与 `frontend` / `harmonyapp`
 同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
-首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 / 瞬间详情（含评论楼中楼列表与常驻贴底评论输入条）已实现；
+登录/注册/访客模式（390 设计稿 87:1818 版式）、首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 /
+我的瞬间（发布 + 收藏，含 private 徽章与软删占位）/ 我的群组（成员视角 + 本地过滤）/
+瞬间详情（含评论楼中楼列表与常驻贴底评论输入条）已实现；
 地图原生渲染、图片上传/发布、WebSocket 实时、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
@@ -39,6 +41,7 @@ JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
 ANDROID_HOME="$HOME/Library/Android/sdk" \
 ./gradlew --no-daemon assembleDebug          # APK: app/build/outputs/apk/debug/app-debug.apk
 JAVA_HOME=... ANDROID_HOME=... ./gradlew --no-daemon testDebugUnitTest
+JAVA_HOME=... ANDROID_HOME=... ./gradlew --no-daemon assembleRelease   # R8 + 资源压缩（产物未签名）
 # token：仓库根 node scripts/design-tokens/gen-android.mjs [--check]
 ```
 
@@ -58,7 +61,7 @@ app/src/main/java/com/hotspot/app/
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
-  ui/components/   # 原语：SystemButton/SystemInput/Badge/Tabs/Surfaces/Avatar/States/
+  ui/components/   # 原语：SystemButton/SystemInput/SearchInput/Badge/Tabs/Surfaces/Avatar/States/
                    #       PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
                    # 评论区：CommentThread（楼中楼+Canvas 导引线）/ CommentInputBar（docked+IME）
                    #       / CommentAuthorBadge（作者微徽章）
@@ -89,7 +92,8 @@ app/src/main/java/com/hotspot/app/
 ## 已知待办（首版登记）
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、管理后台、我的瞬间/群组列表；
+2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、管理后台；
+   我的群组首版无详情页（成员视角列表 + 本地过滤；行不可点击，不做假跳转）；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
-3. `assembleRelease`（R8 规则已配，CI 只跑 debug）与真机走查（模拟器走查流程见
-   skill `hotspot-android-device-verify`）。
+3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
+   验证通过，CI 仍只跑 debug）。
