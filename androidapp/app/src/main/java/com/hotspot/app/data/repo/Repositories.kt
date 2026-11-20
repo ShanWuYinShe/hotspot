@@ -9,7 +9,11 @@ import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.data.model.AuthTokenPair
 import com.hotspot.app.data.model.CommentItem
+import com.hotspot.app.data.model.EnterGroupResult
+import com.hotspot.app.data.model.GroupAnnouncementItem
+import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
+import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.MessageSentResult
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.NotifyItem
@@ -130,11 +134,20 @@ class FeedRepository(private val api: ApiClient) {
         Page.serializer(MomentItem.serializer()),
     )
 
-    /** 瞬间详情（登录视角 MomentItem）。 */
+    /** 瞬间详情（登录视角 MomentItem，含 is_favorited 查看者状态）。 */
     suspend fun openMoment(momentId: String): ApiResult<MomentItem> = api.post(
         ApiEndpoint.MOMENTS_OPEN,
         buildJsonObject { put("moment_id", momentId) },
         MomentItem.serializer(),
+    )
+
+    /** 收藏 / 取消收藏（spec/api_spec_moment.md → moments/set_favorite，两态统一端点）。 */
+    suspend fun setFavorite(momentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.MOMENTS_SET_FAVORITE,
+        buildJsonObject {
+            put("moment_id", momentId)
+            put("active", active)
+        },
     )
 
     suspend fun following(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
@@ -348,6 +361,79 @@ class ProfileRepository(private val api: ApiClient) {
         buildJsonObject { put("pagination", pagination(cursor)) },
         Page.serializer(GroupItem.serializer()),
     )
+}
+
+/**
+ * 群组详情域：详情 / 成员 / 公告 / 加入 / 退出。
+ * 契约见 spec/api_spec_group.md（open_the_door、members/fetch、enter、exit）与
+ * spec/api_spec_public.md（announcements/fetch：仅 public 版、请求只有 group_id、响应无分页）。
+ * 距离/位置由后端计算，客户端只展示；加入/退出结果以服务端 status/错误码为准。
+ */
+class GroupRepository(private val api: ApiClient) {
+    /** 群组详情（登录视角 GroupItem，含 viewer_state：null = 非成员）。 */
+    suspend fun open(groupId: String): ApiResult<GroupItem> = api.post(
+        ApiEndpoint.GROUPS_OPEN_THE_DOOR,
+        buildJsonObject { put("group_id", groupId) },
+        GroupItem.serializer(),
+    )
+
+    /**
+     * 加入群组（智能路由：direct/password + requires_approval 由服务端判定）。
+     * password 群需先收集口令；message 为审批群可选附言（本页不做输入，传 null）。
+     * 错误码 10200/10300/10400 由 ApiClient 透传服务端 message。
+     */
+    suspend fun enter(
+        groupId: String,
+        password: String? = null,
+        message: String? = null,
+    ): ApiResult<EnterGroupResult> = api.post(
+        ApiEndpoint.GROUPS_ENTER,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("password", password)
+            put("message", message)
+        },
+        EnterGroupResult.serializer(),
+    )
+
+    /** 退出群组（群主调用会被服务端 10400 拒绝，客户端只透传 message）。 */
+    suspend fun exit(groupId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_EXIT,
+        buildJsonObject { put("group_id", groupId) },
+    )
+
+    /** 成员列表（成员视角公开字段；按 joined_at 正序，客户端只做分页透传）。 */
+    suspend fun members(
+        groupId: String,
+        cursor: String?,
+        limit: Int = GROUP_MEMBERS_PAGE_SIZE,
+    ): ApiResult<Page<GroupMemberItem>> = api.post(
+        ApiEndpoint.GROUPS_MEMBERS_FETCH,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("role", JsonNull)
+            put("pagination", pagination(cursor, limit))
+        },
+        Page.serializer(GroupMemberItem.serializer()),
+    )
+
+    /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    suspend fun announcements(groupId: String): ApiResult<List<GroupAnnouncementItem>> {
+        val result = api.post(
+            ApiEndpoint.GROUPS_ANNOUNCEMENTS_FETCH,
+            buildJsonObject { put("group_id", groupId) },
+            GroupAnnouncementList.serializer(),
+        )
+        return when (result) {
+            is ApiResult.Ok -> ApiResult.Ok(result.data.items)
+            is ApiResult.Err -> result
+        }
+    }
+
+    companion object {
+        /** 成员列表首屏页大小（任务契约：首屏 30）。 */
+        const val GROUP_MEMBERS_PAGE_SIZE = 30
+    }
 }
 
 /** 通知中心：列表 / 未读摘要 / 全部已读。 */

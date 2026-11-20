@@ -1,6 +1,9 @@
 package com.hotspot.app.ui.screens
 
+import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,10 +19,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,15 +40,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
+import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.CommentItem
 import com.hotspot.app.data.model.MomentItem
@@ -62,6 +68,7 @@ import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.hotSpotFocusRing
 import com.hotspot.app.ui.components.replyChipLabel
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.Dimens
@@ -124,6 +131,10 @@ fun MomentDetailScreen(
     var pendingIdempotencyKey by remember { mutableStateOf<String?>(null) }
     val likingIds = remember { mutableStateMapOf<String, Boolean>() }
     val inputFocusRequester = remember { FocusRequester() }
+    // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
+    var favorite by remember { mutableStateOf(false) }
+    var favoriteBusy by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     suspend fun loadMoment() {
         loading = moment == null
@@ -132,10 +143,49 @@ fun MomentDetailScreen(
             is ApiResult.Ok -> {
                 moment = result.data
                 commentCount = result.data.commentsCount
+                favorite = result.data.isFavorited
             }
             is ApiResult.Err -> error = result.error.userMessage
         }
         loading = false
+    }
+
+    /**
+     * 收藏 / 取消收藏（spec/api_spec_moment.md → moments/set_favorite）。
+     * 乐观翻转 + 失败回滚；未登录时只提示不请求（详情页本身可匿名浏览？本页登录门禁下不可达，纯防御）。
+     */
+    fun toggleFavorite() {
+        if (favoriteBusy) return
+        if (!loggedIn) {
+            actionError = "登录后才能收藏瞬间"
+            return
+        }
+        val next = !favorite
+        favorite = next
+        favoriteBusy = true
+        actionError = null
+        scope.launch {
+            when (val result = feedRepository.setFavorite(momentId, next)) {
+                is ApiResult.Ok -> Unit
+                is ApiResult.Err -> {
+                    favorite = !next
+                    actionError = result.error.userMessage
+                }
+            }
+            favoriteBusy = false
+        }
+    }
+
+    /** 分享瞬间：系统分享面板（与 Web shareMoment 同口径：标题 + 线上链接）。 */
+    fun shareMoment() {
+        val authorName = moment?.user?.nickname?.ifBlank { "HotSpot 用户" } ?: "HotSpot 用户"
+        val url = "https://chaoset.com/moments/" + momentId
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, authorName + "的瞬间")
+            putExtra(Intent.EXTRA_TEXT, "「" + authorName + "」的瞬间：" + url)
+        }
+        context.startActivity(Intent.createChooser(send, "分享瞬间"))
     }
 
     suspend fun loadComments() {
@@ -319,7 +369,14 @@ fun MomentDetailScreen(
                     ),
                 ) {
                     item(key = "moment-body") {
-                        MomentBody(data = data, commentCount = commentCount)
+                        MomentBody(
+                            data = data,
+                            commentCount = commentCount,
+                            favorite = favorite,
+                            favoriteBusy = favoriteBusy,
+                            onToggleFavorite = { toggleFavorite() },
+                            onShare = { shareMoment() },
+                        )
                     }
                     item(key = "comments-header") {
                         CommentsSectionHeader(count = commentCount)
@@ -455,7 +512,14 @@ private fun CommentsLoadMoreError(message: String, onRetry: () -> Unit) {
 
 /** 瞬间正文：作者行 / 图片 / 正文 / 互动计数（动作条与评论区在列表后续项）。 */
 @Composable
-private fun MomentBody(data: MomentItem, commentCount: Int) {
+private fun MomentBody(
+    data: MomentItem,
+    commentCount: Int,
+    favorite: Boolean,
+    favoriteBusy: Boolean,
+    onToggleFavorite: () -> Unit,
+    onShare: () -> Unit,
+) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -503,14 +567,60 @@ private fun MomentBody(data: MomentItem, commentCount: Int) {
             )
         }
         Spacer(Modifier.height(Spacing.md))
+        // 动作条（设计稿 87:3687）：左 点赞数 + 评论数；右 分享 / 收藏（收藏两态）。
         Row(verticalAlignment = Alignment.CenterVertically) {
             DetailCount(Icons.Filled.Favorite, data.likeCount)
             Spacer(Modifier.width(Spacing.xl))
             DetailCount(Icons.Filled.MailOutline, commentCount)
-            Spacer(Modifier.width(Spacing.xl))
-            DetailCount(Icons.Filled.Share, data.sharesCount)
+            Spacer(Modifier.weight(1f))
+            MomentIconButton(
+                iconRes = R.drawable.ic_share,
+                contentDescription = "分享瞬间",
+                tint = colors.textSecondary,
+                onClick = onShare,
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            MomentIconButton(
+                iconRes = if (favorite) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark,
+                contentDescription = if (favorite) "取消收藏" else "收藏瞬间",
+                tint = if (favorite) colors.accent else colors.textSecondary,
+                enabled = !favoriteBusy,
+                onClick = onToggleFavorite,
+            )
         }
         Spacer(Modifier.height(Spacing.xs))
+    }
+}
+
+/** 图标动作钮：44dp 触控热区 + 圆形焦点环，图标 18（与动作条数字同视觉重量）。 */
+@Composable
+private fun MomentIconButton(
+    iconRes: Int,
+    contentDescription: String,
+    tint: Color,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    Box(
+        modifier = Modifier
+            .size(Dimens.minTouchTarget)
+            .clip(CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .hotSpotFocusRing(cornerRadius = 22.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = contentDescription,
+            modifier = Modifier.size(18.dp),
+            tint = if (enabled) tint else colors.textSecondary.copy(alpha = 0.5f),
+        )
     }
 }
 

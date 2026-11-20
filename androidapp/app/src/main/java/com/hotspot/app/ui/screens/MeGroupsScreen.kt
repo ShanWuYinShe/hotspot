@@ -58,10 +58,13 @@ private val LoadMoreThreshold = 240
  * 我的群组（推入页 me/groups，设计稿 87:3219）：
  * 数据走 groups/fetch_joined（成员视角，含 viewer_state 置顶与 last_message 预览）；
  * 搜索框只对「已加载列表」按群名/标签本地过滤（首版无服务端群组搜索注入）。
- * 首版无群组详情页 → 行不点击（不做假跳转）。
+ * 行点击进入群详情（group/{groupId}，设计稿 87:1696）。
  */
 @Composable
-fun MeGroupsScreen(onBack: () -> Unit) {
+fun MeGroupsScreen(
+    onBack: () -> Unit,
+    onOpenGroup: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val profileRepository = AppContainer.profileRepository
     val scope = rememberCoroutineScope()
@@ -163,7 +166,7 @@ fun MeGroupsScreen(onBack: () -> Unit) {
                 ) {
                     ListGroup {
                         visible.forEach { item ->
-                            GroupJoinedRow(item)
+                            GroupJoinedRow(item, onOpenGroup = onOpenGroup)
                         }
                     }
                     when {
@@ -183,10 +186,13 @@ fun MeGroupsScreen(onBack: () -> Unit) {
 
 /**
  * 群组行（与 ListRow 行高一致）：头像 + 群名 + 「成员数 · 最近消息预览」；
- * viewer_state.is_pinned 时右侧 20 档「置顶」标记。首版无详情页 → 行不点击。
+ * viewer_state.is_pinned 时右侧 20 档「置顶」标记；整行点击进入群详情。
  */
 @Composable
-private fun GroupJoinedRow(item: GroupItem) {
+private fun GroupJoinedRow(
+    item: GroupItem,
+    onOpenGroup: (String) -> Unit,
+) {
     val pinned = item.viewerState?.isPinned == true
     ListRow(
         leading = {
@@ -203,7 +209,7 @@ private fun GroupJoinedRow(item: GroupItem) {
         } else {
             null
         },
-        onClick = null,
+        onClick = { onOpenGroup(item.group.groupId) },
     )
 }
 

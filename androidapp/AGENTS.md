@@ -8,8 +8,10 @@
 同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
 登录/注册/访客模式（390 设计稿 87:1818 版式）、首页信息流 / 附近 / 消息 / 我的 / 搜索 / 通知 / 设置 /
 我的瞬间（发布 + 收藏，含 private 徽章与软删占位）/ 我的群组（成员视角 + 本地过滤）/
-瞬间详情（含评论楼中楼列表与常驻贴底评论输入条）已实现；
-地图原生渲染、图片上传/发布、WebSocket 实时、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）。
+瞬间详情（含评论楼中楼列表、常驻贴底评论输入条、收藏与系统分享）/ 群详情（设计稿 87:1696：封面卡 + 简介/成员/公告
+三 tab + 加入/退出群组，入口接我的群组行、附近群组卡、搜索群组结果）已实现；
+地图原生渲染、图片上传/发布、WebSocket 实时、群聊会话页、管理后台为**代码内登记 TODO 占位**
+（展示真实空态，禁止造假数据）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
 后端 int64 字段按 spec 的 string 处理，不做数值运算。
@@ -58,7 +60,7 @@ app/src/main/java/com/hotspot/app/
   data/api/        # ApiClient（OkHttp + 信封解析）、Endpoints（唯一路径定义处）
   data/auth/       # TokenStore（Bearer 持久化）
   data/model/      # spec 字段 DTO
-  data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知）
+  data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
   ui/components/   # 原语：SystemButton/SystemInput/SearchInput/Badge/Tabs/Surfaces/Avatar/States/
@@ -93,7 +95,8 @@ app/src/main/java/com/hotspot/app/
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
 2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、管理后台；
-   我的群组首版无详情页（成员视角列表 + 本地过滤；行不可点击，不做假跳转）；
+   群聊会话页（群详情已实现，但首版无群聊页，故不放入口，也不伪造「打开群聊」按钮）；
+   群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
    验证通过，CI 仍只跑 debug）。

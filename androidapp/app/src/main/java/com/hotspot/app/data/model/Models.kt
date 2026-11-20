@@ -184,6 +184,50 @@ data class GroupItem(
     @SerialName("last_message") val lastMessage: MessageBrief? = null,
 )
 
+/**
+ * 群成员列表项（spec/api_spec_group.md → GroupMemberItem，members/fetch 与 members/search 共用）。
+ * presence_status / last_online_at 为隐私受控恒定 nullable（null = 成员关闭在线可见）。
+ */
+@Serializable
+data class GroupMemberItem(
+    val user: UserInfo = UserInfo(),
+    val role: String = "member",
+    @SerialName("joined_at") val joinedAt: String = "",
+    @SerialName("presence_status") val presenceStatus: String? = null,
+    @SerialName("last_online_at") val lastOnlineAt: String? = null,
+)
+
+/** 群公告列表项（spec/api_spec_types.md → GroupAnnouncementItem）。 */
+@Serializable
+data class GroupAnnouncementItem(
+    @SerialName("announcement_id") val announcementId: String = "",
+    @SerialName("group_id") val groupId: String = "",
+    val title: String = "",
+    val content: String = "",
+    @SerialName("created_by") val createdBy: UserInfo = UserInfo(),
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("is_pinned") val isPinned: Boolean = false,
+)
+
+/**
+ * 群公告列表响应（spec/api_spec_public.md → GroupAnnouncementList）：只有 items，无分页容器
+ * （契约请求仅 group_id，返回条数由服务端 group_announcements_count 配置控制）。
+ */
+@Serializable
+data class GroupAnnouncementList(
+    val items: List<GroupAnnouncementItem> = emptyList(),
+)
+
+/**
+ * 加入群组响应（spec/api_spec_group.md → EnterGroupResult）。
+ * status: 'joined'（已加入）/ 'pending_approval'（已提交申请，等待审核）。
+ */
+@Serializable
+data class EnterGroupResult(
+    val status: String = "",
+    @SerialName("application_id") val applicationId: String? = null,
+)
+
 @Serializable
 data class MessageBrief(
     @SerialName("message_id") val messageId: String = "",
