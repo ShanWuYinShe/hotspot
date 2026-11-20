@@ -109,6 +109,31 @@ data class MomentItem(
     val likeCount: Int get() = reactions.sumOf { it.count }
 }
 
+/**
+ * 评论（spec/api_spec_types.md CommentItem）：两级模型（顶层评论 + 一级回复）。
+ * fetch 顶层列表时 top_replies 携带前 N 条回复预览（默认 3），其它端点为空数组。
+ * reactions / top_replies 服务端可能下发 null，依赖 Json { coerceInputValues = true } 回落到默认空表。
+ */
+@Serializable
+data class CommentItem(
+    @SerialName("comment_id") val commentId: String = "",
+    val user: UserInfo = UserInfo(),
+    val content: String = "",
+    @SerialName("parent_id") val parentId: String? = null,
+    val mentions: List<String> = emptyList(),
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("replies_count") val repliesCount: Int = 0,
+    val reactions: List<Reaction> = emptyList(),
+    @SerialName("is_deleted") val isDeleted: Boolean = false,
+    @SerialName("top_replies") val topReplies: List<CommentItem> = emptyList(),
+) {
+    /** 点赞数（reactions[].count 求和，与 Web / 鸿蒙同口径）。 */
+    val likeCount: Int get() = reactions.sumOf { it.count }
+
+    /** 我是否已点赞（reactions[].reacted_by_me 任一为 true）。 */
+    val liked: Boolean get() = reactions.any { it.reactedByMe }
+}
+
 @Serializable
 data class GroupInfo(
     @SerialName("group_id") val groupId: String = "",

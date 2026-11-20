@@ -25,6 +25,7 @@
 | `hotspot-frontend-prod-console` | 线上控制台报错分诊：CF beacon、Firefox preload/CSS 告警、弱网 chunk 失败 |
 | `hotspot-harmony-ui` | 鸿蒙端设计 token、原语与跨端同步机制 |
 | `hotspot-harmony-device-verify` | 鸿蒙端端上实测：hdc + uitest 走查流程、本机坐标、走查账号与陷阱 |
+| `hotspot-android-device-verify` | Android 端端上实测：AVD/adb reverse 联调、10.0.2.2 超时判据、登录与截图走查、造数与清理 |
 | `hotspot-worktree-debug` | worktree 内 compose 隔离调试、端口重映射与清理 |
 | `hotspot-reception-bot` | 接待机器人运行、人格与线上接入（运行时位置见该 skill 内说明） |
 | `hotspot-figma-automation` | Figma 设计稿云端自动化修改、清洗、去系统化与闭环截图同步规程 |
