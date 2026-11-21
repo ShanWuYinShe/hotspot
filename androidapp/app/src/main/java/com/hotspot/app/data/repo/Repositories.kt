@@ -17,6 +17,7 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
+import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.model.MessageSentResult
 import com.hotspot.app.data.model.CompletedUploads
 import com.hotspot.app.data.model.MomentItem
@@ -35,6 +36,7 @@ import com.hotspot.app.data.model.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -437,6 +439,32 @@ class ChatRepository(private val api: ApiClient) {
             put("file_id", JsonNull)
             put("share_code", JsonNull)
             put("reply_to_message_id", JsonNull)
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
+    // ── 群聊（spec/api_spec_chat.md → group_messages；首版只读历史 + 文本发送）──
+
+    suspend fun groupMessages(groupId: String, cursor: String?): ApiResult<Page<GroupMessageItem>> = api.post(
+        ApiEndpoint.GROUP_MESSAGES_FETCH,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(GroupMessageItem.serializer()),
+    )
+
+    suspend fun sendGroupTextMessage(groupId: String, content: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.GROUP_MESSAGES_SEND,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("type", "text")
+            put("content", content)
+            put("file_id", JsonNull)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+            put("mentions", buildJsonArray { })
         },
         MessageSentResult.serializer(),
         idempotencyKey = UUID.randomUUID().toString(),

@@ -26,10 +26,14 @@ object Routes {
     const val MOMENT_DETAIL = "moment/{momentId}"
     // 群详情（推入页；设计稿 87:1696，入口：我的群组 / 附近群组 / 搜索群组结果）
     const val GROUP = "group/{groupId}"
+    // 群聊会话（设计稿 87:3529；入口：群详情「打开群聊」，群成员可见）
+    const val GROUP_CHAT = "group_chat/{groupId}"
     // 他人主页（设计稿 87:5163，users/open_the_door 聚合资料 + 最近瞬间）
     const val USER = "user/{userId}"
 
     fun user(userId: String): String = "user/" + userId
+
+    fun groupChat(groupId: String): String = "group_chat/" + groupId
 
     /** 底部导航 5 tab 的路由集合（仅这些路由显示底栏）。 */
     val tabRoutes: Set<String> = setOf(HOME, NEARBY, PUBLISH, MESSAGES, ME)

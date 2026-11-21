@@ -371,6 +371,29 @@ data class PrivateMessageItem(
     val reactions: List<Reaction> = emptyList(),
 )
 
+/**
+ * 群聊消息项（spec/api_spec_chat.md → GroupMessageItem）。
+ * 发送者统一为 sender: UserInfo；read_count 为已读人数（最终一致，null = 不适用）；
+ * recalled_at 非 null 即已撤回；type=system 为群系统消息（居中展示）。
+ */
+@Serializable
+data class GroupMessageItem(
+    @SerialName("message_id") val messageId: String = "",
+    val type: String = "text",
+    val content: String? = null,
+    val media: MessageMedia? = null,
+    @SerialName("share_code") val shareCode: String? = null,
+    val sender: UserInfo = UserInfo(),
+    @SerialName("reply_to") val replyTo: MessageBrief? = null,
+    val mentions: List<String> = emptyList(),
+    @SerialName("recalled_by") val recalledBy: UserInfo? = null,
+    @SerialName("sent_at") val sentAt: String = "",
+    @SerialName("edited_at") val editedAt: String? = null,
+    @SerialName("recalled_at") val recalledAt: String? = null,
+    @SerialName("read_count") val readCount: Int? = null,
+    val reactions: List<Reaction> = emptyList(),
+)
+
 @Serializable
 data class PrivateChatItem(
     @SerialName("other_user") val otherUser: UserInfo = UserInfo(),

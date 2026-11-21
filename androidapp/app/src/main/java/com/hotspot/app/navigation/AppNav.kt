@@ -18,6 +18,7 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.ChatScreen
 import com.hotspot.app.ui.screens.EditProfileScreen
+import com.hotspot.app.ui.screens.GroupChatScreen
 import com.hotspot.app.ui.screens.GroupDetailScreen
 import com.hotspot.app.ui.screens.HomeScreen
 import com.hotspot.app.ui.screens.LoginScreen
@@ -212,12 +213,33 @@ private fun MainScaffold() {
                     ChatScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
+                    route = Routes.GROUP_CHAT,
+                    arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
+                ) {
+                    GroupChatScreen(
+                        onBack = {
+                            GroupChatTarget.clear()
+                            navController.popBackStack()
+                        },
+                    )
+                }
+                composable(
                     route = Routes.GROUP,
                     arguments = listOf(navArgument("groupId") { type = NavType.StringType }),
                 ) { entry ->
                     GroupDetailScreen(
                         groupId = entry.arguments?.getString("groupId").orEmpty(),
                         onBack = { navController.popBackStack() },
+                        onOpenGroupChat = { item ->
+                            GroupChatTarget.select(
+                                groupId = item.group.groupId,
+                                name = item.group.name,
+                                avatarUrl = item.group.avatarUrl,
+                                membersCount = item.group.membersCount,
+                                onlineCount = item.onlineMembersCount ?: 0,
+                            )
+                            navController.navigate(Routes.groupChat(item.group.groupId))
+                        },
                     )
                 }
             }
