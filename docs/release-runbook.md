@@ -79,6 +79,46 @@ gh run watch <run-id> --exit-status
 - **审计**：追加一行到服务器 `backups/deploy-history.log` 与本机 `.workwork/deploy-history.log`；
 - **旧镜像回收**：保留最近 `DEPLOY_KEEP_IMAGES`（默认 3）个历史版本 + 当前/上一版本。
 
+### Android APK 分发（附到 Release）
+
+Android 端不进 CI 发版链路（CI 只跑 debug 门禁），APK 由本机签名后上传到对应 GitHub Release。
+签名材料**不入库、不打印、不配 GitHub secret**：
+
+- keystore：`~/.android/hotspot-release.jks`（alias `hotspot`，RSA 4096 / 10000 天）；
+  口令存 macOS 钥匙串（`security find-generic-password -a <用户名> -s hotspot-android-release -w`）。
+  **keystore 丢失后无法覆盖升级安装**，需另行离线备份，禁止提交到仓库或 CI。
+- 构建（版本号通过环境变量注入，默认已与当前 tag 对齐）：
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+PASS=$(security find-generic-password -a "$USER" -s hotspot-android-release -w)
+HOTSPOT_KEYSTORE_FILE="$HOME/.android/hotspot-release.jks" \
+HOTSPOT_KEYSTORE_PASSWORD="$PASS" HOTSPOT_KEY_ALIAS=hotspot HOTSPOT_KEY_PASSWORD="$PASS" \
+HOTSPOT_VERSION_NAME=v1.11.0 HOTSPOT_VERSION_CODE=2 \
+cd androidapp && ./gradlew --no-daemon assembleRelease
+```
+
+- 校验签名与版本：
+
+```bash
+"$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --print-certs \
+  androidapp/app/build/outputs/apk/release/app-release.apk
+"$ANDROID_HOME/build-tools/37.0.0/aapt2" dump badging \
+  androidapp/app/build/outputs/apk/release/app-release.apk | head -2
+```
+
+- 附到 Release（tag 的 Release 工作流跑完后）：
+
+```bash
+gh release upload v1.11.0 \
+  androidapp/app/build/outputs/apk/release/app-release.apk#hotspot-android-v1.11.0.apk --clobber
+gh release view v1.11.0 --json assets --jq '.assets[].name'
+```
+
+- 版本规则：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致；
+  两者默认值写在 `androidapp/app/build.gradle.kts`，发新版用 `HOTSPOT_VERSION_NAME`/`HOTSPOT_VERSION_CODE` 覆盖即可。
+
 ### 部署后自查
 
 ```bash

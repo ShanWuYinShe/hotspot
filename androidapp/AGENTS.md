@@ -56,6 +56,10 @@ JAVA_HOME=... ANDROID_HOME=... ./gradlew --no-daemon assembleRelease   # R8 + �
 ```
 
 - **一律 `--no-daemon`**，收尾确认 `pgrep -fl 'GradleDaemon|KotlinCompileDaemon'` 为空。
+- **发布签名**：签名为本机行为（material 不入库、CI 不持密钥）。提供 `HOTSPOT_KEYSTORE_FILE` /
+  `HOTSPOT_KEYSTORE_PASSWORD` / `HOTSPOT_KEY_ALIAS` / `HOTSPOT_KEY_PASSWORD` 四个环境变量时
+  `assembleRelease` 产出已签名 APK，否则保持未签名；版本号用 `HOTSPOT_VERSION_NAME`/`HOTSPOT_VERSION_CODE`
+  覆盖（默认与当前发布对齐）。完整命令与 keystore 位置见 `docs/release-runbook.md`「Android APK 分发」。
 - 本机不要提交 `local.properties`（已在 .gitignore）；`ANDROID_HOME` 走环境变量。
 - CI 覆盖：`.github/workflows/ci.yml` 的 `Android (Compose Build)`（JDK 21 + SDK 37 + token 校验 +
   assembleDebug/testDebugUnitTest）；本地不必重复跑全量构建，但改 UI 后至少跑一次 assembleDebug。
