@@ -62,10 +62,10 @@ CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构�
 1. **背景 / 问题**：现象 → 根因；实现过程中发现的问题、关键 `log` / 命令输出贴 fenced 代码块（不要只给结论）；
    设计对齐类 PR 标注设计稿节点号（如 `87:3617`）。
 2. **改动**：按模块列点，标注关键文件。
-3. **证据（截图）**：端上 / 浏览器走查截图与设计稿对照贴进 PR body（GitHub 会内联渲染）。
-   图片先压缩（`sips --resampleWidth 540`，单张 ≤300KB）提交到 `.github/pr-evidence/<分支slug>/`，
-   PR body 用 raw 链接（`https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>`）内联；
-   合并后把链接里的 `<ref>` 从分支名切到 `main`，保证分支删除后图片仍可查看。
+3. **证据（截图）**：端上 / 浏览器走查截图与设计稿对照贴进 PR body，用 `gh` 的 `--attach` 上传：
+   先压缩（`sips --resampleWidth 540` 或 `~/.agents/bin/pr-evidence` 的 `shrink`，单张 ≤300KB），
+   body 里照常写本地路径 `![改前](./before.png)`，建 PR 时 `gh pr create --body-file body.md --attach 'before.png#改前' --attach 'after.png#改后'`，
+   gh 会把本地路径替换成附件地址。**证据图不提交进仓库，`.github/pr-evidence/` 不再使用**。
 4. **验证**：CI 结论（job 数 / 是否全绿）+ 本地构建/单测结论 + 端上走查要点。
 
 纯文档/注释类 PR 可省略截图，但「背景/问题」与「验证」两段不可省。
