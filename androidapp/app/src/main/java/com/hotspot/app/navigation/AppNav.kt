@@ -33,6 +33,7 @@ import com.hotspot.app.ui.screens.NearbyScreen
 import com.hotspot.app.ui.screens.NotifyScreen
 import com.hotspot.app.ui.screens.PublishScreen
 import com.hotspot.app.ui.screens.RelationshipsScreen
+import com.hotspot.app.ui.screens.ReportsScreen
 import com.hotspot.app.ui.screens.SearchScreen
 import com.hotspot.app.ui.screens.SettingsScreen
 
@@ -155,7 +156,14 @@ private fun MainScaffold() {
                     NotifyScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.SETTINGS) {
-                    SettingsScreen(onBack = { navController.popBackStack() })
+                    SettingsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
+                        onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
+                    )
+                }
+                composable(Routes.ME_REPORTS) {
+                    ReportsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,

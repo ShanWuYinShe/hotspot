@@ -35,6 +35,8 @@ object ApiEndpoint {
     const val USERS_FETCH_FRIENDS = "/api/v1/users/fetch_friends"
     const val USERS_FETCH_FOLLOWING = "/api/v1/users/fetch_following"
     const val USERS_FETCH_FOLLOWERS = "/api/v1/users/fetch_followers"
+    // 我的举报记录（spec/api_spec_report.md → reports/fetch，命名空间天生私有）
+    const val REPORTS_FETCH = "/api/v1/reports/fetch"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
     const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"

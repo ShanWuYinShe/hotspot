@@ -12,6 +12,8 @@ object Routes {
     const val ME_GROUPS = "me/groups"
     // 编辑资料（设计稿 87:3128）与关系页（设计稿 87:3300，tab = 好友/关注/粉丝）
     const val ME_EDIT = "me/edit"
+    // 我的举报（设计稿 87:3350，入口：设置 → 系统与关于）
+    const val ME_REPORTS = "me/reports"
     const val RELATIONSHIPS = "me/relationships?tab={tab}"
     // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
     const val NEARBY_PEOPLE = "nearby/people"

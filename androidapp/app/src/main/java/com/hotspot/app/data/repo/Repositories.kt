@@ -23,6 +23,7 @@ import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.RelatedUserItem
+import com.hotspot.app.data.model.ReportItem
 import com.hotspot.app.data.model.UnreadSummary
 import com.hotspot.app.data.model.UserItem
 import kotlinx.serialization.json.JsonElement
@@ -529,6 +530,23 @@ class GroupRepository(private val api: ApiClient) {
         /** 成员列表首屏页大小（任务契约：首屏 30）。 */
         const val GROUP_MEMBERS_PAGE_SIZE = 30
     }
+}
+
+/** 举报：我的举报记录（spec/api_spec_report.md → reports/fetch，created_at DESC）。 */
+class ReportsRepository(private val api: ApiClient) {
+    suspend fun fetch(
+        status: String?,
+        targetType: String? = null,
+        cursor: String?,
+    ): ApiResult<Page<ReportItem>> = api.post(
+        ApiEndpoint.REPORTS_FETCH,
+        buildJsonObject {
+            put("status", status)
+            put("target_type", targetType)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(ReportItem.serializer()),
+    )
 }
 
 /**
