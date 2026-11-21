@@ -65,7 +65,7 @@ private val PEOPLE_SORTS = listOf("距离最近" to "distance", "最新加入" t
  * 关注走 users/set_follow，本地乐观更新，失败回滚并 Toast 服务端 message。
  */
 @Composable
-fun NearbyPeopleScreen(onBack: () -> Unit, onOpenSearch: () -> Unit) {
+fun NearbyPeopleScreen(onBack: () -> Unit, onOpenSearch: () -> Unit, onOpenUser: (String) -> Unit) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
     var filterIndex by remember { mutableIntStateOf(0) }
@@ -94,6 +94,7 @@ fun NearbyPeopleScreen(onBack: () -> Unit, onOpenSearch: () -> Unit) {
                 sortIndex = sortIndex,
                 onFilterSelected = { filterIndex = it },
                 onSortSelected = { sortIndex = it },
+                onOpenUser = onOpenUser,
             )
         }
     }
@@ -107,6 +108,7 @@ private fun NearbyPeopleContent(
     sortIndex: Int,
     onFilterSelected: (Int) -> Unit,
     onSortSelected: (Int) -> Unit,
+    onOpenUser: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -215,6 +217,7 @@ private fun NearbyPeopleContent(
                         following = followStates[user.user.userId] ?: (user.relation?.isFollowing ?: false),
                         followBusy = followBusy[user.user.userId] == true,
                         onToggleFollow = { toggleFollow(user) },
+                        onClick = { onOpenUser(user.user.userId) },
                     )
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {

@@ -140,8 +140,8 @@ func TestServiceFillReactionsNilAggregatorIsNoop(t *testing.T) {
 }
 
 func (r *stubMomentRepo) ListMomentsByAuthor(context.Context, string, int, string, bool) (PaginatedMoments, error) {
-	return PaginatedMoments{}, nil
+	return r.authorMoments, nil
 }
 func (r *stubMomentRepo) ListReactedByUser(context.Context, string, string, int, string) (PaginatedMoments, error) {
-	return PaginatedMoments{}, nil
+	return r.reactedMoments, nil
 }

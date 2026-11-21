@@ -63,6 +63,7 @@ fun HomeScreen(
     onOpenSearch: () -> Unit,
     onOpenNotify: () -> Unit,
     onOpenMoment: (momentId: String) -> Unit,
+    onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val feedRepository = AppContainer.feedRepository
@@ -140,7 +141,11 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     items(state.items, key = { it.momentId }) { moment ->
-                        MomentCard(moment = moment, onClick = { onOpenMoment(moment.momentId) })
+                        MomentCard(
+                            moment = moment,
+                            onClick = { onOpenMoment(moment.momentId) },
+                            onAuthorClick = { onOpenUser(moment.user.userId) },
+                        )
                     }
                     item(key = "footer") {
                         when {

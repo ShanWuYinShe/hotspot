@@ -308,6 +308,11 @@ Handler -> Service -> Repository
 - 每模块 Repository 至少提供两套实现：`repo_postgres.go`（生产）+ `repo_memory.go`（内存，用于单测与无 DB 场景）
 - DB 未配置时优雅降级到内存实现
 - SQL 写在 `repo_postgres_queries.go`，保持查询与映射分离
+- **按作者聚合的瞬间列表**（`users/open_the_door` 的 `recent_moments`、`users/fetch_moments`、`users/list_reacted`）
+  repo 行扫描只带回标量列；`MomentItem.images`/`reactions` 等恒定数组由 moments `Service` 层的
+  `hydrateImagesBatch`/`fillReactionsBatch`/`ensureMomentArraysBatch` 装配（见 `service.go` `ListMomentsByAuthor`）。
+  新增此类列表端点时，不要直接把 repo 结果返回给 handler——否则图片为 null、反应为 null 违反 spec 恒定形状，
+  个人主页画廊会空白。回归测试：`service_user_profile_lists_test.go`
 
 ## WebSocket
 
@@ -547,6 +552,11 @@ Handler -> Service -> Repository
 - 每模块 Repository 至少提供两套实现：`repo_postgres.go`（生产）+ `repo_memory.go`（内存，用于单测与无 DB 场景）
 - DB 未配置时优雅降级到内存实现
 - SQL 写在 `repo_postgres_queries.go`，保持查询与映射分离
+- **按作者聚合的瞬间列表**（`users/open_the_door` 的 `recent_moments`、`users/fetch_moments`、`users/list_reacted`）
+  repo 行扫描只带回标量列；`MomentItem.images`/`reactions` 等恒定数组由 moments `Service` 层的
+  `hydrateImagesBatch`/`fillReactionsBatch`/`ensureMomentArraysBatch` 装配（见 `service.go` `ListMomentsByAuthor`）。
+  新增此类列表端点时，不要直接把 repo 结果返回给 handler——否则图片为 null、反应为 null 违反 spec 恒定形状，
+  个人主页画廊会空白。回归测试：`service_user_profile_lists_test.go`
 
 ## WebSocket
 

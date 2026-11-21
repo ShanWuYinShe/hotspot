@@ -957,12 +957,39 @@ func (s *Service) broadcastMomentDeletedToFavorites(ctx context.Context, momentI
 // 本人视角。users 模块个人主页聚合经 Service 接口消费（原 users repo 直查
 // moments 表的实现归位本模块）。
 func (s *Service) ListMomentsByAuthor(ctx context.Context, userID string, limit int, cursor string, includePrivate bool) (PaginatedMoments, error) {
-	return s.repo.ListMomentsByAuthor(ctx, userID, limit, cursor, includePrivate)
+	result, err := s.repo.ListMomentsByAuthor(ctx, userID, limit, cursor, includePrivate)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	// users/open_the_door 与 users/fetch_moments 经本方法消费：spec 要求 MomentItem
+	// 恒定形状（images/reactions 为数组），且主页「最近瞬间」画廊依赖真实图片；
+	// repo 行扫描只带回标量列，这里补齐图片与反应聚合。
+	s.hydrateImagesBatch(ctx, result.Items)
+	s.fillReactionsBatch(ctx, result.Items, viewerUserID(ctx))
+	ensureMomentArraysBatch(result.Items)
+	return result, nil
 }
 
 // ListReactedByUser 返回某用户反应过的瞬间（reacted_at DESC keyset）。
 // viewerUserID 为空表示匿名；非空时结果包含该作者自己的私密瞬间
 // （spec api_spec_moment.md → moments/list_reacted）。
 func (s *Service) ListReactedByUser(ctx context.Context, userID, viewerUserID string, limit int, cursor string) (PaginatedMoments, error) {
-	return s.repo.ListReactedByUser(ctx, userID, viewerUserID, limit, cursor)
+	result, err := s.repo.ListReactedByUser(ctx, userID, viewerUserID, limit, cursor)
+	if err != nil {
+		return PaginatedMoments{}, err
+	}
+	// 同上：公开个人主页「反应过的瞬间」同样按 MomentItem 恒定形状下发。
+	s.hydrateImagesBatch(ctx, result.Items)
+	s.fillReactionsBatch(ctx, result.Items, viewerIDForContextOr(ctx, viewerUserID))
+	ensureMomentArraysBatch(result.Items)
+	return result, nil
+}
+
+// viewerIDForContextOr 反应列表的查看者：函数参数优先（匿名 public 版传空），
+// 为空时回退登录上下文（登录版 users/…/list_reacted 直接消费）。
+func viewerIDForContextOr(ctx context.Context, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	return viewerUserID(ctx)
 }

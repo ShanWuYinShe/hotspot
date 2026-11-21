@@ -14,31 +14,35 @@ import (
 )
 
 type stubMomentRepo struct {
-	created     MomentItem
-	createErr   error
-	getResult   MomentItem
-	getFound    bool
-	getErr      error
-	getCalls    int         // Get 调用计数
-	getSecond   *MomentItem // 第 2 次起 Get 返回该值（模拟 Update 后 reload 出新版本）
-	updateErr   error
-	deleteErr   error
-	exists      bool
-	existsErr   error
-	favRepoErr  error
-	unfavErr    error
-	searchRes   PaginatedMoments
-	searchErr   error
-	lastSearch  SearchMomentsRequest // Search 收到的请求（用例断言默认 limit 用）
-	favRes      PaginatedMoments
-	favListErr  error
-	incComment  error
-	adjustErr   error
-	decComment  error
-	incShares   error
-	listMineRes PaginatedMoments
-	listMineErr error
-	myState     *MyMomentState
+	created    MomentItem
+	createErr  error
+	getResult  MomentItem
+	getFound   bool
+	getErr     error
+	getCalls   int         // Get 调用计数
+	getSecond  *MomentItem // 第 2 次起 Get 返回该值（模拟 Update 后 reload 出新版本）
+	updateErr  error
+	deleteErr  error
+	exists     bool
+	existsErr  error
+	favRepoErr error
+	unfavErr   error
+	searchRes  PaginatedMoments
+	searchErr  error
+	lastSearch SearchMomentsRequest // Search 收到的请求（用例断言默认 limit 用）
+	favRes     PaginatedMoments
+	favListErr error
+	incComment error
+	adjustErr  error
+	// 个人主页列表（users/open_the_door、users/fetch_moments、list_reacted）注入
+	authorMoments  PaginatedMoments
+	reactedMoments PaginatedMoments
+	imageRows      map[string][]momentImageRow
+	decComment     error
+	incShares      error
+	listMineRes    PaginatedMoments
+	listMineErr    error
+	myState        *MyMomentState
 }
 
 func (r *stubMomentRepo) Create(_ context.Context, _ string, _ CreateMomentRequest) (MomentItem, error) {
@@ -87,6 +91,9 @@ func (r *stubMomentRepo) LoadMyState(ctx context.Context, a, b string) *MyMoment
 }
 
 func (r *stubMomentRepo) FetchMomentImageRows(_ context.Context, _ []string) (map[string][]momentImageRow, error) {
+	if r.imageRows != nil {
+		return r.imageRows, nil
+	}
 	return map[string][]momentImageRow{}, nil
 }
 

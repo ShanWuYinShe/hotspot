@@ -63,6 +63,7 @@ fun NearbyScreen(
     onOpenMoments: () -> Unit,
     onOpenMoment: (momentId: String) -> Unit,
     onOpenGroup: (groupId: String) -> Unit,
+    onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -202,6 +203,7 @@ fun NearbyScreen(
                             following = followStates[user.user.userId] ?: (user.relation?.isFollowing ?: false),
                             followBusy = followBusy[user.user.userId] == true,
                             onToggleFollow = { toggleFollow(user) },
+                            onClick = { onOpenUser(user.user.userId) },
                         )
                     }
                 }
@@ -212,6 +214,7 @@ fun NearbyScreen(
                     onSeeAll = onOpenMoments,
                 )
                 NearbyMomentPreviewGrid(
+                    onOpenUser = onOpenUser,
                     moments = momentsState.items.take(4),
                     onOpenMoment = onOpenMoment,
                 )
@@ -239,6 +242,7 @@ fun NearbyScreen(
 private fun NearbyMomentPreviewGrid(
     moments: List<MomentItem>,
     onOpenMoment: (String) -> Unit,
+    onOpenUser: (String) -> Unit,
 ) {
     if (moments.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
@@ -249,6 +253,7 @@ private fun NearbyMomentPreviewGrid(
                         moment = moment,
                         onClick = { onOpenMoment(moment.momentId) },
                         modifier = Modifier.weight(1f),
+                        onAuthorClick = { onOpenUser(moment.user.userId) },
                     )
                 }
                 if (row.size == 1) Spacer(Modifier.weight(1f))

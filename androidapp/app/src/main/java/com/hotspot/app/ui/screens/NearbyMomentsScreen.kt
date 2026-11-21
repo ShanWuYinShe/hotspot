@@ -59,7 +59,12 @@ private val MOMENT_FILTERS = listOf("全部", "夜色")
  * 「夜色」为端内标签筛选（moments/fetch_nearby 无 tag 入参，客户端按 moments.tags 过滤）。
  */
 @Composable
-fun NearbyMomentsScreen(onBack: () -> Unit, onOpenSearch: () -> Unit, onOpenMoment: (String) -> Unit) {
+fun NearbyMomentsScreen(
+    onBack: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenMoment: (String) -> Unit,
+    onOpenUser: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
     var filterIndex by remember { mutableIntStateOf(0) }
@@ -81,6 +86,7 @@ fun NearbyMomentsScreen(onBack: () -> Unit, onOpenSearch: () -> Unit, onOpenMome
             filterIndex = filterIndex,
             onFilterSelected = { filterIndex = it },
             onOpenMoment = onOpenMoment,
+            onOpenUser = onOpenUser,
         )
     }
 }
@@ -90,6 +96,7 @@ private fun NearbyMomentsContent(
     filterIndex: Int,
     onFilterSelected: (Int) -> Unit,
     onOpenMoment: (String) -> Unit,
+    onOpenUser: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val scope = rememberCoroutineScope()
@@ -147,7 +154,11 @@ private fun NearbyMomentsContent(
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
                 itemsIndexed(visible, key = { _, moment -> moment.momentId }) { _, moment ->
-                    NearbyMomentCard(moment = moment, onClick = { onOpenMoment(moment.momentId) })
+                    NearbyMomentCard(
+                        moment = moment,
+                        onClick = { onOpenMoment(moment.momentId) },
+                        onAuthorClick = { onOpenUser(moment.user.userId) },
+                    )
                 }
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     when {

@@ -55,6 +55,7 @@ fun MomentCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     aspectRatio: Float = 4f / 5f,
+    onAuthorClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val imageUrl = MediaUrls.absolute(moment.images.firstOrNull()?.url)
@@ -131,7 +132,8 @@ fun MomentCard(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxWidth()
-                .padding(Spacing.md),
+                .padding(Spacing.md)
+                .then(if (onAuthorClick != null) Modifier.clickable { onAuthorClick() } else Modifier),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Avatar(

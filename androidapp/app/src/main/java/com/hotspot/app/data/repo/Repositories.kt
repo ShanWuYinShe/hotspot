@@ -27,8 +27,10 @@ import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.RelatedUserItem
+import com.hotspot.app.data.model.ReportCreated
 import com.hotspot.app.data.model.ReportItem
 import com.hotspot.app.data.model.UnreadSummary
+import com.hotspot.app.data.model.UserDoorResult
 import com.hotspot.app.data.model.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -593,6 +595,44 @@ class ProfileRepository(private val api: ApiClient) {
         buildJsonObject { put("pagination", pagination(cursor)) },
         Page.serializer(GroupItem.serializer()),
     )
+
+    /** 他人主页资料（spec → users/open_the_door；10300 = 不存在或隐私隐藏）。 */
+    suspend fun openUserDoor(userId: String, includeRecentMoments: Boolean = true): ApiResult<UserDoorResult> = api.post(
+        ApiEndpoint.USERS_OPEN_THE_DOOR,
+        buildJsonObject {
+            put("user_id", userId)
+            put("include_recent_moments", includeRecentMoments)
+        },
+        UserDoorResult.serializer(),
+    )
+
+    /** 某用户的瞬间历史（公开视角，翻页接在 recent_moments 之后）。 */
+    suspend fun userMoments(userId: String, cursor: String?): ApiResult<Page<MomentItem>> = api.post(
+        ApiEndpoint.USERS_FETCH_MOMENTS,
+        buildJsonObject {
+            put("user_id", userId)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(MomentItem.serializer()),
+    )
+
+    /** 设置好友备注（仅对已关注对象有效，spec → users/set_remark）。 */
+    suspend fun setRemark(userId: String, remark: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_SET_REMARK,
+        buildJsonObject {
+            put("user_id", userId)
+            put("remark", remark)
+        },
+    )
+
+    /** 拉黑 / 解除拉黑（spec → users/set_block 两态统一）。 */
+    suspend fun setBlock(userId: String, blocked: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_SET_BLOCK,
+        buildJsonObject {
+            put("user_id", userId)
+            put("blocked", blocked)
+        },
+    )
 }
 
 /**
@@ -682,6 +722,23 @@ class ReportsRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(ReportItem.serializer()),
+    )
+
+    /** 创建举报（spec/api_spec_report.md → reports/create；重复 pending 返回 is_duplicate=true 视为成功）。 */
+    suspend fun create(
+        targetType: String,
+        targetId: String,
+        reason: String,
+        description: String? = null,
+    ): ApiResult<ReportCreated> = api.post(
+        ApiEndpoint.REPORTS_CREATE,
+        buildJsonObject {
+            put("target_type", targetType)
+            put("target_id", targetId)
+            put("reason", reason)
+            put("description", description)
+        },
+        ReportCreated.serializer(),
     )
 }
 

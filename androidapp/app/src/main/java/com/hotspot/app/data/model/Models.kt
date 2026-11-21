@@ -140,6 +140,13 @@ data class ReportItem(
     val resolution: ReportResolution? = null,
 )
 
+/** reports/create 响应（spec → ReportCreated）。 */
+@Serializable
+data class ReportCreated(
+    @SerialName("report_id") val reportId: String = "",
+    @SerialName("is_duplicate") val isDuplicate: Boolean = false,
+)
+
 @Serializable
 data class RelatedUserItem(
     val user: UserItem = UserItem(),
@@ -158,6 +165,13 @@ data class UserItem(
     val location: RelativeLocation? = null,
     val stats: UserStats? = null,
     val relation: Relationship? = null,
+)
+
+/** users/open_the_door 响应（spec → UserProfileResult）：资料 + 可选主页首屏最近瞬间。 */
+@Serializable
+data class UserDoorResult(
+    val user: UserItem = UserItem(),
+    @SerialName("recent_moments") val recentMoments: Page<MomentItem>? = null,
 )
 
 @Serializable
