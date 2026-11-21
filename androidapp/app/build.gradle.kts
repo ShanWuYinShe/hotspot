@@ -37,8 +37,10 @@ android {
         applicationId = "com.hotspot.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // 版本号：默认与仓库发布 tag 对齐；发新版时通过环境变量覆盖即可，无需改代码
+        // （HOTSPOT_VERSION_NAME=v1.12.0 HOTSPOT_VERSION_CODE=3 ./gradlew assembleRelease）。
+        versionCode = providers.environmentVariable("HOTSPOT_VERSION_CODE").orNull?.toIntOrNull() ?: 2
+        versionName = providers.environmentVariable("HOTSPOT_VERSION_NAME").orNull?.removePrefix("v") ?: "1.11.0"
 
         buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
     }
@@ -51,6 +53,30 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // 发布签名：材料不进仓库。提供 4 个环境变量时启用（见 docs/release-runbook.md「Android APK 分发」）；
+    // 未提供时 release 产物保持未签名（CI 只跑 debug，不受影响）。
+    val releaseKeystoreFile = providers.environmentVariable("HOTSPOT_KEYSTORE_FILE").orNull
+    val releaseKeystorePassword = providers.environmentVariable("HOTSPOT_KEYSTORE_PASSWORD").orNull
+    val releaseKeyAlias = providers.environmentVariable("HOTSPOT_KEY_ALIAS").orNull
+    val releaseKeyPassword = providers.environmentVariable("HOTSPOT_KEY_PASSWORD").orNull
+    val hasReleaseSigning = listOf(
+        releaseKeystoreFile,
+        releaseKeystorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    ).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseKeystoreFile!!)
+                storePassword = releaseKeystorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -66,6 +92,9 @@ android {
                 "proguard-rules.pro",
             )
             buildConfigField("String", "API_BASE_URL", "\"$releaseUrl\"")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
