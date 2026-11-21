@@ -76,7 +76,6 @@ private fun MainScaffold() {
                 composable(Routes.PUBLISH) { PublishScreen() }
                 composable(Routes.MESSAGES) {
                     MessagesScreen(
-                        onOpenNotify = { navController.navigate(Routes.NOTIFY) },
                         onOpenChat = { userId, nickname ->
                             ChatTarget.select(userId, nickname)
                             navController.navigate(Routes.chat(userId))
