@@ -9,10 +9,15 @@
 // 只做水平平移（transform），不改变布局、不吞点击：动画/滚动/吸顶行为不变。
 //
 // 使用范围：仅页面级空态（整页无内容）。分栏面板/卡片内空态不要使用。
+// 测试环境（jsdom）可能没有 matchMedia / ResizeObserver：一律降级为无操作。
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 
 export function centerOnPage(node: HTMLElement, enabled: boolean = true) {
+	if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+		return {};
+	}
+
 	let active = enabled;
 	let raf = 0;
 	const media = window.matchMedia(DESKTOP_QUERY);
@@ -39,10 +44,11 @@ export function centerOnPage(node: HTMLElement, enabled: boolean = true) {
 	};
 
 	schedule();
-	const resizeObserver = new ResizeObserver(schedule);
-	resizeObserver.observe(node);
+	const ResizeObserverImpl = typeof ResizeObserver === 'undefined' ? null : ResizeObserver;
+	const resizeObserver = ResizeObserverImpl ? new ResizeObserverImpl(schedule) : null;
+	resizeObserver?.observe(node);
 	window.addEventListener('resize', schedule);
-	media.addEventListener('change', schedule);
+	media.addEventListener?.('change', schedule);
 
 	return {
 		update(next: boolean) {
@@ -51,9 +57,9 @@ export function centerOnPage(node: HTMLElement, enabled: boolean = true) {
 		},
 		destroy() {
 			cancelAnimationFrame(raf);
-			resizeObserver.disconnect();
+			resizeObserver?.disconnect();
 			window.removeEventListener('resize', schedule);
-			media.removeEventListener('change', schedule);
+			media.removeEventListener?.('change', schedule);
 			node.style.transform = '';
 		}
 	};
