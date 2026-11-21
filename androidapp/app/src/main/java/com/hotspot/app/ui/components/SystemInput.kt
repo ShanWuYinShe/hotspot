@@ -24,7 +24,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -32,11 +31,11 @@ import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
-import com.hotspot.app.ui.theme.Tokens
 
 /**
- * 系统输入（表单输入唯一壳）：43 高 / 圆角 16 / 焦点环 accent 22% / 错误态 danger。
- * 表面语言对齐前端 .input-surface（单层 hairline 边 + focus 柔光环 + danger 错误环）。
+ * 系统输入（表单输入唯一壳）：43 高 / 圆角 16 / 聚焦 accent 2dp 单层边界 / 错误态 danger 单层边界。
+ * 表面语言对齐前端 .input-surface（静态 1px 边 → 聚焦 2px 单层边界，无外层柔光环；
+ * 双层深浅描边在浅色主题下会被读成「双边框」）。
  */
 @Composable
 fun SystemInput(
@@ -63,11 +62,8 @@ fun SystemInput(
         focused -> colors.fieldBorderFocus
         else -> colors.fieldBorder
     }
-    val ringColor = when {
-        errorText != null -> colors.fieldRingDanger
-        focused -> colors.fieldRing
-        else -> Color.Transparent
-    }
+    // 聚焦/错误态单层加粗到 2dp：替代「hairline 边 + 内缘柔光环」的双层描边
+    val borderWidth = if (focused || errorText != null) 2.dp else 1.dp
     Column(modifier) {
         if (label != null) {
             Text(
@@ -83,8 +79,7 @@ fun SystemInput(
                 .height(Dimens.inputHeight)
                 .clip(shape)
                 .background(if (enabled) colors.fieldBg else colors.fieldBgDisabled, shape)
-                .border(1.dp, borderColor, shape)
-                .inputRing(ringColor, Tokens.Radius.md.dp)
+                .border(borderWidth, borderColor, shape)
                 .padding(horizontal = Spacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {

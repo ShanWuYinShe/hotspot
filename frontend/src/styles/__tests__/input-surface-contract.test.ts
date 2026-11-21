@@ -43,21 +43,23 @@ describe('input-surface 静态表面', () => {
 });
 
 describe('input-surface 焦点/错误/禁用态', () => {
-	it('焦点 = accent 边界 + 内缘 1px（视觉 2px）+ 3px 柔光环', () => {
+	it('焦点 = accent 单层 2px 视觉边界（1px 边界 + 1px 同色内缘），不再叠 3px 柔光环', () => {
 		const body = ruleBody('\n  .input-surface:focus-within {');
 		expect(body).toMatch(/border-color:\s*var\(--cst-field-border-focus\)/);
 		expect(body).toMatch(/inset 0 0 0 1px var\(--cst-field-border-focus\)/);
-		expect(body).toMatch(/0 0 0 3px var\(--cst-field-ring\)/);
+		// 双层边框回归守卫：禁止再出现外层 3px 柔光环
+		expect(body).not.toMatch(/0 0 0 3px/);
 	});
 
-	it('错误态 = danger 边界 + danger 光环；错误行由组件就近渲染', () => {
+	it('错误态 = danger 单层边界（聚焦时 1px 边界 + 1px 同色内缘）；错误行由组件就近渲染', () => {
 		const body = ruleBody("\n  .input-surface[aria-invalid='true'],");
 		expect(body).toMatch(/border-color:\s*var\(--cst-status-danger\)/);
 		expect(body).not.toMatch(/shadow-inset/);
 		const focusBody = ruleBody(
 			"\n  .input-surface[aria-invalid='true']:focus-within,"
 		);
-		expect(focusBody).toMatch(/var\(--cst-field-ring-danger\)/);
+		expect(focusBody).toMatch(/inset 0 0 0 1px var\(--cst-status-danger\)/);
+		expect(focusBody).not.toMatch(/var\(--cst-field-ring-danger\)/);
 	});
 
 	it('禁用态回落到弱化嵌入面', () => {

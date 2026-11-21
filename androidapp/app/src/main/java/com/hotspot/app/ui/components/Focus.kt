@@ -47,21 +47,5 @@ fun Modifier.hotSpotFocusRing(
         }
 }
 
-/** 输入族焦点/错误柔光环：沿输入框内缘绘制 3dp token 环（--cst-field-ring / -danger）。 */
-fun Modifier.inputRing(color: Color, cornerRadius: Dp = 16.dp): Modifier = drawWithContent {
-    drawContent()
-    if (color.alpha > 0f) {
-        val stroke = 3.dp.toPx()
-        val inset = stroke / 2f
-        drawRoundRect(
-            color = color,
-            topLeft = Offset(inset, inset),
-            size = Size(size.width - stroke, size.height - stroke),
-            cornerRadius = CornerRadius(cornerRadius.toPx()),
-            style = Stroke(width = stroke),
-        )
-    }
-}
-
 /** 触控热区底线：视觉尺寸可小，但可点区域 ≥44dp（mobile-ui-conventions）。 */
 fun Modifier.minTouchTarget(): Modifier = this

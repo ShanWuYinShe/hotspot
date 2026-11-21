@@ -150,8 +150,8 @@ fun CommentInputBar(
                     .height(Dimens.inputHeight)
                     .clip(AppShapes.compact)
                     .background(if (focused) colors.surface else colors.subtle, AppShapes.compact)
-                    .border(1.dp, if (focused) colors.fieldBorderFocus else colors.border, AppShapes.compact)
-                    .inputRing(if (focused) colors.fieldRing else Color.Transparent, Tokens.Radius.md.dp)
+                    // 聚焦单层加粗到 2dp（不再叠内缘柔光环，避免双层描边）
+                    .border(if (focused) 2.dp else 1.dp, if (focused) colors.fieldBorderFocus else colors.border, AppShapes.compact)
                     .padding(horizontal = Spacing.md3),
                 contentAlignment = Alignment.CenterStart,
             ) {
