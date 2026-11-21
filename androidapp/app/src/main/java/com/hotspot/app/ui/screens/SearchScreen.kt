@@ -56,6 +56,7 @@ private val SEARCH_TABS = listOf("用户", "瞬间", "群组")
 fun SearchScreen(
     onBack: () -> Unit,
     onOpenGroup: (String) -> Unit,
+    onOpenUser: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     var query by remember { mutableStateOf("") }
@@ -84,7 +85,7 @@ fun SearchScreen(
             Spacer(Modifier.height(Spacing.md))
         }
         when (tabIndex) {
-            0 -> UserResults(query = submitted)
+            0 -> UserResults(query = submitted, onOpenUser = onOpenUser)
             1 -> MomentResults(query = submitted)
             else -> GroupResults(query = submitted, onOpenGroup = onOpenGroup)
         }
@@ -92,7 +93,7 @@ fun SearchScreen(
 }
 
 @Composable
-private fun UserResults(query: String) {
+private fun UserResults(query: String, onOpenUser: (String) -> Unit) {
     val scope = rememberCoroutineScope()
     val state = rememberSingleLoadState<UserItem>()
     var retryKey by remember { mutableIntStateOf(0) }
@@ -133,6 +134,7 @@ private fun UserResults(query: String) {
                             Badge(text = "已关注", tone = BadgeTone.ACCENT)
                         }
                     },
+                    onClick = { onOpenUser(user.user.userId) },
                 )
             }
         }

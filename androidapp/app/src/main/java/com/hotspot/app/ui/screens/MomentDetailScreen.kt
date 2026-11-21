@@ -103,6 +103,7 @@ private data class CommentReplyTarget(
 fun MomentDetailScreen(
     momentId: String,
     onBack: () -> Unit,
+    onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val scope = rememberCoroutineScope()
@@ -376,6 +377,7 @@ fun MomentDetailScreen(
                             favorite = favorite,
                             favoriteBusy = favoriteBusy,
                             onToggleFavorite = { toggleFavorite() },
+                            onAuthorClick = { onOpenUser(data.user.userId) },
                             modifier = Modifier.padding(horizontal = Spacing.lg),
                         )
                     }
@@ -544,10 +546,16 @@ private fun MomentBody(
     favoriteBusy: Boolean,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
+    onAuthorClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Column(modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.then(
+                if (onAuthorClick != null) Modifier.clickable { onAuthorClick() } else Modifier,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Avatar(
                 name = data.user.nickname,
                 imageUrl = data.user.avatarUrl,

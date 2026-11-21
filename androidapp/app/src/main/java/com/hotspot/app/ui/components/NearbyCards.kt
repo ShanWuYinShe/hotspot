@@ -319,6 +319,7 @@ fun NearbyUserCard(
     followBusy: Boolean,
     onToggleFollow: () -> Unit,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val label = user.tags.firstOrNull()?.let { "#$it" } ?: "#热点邻居"
@@ -327,6 +328,7 @@ fun NearbyUserCard(
             .shadow(1.dp, AppShapes.card, ambientColor = colors.shadowDark, spotColor = colors.shadowDark)
             .clip(AppShapes.card)
             .background(colors.island)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(Spacing.md),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
@@ -396,11 +398,13 @@ fun NearbyUserRow(
     followBusy: Boolean,
     onToggleFollow: () -> Unit,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -575,6 +579,7 @@ fun NearbyMomentCard(
     moment: MomentItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onAuthorClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val imageUrl = MediaUrls.absolute(moment.images.firstOrNull()?.url)
@@ -639,7 +644,12 @@ fun NearbyMomentCard(
                 }
             }
             Column(Modifier.padding(Spacing.md)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.then(
+                        if (onAuthorClick != null) Modifier.clickable { onAuthorClick() } else Modifier,
+                    ),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Avatar(
                         name = moment.user.nickname,
                         imageUrl = moment.user.avatarUrl,

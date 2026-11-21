@@ -36,6 +36,7 @@ import com.hotspot.app.ui.screens.RelationshipsScreen
 import com.hotspot.app.ui.screens.ReportsScreen
 import com.hotspot.app.ui.screens.SearchScreen
 import com.hotspot.app.ui.screens.SettingsScreen
+import com.hotspot.app.ui.screens.UserProfileScreen
 
 /**
  * 根组件：登录态门禁 —— 未登录（TokenStore.session == null）只渲染登录页；
@@ -54,6 +55,15 @@ fun HotSpotApp() {
 @Composable
 private fun MainScaffold() {
     val navController = rememberNavController()
+    val selfUserId = AppContainer.tokenStore.session.value?.userId
+    // 他人主页入口：点到自己时回个人中心，避免出现「关注自己」这类无意义动作
+    fun openUser(userId: String) {
+        if (selfUserId != null && userId == selfUserId) {
+            navController.navigate(Routes.ME)
+        } else {
+            navController.navigate(Routes.user(userId))
+        }
+    }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute != null && currentRoute in Routes.bottomBarRoutes
@@ -70,6 +80,7 @@ private fun MainScaffold() {
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenNotify = { navController.navigate(Routes.NOTIFY) },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.NEARBY) {
@@ -80,12 +91,14 @@ private fun MainScaffold() {
                         onOpenMoments = { navController.navigate(Routes.NEARBY_MOMENTS) },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.NEARBY_PEOPLE) {
                     NearbyPeopleScreen(
                         onBack = { navController.popBackStack() },
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.NEARBY_GROUPS) {
@@ -100,6 +113,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.PUBLISH) { PublishScreen() }
@@ -132,6 +146,7 @@ private fun MainScaffold() {
                         initialTab = entry.arguments?.getInt("tab") ?: 0,
                         onBack = { navController.popBackStack() },
                         onOpenChat = { userId -> navController.navigate(Routes.chat(userId)) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.ME_MOMENTS) {
@@ -150,6 +165,7 @@ private fun MainScaffold() {
                     SearchScreen(
                         onBack = { navController.popBackStack() },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                        onOpenUser = { userId -> openUser(userId) },
                     )
                 }
                 composable(Routes.NOTIFY) {
@@ -172,6 +188,21 @@ private fun MainScaffold() {
                     MomentDetailScreen(
                         momentId = entry.arguments?.getString("momentId").orEmpty(),
                         onBack = { navController.popBackStack() },
+                        onOpenUser = { userId -> openUser(userId) },
+                    )
+                }
+                composable(
+                    route = Routes.USER,
+                    arguments = listOf(navArgument("userId") { type = NavType.StringType }),
+                ) { entry ->
+                    UserProfileScreen(
+                        userId = entry.arguments?.getString("userId").orEmpty(),
+                        onBack = { navController.popBackStack() },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onOpenMessage = { userId ->
+                            ChatTarget.select(userId, "")
+                            navController.navigate(Routes.chat(userId))
+                        },
                     )
                 }
                 composable(

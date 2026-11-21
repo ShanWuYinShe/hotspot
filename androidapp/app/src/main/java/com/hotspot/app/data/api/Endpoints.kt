@@ -35,8 +35,15 @@ object ApiEndpoint {
     const val USERS_FETCH_FRIENDS = "/api/v1/users/fetch_friends"
     const val USERS_FETCH_FOLLOWING = "/api/v1/users/fetch_following"
     const val USERS_FETCH_FOLLOWERS = "/api/v1/users/fetch_followers"
+    // 用户资料详情（spec → users/open_the_door；include_recent_moments 聚合主页首屏）
+    const val USERS_OPEN_THE_DOOR = "/api/v1/users/open_the_door"
+    // 用户瞬间历史（公开视角，spec → users/fetch_moments）
+    const val USERS_FETCH_MOMENTS = "/api/v1/users/fetch_moments"
+    const val USERS_SET_REMARK = "/api/v1/users/set_remark"
+    const val USERS_SET_BLOCK = "/api/v1/users/set_block"
     // 我的举报记录（spec/api_spec_report.md → reports/fetch，命名空间天生私有）
     const val REPORTS_FETCH = "/api/v1/reports/fetch"
+    const val REPORTS_CREATE = "/api/v1/reports/create"
     // 媒体上传三步链路（spec/api_spec_media.md）：presign_upload → PUT 直传 → complete_upload
     const val MEDIA_PRESIGN_UPLOAD = "/api/v1/media/presign_upload"
     const val MEDIA_COMPLETE_UPLOAD = "/api/v1/media/complete_upload"

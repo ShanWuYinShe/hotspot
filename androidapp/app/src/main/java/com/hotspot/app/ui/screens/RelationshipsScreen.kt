@@ -76,6 +76,7 @@ fun RelationshipsScreen(
     initialTab: Int,
     onBack: () -> Unit,
     onOpenChat: (userId: String) -> Unit,
+    onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -118,6 +119,7 @@ fun RelationshipsScreen(
                 tabIndex = tabIndex,
                 query = query,
                 onOpenChat = onOpenChat,
+                onOpenUser = onOpenUser,
                 onError = { message -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show() },
                 scope = scope,
             )
@@ -180,6 +182,7 @@ private fun RelationshipListContent(
     tabIndex: Int,
     query: String,
     onOpenChat: (String) -> Unit,
+    onOpenUser: (String) -> Unit,
     onError: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
@@ -274,6 +277,7 @@ private fun RelationshipListContent(
                             followBusy = followBusy[item.user.user.userId] == true,
                             onToggleFollow = { toggleFollow(item) },
                             onOpenChat = { onOpenChat(item.user.user.userId) },
+                            onOpenUser = { onOpenUser(item.user.user.userId) },
                         )
                         if (index != visible.lastIndex) {
                             Box(
@@ -306,12 +310,14 @@ private fun RelationshipRow(
     followBusy: Boolean,
     onToggleFollow: () -> Unit,
     onOpenChat: () -> Unit,
+    onOpenUser: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val user = item.user
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onOpenUser)
             .padding(horizontal = Spacing.md, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
