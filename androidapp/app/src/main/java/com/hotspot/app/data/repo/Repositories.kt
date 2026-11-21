@@ -22,6 +22,7 @@ import com.hotspot.app.data.model.NotifyItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
+import com.hotspot.app.data.model.RelatedUserItem
 import com.hotspot.app.data.model.UnreadSummary
 import com.hotspot.app.data.model.UserItem
 import kotlinx.serialization.json.JsonElement
@@ -385,6 +386,57 @@ class ProfileRepository(private val api: ApiClient) {
         ApiEndpoint.MOMENTS_FETCH_FAVORITES,
         buildJsonObject { put("pagination", pagination(cursor)) },
         Page.serializer(MomentItem.serializer()),
+    )
+
+    /**
+     * 更新账户资料（spec → users/update_account，patch 语义：只下发要改的字段）。
+     * avatar_file_id 依赖媒体上传链路（首版 TODO），本方法不涉及头像。
+     */
+    suspend fun updateAccount(
+        nickname: String? = null,
+        bio: String? = null,
+        tags: List<String>? = null,
+        gender: String? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_UPDATE_ACCOUNT,
+        buildJsonObject {
+            if (nickname != null) put("nickname", nickname)
+            if (bio != null) put("bio", bio)
+            if (tags != null) {
+                put(
+                    "tags",
+                    buildJsonArray {
+                        tags.forEach { add(JsonPrimitive(it)) }
+                    },
+                )
+            }
+            if (gender != null) put("gender", gender)
+        },
+    )
+
+    /** 好友列表（好友 = 双方互相关注；user_id 必传，拉自己时传自己的 id）。 */
+    suspend fun friends(userId: String, cursor: String?): ApiResult<Page<RelatedUserItem>> =
+        relationList(ApiEndpoint.USERS_FETCH_FRIENDS, userId, cursor)
+
+    /** 关注列表（我关注的人）。 */
+    suspend fun following(userId: String, cursor: String?): ApiResult<Page<RelatedUserItem>> =
+        relationList(ApiEndpoint.USERS_FETCH_FOLLOWING, userId, cursor)
+
+    /** 粉丝列表（关注我的人）。 */
+    suspend fun followers(userId: String, cursor: String?): ApiResult<Page<RelatedUserItem>> =
+        relationList(ApiEndpoint.USERS_FETCH_FOLLOWERS, userId, cursor)
+
+    private suspend fun relationList(
+        endpoint: String,
+        userId: String,
+        cursor: String?,
+    ): ApiResult<Page<RelatedUserItem>> = api.post(
+        endpoint,
+        buildJsonObject {
+            put("user_id", userId)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(RelatedUserItem.serializer()),
     )
 
     /** 关注 / 取关（spec/api_spec_user.md → users/set_follow：active 两态统一）。 */

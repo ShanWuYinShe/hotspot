@@ -10,6 +10,9 @@ object Routes {
     const val ME = "me"
     const val ME_MOMENTS = "me/moments"
     const val ME_GROUPS = "me/groups"
+    // 编辑资料（设计稿 87:3128）与关系页（设计稿 87:3300，tab = 好友/关注/粉丝）
+    const val ME_EDIT = "me/edit"
+    const val RELATIONSHIPS = "me/relationships?tab={tab}"
     // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
     const val NEARBY_PEOPLE = "nearby/people"
     const val NEARBY_GROUPS = "nearby/groups"
@@ -40,4 +43,7 @@ object Routes {
     fun moment(momentId: String): String = "moment/" + momentId
 
     fun group(groupId: String): String = "group/" + groupId
+
+    /** 关系页（0 = 好友 / 1 = 关注 / 2 = 粉丝）。 */
+    fun relationships(tab: Int): String = "me/relationships?tab=" + tab
 }

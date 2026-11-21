@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.ChatScreen
+import com.hotspot.app.ui.screens.EditProfileScreen
 import com.hotspot.app.ui.screens.GroupDetailScreen
 import com.hotspot.app.ui.screens.HomeScreen
 import com.hotspot.app.ui.screens.LoginScreen
@@ -31,6 +32,7 @@ import com.hotspot.app.ui.screens.NearbyPeopleScreen
 import com.hotspot.app.ui.screens.NearbyScreen
 import com.hotspot.app.ui.screens.NotifyScreen
 import com.hotspot.app.ui.screens.PublishScreen
+import com.hotspot.app.ui.screens.RelationshipsScreen
 import com.hotspot.app.ui.screens.SearchScreen
 import com.hotspot.app.ui.screens.SettingsScreen
 
@@ -114,6 +116,21 @@ private fun MainScaffold() {
                         onOpenNotify = { navController.navigate(Routes.NOTIFY) },
                         onOpenMoments = { navController.navigate(Routes.ME_MOMENTS) },
                         onOpenGroups = { navController.navigate(Routes.ME_GROUPS) },
+                        onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
+                        onOpenRelationships = { tab -> navController.navigate(Routes.relationships(tab)) },
+                    )
+                }
+                composable(Routes.ME_EDIT) {
+                    EditProfileScreen(onBack = { navController.popBackStack() })
+                }
+                composable(
+                    route = Routes.RELATIONSHIPS,
+                    arguments = listOf(navArgument("tab") { type = NavType.IntType; defaultValue = 0 }),
+                ) { entry ->
+                    RelationshipsScreen(
+                        initialTab = entry.arguments?.getInt("tab") ?: 0,
+                        onBack = { navController.popBackStack() },
+                        onOpenChat = { userId -> navController.navigate(Routes.chat(userId)) },
                     )
                 }
                 composable(Routes.ME_MOMENTS) {
