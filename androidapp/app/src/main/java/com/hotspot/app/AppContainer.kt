@@ -13,6 +13,7 @@ import com.hotspot.app.data.repo.GroupRepository
 import com.hotspot.app.data.repo.NearbyRepository
 import com.hotspot.app.data.repo.NotifyRepository
 import com.hotspot.app.data.repo.ProfileRepository
+import com.hotspot.app.data.repo.ReportsRepository
 import com.hotspot.app.data.repo.SearchRepository
 import com.hotspot.app.data.repo.SystemRepository
 import com.hotspot.app.ui.theme.ThemeController
@@ -48,6 +49,8 @@ object AppContainer {
         private set
     lateinit var systemRepository: SystemRepository
         private set
+    lateinit var reportsRepository: ReportsRepository
+        private set
 
     @Volatile
     private var initialized = false
@@ -70,6 +73,7 @@ object AppContainer {
             commentRepository = CommentRepository(apiClient)
             groupRepository = GroupRepository(apiClient)
             systemRepository = SystemRepository(apiClient)
+            reportsRepository = ReportsRepository(apiClient)
             initialized = true
         }
     }

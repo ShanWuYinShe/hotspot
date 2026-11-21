@@ -76,6 +76,28 @@ data class RelativeLocation(
  * 关系列表项（spec/api_spec_user.md → RelatedUserItem；好友/关注/粉丝三接口共用形状）。
  * followed_back_at 仅 fetch_friends 返回；remark 仅查自己时返回。
  */
+/** 举报处理结果摘要（spec → ReportResolution；脱敏，不含处理者身份）。 */
+@Serializable
+data class ReportResolution(
+    val action: String = "",
+    @SerialName("resolved_at") val resolvedAt: String? = null,
+    val note: String? = null,
+)
+
+/** 我的举报记录（spec → ReportItem；只取客户端展示所需字段，snapshot 不展示）。 */
+@Serializable
+data class ReportItem(
+    @SerialName("report_id") val reportId: String = "",
+    @SerialName("target_type") val targetType: String = "",
+    @SerialName("target_id") val targetId: String = "",
+    val reason: String = "",
+    val description: String? = null,
+    val status: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("handled_at") val handledAt: String? = null,
+    val resolution: ReportResolution? = null,
+)
+
 @Serializable
 data class RelatedUserItem(
     val user: UserItem = UserItem(),
