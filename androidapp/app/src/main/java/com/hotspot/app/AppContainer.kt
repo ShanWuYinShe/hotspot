@@ -2,7 +2,9 @@ package com.hotspot.app
 
 import android.content.Context
 import com.hotspot.app.data.api.ApiClient
+import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.auth.TokenStore
+import com.hotspot.app.data.model.DefaultLocation
 import com.hotspot.app.data.repo.AuthRepository
 import com.hotspot.app.data.repo.ChatRepository
 import com.hotspot.app.data.repo.CommentRepository
@@ -12,6 +14,7 @@ import com.hotspot.app.data.repo.NearbyRepository
 import com.hotspot.app.data.repo.NotifyRepository
 import com.hotspot.app.data.repo.ProfileRepository
 import com.hotspot.app.data.repo.SearchRepository
+import com.hotspot.app.data.repo.SystemRepository
 import com.hotspot.app.ui.theme.ThemeController
 
 /**
@@ -43,6 +46,8 @@ object AppContainer {
         private set
     lateinit var groupRepository: GroupRepository
         private set
+    lateinit var systemRepository: SystemRepository
+        private set
 
     @Volatile
     private var initialized = false
@@ -64,7 +69,24 @@ object AppContainer {
             notifyRepository = NotifyRepository(apiClient)
             commentRepository = CommentRepository(apiClient)
             groupRepository = GroupRepository(apiClient)
+            systemRepository = SystemRepository(apiClient)
             initialized = true
         }
+    }
+
+    // 浏览锚点缓存：client_config.defaults.default_location（reference_point 回退链第 3 级）。
+    private var cachedDefaultLocation: DefaultLocation? = null
+    private var defaultLocationRequested = false
+
+    /** 首次调用拉取并缓存默认浏览位置；失败置回未请求，下次调用重试。 */
+    suspend fun defaultLocation(): DefaultLocation? {
+        if (!defaultLocationRequested) {
+            defaultLocationRequested = true
+            when (val result = systemRepository.clientConfig()) {
+                is ApiResult.Ok -> cachedDefaultLocation = result.data.defaults.defaultLocation
+                is ApiResult.Err -> defaultLocationRequested = false
+            }
+        }
+        return cachedDefaultLocation
     }
 }
