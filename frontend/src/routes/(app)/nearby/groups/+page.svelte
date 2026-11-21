@@ -160,6 +160,7 @@
 			{/if}
 		{:else}
 			<EmptyState
+			pageCentered
 				spotlight
 				iconTone="accent"
 				title="没有找到相关群组"

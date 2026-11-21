@@ -71,6 +71,7 @@
 	{:else if searchQ}
 		<!-- 搜索无结果与初始无群组区分语义 -->
 		<EmptyState
+			pageCentered
 			iconTone="accent"
 			title="没有找到匹配的群组"
 			description="换个关键词试试，或者去附近群组发现新的小圈子。"
@@ -81,6 +82,7 @@
 		</EmptyState>
 	{:else}
 		<EmptyState
+			pageCentered
 			spotlight
 			iconTone="accent"
 			title="还没有加入群组"

@@ -133,7 +133,7 @@
 |---|---|
 | `data-display/MetricRow` `variant="strip"` | **数字横幅唯一形态**（资料页/附近枢纽/群组详情/后台 KPI）：`flex divide-x divide-border-subtle` + 24px（`size="sm"` 20px）semibold `tabular-nums` 数字 + 12px 次级标签；`align="center"\|"start"`；可点项渲染为 button（focus-ring）。**禁止新增灰色药丸指标块**（`capsule` 仅保留既有调用） |
 | `home/SectionHead`（全站共享） | **分区标题唯一实现**：icon（16，text-secondary）+ 标题 14 semibold + `count`（12 次级 tabular）+ 副标题 + 右侧 `action` 文字链；`variant="section"\|"rail"\|"eyebrow"`。页面/rail 不再手写「标题 + 查看全部」行 |
-| `data-display/EmptyState` | 非 bare 图标砖 64px（`iconTone="neutral"\|"accent"`，accent = accent-soft 底 + accent 图标）；标题 14 semibold、描述 12 次级；新增 `extra` snippet（价值点/建议 chips，位于描述与动作之间）；spotlight 契约不变 |
+| `data-display/EmptyState` | 非 bare 图标砖 64px（`iconTone="neutral"\|"accent"`，accent = accent-soft 底 + accent 图标）；标题 14 semibold、描述 12 次级；新增 `extra` snippet（价值点/建议 chips，位于描述与动作之间）；spotlight 契约不变；`pageCentered` 开启桌面端页面级空态整页水平居中（分栏/面板内空态禁用，见 design-system §21.7） |
 | `auth/NeedsAuthNotice` | **访客引导面板**：spotlight + accent 图标砖 + 标题/描述 + `highlights`（≤3 条 icon+文案）+ 主 CTA（登录/注册）+ 次 CTA（先随便逛逛，默认回首页浏览；语义见「登录/访客引导契约」）；`/me`、`/messages`、`/notify`、me 子页访客态统一使用 |
 | `profile/IdentityHero` | **资料页身份封面唯一实现**（/me、/users/[id]、ProfileMobile）：封面条（桌面 132 / 移动 92，主题渐变/封面图 + 遮罩）→ 头像（88/72，`-mt-11` 压封面 + `ring-4 ring-surface-page`）→ 昵称/handle/在线状态/简介/位置/标签 → `MetricRow strip` → `actions` snippet；桌面两栏（左身份 / 右指标+动作）、移动动作整行。**禁止页面再自写身份卡** |
 | `profile/ProfileCompleteness` | 资料状态卡：<100% 分段点 + 可点补全入口；100% 隐藏进度条只留完成态。`variant="card"`（默认，标题在卡内）/ `"section"`（桌面双栏用，标题在卡外，与左列 SectionHead 同基线） |

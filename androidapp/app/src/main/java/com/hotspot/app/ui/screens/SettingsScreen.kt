@@ -139,11 +139,19 @@ fun SettingsScreen(
                             )
                         }
                     }
-                    Text(
-                        text = "编辑资料 ›",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = colors.accent,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "编辑资料",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.accent,
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_chevron_right),
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = colors.accent,
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(Spacing.xl))

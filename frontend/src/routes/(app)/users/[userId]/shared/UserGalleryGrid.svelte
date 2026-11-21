@@ -57,6 +57,7 @@
 		</div>
 	{:else}
 		<EmptyState
+		pageCentered
 			iconTone="accent"
 			title="还没有带图瞬间"
 			description="带图瞬间会展示在这里；文字瞬间暂不计入画廊。"

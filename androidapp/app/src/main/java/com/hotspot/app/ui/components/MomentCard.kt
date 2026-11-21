@@ -32,13 +32,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hotspot.app.R
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
@@ -111,10 +114,11 @@ fun MomentCard(
                     .padding(Spacing.lg2),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(
-                    text = "“",
-                    style = MaterialTheme.typography.displayMedium,
-                    color = colors.accent,
+                Icon(
+                    painter = painterResource(R.drawable.ic_quote),
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.iconSm),
+                    tint = colors.accent,
                 )
                 Text(
                     text = moment.description.ifBlank { "内容已删除" },

@@ -39,11 +39,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hotspot.app.R
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.UserItem
@@ -228,10 +230,11 @@ fun NearbySectionHead(
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.accent,
                 )
-                Text(
-                    text = " ›",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.accent,
+                Icon(
+                    painter = painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = colors.accent,
                 )
             }
         }
@@ -610,10 +613,11 @@ fun NearbyMomentCard(
                             .fillMaxSize()
                             .padding(Spacing.md),
                     ) {
-                        Text(
-                            text = "❝❝",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = colors.accent,
+                        Icon(
+                            painter = painterResource(R.drawable.ic_quote),
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.iconXs),
+                            tint = colors.accent,
                         )
                         Spacer(Modifier.height(Spacing.sm2))
                         Text(

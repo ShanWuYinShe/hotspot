@@ -115,6 +115,7 @@
 				/>
 			{:else if !data.list.length}
 				<EmptyState
+			pageCentered
 					spotlight
 					iconTone="accent"
 					title={data.anchor ? (data.anchor.name ? `「${data.anchor.name}」附近暂时没有用户` : '当前查看的位置附近暂时没有用户') : '附近暂时没有匹配的用户'}

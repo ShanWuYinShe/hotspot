@@ -2,6 +2,7 @@
 	import type { Snippet } from 'svelte';
 	import { Inbox } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
+	import { centerOnPage } from '@/lib/actions/center-on-page';
 
 	// EmptyState — 空列表唯一状态原语。bare / 非 bare 两态契约保持不变。
 	//
@@ -26,6 +27,7 @@
 		iconSize = 64,
 		iconTone = 'neutral',
 		spotlight = false,
+		pageCentered = false,
 		class: className = ''
 	}: {
 		icon?: Snippet;
@@ -42,6 +44,8 @@
 		iconTone?: 'neutral' | 'accent';
 		/** 场景化空态装饰层：仅超大空态使用（跨端 spec 见 report「跨端同步说明」）。 */
 		spotlight?: boolean;
+		/** 桌面端页面级空态：水平中心对齐整页（视口）中心，与顶部灵动岛同轴；分栏/面板内空态不要开启。 */
+		pageCentered?: boolean;
 		class?: string;
 	} = $props();
 
@@ -62,6 +66,7 @@
 	{#if spotlight}
 		{@render spotlightLayer()}
 	{/if}
+	<div class="flex w-full flex-col items-center gap-3" use:centerOnPage={pageCentered}>
 	{#if bare}
 		{#if icon}
 			{@render icon()}
@@ -100,4 +105,5 @@
 			{@render action()}
 		{/if}
 	{/if}
+	</div>
 </div>

@@ -182,6 +182,7 @@
 		{:else if moments.length === 0 && visibleNearbyUsers.length === 0 && nearbyGroups.length === 0}
 			<!-- 页面级空态走新版 EmptyState：72px 图标软底 + spotlight（不再用裸图标 + 灰字） -->
 			<EmptyState
+			pageCentered
 				spotlight
 				iconTone="accent"
 				title="附近还没有内容"

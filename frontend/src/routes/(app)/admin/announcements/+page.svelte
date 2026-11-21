@@ -137,7 +137,7 @@
 </svelte:head>
 
 {#if !canRead}
-	<EmptyState title="无访问权限" description="需要 admin.announcements.read 权限" iconTone="accent">
+	<EmptyState pageCentered title="无访问权限" description="需要 admin.announcements.read 权限" iconTone="accent">
 		{#snippet icon()}<Megaphone class="size-7" strokeWidth={1.5} />{/snippet}
 	</EmptyState>
 {:else}
