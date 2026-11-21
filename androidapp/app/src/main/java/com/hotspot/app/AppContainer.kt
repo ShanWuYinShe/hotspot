@@ -4,12 +4,16 @@ import android.content.Context
 import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.auth.TokenStore
+import com.hotspot.app.data.model.AppLimits
+import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.DefaultLocation
 import com.hotspot.app.data.repo.AuthRepository
 import com.hotspot.app.data.repo.ChatRepository
 import com.hotspot.app.data.repo.CommentRepository
 import com.hotspot.app.data.repo.FeedRepository
 import com.hotspot.app.data.repo.GroupRepository
+import com.hotspot.app.data.repo.MediaRepository
+import com.hotspot.app.data.repo.MomentsRepository
 import com.hotspot.app.data.repo.NearbyRepository
 import com.hotspot.app.data.repo.NotifyRepository
 import com.hotspot.app.data.repo.ProfileRepository
@@ -51,6 +55,10 @@ object AppContainer {
         private set
     lateinit var reportsRepository: ReportsRepository
         private set
+    lateinit var momentsRepository: MomentsRepository
+        private set
+    lateinit var mediaRepository: MediaRepository
+        private set
 
     @Volatile
     private var initialized = false
@@ -74,23 +82,31 @@ object AppContainer {
             groupRepository = GroupRepository(apiClient)
             systemRepository = SystemRepository(apiClient)
             reportsRepository = ReportsRepository(apiClient)
+            momentsRepository = MomentsRepository(apiClient)
+            mediaRepository = MediaRepository(apiClient)
             initialized = true
         }
     }
 
-    // 浏览锚点缓存：client_config.defaults.default_location（reference_point 回退链第 3 级）。
-    private var cachedDefaultLocation: DefaultLocation? = null
-    private var defaultLocationRequested = false
+    // 客户端公开配置缓存（client_config）：默认浏览位置 + 业务限额（发布器）。
+    private var cachedClientConfig: ClientConfig? = null
+    private var clientConfigRequested = false
 
-    /** 首次调用拉取并缓存默认浏览位置；失败置回未请求，下次调用重试。 */
-    suspend fun defaultLocation(): DefaultLocation? {
-        if (!defaultLocationRequested) {
-            defaultLocationRequested = true
+    /** 首次调用拉取并缓存 client_config；失败置回未请求，下次调用重试。 */
+    suspend fun clientConfig(): ClientConfig? {
+        if (!clientConfigRequested) {
+            clientConfigRequested = true
             when (val result = systemRepository.clientConfig()) {
-                is ApiResult.Ok -> cachedDefaultLocation = result.data.defaults.defaultLocation
-                is ApiResult.Err -> defaultLocationRequested = false
+                is ApiResult.Ok -> cachedClientConfig = result.data
+                is ApiResult.Err -> clientConfigRequested = false
             }
         }
-        return cachedDefaultLocation
+        return cachedClientConfig
     }
+
+    /** 浏览锚点（reference_point 回退链第 3 级）：client_config.defaults.default_location。 */
+    suspend fun defaultLocation(): DefaultLocation? = clientConfig()?.defaults?.defaultLocation
+
+    /** 发布器限额；配置不可用时退回 spec 默认值（9 图 / 9 标签 / 280 字）。 */
+    suspend fun limits(): AppLimits = clientConfig()?.limits ?: AppLimits()
 }
