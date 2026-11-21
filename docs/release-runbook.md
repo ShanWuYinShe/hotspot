@@ -95,8 +95,9 @@ export ANDROID_HOME="$HOME/Library/Android/sdk"
 PASS=$(security find-generic-password -a "$USER" -s hotspot-android-release -w)
 HOTSPOT_KEYSTORE_FILE="$HOME/.android/hotspot-release.jks" \
 HOTSPOT_KEYSTORE_PASSWORD="$PASS" HOTSPOT_KEY_ALIAS=hotspot HOTSPOT_KEY_PASSWORD="$PASS" \
-HOTSPOT_VERSION_NAME=v1.11.0 HOTSPOT_VERSION_CODE=2 \
+HOTSPOT_VERSION_NAME=vX.Y.Z HOTSPOT_VERSION_CODE=N \
 cd androidapp && ./gradlew --no-daemon assembleRelease
+# N = 上一次 versionCode + 1（递增，勿重复）
 ```
 
 - 校验签名与版本：
@@ -111,13 +112,13 @@ cd androidapp && ./gradlew --no-daemon assembleRelease
 - 附到 Release（tag 的 Release 工作流跑完后）：
 
 ```bash
-gh release upload v1.11.0 \
-  androidapp/app/build/outputs/apk/release/app-release.apk#hotspot-android-v1.11.0.apk --clobber
-gh release view v1.11.0 --json assets --jq '.assets[].name'
+gh release upload vX.Y.Z \
+  androidapp/app/build/outputs/apk/release/app-release.apk#hotspot-android-vX.Y.Z.apk --clobber
+gh release view vX.Y.Z --json assets --jq '.assets[].name'
 ```
 
 - 版本规则：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致；
-  两者默认值写在 `androidapp/app/build.gradle.kts`，发新版用 `HOTSPOT_VERSION_NAME`/`HOTSPOT_VERSION_CODE` 覆盖即可。
+  两者默认值写在 `androidapp/app/build.gradle.kts`（随每次发版更新），发新版用 `HOTSPOT_VERSION_NAME`/`HOTSPOT_VERSION_CODE` 覆盖即可。
 
 ### 部署后自查
 
