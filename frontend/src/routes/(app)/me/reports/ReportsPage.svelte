@@ -211,6 +211,7 @@
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if items.length === 0}
 		<EmptyState
+			pageCentered
 			spotlight
 			iconTone="accent"
 			title="暂无举报记录"

@@ -215,6 +215,7 @@
 				</div>
 			{:else if data.filteredNotifies.length === 0}
 				<EmptyState
+			pageCentered
 					spotlight
 					iconTone="accent"
 					title={data.filter === 'all' ? '暂无通知' : '该分类下暂无通知'}

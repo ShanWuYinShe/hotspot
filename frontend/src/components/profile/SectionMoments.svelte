@@ -135,7 +135,7 @@
 		<LoadError message={error} onRetry={retryActive} />
 	{:else if archive.length === 0}
 		<!-- 空态：页面级，用带图标砖的空态（非 bare）+ 场景化装饰 -->
-		<EmptyState spotlight iconTone="accent" title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
+		<EmptyState pageCentered spotlight iconTone="accent" title="这里还没有瞬间" description="从一次路过、一次相遇开始记录。">
 			{#snippet icon()}
 				<Grid3X3 class="size-7" strokeWidth={1.5} />
 			{/snippet}

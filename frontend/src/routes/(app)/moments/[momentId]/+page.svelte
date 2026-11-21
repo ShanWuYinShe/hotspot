@@ -161,6 +161,7 @@
 			<LoadError message={d.loadError} onRetry={() => d.reload()} />
 		{:else if !d.moment.id}
 			<EmptyState
+				pageCentered
 				spotlight
 				iconTone="accent"
 				title="动态不存在"

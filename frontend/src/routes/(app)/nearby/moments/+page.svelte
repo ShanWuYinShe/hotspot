@@ -152,6 +152,7 @@
 			{/if}
 		{:else}
 			<EmptyState
+			pageCentered
 				spotlight
 				iconTone="accent"
 				title={data.activeTag ? `没有找到带有「${data.activeTag}」的瞬间` : '附近还没有瞬间'}

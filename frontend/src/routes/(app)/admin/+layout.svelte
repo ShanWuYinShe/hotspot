@@ -152,6 +152,7 @@
 	{:else if !admin.isAdmin}
 		<!-- 平台级无权限空态：图标软底 + spotlight，交代「为什么看不到」与下一步动作 -->
 		<EmptyState
+			pageCentered
 			title="无访问权限"
 			description="当前账号不是平台管理员。如需管理权限，请联系超级管理员授予角色。"
 			iconTone="accent"

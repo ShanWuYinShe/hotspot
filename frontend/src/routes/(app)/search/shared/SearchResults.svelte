@@ -133,6 +133,7 @@
 	{:else if !hasResults || tabEmpty}
 		<!-- 空态统一 EmptyState：页面级 spotlight + accent 图标软底 + 建议 chips -->
 		<EmptyState
+			pageCentered
 			spotlight
 			iconTone="accent"
 			title={`没有找到“${query}”`}
