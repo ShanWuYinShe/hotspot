@@ -396,7 +396,7 @@
 | 列表行（分组内的行） | **无投影**（层级由分组容器 + 发丝分隔线承担） | — |
 | 选中胶囊（TabsPillGroup） | `controlShadow`（hover 增量走底色） | — |
 | 输入框静态 | 字段表面色（surface-primary）+ 1px border-default，无投影（纸面主题一致） | hover：边框升 border-strong |
-| 输入框聚焦 | accent 1px 边界 + 内缘 1px（视觉 2px）+ 3px accent 柔光环 | — |
+| 输入框聚焦 | accent 2px 单层边界（1px 边界 + 1px 同色内缘，无外层柔光环） | — |
 | 菜单/浮层（NotificationCenter、sheet 内浮钮） | `controlShadow` | — |
 | 静态内容卡（登录卡/表单区块/提示 banner/空态卡/骨架卡） | `surfaceShadow` | — |
 

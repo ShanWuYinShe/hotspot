@@ -25,7 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -65,9 +64,8 @@ fun SearchInput(
             .height(Dimens.searchInputHeight)
             .clip(shape)
             .background(if (enabled) colors.surface else colors.fieldBgDisabled, shape)
-            .border(1.dp, borderColor, shape)
-            // 胶囊高度 39 → 内缘光环用高度一半（20dp）贴合胶囊形状
-            .inputRing(if (focused) colors.fieldRing else Color.Transparent, cornerRadius = 20.dp)
+            // 聚焦单层加粗到 2dp（不再叠内缘柔光环，避免双层描边）
+            .border(if (focused) 2.dp else 1.dp, borderColor, shape)
             .padding(horizontal = Spacing.md3),
         verticalAlignment = Alignment.CenterVertically,
     ) {
