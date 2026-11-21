@@ -14,8 +14,10 @@
 关系页（87:3300：好友/关注/粉丝三 tab + 搜索；好友发消息、关注两态）/
 编辑资料（87:3128：昵称/简介/性别/兴趣标签 ≤5，users/update_account patch）/
 设置（87:4864：账号卡 / 三主题预览卡 × 明暗三档 / 系统与关于）/
-我的举报（87:3350：状态筛选 + 处理结果，reports/fetch 分页）已实现；
-地图原生渲染、图片上传/发布、WebSocket 实时、群聊会话页、管理后台为**代码内登记 TODO 占位**
+我的举报（87:3350：状态筛选 + 处理结果，reports/fetch 分页）/
+发布瞬间（无独立设计画板，结构对齐 Web CreateSheet：文案 + 相册选图 + 氛围标签 + 可见范围 + 默认浏览位置；
+media/presign_upload → PUT → complete_upload → moments/create）已实现；
+地图原生渲染、WebSocket 实时、群聊会话页、管理后台为**代码内登记 TODO 占位**
 （展示真实空态，禁止造假数据）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
@@ -113,7 +115,7 @@ app/src/main/java/com/hotspot/app/
 ## 已知待办（首版登记）
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 地图原生渲染、图片上传/发布链路、WebSocket 实时、管理后台；
+2. 地图原生渲染、WebSocket 实时、管理后台；
    群聊会话页（群详情已实现，但首版无群聊页，故不放入口，也不伪造「打开群聊」按钮）；
    群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。

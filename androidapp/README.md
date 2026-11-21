@@ -81,6 +81,8 @@ app/src/test/                  # token 结构不变量 + 业务错误码文案�
 搜索（用户/瞬间/群组）、通知（列表 + 全部已读）、设置（设计稿 87:4864：账号卡 + 三主题预览卡 ×
 明暗三档 + 系统与关于：版本 / 我的举报 / 退出登录）、我的举报（设计稿 87:3350：全部/待处理/已处理/已驳回
 筛选 + 举报卡片状态与处理结果，`reports/fetch` 分页）、
+发布瞬间（文案 ≤2000 字 + 相册选图 ≤9 张 + 氛围标签 ≤10 + 附近可见/仅自己 + 默认浏览位置；
+`media/presign_upload → PUT 直传 → media/complete_upload` 三步上传，再 `moments/create` 幂等发布）、
 瞬间详情（含评论楼中楼列表 + docked 评论输入条：发表/回复/点赞 + 收藏两态 + 系统分享，方案 B 视觉与
 Web/鸿蒙同口径；收藏落 `moments/set_favorite`，与「我的瞬间-收藏」tab 同源）。
 
@@ -94,6 +96,7 @@ Web/鸿蒙同口径；收藏落 `moments/set_favorite`，与「我的瞬间-收�
 - 头像上传（media/complete_upload → users/update_account.avatar_file_id；编辑资料页点头像仅提示占位）
 - 关系页「黑名单」tab（依赖拉黑 users/set_block，首版未实现）
 - 设置页「地图与位置」区块（高德/OpenStreetMap 切换）暂不渲染：Android 原生地图仍为 TODO，提供无效开关属造假入口
+- 发布位置暂用 ClientConfig 默认浏览位置（无地图/设备定位，故无「浏览锚点」概念）；设备定位与地图接入后按 Web「锚点优先」语义替换
 - 我的瞬间「喜欢」tab（后端无列表端点，按设计稿登记不渲染）
 
 ## 安全待办

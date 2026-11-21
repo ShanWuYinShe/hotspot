@@ -10,6 +10,7 @@ import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.data.model.AuthTokenPair
 import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.CommentItem
+import com.hotspot.app.data.model.DefaultLocation
 import com.hotspot.app.data.model.EnterGroupResult
 import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.GroupAnnouncementItem
@@ -17,15 +18,20 @@ import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.MessageSentResult
+import com.hotspot.app.data.model.CompletedUploads
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.NotifyItem
 import com.hotspot.app.data.model.Page
+import com.hotspot.app.data.model.PresignFileInput
+import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.RelatedUserItem
 import com.hotspot.app.data.model.ReportItem
 import com.hotspot.app.data.model.UnreadSummary
 import com.hotspot.app.data.model.UserItem
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -33,6 +39,12 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okio.BufferedSink
+import java.time.Duration
 import java.util.UUID
 
 /** 分页参数（spec/api_spec_types.md PaginationParams：limit 默认 20 / cursor 不透明透传）。 */
@@ -166,6 +178,130 @@ class FeedRepository(private val api: ApiClient) {
 }
 
 /** 附近枢纽：附近的人 / 附近群组 / 附近瞬间（距离排序由后端计算，客户端只展示）。 */
+/**
+ * 瞬间写操作（spec/api_spec_moment.md → moments/create）：发布器唯一入口。
+ * location 必填；Android 无地图/设备定位，调用方传 ClientConfig 默认位置（与附近/发现同源）。
+ */
+class MomentsRepository(private val api: ApiClient) {
+    suspend fun create(
+        description: String,
+        location: DefaultLocation,
+        tags: List<String>,
+        privacyLevel: String,
+        imageFileIds: List<String>,
+    ): ApiResult<MomentItem> = api.post(
+        ApiEndpoint.MOMENTS_CREATE,
+        buildJsonObject {
+            put("description", description)
+            put(
+                "location",
+                buildJsonObject {
+                    put(
+                        "point",
+                        buildJsonObject {
+                            put("latitude", location.point.latitude)
+                            put("longitude", location.point.longitude)
+                        },
+                    )
+                    put("location_name", location.locationName)
+                },
+            )
+            put("privacy_level", privacyLevel)
+            put("tags", buildJsonArray { tags.forEach { add(JsonPrimitive(it)) } })
+            put("image_file_ids", buildJsonArray { imageFileIds.forEach { add(JsonPrimitive(it)) } })
+            put("mentions", buildJsonArray { })
+        },
+        MomentItem.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+}
+
+/** 媒体上传三步链路（spec/api_spec_media.md）：presign_upload → PUT 直传 → complete_upload。 */
+class MediaRepository(private val api: ApiClient) {
+    private val uploadClient = OkHttpClient.Builder()
+        .connectTimeout(Duration.ofSeconds(20))
+        .readTimeout(Duration.ofSeconds(60))
+        .writeTimeout(Duration.ofSeconds(120))
+        .callTimeout(Duration.ofSeconds(180))
+        .build()
+
+    suspend fun presign(files: List<PresignFileInput>): ApiResult<PresignedUploads> = api.post(
+        ApiEndpoint.MEDIA_PRESIGN_UPLOAD,
+        buildJsonObject {
+            put(
+                "files",
+                buildJsonArray {
+                    files.forEach { file ->
+                        add(
+                            buildJsonObject {
+                                put("file_name", file.fileName)
+                                put("file_size", file.fileSize)
+                                put("mime_type", file.mimeType)
+                                put("category", file.category)
+                                put("md5", file.md5)
+                            },
+                        )
+                    }
+                },
+            )
+        },
+        PresignedUploads.serializer(),
+    )
+
+    suspend fun complete(uploadIds: List<String>): ApiResult<CompletedUploads> = api.post(
+        ApiEndpoint.MEDIA_COMPLETE_UPLOAD,
+        buildJsonObject {
+            put("upload_ids", buildJsonArray { uploadIds.forEach { add(JsonPrimitive(it)) } })
+        },
+        CompletedUploads.serializer(),
+    )
+
+    /**
+     * PUT 直传对象存储（预签名 URL + 响应下发的 headers，不附加 Authorization）。
+     * 返回 Result：失败由调用方转成用户提示；onProgress 为 0..1 单文件进度。
+     */
+    suspend fun putObject(
+        uploadUrl: String,
+        headers: Map<String, String>,
+        bytes: ByteArray,
+        mimeType: String,
+        onProgress: ((Float) -> Unit)? = null,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val mediaType = (mimeType.takeIf { it.isNotBlank() } ?: "application/octet-stream").toMediaType()
+            val requestBuilder = Request.Builder()
+                .url(uploadUrl)
+                .put(ProgressRequestBody(bytes, mediaType, onProgress))
+            headers.forEach { (name, value) -> requestBuilder.header(name, value) }
+            uploadClient.newCall(requestBuilder.build()).execute().use { response ->
+                check(response.isSuccessful) { "上传失败（HTTP " + response.code + "）" }
+            }
+        }
+    }
+}
+
+/** 带进度回调的请求体：分块写入，进度只用于 UI 提示。 */
+private class ProgressRequestBody(
+    private val bytes: ByteArray,
+    private val mediaType: okhttp3.MediaType,
+    private val onProgress: ((Float) -> Unit)?,
+) : RequestBody() {
+    override fun contentType(): okhttp3.MediaType = mediaType
+
+    override fun contentLength(): Long = bytes.size.toLong()
+
+    override fun writeTo(sink: BufferedSink) {
+        val chunkSize = 16 * 1024
+        var written = 0
+        while (written < bytes.size) {
+            val length = minOf(chunkSize, bytes.size - written)
+            sink.write(bytes, written, length)
+            written += length
+            onProgress?.invoke(written.toFloat() / bytes.size.toFloat())
+        }
+    }
+}
+
 class NearbyRepository(private val api: ApiClient) {
     /**
      * 附近的人（spec/api_spec_discovery.md：发现即 users/search + radius + sort_by=distance）。

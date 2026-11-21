@@ -29,11 +29,53 @@ data class ClientDefaults(
     @SerialName("default_location") val defaultLocation: DefaultLocation? = null,
 )
 
+/** 业务限额（spec/api_spec_types.md → AppLimits；只取发布器用到的最小集合）。 */
+@Serializable
+data class AppLimits(
+    @SerialName("max_moment_tags") val maxMomentTags: Int = 9,
+    @SerialName("max_moment_images") val maxMomentImages: Int = 9,
+    @SerialName("moment_description_max_length") val momentDescriptionMaxLength: Int = 280,
+)
+
 /** 客户端公开配置（spec/api_spec_public.md → POST /public/v1/system/client_config，仅取用途所需字段）。 */
 @Serializable
 data class ClientConfig(
     val defaults: ClientDefaults = ClientDefaults(),
+    val limits: AppLimits = AppLimits(),
 )
+
+// ===== 媒体上传（spec/api_spec_media.md）=====
+
+@Serializable
+data class PresignFileInput(
+    @SerialName("file_name") val fileName: String,
+    @SerialName("file_size") val fileSize: Long,
+    @SerialName("mime_type") val mimeType: String,
+    val category: String = "moment_image",
+    val md5: String? = null,
+)
+
+@Serializable
+data class PresignedUpload(
+    @SerialName("upload_id") val uploadId: String = "",
+    @SerialName("upload_url") val uploadUrl: String = "",
+    val headers: Map<String, String> = emptyMap(),
+    @SerialName("expires_at") val expiresAt: String? = null,
+)
+
+@Serializable
+data class PresignedUploads(val uploads: List<PresignedUpload> = emptyList())
+
+@Serializable
+data class UploadedMedia(
+    @SerialName("file_id") val fileId: String = "",
+    @SerialName("thumbnail_url") val thumbnailUrl: String? = null,
+    @SerialName("file_size") val fileSize: Long = 0,
+    @SerialName("mime_type") val mimeType: String = "",
+)
+
+@Serializable
+data class CompletedUploads(val uploads: List<UploadedMedia> = emptyList())
 
 @Serializable
 data class UserInfo(
