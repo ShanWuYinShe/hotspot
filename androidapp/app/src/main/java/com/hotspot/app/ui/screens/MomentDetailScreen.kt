@@ -2,8 +2,10 @@ package com.hotspot.app.ui.screens
 
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Icon
@@ -39,6 +42,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,7 +68,6 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
-import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
@@ -346,8 +349,8 @@ fun MomentDetailScreen(
         }
     }
 
-    Column(Modifier.fillMaxSize()) {
-        PageHeader(title = "瞬间", onBack = onBack)
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
         when {
             loading && moment == null -> LoadingState()
             error != null && moment == null -> ErrorState(
@@ -361,13 +364,11 @@ fun MomentDetailScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(
-                        start = Spacing.lg,
-                        end = Spacing.lg,
-                        top = Spacing.md,
-                        bottom = Spacing.xl,
-                    ),
+                    contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
+                    item(key = "hero") {
+                        MomentHero(data = data)
+                    }
                     item(key = "moment-body") {
                         MomentBody(
                             data = data,
@@ -375,52 +376,69 @@ fun MomentDetailScreen(
                             favorite = favorite,
                             favoriteBusy = favoriteBusy,
                             onToggleFavorite = { toggleFavorite() },
-                            onShare = { shareMoment() },
+                            modifier = Modifier.padding(horizontal = Spacing.lg),
                         )
                     }
                     item(key = "comments-header") {
-                        CommentsSectionHeader(count = commentCount)
+                        CommentsSectionHeader(
+                            count = commentCount,
+                            modifier = Modifier.padding(horizontal = Spacing.lg),
+                        )
                     }
                     when {
                         commentsLoading && comments.isEmpty() -> item(key = "comments-loading") {
-                            LoadingState(message = "加载评论中…")
+                            Box(Modifier.padding(horizontal = Spacing.lg)) {
+                                LoadingState(message = "加载评论中…")
+                            }
                         }
                         commentsError != null && comments.isEmpty() -> item(key = "comments-error") {
-                            ErrorState(
-                                message = commentsError ?: "评论加载失败",
-                                onRetry = { scope.launch { loadComments() } },
-                            )
+                            Box(Modifier.padding(horizontal = Spacing.lg)) {
+                                ErrorState(
+                                    message = commentsError ?: "评论加载失败",
+                                    onRetry = { scope.launch { loadComments() } },
+                                )
+                            }
                         }
                         comments.isEmpty() -> item(key = "comments-empty") {
-                            EmptyState(
-                                title = "还没有评论",
-                                description = "来说点什么吧，成为第一个评论的人。",
-                            )
+                            Box(Modifier.padding(horizontal = Spacing.lg)) {
+                                EmptyState(
+                                    title = "还没有评论",
+                                    description = "来说点什么吧，成为第一个评论的人。",
+                                )
+                            }
                         }
                         else -> {
                             items(threads, key = { "thread-" + it.comment.commentId }) { thread ->
-                                CommentThreadItem(
-                                    thread = thread,
-                                    momentAuthorId = data.user.userId,
-                                    actionsEnabled = loggedIn,
-                                    onToggleLike = { commentId, _ -> onCommentLikeClick(commentId) },
-                                    onReply = { parentCommentId, nickname, userId ->
-                                        startReply(parentCommentId, nickname, userId)
-                                    },
-                                )
-                            }
-                            if (commentsError != null) {
-                                item(key = "comments-more-error") {
-                                    CommentsLoadMoreError(
-                                        message = commentsError ?: "加载更多评论失败",
-                                        onRetry = { scope.launch { loadMoreComments() } },
+                                Box(Modifier.padding(horizontal = Spacing.lg)) {
+                                    CommentThreadItem(
+                                        thread = thread,
+                                        momentAuthorId = data.user.userId,
+                                        actionsEnabled = loggedIn,
+                                        onToggleLike = { commentId, _ -> onCommentLikeClick(commentId) },
+                                        onReply = { parentCommentId, nickname, userId ->
+                                            startReply(parentCommentId, nickname, userId)
+                                        },
                                     )
                                 }
                             }
+                            if (commentsError != null) {
+                                item(key = "comments-more-error") {
+                                    Box(Modifier.padding(horizontal = Spacing.lg)) {
+                                        CommentsLoadMoreError(
+                                            message = commentsError ?: "加载更多评论失败",
+                                            onRetry = { scope.launch { loadMoreComments() } },
+                                        )
+                                    }
+                                }
+                            }
                             if (commentsLoadingMore) {
-                                item(key = "comments-more-loading") { InlineLoading() }
+                                item(key = "comments-more-loading") {
+                                    Box(Modifier.padding(horizontal = Spacing.lg)) { InlineLoading() }
+                                }
                             } else if (commentsEndReached) {
-                                item(key = "comments-end") { ListEnd() }
+                                item(key = "comments-end") {
+                                    Box(Modifier.padding(horizontal = Spacing.lg)) { ListEnd() }
+                                }
                             }
                         }
                     }
@@ -455,18 +473,21 @@ fun MomentDetailScreen(
                 }
             }
         }
+        }
+        // 浮层动作：返回 / 分享（设计稿 87:3687 在 hero 上浮动玻璃圆钮，滚动时固定可见）
+        MomentTopOverlay(onBack = onBack, onShare = { shareMoment() })
     }
 }
 
-/** LazyColumn 里评论线程之前的固定项数（瞬间正文 + 评论分区标题），用于滚动定位。 */
-private const val COMMENT_ITEMS_OFFSET = 2
+/** LazyColumn 里评论线程之前固定项数（hero + 瞬间正文 + 评论分区标题），用于滚动定位。 */
+private const val COMMENT_ITEMS_OFFSET = 3
 
 /** 评论分区标题（对齐 Web SectionHead：标题 14 semibold + 计数 11 次级）。 */
 @Composable
-private fun CommentsSectionHeader(count: Int) {
+private fun CommentsSectionHeader(count: Int, modifier: Modifier = Modifier) {
     val colors = HotSpotTheme.colors
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = Spacing.lg, bottom = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
@@ -510,7 +531,11 @@ private fun CommentsLoadMoreError(message: String, onRetry: () -> Unit) {
     }
 }
 
-/** 瞬间正文：作者行 / 图片 / 正文 / 互动计数（动作条与评论区在列表后续项）。 */
+/**
+ * 瞬间正文（对齐设计稿 87:3687 瞬间正文卡片 / MomentContentBlock）：
+ * 作者栏（头像 36 + 昵称 + 位置/发布时间次级行）→ 正文 → 话题标签 → 互动计数。
+ * hero 图片由 LazyColumn 首项 [MomentHero] 通栏渲染；返回/分享在 [MomentTopOverlay] 浮层。
+ */
 @Composable
 private fun MomentBody(
     data: MomentItem,
@@ -518,10 +543,10 @@ private fun MomentBody(
     favorite: Boolean,
     favoriteBusy: Boolean,
     onToggleFavorite: () -> Unit,
-    onShare: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = HotSpotTheme.colors
-    Column(Modifier.fillMaxWidth()) {
+    Column(modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar(
                 name = data.user.nickname,
@@ -537,28 +562,14 @@ private fun MomentBody(
                     color = colors.textPrimary,
                 )
                 Text(
-                    text = TimeFormat.relative(data.createdAt) +
-                        (data.location?.locationName?.let { " · " + it } ?: ""),
+                    text = (data.location?.locationName?.let { it + " · " } ?: "") +
+                        TimeFormat.relative(data.createdAt),
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.textSecondary,
                 )
             }
         }
         Spacer(Modifier.height(Spacing.md))
-        val imageUrl = MediaUrls.absolute(data.images.firstOrNull()?.url)
-        if (imageUrl != null) {
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current).data(imageUrl).crossfade(true).build(),
-                contentDescription = data.description.ifBlank { "瞬间图片" },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(4f / 5f)
-                    .clip(AppShapes.card)
-                    .background(colors.subtle),
-                contentScale = ContentScale.Crop,
-            )
-            Spacer(Modifier.height(Spacing.md))
-        }
         if (data.description.isNotBlank()) {
             Text(
                 text = data.description,
@@ -566,20 +577,19 @@ private fun MomentBody(
                 color = colors.textPrimary,
             )
         }
-        Spacer(Modifier.height(Spacing.md))
-        // 动作条（设计稿 87:3687）：左 点赞数 + 评论数；右 分享 / 收藏（收藏两态）。
+        if (data.tags.isNotEmpty()) {
+            Spacer(Modifier.height(Spacing.sm2))
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                data.tags.take(3).forEach { tag -> TopicTag(tag) }
+            }
+        }
+        Spacer(Modifier.height(Spacing.lg))
+        // 动作条（设计稿 87:3687 PostActions）：左 点赞数 + 评论数；右 收藏两态（分享在顶部浮层）。
         Row(verticalAlignment = Alignment.CenterVertically) {
             DetailCount(Icons.Filled.Favorite, data.likeCount)
             Spacer(Modifier.width(Spacing.xl))
             DetailCount(Icons.Filled.MailOutline, commentCount)
             Spacer(Modifier.weight(1f))
-            MomentIconButton(
-                iconRes = R.drawable.ic_share,
-                contentDescription = "分享瞬间",
-                tint = colors.textSecondary,
-                onClick = onShare,
-            )
-            Spacer(Modifier.width(Spacing.sm))
             MomentIconButton(
                 iconRes = if (favorite) R.drawable.ic_bookmark_filled else R.drawable.ic_bookmark,
                 contentDescription = if (favorite) "取消收藏" else "收藏瞬间",
@@ -589,6 +599,123 @@ private fun MomentBody(
             )
         }
         Spacer(Modifier.height(Spacing.xs))
+    }
+}
+
+/** hero 宽高比（设计稿 390x280：图片通栏、无圆角，作者栏紧随其下）。 */
+private const val MomentHeroAspect = 390f / 280f
+
+/** 无图瞬间的顶部留白：让出浮层按钮高度，避免作者栏被返回/分享钮压住。 */
+private val MomentHeroNoImageTop = 64.dp
+
+/** hero 头图：通栏贴边、无圆角；无图瞬间用固定留白占位（纯文字瞬间不造假图）。 */
+@Composable
+private fun MomentHero(data: MomentItem) {
+    val colors = HotSpotTheme.colors
+    val imageUrl = MediaUrls.absolute(data.images.firstOrNull()?.url)
+    if (imageUrl != null) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current).data(imageUrl).crossfade(true).build(),
+            contentDescription = data.description.ifBlank { "瞬间图片" },
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(MomentHeroAspect)
+                .background(colors.subtle),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Spacer(Modifier.height(MomentHeroNoImageTop))
+    }
+}
+
+/**
+ * 顶部浮层动作（设计稿 87:3687：hero 左上返回 / 右上分享，36 玻璃圆钮 + 发丝边 + 轻投影）；
+ * 固定在滚动区上层，与 Web DetailHeader 一致。更多菜单（举报/编辑等）待后端能力接入后补。
+ */
+@Composable
+private fun MomentTopOverlay(onBack: () -> Unit, onShare: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        GlassCircleButton(
+            icon = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "返回",
+            onClick = onBack,
+        )
+        Spacer(Modifier.weight(1f))
+        GlassCircleButton(
+            iconRes = R.drawable.ic_share,
+            contentDescription = "分享瞬间",
+            onClick = onShare,
+        )
+    }
+}
+
+/** 36 玻璃圆钮：island 底 92% + 发丝边 + 轻投影（hero 上可读；对齐 Web DetailHeader 圆钮）。 */
+@Composable
+private fun GlassCircleButton(
+    contentDescription: String,
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
+) {
+    val colors = HotSpotTheme.colors
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .shadow(
+                elevation = 2.dp,
+                shape = CircleShape,
+                ambientColor = colors.shadowDark,
+                spotColor = colors.shadowDark,
+            )
+            .clip(CircleShape)
+            .background(colors.island.copy(alpha = 0.92f))
+            .border(1.dp, colors.border, CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .hotSpotFocusRing(cornerRadius = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(18.dp),
+                tint = colors.textPrimary,
+            )
+        } else if (iconRes != null) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = contentDescription,
+                modifier = Modifier.size(18.dp),
+                tint = colors.textPrimary,
+            )
+        }
+    }
+}
+
+/** 话题标签（设计稿 87:3687 TopicTag：#云龙湖 24 高胶囊、accent 软底）。 */
+@Composable
+private fun TopicTag(tag: String) {
+    val colors = HotSpotTheme.colors
+    Box(
+        modifier = Modifier
+            .clip(AppShapes.pill)
+            .background(colors.accentSoft)
+            .padding(horizontal = Spacing.md2, vertical = Spacing.xs),
+    ) {
+        Text(
+            text = "#$tag",
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.accent,
+        )
     }
 }
 
