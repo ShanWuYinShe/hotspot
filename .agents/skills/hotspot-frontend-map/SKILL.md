@@ -58,6 +58,11 @@ description: hotspot 前端自研地图契约：marker 覆盖全部标记（图�
   桌面左面板与移动/平板底部 Sheet 共用以上三个组件 + `AnchorConfirmButton`：布局不同（左栏 vs Sheet），语义/状态完全一致；改动锚点 UI 必须三端一起验证。移动 Sheet 内容顺序固定为「搜索框 → 搜索建议/选中地点/最近使用 → 浏览锚点卡片 → 贴底确认 CTA」：锚点卡不得回到搜索框正下方（会把「最近使用」空态挤到 mid 档首屏之外）。
 - **确认反馈（按钮内联，禁止成功 toast）**：`AnchorConfirmButton` + `anchor-feedback.svelte.ts` 状态机：idle（主按钮「将地图中心设为浏览锚点」/「以此地点为浏览锚点」）→ pending 1.0s（spinner，aria-busy）→ success 1.4s（✓「浏览锚点已生效」）→ idle；失败 error 1.8s（按钮内提示 + 点击重试）。**中心≈锚点时也保持主按钮**（不出现灰色 disabled，避免「以为不能更新」），点击 = 重复确认；「恢复默认」同样不弹 toast，由卡片/标记变化反馈。
 - **逻辑**：底部 CTA 落点 = 选中地点优先，否则地图中心；「恢复默认」清除锚点并回到服务端默认位置。**「定位到我」只移动视野/蓝点，禁止静默改写锚点**；进入地图不再自动请求浏览器定位（避免授权弹窗打断探索），已有锚点时以锚点为首屏视野；位置仅在用户显式点「定位到我/回到我的位置」时获取。
+- **发布器位置（发布瞬间）**：publish 的 `location` 必须按「浏览锚点 → ClientConfig 默认位置 → 零点」解析
+  （`lib/publish-location.ts` 的 `resolvePublishLocation`，与鸿蒙 `CreateMomentPage` 的 browseAnchor 优先同语义），
+  **禁止只取默认位置**——否则用户在别处浏览后发布的瞬间会被错标到默认地点。锚点无名称时名字回退「自定义位置」；
+  打开发布器时读取锚点并监听 `LOCATION_ANCHOR_UPDATED_EVENT`，提交时再读一次当前锚点。单测
+  `lib/publish-location.test.ts`，改发布位置逻辑必须同时跑它。
 - **验收（浏览器）**：清空 localStorage → 卡片「未设置」+ 无标记 + CTA「将地图中心设为浏览锚点」；点 CTA → 按钮内依次出现「正在生效…」→「浏览锚点已生效」→ 恢复主按钮（全程无成功 toast），卡片/标记同步；中心≈锚点时按钮仍是主按钮且可点；注入远端锚点 → 显示距离且 CTA 可点；「恢复默认」→ 三处回到未设置；移动端同流程（Sheet 内卡片 + 粘底 CTA）。
 
 ## 浏览器实测方法（agent-browser，合成 wheel 事件即可生效）

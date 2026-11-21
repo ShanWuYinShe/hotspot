@@ -10,7 +10,11 @@
 	import { auth } from '@/stores/auth.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
-	import { loadDefaultLocation } from '@/lib/default-location';
+	import { readLastLocation, LOCATION_ANCHOR_UPDATED_EVENT, type MapPoint } from '@/lib/map-auto-locate';
+	import {
+		resolvePublishLocation,
+		type PublishFallbackLocation
+	} from '@/lib/publish-location';
 	import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 	import { createMoment } from '@/api';
 	import { uploadMediaFiles } from '@/lib/upload';
@@ -38,18 +42,33 @@
 	];
 
 	// 草稿字段走 composer store（跨弹层挂载存活，关闭重开不丢稿）；
-	// 位置每次重开重新定位（不存草稿，避免陈旧定位）。
-	let locationName = $state('');
+	// 位置每次重开重新取：当前浏览锚点优先，缺失时回退 ClientConfig 默认位置。
 	let topicActive = $state(false);
 	let submitting = $state(false);
 	// 发布阶段提示（审计 P2-8：大图慢网上传期间给到第 n 张 / 百分比反馈）
 	let submitStatus = $state('');
-	let referencePoint = $state<{ latitude: number; longitude: number } | null>(null);
+	let fallbackLocation = $state<PublishFallbackLocation | null>(null);
+	let browseAnchor = $state<MapPoint | null>(null);
+
+	// 浏览锚点：打开发布器即读，且常驻监听锚点变更事件（发布器打开期间在别处改锚点也不陈旧）。
+	$effect(() => {
+		browseAnchor = readLastLocation();
+		const onAnchorUpdated = () => {
+			browseAnchor = readLastLocation();
+		};
+		window.addEventListener(LOCATION_ANCHOR_UPDATED_EVENT, onAnchorUpdated);
+		return () => window.removeEventListener(LOCATION_ANCHOR_UPDATED_EVENT, onAnchorUpdated);
+	});
 
 	$effect(() => startDefaultLocation((loc) => {
-		referencePoint = loc?.point ?? null;
-		locationName = loc?.location_name ?? '';
+		fallbackLocation = loc
+			? { point: loc.point, location_name: loc.location_name }
+			: null;
 	}));
+
+	// 「浏览锚点 → 默认位置 → 零点」的统一解析（与鸿蒙 CreateMomentPage 同语义）。
+	const publishLocation = $derived(resolvePublishLocation(browseAnchor, fallbackLocation));
+	const locationName = $derived(publishLocation.location_name);
 
 	const toggleMood = (tag: string) => {
 		const next = draft.moods.includes(tag) ? draft.moods.filter((t) => t !== tag) : [...draft.moods, tag];
@@ -88,17 +107,13 @@
 					})
 				: undefined;
 			submitStatus = '正在发布…';
+			// spec：location 必填（types.md 契约级）。提交瞬间再解析一次（读当前锚点），
+			// 优先级：浏览锚点 → ClientConfig default_location → 零点（仅配置不可用时）。
+			const location = resolvePublishLocation(readLastLocation(), fallbackLocation);
 			const res = await createMoment({
 				description: draft.text.trim(),
 				tags: [...draft.moods],
-				// spec：location 必填（types.md 契约级）。优先用户参考点，缺失时回退
-				// ClientConfig default_location；两者皆缺（配置不可用）才退化为零点。
-				location: {
-					point:
-						referencePoint ??
-						(await loadDefaultLocation())?.point ?? { latitude: 0, longitude: 0 },
-					location_name: locationName || ''
-				},
+				location,
 				privacy_level: draft.audience === 'nearby' ? 'public' : 'private',
 				image_file_ids
 			});
