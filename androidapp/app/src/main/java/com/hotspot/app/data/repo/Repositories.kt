@@ -8,8 +8,10 @@ import com.hotspot.app.data.auth.AuthSession
 import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.data.model.AuthTokenPair
+import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.CommentItem
 import com.hotspot.app.data.model.EnterGroupResult
+import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
@@ -22,6 +24,7 @@ import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.UnreadSummary
 import com.hotspot.app.data.model.UserItem
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -162,41 +165,70 @@ class FeedRepository(private val api: ApiClient) {
 
 /** 附近枢纽：附近的人 / 附近群组 / 附近瞬间（距离排序由后端计算，客户端只展示）。 */
 class NearbyRepository(private val api: ApiClient) {
-    suspend fun nearbyPeople(cursor: String?): ApiResult<Page<UserItem>> = api.post(
+    /**
+     * 附近的人（spec/api_spec_discovery.md：发现即 users/search + radius + sort_by=distance）。
+     * tag 为兴趣标签筛选（全部传 null）；sortBy 支持 distance / newest。
+     */
+    suspend fun nearbyPeople(
+        cursor: String?,
+        tag: String? = null,
+        sortBy: String = "distance",
+        referencePoint: GeoPoint? = null,
+    ): ApiResult<Page<UserItem>> = api.post(
         ApiEndpoint.USERS_SEARCH,
         buildJsonObject {
             put("keyword", JsonNull)
-            put("tag", JsonNull)
+            put("tag", tag)
             put("radius", 5000)
-            put("sort_by", "distance")
-            put("reference_point", JsonNull)
+            put("sort_by", sortBy)
+            put("reference_point", referencePointJson(referencePoint))
             put("pagination", pagination(cursor))
         },
         Page.serializer(UserItem.serializer()),
     )
 
-    suspend fun nearbyGroups(cursor: String?): ApiResult<Page<GroupItem>> = api.post(
+    /** 附近群组（groups/search + radius + sort_by=distance；tag 筛选同理）。 */
+    suspend fun nearbyGroups(
+        cursor: String?,
+        tag: String? = null,
+        sortBy: String = "distance",
+        referencePoint: GeoPoint? = null,
+    ): ApiResult<Page<GroupItem>> = api.post(
         ApiEndpoint.GROUPS_SEARCH,
         buildJsonObject {
             put("keyword", JsonNull)
-            put("tag", JsonNull)
+            put("tag", tag)
             put("radius", 5000)
-            put("sort_by", "distance")
-            put("reference_point", JsonNull)
+            put("sort_by", sortBy)
+            put("reference_point", referencePointJson(referencePoint))
             put("pagination", pagination(cursor))
         },
         Page.serializer(GroupItem.serializer()),
     )
 
-    suspend fun nearbyMoments(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
+    suspend fun nearbyMoments(
+        cursor: String?,
+        referencePoint: GeoPoint? = null,
+    ): ApiResult<Page<MomentItem>> = api.post(
         ApiEndpoint.MOMENTS_FETCH_NEARBY,
         buildJsonObject {
             put("radius", 5000)
-            put("reference_point", JsonNull)
+            put("reference_point", referencePointJson(referencePoint))
             put("pagination", pagination(cursor))
         },
         Page.serializer(MomentItem.serializer()),
     )
+}
+
+
+/** 附近类请求的 reference_point：锚点缺失时显式传 null（服务端回退链接口见 spec）。 */
+private fun referencePointJson(point: GeoPoint?): JsonElement = if (point == null) {
+    JsonNull
+} else {
+    buildJsonObject {
+        put("latitude", point.latitude)
+        put("longitude", point.longitude)
+    }
 }
 
 /** 全局搜索：用户 / 瞬间 / 群组各自独立分页（spec/api_spec_discovery.md：不提供聚合端点）。 */
@@ -355,6 +387,17 @@ class ProfileRepository(private val api: ApiClient) {
         Page.serializer(MomentItem.serializer()),
     )
 
+    /** 关注 / 取关（spec/api_spec_user.md → users/set_follow：active 两态统一）。 */
+    suspend fun setFollow(userId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_SET_FOLLOW,
+        buildJsonObject {
+            put("user_id", userId)
+            put("active", active)
+            put("source", JsonNull)
+            put("source_moment_id", JsonNull)
+        },
+    )
+
     /** 我加入的群组（成员视角，spec/api_spec_group.md → groups/fetch_joined）。 */
     suspend fun joinedGroups(cursor: String?): ApiResult<Page<GroupItem>> = api.post(
         ApiEndpoint.GROUPS_FETCH_JOINED,
@@ -434,6 +477,15 @@ class GroupRepository(private val api: ApiClient) {
         /** 成员列表首屏页大小（任务契约：首屏 30）。 */
         const val GROUP_MEMBERS_PAGE_SIZE = 30
     }
+}
+
+/**
+ * 系统公开配置：只取 defaults.default_location 作为附近/地图等发现类请求的浏览锚点
+ * （spec/api_spec_types.md「reference_point 解析规则」第 3 级）。
+ */
+class SystemRepository(private val api: ApiClient) {
+    suspend fun clientConfig(): ApiResult<ClientConfig> =
+        api.post(ApiEndpoint.SYSTEM_CLIENT_CONFIG, emptyObject(), ClientConfig.serializer())
 }
 
 /** 通知中心：列表 / 未读摘要 / 全部已读。 */

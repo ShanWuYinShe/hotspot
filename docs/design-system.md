@@ -1417,6 +1417,7 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 | `SegmentedTabs` / `Tabs` | 34 高胶囊分段 / 34 高 Tab 行，选中态底色 + 文字色切换，垂直居中 |
 | `MomentCard` / `Surfaces` / `ListGroup` | 无描边软岛（`--cst-surface-island`）+ 圆角 20 + 轻投影，行 64 |
 | `PageHeader` / `BottomNav` | 页头返回 42 圆钮 + 标题；底部 5 tab（首页/附近/发布+/消息/我的）为**悬浮岛**：左右 14、底部 max(12, 系统手势区)、28 圆角、玻璃底 + 发丝边 + 抬升投影，中心「发布」为 48 圆钮（无文字）；其余 tab 24 图标 + 11fp 标签 + **选中指示条在图标与文字下方**（设计稿 底部导航 `522:2`，14×3 圆角条；未选中保留同尺寸占位避免跳动） |
+| 附近 4 屏（`87:4409 / 87:4192 / 87:3798 / 87:3995`） | 枢纽 = 定位胶囊 + 实时附近统计卡（人/瞬间/在线）+ 附近的人行预览（关注）+ 附近瞬间两列预览 + 附近群组两列预览，各段「查看全部」进叶子页；叶子页 = 定位/计数胶囊 + 兴趣筛选胶囊（全部/摄影/户外/旅行/音乐/美食/阅读）+ 排序（距离最近/最新）+ 两列卡片；用户卡 = 标签/距离 + 头像/昵称/副标题 + 关注两态，群卡 = 封面或首字 + 深色分类胶囊 + 状态点 + 成员/距离 + 加入两态，瞬间卡 = 日期胶囊 + 图/文 + 作者 + 互动计数。**发现类请求必须显式传 `reference_point`（client_config.defaults.default_location）**——服务端回退链在 groups/moments 上与 users 不一致（实测不传锚点 groups 为空），客户端显式传参规避 |
 | `Avatar` / `States` / `AmbientCanvas` | 首字母占位 + 图片渐显；加载/空/错误三态；主题氛围画布 |
 | `CommentThread` / `CommentInputBar` / `CommentAuthorBadge` | 瞬间详情评论区（方案 B，与 Web/harmony 同契约）：楼中楼透明回复块 + Canvas 静态导引线（1.25dp / α0.35 / 圆头，随主评论实测行高自适应）、作者微徽章 28×16 / r4 / 10sp、docked 输入条（头像 36 + 16 圆角输入槽 + 发送 40，IME 避让、回复 chip）、`reactions/set` 乐观点赞；归组/分页/笛卡尔去重逻辑在 `util/CommentThreading.kt`（纯 JVM 单测覆盖） |
 

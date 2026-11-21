@@ -11,6 +11,9 @@ object ApiEndpoint {
     const val GUEST = "/public/v1/auth/guest"
     const val REFRESH_TOKEN = "/public/v1/auth/refresh_token"
 
+    // /public/v1/system（匿名：客户端公开配置，含 defaults.default_location 浏览锚点）
+    const val SYSTEM_CLIENT_CONFIG = "/public/v1/system/client_config"
+
     // /api/v1（必须 Bearer Token）
     const val SIGNOUT = "/api/v1/auth/signout"
 
@@ -24,6 +27,8 @@ object ApiEndpoint {
 
     const val USERS_SEARCH = "/api/v1/users/search"
     const val USERS_ACCOUNT = "/api/v1/users/account"
+    // 关注/取关（spec/api_spec_user.md → users/set_follow，两态统一）
+    const val USERS_SET_FOLLOW = "/api/v1/users/set_follow"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
     const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"

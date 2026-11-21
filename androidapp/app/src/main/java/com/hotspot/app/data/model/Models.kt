@@ -17,6 +17,24 @@ data class Page<T>(
     @SerialName("next_cursor") val nextCursor: String? = null,
 )
 
+/** 请求侧位置（spec → Location：原始坐标 + 名称；client_config.defaults.default_location）。 */
+@Serializable
+data class DefaultLocation(
+    val point: GeoPoint = GeoPoint(),
+    @SerialName("location_name") val locationName: String = "",
+)
+
+@Serializable
+data class ClientDefaults(
+    @SerialName("default_location") val defaultLocation: DefaultLocation? = null,
+)
+
+/** 客户端公开配置（spec/api_spec_public.md → POST /public/v1/system/client_config，仅取用途所需字段）。 */
+@Serializable
+data class ClientConfig(
+    val defaults: ClientDefaults = ClientDefaults(),
+)
+
 @Serializable
 data class UserInfo(
     @SerialName("user_id") val userId: String = "",

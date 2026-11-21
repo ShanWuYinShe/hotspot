@@ -14,6 +14,11 @@
 （展示真实空态，禁止造假数据）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
+- **发现类请求显式传浏览锚点**：附近/发现接口（`users/search`、`groups/search`、`moments/fetch_nearby`）必须显式传
+  `reference_point`（取 `client_config.defaults.default_location.point`，见 `AppContainer.defaultLocation()`）——
+  服务端回退链在 groups/moments 上实测不一致（不传锚点时 groups 返回空），客户端显式传参规避；未接设备定位前，
+  导航胶囊位置文案也用该默认位置的 `location_name`，不写死地名。
+- 附近的人列表需排除当前登录用户（对齐 Web/鸿蒙；`users/set_follow` 对自身返回 10400）。
 后端 int64 字段按 spec 的 string 处理，不做数值运算。
 
 ## 设计 token 链路（禁止手改生成物）

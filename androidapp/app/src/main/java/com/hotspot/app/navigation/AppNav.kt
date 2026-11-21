@@ -25,6 +25,9 @@ import com.hotspot.app.ui.screens.MeMomentsScreen
 import com.hotspot.app.ui.screens.MeScreen
 import com.hotspot.app.ui.screens.MessagesScreen
 import com.hotspot.app.ui.screens.MomentDetailScreen
+import com.hotspot.app.ui.screens.NearbyGroupsScreen
+import com.hotspot.app.ui.screens.NearbyMomentsScreen
+import com.hotspot.app.ui.screens.NearbyPeopleScreen
 import com.hotspot.app.ui.screens.NearbyScreen
 import com.hotspot.app.ui.screens.NotifyScreen
 import com.hotspot.app.ui.screens.PublishScreen
@@ -50,7 +53,7 @@ private fun MainScaffold() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute != null && currentRoute in Routes.tabRoutes
+    val showBottomBar = currentRoute != null && currentRoute in Routes.bottomBarRoutes
 
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) {
@@ -69,8 +72,31 @@ private fun MainScaffold() {
                 composable(Routes.NEARBY) {
                     NearbyScreen(
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
-                        onOpenMessages = { navController.navigate(Routes.MESSAGES) },
+                        onOpenPeople = { navController.navigate(Routes.NEARBY_PEOPLE) },
+                        onOpenGroups = { navController.navigate(Routes.NEARBY_GROUPS) },
+                        onOpenMoments = { navController.navigate(Routes.NEARBY_MOMENTS) },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                    )
+                }
+                composable(Routes.NEARBY_PEOPLE) {
+                    NearbyPeopleScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                    )
+                }
+                composable(Routes.NEARBY_GROUPS) {
+                    NearbyGroupsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                    )
+                }
+                composable(Routes.NEARBY_MOMENTS) {
+                    NearbyMomentsScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                     )
                 }
                 composable(Routes.PUBLISH) { PublishScreen() }

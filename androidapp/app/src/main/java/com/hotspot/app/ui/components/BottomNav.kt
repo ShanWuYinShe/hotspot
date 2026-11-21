@@ -113,7 +113,7 @@ fun BottomNav(
             items.forEach { item ->
                 BottomNavItemView(
                     item = item,
-                    selected = currentRoute == item.route,
+                    selected = Routes.isTabActive(item.route, currentRoute),
                     onClick = { onNavigate(item.route) },
                     modifier = Modifier.weight(1f),
                 )

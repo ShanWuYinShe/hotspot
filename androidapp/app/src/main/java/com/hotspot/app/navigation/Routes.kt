@@ -10,6 +10,10 @@ object Routes {
     const val ME = "me"
     const val ME_MOMENTS = "me/moments"
     const val ME_GROUPS = "me/groups"
+    // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
+    const val NEARBY_PEOPLE = "nearby/people"
+    const val NEARBY_GROUPS = "nearby/groups"
+    const val NEARBY_MOMENTS = "nearby/moments"
     const val SEARCH = "search"
     const val NOTIFY = "notify"
     const val SETTINGS = "settings"
@@ -20,6 +24,16 @@ object Routes {
 
     /** 底部导航 5 tab 的路由集合（仅这些路由显示底栏）。 */
     val tabRoutes: Set<String> = setOf(HOME, NEARBY, PUBLISH, MESSAGES, ME)
+
+    /** 附近子页：仍显示底栏（设计稿子页保留悬浮岛导航），且「附近」tab 保持选中态。 */
+    val nearbyRoutes: Set<String> = setOf(NEARBY, NEARBY_PEOPLE, NEARBY_GROUPS, NEARBY_MOMENTS)
+
+    /** 显示底栏的全部路由。 */
+    val bottomBarRoutes: Set<String> = tabRoutes + nearbyRoutes
+
+    /** 某 tab 在当前路由下是否处于选中态（附近子页归属「附近」tab）。 */
+    fun isTabActive(route: String, currentRoute: String?): Boolean =
+        if (route == NEARBY) currentRoute in nearbyRoutes else currentRoute == route
 
     fun chat(userId: String): String = "chat/" + userId
 
