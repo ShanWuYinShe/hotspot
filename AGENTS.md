@@ -55,6 +55,21 @@
 CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上真机/模拟器走查（见 skill `hotspot-harmony-device-verify`）；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
 - 发版/发布门禁：日常验证以 CI 为准；打 tag 前只需确认 `origin/main` 最近一次 CI 全绿（含 `Docker Build + Runtime Smoke`），镜像构建与容器内集成由 CI 在 PR/main 上覆盖，本地不再构建生产镜像、不再核对本地镜像指纹。详见下节「版本号与发布」。
 
+### PR 描述：排查记录与证据（固定结构）
+
+每个 PR 的描述要让 reviewer **不打开代码仓库就能核对「问题 → 改动 → 证据」**，固定包含四段：
+
+1. **背景 / 问题**：现象 → 根因；实现过程中发现的问题、关键 `log` / 命令输出贴 fenced 代码块（不要只给结论）；
+   设计对齐类 PR 标注设计稿节点号（如 `87:3617`）。
+2. **改动**：按模块列点，标注关键文件。
+3. **证据（截图）**：端上 / 浏览器走查截图与设计稿对照贴进 PR body（GitHub 会内联渲染）。
+   图片先压缩（`sips --resampleWidth 540`，单张 ≤300KB）提交到 `.github/pr-evidence/<分支slug>/`，
+   PR body 用 raw 链接（`https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>`）内联；
+   合并后把链接里的 `<ref>` 从分支名切到 `main`，保证分支删除后图片仍可查看。
+4. **验证**：CI 结论（job 数 / 是否全绿）+ 本地构建/单测结论 + 端上走查要点。
+
+纯文档/注释类 PR 可省略截图，但「背景/问题」与「验证」两段不可省。
+
 ## 版本号与发布
 
 版本号以 git tag 为源（流程见 `git-workflow`「版本号以 tag 为源」），版本串注入全部产物（后端 health/启动日志、前端 `/version.json` 与设置页徽标、镜像 OCI label），用于线上排障精确回溯。发布为产物分发：tag 触发 CI（`.github/workflows/release.yml`，内置门禁：tag 形态 `vX.Y.Z`、必须落在 `origin/main`、该提交 CI 全绿）构建镜像并附 `.sha256` 挂 GitHub Release，本地 `./scripts/deploy-production.sh vX.Y.Z` 下载分发到服务器 `docker load`——服务器不接触源码、不构建；回滚用 `./scripts/rollback-production.sh`（复用同一链路）。鸿蒙端版本约定见 `harmonyapp/AGENTS.md`。完整流程（含热修复）见 `docs/release-runbook.md`。
