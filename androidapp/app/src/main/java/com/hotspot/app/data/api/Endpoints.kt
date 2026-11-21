@@ -29,6 +29,12 @@ object ApiEndpoint {
     const val USERS_ACCOUNT = "/api/v1/users/account"
     // 关注/取关（spec/api_spec_user.md → users/set_follow，两态统一）
     const val USERS_SET_FOLLOW = "/api/v1/users/set_follow"
+    // 我的账户资料更新（spec/api_spec_user.md → users/update_account，patch 语义）
+    const val USERS_UPDATE_ACCOUNT = "/api/v1/users/update_account"
+    // 关系列表（user_id 必传；好友/关注/粉丝各自分页）
+    const val USERS_FETCH_FRIENDS = "/api/v1/users/fetch_friends"
+    const val USERS_FETCH_FOLLOWING = "/api/v1/users/fetch_following"
+    const val USERS_FETCH_FOLLOWERS = "/api/v1/users/fetch_followers"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
     const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"

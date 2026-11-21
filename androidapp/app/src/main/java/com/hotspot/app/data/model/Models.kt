@@ -72,6 +72,18 @@ data class RelativeLocation(
     @SerialName("bearing_degrees") val bearingDegrees: Double? = null,
 )
 
+/**
+ * 关系列表项（spec/api_spec_user.md → RelatedUserItem；好友/关注/粉丝三接口共用形状）。
+ * followed_back_at 仅 fetch_friends 返回；remark 仅查自己时返回。
+ */
+@Serializable
+data class RelatedUserItem(
+    val user: UserItem = UserItem(),
+    @SerialName("followed_at") val followedAt: String = "",
+    @SerialName("followed_back_at") val followedBackAt: String? = null,
+    val remark: String? = null,
+)
+
 @Serializable
 data class UserItem(
     val user: UserInfo = UserInfo(),
@@ -325,6 +337,9 @@ data class AccountData(
     val email: String? = null,
     val phone: String? = null,
     @SerialName("presence_status") val presenceStatus: String = "offline",
+    @SerialName("last_online_at") val lastOnlineAt: String? = null,
+    // 账户存储的原始位置（spec → Location：point + location_name，个人中心显示所在地）
+    val location: DefaultLocation? = null,
     @SerialName("created_at") val createdAt: String = "",
     val stats: UserStats? = null,
 )
