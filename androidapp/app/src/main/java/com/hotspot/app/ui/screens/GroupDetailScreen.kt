@@ -157,6 +157,7 @@ private val GROUP_TABS = listOf("简介", "成员", "公告")
 fun GroupDetailScreen(
     groupId: String,
     onBack: () -> Unit,
+    onOpenGroupChat: (GroupItem) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val repository = AppContainer.groupRepository
@@ -354,6 +355,7 @@ fun GroupDetailScreen(
                 joinPending = joinPending,
                 actionError = actionError,
                 onJoin = { requestJoin() },
+                onOpenGroupChat = { onOpenGroupChat(currentDetail) },
             )
         }
     }
@@ -1116,6 +1118,7 @@ private fun GroupActionDock(
     joinPending: Boolean,
     actionError: String?,
     onJoin: () -> Unit,
+    onOpenGroupChat: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val joined = group.viewerState != null
@@ -1150,16 +1153,16 @@ private fun GroupActionDock(
             }
             when {
                 joined -> {
+                    // 已加入：主入口打开群聊（对齐 Web GroupActionCard「打开群聊」）；退出入口仍在右上更多菜单
                     SystemButton(
-                        text = "已加入",
-                        onClick = {},
-                        variant = ButtonVariant.SECONDARY,
-                        enabled = false,
+                        text = "打开群聊",
+                        onClick = onOpenGroupChat,
+                        variant = ButtonVariant.PRIMARY,
                         fillMaxWidth = true,
                         height = GroupActionButtonHeight,
                     )
                     Spacer(Modifier.height(Spacing.md3))
-                    GroupActionTip(text = "你已在这个群组中")
+                    GroupActionTip(text = "你已在这个群组中，打开即可查看群内消息")
                 }
                 joinPending -> {
                     SystemButton(
