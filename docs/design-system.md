@@ -1416,7 +1416,7 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 | `Badge` | sm 20 / md 24 + 语义 tone（accent/online/warning/danger/neutral），数字未读用同族 accent |
 | `SegmentedTabs` / `Tabs` | 34 高胶囊分段 / 34 高 Tab 行，选中态底色 + 文字色切换，垂直居中 |
 | `MomentCard` / `Surfaces` / `ListGroup` | 无描边软岛（`--cst-surface-island`）+ 圆角 20 + 轻投影，行 64 |
-| `PageHeader` / `BottomNav` | 页头返回 42 圆钮 + 标题；底部 5 tab（首页/附近/发布+/消息/我的），32 图标 + 11fp 标签 + **选中指示条在图标与文字下方**（设计稿 底部导航 `522:2`，20×3 圆角条；未选中保留同尺寸占位避免跳动） |
+| `PageHeader` / `BottomNav` | 页头返回 42 圆钮 + 标题；底部 5 tab（首页/附近/发布+/消息/我的）为**悬浮岛**：左右 14、底部 max(12, 系统手势区)、28 圆角、玻璃底 + 发丝边 + 抬升投影，中心「发布」为 48 圆钮（无文字）；其余 tab 24 图标 + 11fp 标签 + **选中指示条在图标与文字下方**（设计稿 底部导航 `522:2`，14×3 圆角条；未选中保留同尺寸占位避免跳动） |
 | `Avatar` / `States` / `AmbientCanvas` | 首字母占位 + 图片渐显；加载/空/错误三态；主题氛围画布 |
 | `CommentThread` / `CommentInputBar` / `CommentAuthorBadge` | 瞬间详情评论区（方案 B，与 Web/harmony 同契约）：楼中楼透明回复块 + Canvas 静态导引线（1.25dp / α0.35 / 圆头，随主评论实测行高自适应）、作者微徽章 28×16 / r4 / 10sp、docked 输入条（头像 36 + 16 圆角输入槽 + 发送 40，IME 避让、回复 chip）、`reactions/set` 乐观点赞；归组/分页/笛卡尔去重逻辑在 `util/CommentThreading.kt`（纯 JVM 单测覆盖） |
 
