@@ -1,5 +1,6 @@
 package com.hotspot.app.ui.components
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -37,9 +32,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hotspot.app.R
 import com.hotspot.app.navigation.Routes
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.Dimens
@@ -49,7 +45,7 @@ import com.hotspot.app.ui.theme.Spacing
 private data class BottomNavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    @DrawableRes val iconRes: Int,
     val primary: Boolean = false,
 )
 
@@ -74,12 +70,14 @@ fun BottomNav(
     modifier: Modifier = Modifier,
 ) {
     val colors = HotSpotTheme.colors
+    // 线框图标（Lucide 语义 home / compass / plus / message-circle / circle-user），
+    // 与设计稿「底部导航」522:2 及 Web MobilePortrait 的图标族一致；禁止用 Material Filled 图标。
     val items = listOf(
-        BottomNavItem(Routes.HOME, "首页", Icons.Filled.Home),
-        BottomNavItem(Routes.NEARBY, "附近", Icons.Filled.Place),
-        BottomNavItem(Routes.PUBLISH, "发布", Icons.Filled.Add, primary = true),
-        BottomNavItem(Routes.MESSAGES, "消息", Icons.Filled.Email),
-        BottomNavItem(Routes.ME, "我的", Icons.Filled.Person),
+        BottomNavItem(Routes.HOME, "首页", R.drawable.ic_nav_home),
+        BottomNavItem(Routes.NEARBY, "附近", R.drawable.ic_nav_nearby),
+        BottomNavItem(Routes.PUBLISH, "发布", R.drawable.ic_nav_publish, primary = true),
+        BottomNavItem(Routes.MESSAGES, "消息", R.drawable.ic_nav_messages),
+        BottomNavItem(Routes.ME, "我的", R.drawable.ic_nav_me),
     )
     // 底部安全区由系统提供：取系统导航栏 inset，至少保留 12dp 呼吸（对齐 Web pb-[max(12px,env(...))]）
     val navBarBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -160,7 +158,7 @@ private fun BottomNavItemView(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = item.icon,
+                    painter = painterResource(item.iconRes),
                     contentDescription = "发布",
                     modifier = Modifier.size(Dimens.iconSm),
                     tint = colors.textOnAccent,
@@ -168,7 +166,7 @@ private fun BottomNavItemView(
             }
         } else {
             Icon(
-                imageVector = item.icon,
+                painter = painterResource(item.iconRes),
                 contentDescription = null,
                 modifier = Modifier
                     .size(Dimens.iconMd)

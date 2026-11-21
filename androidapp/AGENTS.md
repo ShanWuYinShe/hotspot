@@ -92,6 +92,8 @@ app/src/main/java/com/hotspot/app/
 
 ## UI 契约
 
+- 图标族：导航/功能图标统一**线框矢量**（对齐设计稿与 Web Lucide 语义），底部导航用 `res/drawable/ic_nav_*`
+  （home/compass/plus/message-circle/circle-user）；**禁止用 `Icons.Filled.*` 实心 Material 图标充当导航图标**。
 - 原语优先：按钮 `SystemButton`、输入 `SystemInput`、徽章 `Badge`、Tab `SegmentedTabs/TabPills`、
   软岛 `Surfaces`、空/加载/错误态 `States`、页头 `PageHeader`、底部导航 `BottomNav`。禁止页面手写重复样式。
 - 触控热区 ≥44dp；焦点可见；尊重系统动画缩放（reduced-motion 直接终态）；图片统一 `Avatar`/coil 渐显。
