@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,6 +70,7 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
@@ -81,9 +83,11 @@ import com.hotspot.app.ui.theme.HotSpotTextStyles
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.TimeFormat
+import com.hotspot.app.util.findCommentInThreads
 import com.hotspot.app.util.groupCommentThreads
 import com.hotspot.app.util.markCommentDeleted
 import com.hotspot.app.util.mergeCommentPage
+import com.hotspot.app.util.updateCommentInThreads
 import com.hotspot.app.util.toggleCommentLike as applyOptimisticLike
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -141,6 +145,9 @@ fun MomentDetailScreen(
     // 删除确认：仅评论作者本人可删（spec/comments/delete 软删除）
     var commentDeleteTarget by remember { mutableStateOf<CommentItem?>(null) }
     var commentDeleting by remember { mutableStateOf(false) }
+    // 评论举报（reports/create target_type=comment）：仅非本人评论可举报
+    var commentReportTarget by remember { mutableStateOf<CommentItem?>(null) }
+    var commentReportSubmitting by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
@@ -280,16 +287,16 @@ fun MomentDetailScreen(
 
     fun onCommentLikeClick(commentId: String) {
         if (!loggedIn || likingIds.containsKey(commentId)) return
-        val target = comments.firstOrNull { it.commentId == commentId } ?: return
+        val target = findCommentInThreads(comments, commentId) ?: return
         if (target.isDeleted) return
         val active = !target.liked
-        // 乐观更新：先翻转本地 reactions 聚合，失败回滚到点击前快照
-        comments = comments.map { if (it.commentId == commentId) applyOptimisticLike(it, active) else it }
+        // 乐观更新：顶层评论与楼中楼回复共用同一套 reactions 聚合，失败回滚到点击前快照
+        comments = updateCommentInThreads(comments, commentId) { applyOptimisticLike(it, active) }
         likingIds[commentId] = true
         scope.launch {
             val result = commentRepository.setCommentReaction(commentId, active)
             if (result is ApiResult.Err) {
-                comments = comments.map { if (it.commentId == commentId) target else it }
+                comments = updateCommentInThreads(comments, commentId) { target }
                 actionError = result.error.userMessage
             }
             likingIds.remove(commentId)
@@ -471,6 +478,7 @@ fun MomentDetailScreen(
                                         },
                                         onExpandReplies = { rootCommentId -> expandReplies(rootCommentId) },
                                         onDelete = { comment -> commentDeleteTarget = comment },
+                                        onReport = { comment -> commentReportTarget = comment },
                                     )
                                 }
                             }
@@ -529,6 +537,38 @@ fun MomentDetailScreen(
         }
         // 浮层动作：返回 / 分享（设计稿 87:3687 在 hero 上浮动玻璃圆钮，滚动时固定可见）
         MomentTopOverlay(onBack = onBack, onShare = { shareMoment() })
+    }
+
+    commentReportTarget?.let { target ->
+        ReportDialog(
+            title = "举报评论",
+            submitting = commentReportSubmitting,
+            onDismiss = { if (!commentReportSubmitting) commentReportTarget = null },
+            onSubmit = { reason ->
+                if (commentReportSubmitting) return@ReportDialog
+                commentReportSubmitting = true
+                scope.launch {
+                    when (
+                        val result = AppContainer.reportsRepository.create(
+                            targetType = "comment",
+                            targetId = target.commentId,
+                            reason = reason,
+                        )
+                    ) {
+                        is ApiResult.Ok -> {
+                            commentReportTarget = null
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    commentReportSubmitting = false
+                }
+            },
+        )
     }
 
     commentDeleteTarget?.let { target ->

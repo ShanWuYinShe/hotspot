@@ -40,6 +40,32 @@ fun groupCommentThreads(items: List<CommentItem>): List<CommentThread> {
     }
 }
 
+/** 在顶层评论与其 top_replies 中查找评论（点赞/举报需要同时覆盖楼中楼回复）。 */
+fun findCommentInThreads(items: List<CommentItem>, commentId: String): CommentItem? =
+    items.firstOrNull { it.commentId == commentId }
+        ?: items.asSequence().flatMap { it.topReplies.asSequence() }.firstOrNull { it.commentId == commentId }
+
+/** 就地更新顶层评论或其 top_replies 中的评论；未命中返回原列表（结构不变）。 */
+fun updateCommentInThreads(
+    items: List<CommentItem>,
+    commentId: String,
+    transform: (CommentItem) -> CommentItem,
+): List<CommentItem> = items.map { root ->
+    when {
+        root.commentId == commentId -> transform(root)
+        else -> {
+            val index = root.topReplies.indexOfFirst { it.commentId == commentId }
+            if (index < 0) {
+                root
+            } else {
+                val replies = root.topReplies.toMutableList()
+                replies[index] = transform(replies[index])
+                root.copy(topReplies = replies)
+            }
+        }
+    }
+}
+
 /**
  * 删除成功后的本地软删占位（spec/comments/delete：content 清空、is_deleted=true，
  * 子评论保留；只替换匹配的顶层评论，不动 top_replies）。

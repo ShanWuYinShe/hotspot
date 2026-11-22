@@ -5,6 +5,7 @@ import com.hotspot.app.data.model.Reaction
 import com.hotspot.app.data.model.UserInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,6 +59,19 @@ class CommentThreadingTest {
     fun groupCommentThreads_orphanReplyIsNotPromotedToRoot() {
         val threads = groupCommentThreads(listOf(comment("orphan", parentId = "missing")))
         assertTrue(threads.isEmpty())
+    }
+
+    @Test
+    fun findAndUpdateCommentInThreads_coversReplies() {
+        val root = comment("a", topReplies = listOf(comment("a1", parentId = "a")))
+        val items = listOf(root, comment("b"))
+
+        assertEquals("a1", findCommentInThreads(items, "a1")?.commentId)
+        assertNull(findCommentInThreads(items, "missing"))
+
+        val updated = updateCommentInThreads(items, "a1") { it.copy(content = "更新后的回复") }
+        assertEquals("更新后的回复", updated.first().topReplies.single().content)
+        assertEquals("内容 b", updated[1].content)
     }
 
     @Test
