@@ -21,15 +21,17 @@
 入口：枢纽用户行、附近的人卡片、附近瞬间作者、瞬间详情作者、搜索用户结果）/
 发布瞬间（无独立设计画板，结构对齐 Web CreateSheet：文案 + 相册选图 + 氛围标签 + 可见范围 + 默认浏览位置；
 media/presign_upload → PUT → complete_upload → moments/create）已实现；
-地图原生渲染已接入（附近地图页：`/public/v1/map/canvas` 的 heatmap/hotspots/empty 三态、
-拖动/捏合/按钮缩放、data_type 筛选、热点点击进详情；自研 Canvas 投影，不接第三方地图 SDK）；
+地图选点页已接入（Figma 移动端 `87:1866`「地图选点 · /map」：全屏底图 + 顶部返回/筛选浮动条 +
+右侧缩放/回中/图层控件 + 中心定位针 + 底部搜索/最近使用/「设为浏览锚点」面板；锚点持久化到本地
+并驱动附近页 reference_point；不接第三方地图 SDK，底图暂为示意底色）；
 管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
 WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
 私聊、群聊与消息列表消费增量事件）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
 - **发现类请求显式传浏览锚点**：附近/发现接口（`users/search`、`groups/search`、`moments/fetch_nearby`）必须显式传
-  `reference_point`（取 `client_config.defaults.default_location.point`，见 `AppContainer.defaultLocation()`）——
+  `reference_point`（优先取用户在地图选点页设置的本地锚点，未设置时回退
+  `client_config.defaults.default_location.point`，见 `AppContainer.defaultLocation()`）——
   服务端回退链在 groups/moments 上实测不一致（不传锚点时 groups 返回空），客户端显式传参规避；未接设备定位前，
   导航胶囊位置文案也用该默认位置的 `location_name`，不写死地名。
 - 附近的人列表需排除当前登录用户（对齐 Web/鸿蒙；`users/set_follow` 对自身返回 10400）。
@@ -84,6 +86,7 @@ app/src/main/java/com/hotspot/app/
   data/auth/       # TokenStore（Bearer 持久化）
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
+  data/location/   # 浏览锚点本地存储（地图选点页写入；附近页 reference_point 优先用它）
   data/media/      # 聊天图片上传（presign_upload(category=chat_image) → PUT → complete_upload）
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
@@ -148,3 +151,5 @@ app/src/main/java/com/hotspot/app/
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
    验证通过，CI 仍只跑 debug）。
+4. 地图真实底图（高德/OSM 瓦片）、地理编码搜索与设备定位未接：底图暂为示意底色，搜索候选来自
+   `map/canvas` hotspots + 「纬度,经度」坐标，版权标为「示意底图」而非地图服务商。

@@ -4,9 +4,12 @@ import android.content.Context
 import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.auth.TokenStore
+import com.hotspot.app.data.location.BrowseAnchor
+import com.hotspot.app.data.location.BrowseAnchorStore
 import com.hotspot.app.data.model.AppLimits
 import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.DefaultLocation
+import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.repo.AuthRepository
 import com.hotspot.app.data.repo.ChatRepository
 import com.hotspot.app.data.repo.CommentRepository
@@ -65,6 +68,13 @@ object AppContainer {
     lateinit var mediaRepository: MediaRepository
         private set
 
+    /** 浏览锚点本地存储（地图选点页写入；附近页按它计算距离与推荐）。 */
+    lateinit var browseAnchorStore: BrowseAnchorStore
+        private set
+
+    /** 当前生效锚点（null = 未设置，回退 client_config.defaults.default_location）。 */
+    private var browseAnchorValue: BrowseAnchor? = null
+
     /** WebSocket 实时增量通道（登录态驱动；聊天页/消息列表消费 events）。 */
     lateinit var realtimeClient: HotSpotRealtimeClient
         private set
@@ -81,6 +91,8 @@ object AppContainer {
             if (initialized) return
             val appContext = context.applicationContext
             tokenStore = TokenStore(appContext)
+            browseAnchorStore = BrowseAnchorStore(appContext)
+            browseAnchorValue = browseAnchorStore.current()
             themeController = ThemeController(appContext)
             apiClient = ApiClient(tokenStore)
             authRepository = AuthRepository(apiClient, tokenStore)
@@ -121,8 +133,25 @@ object AppContainer {
         return cachedClientConfig
     }
 
-    /** 浏览锚点（reference_point 回退链第 3 级）：client_config.defaults.default_location。 */
-    suspend fun defaultLocation(): DefaultLocation? = clientConfig()?.defaults?.defaultLocation
+    /**
+     * 浏览锚点：用户在 /map 选点页设置的本地锚点优先；未设置时回退
+     * client_config.defaults.default_location（spec 回退链第 3 级）。
+     */
+    suspend fun defaultLocation(): DefaultLocation? {
+        browseAnchorValue?.let { anchor ->
+            return DefaultLocation(
+                point = GeoPoint(anchor.latitude, anchor.longitude),
+                locationName = anchor.label,
+            )
+        }
+        return clientConfig()?.defaults?.defaultLocation
+    }
+
+    /** 保存地图选点页设置的浏览锚点（立即对后续附近/发现请求生效）。 */
+    fun setBrowseAnchor(anchor: BrowseAnchor) {
+        browseAnchorStore.save(anchor)
+        browseAnchorValue = anchor
+    }
 
     /** 发布器限额；配置不可用时退回 spec 默认值（9 图 / 9 标签 / 280 字）。 */
     suspend fun limits(): AppLimits = clientConfig()?.limits ?: AppLimits()
