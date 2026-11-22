@@ -1,6 +1,10 @@
 package com.hotspot.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,11 +17,15 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,10 +39,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
+import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.ChatImageUploader
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.ChatTarget
@@ -47,15 +62,17 @@ import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
+import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 私聊：历史消息 + 文本发送 + WebSocket 实时增量（新消息/编辑/撤回，进入会话订阅对端频道）。
+ * 私聊：历史消息 + 文本/图片发送 + WebSocket 实时增量（新消息/编辑/撤回，进入会话订阅对端频道）。
  * 历史消息按 sent_at 倒序返回，reverseLayout = true 让最新消息贴底（对齐前端「短会话底对齐」）。
  */
 @Composable
@@ -77,6 +94,7 @@ fun ChatScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
+    var uploading by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
 
     suspend fun reload() {
@@ -90,6 +108,28 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(targetUserId) { reload() }
+
+    // 发送图片：系统 Photo Picker → chat_image 三步上传 → private_messages/send(type=image, file_id)。
+    val context = LocalContext.current
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            uploading = true
+            error = null
+            ChatImageUploader.upload(context, uri)
+                .onSuccess { uploaded ->
+                    when (val result = chatRepository.sendImageMessage(targetUserId, uploaded.fileId)) {
+                        is ApiResult.Ok -> {
+                            reload()
+                            listState.animateScrollToItem(0)
+                        }
+                        is ApiResult.Err -> error = result.error.userMessage
+                    }
+                }
+                .onFailure { error = it.message ?: "图片发送失败，请重试" }
+            uploading = false
+        }
+    }
 
     // 对端输入中提示：收到 is_typing=true 后 6 秒内无新事件自动清除（防丢包常驻）。
     LaunchedEffect(peerTypingAt) {
@@ -260,6 +300,24 @@ fun ChatScreen(onBack: () -> Unit) {
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = !uploading) {
+                        imagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_gallery),
+                    contentDescription = if (uploading) "图片发送中" else "发送图片",
+                    modifier = Modifier.size(Dimens.iconMd),
+                    tint = if (uploading) colors.textSecondary else colors.accent,
+                )
+            }
             SystemInput(
                 value = input,
                 onValueChange = { onInputChange(it) },
@@ -317,24 +375,40 @@ private fun MessageBubble(
                     .background(if (isMine) colors.accent else colors.island)
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
-                val text = when {
-                    message.recalledAt != null -> "消息已撤回"
-                    else -> when (message.type) {
-                    "text" -> message.content ?: ""
-                    "image" -> "[图片]"
-                    "video" -> "[视频]"
-                    "audio" -> "[语音]"
-                    "file" -> "[文件]"
-                    "share" -> "[分享]"
-                    else -> message.content ?: "[消息]"
+                val imageUrl = message.media?.url
+                if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(MediaUrls.absolute(imageUrl))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "聊天图片",
+                        modifier = Modifier
+                            .widthIn(max = 220.dp)
+                            .heightIn(max = 240.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    val text = when {
+                        message.recalledAt != null -> "消息已撤回"
+                        else -> when (message.type) {
+                        "text" -> message.content ?: ""
+                        "image" -> "[图片]"
+                        "video" -> "[视频]"
+                        "audio" -> "[语音]"
+                        "file" -> "[文件]"
+                        "share" -> "[分享]"
+                        else -> message.content ?: "[消息]"
+                        }
                     }
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Normal,
+                        color = if (isMine) colors.textOnAccent else colors.textPrimary,
+                    )
                 }
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Normal,
-                    color = if (isMine) colors.textOnAccent else colors.textPrimary,
-                )
             }
             Text(
                 text = TimeFormat.relative(message.sentAt),
