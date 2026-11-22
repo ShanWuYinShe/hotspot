@@ -61,6 +61,20 @@ class CommentThreadingTest {
     }
 
     @Test
+    fun markCommentDeleted_softDeletesOnlyTargetAndKeepsReplies() {
+        val root = comment("a", topReplies = listOf(comment("a1", parentId = "a")))
+        val other = comment("b")
+        val updated = markCommentDeleted(listOf(root, other), "a")
+
+        val deleted = updated.first { it.commentId == "a" }
+        assertTrue(deleted.isDeleted)
+        assertEquals("", deleted.content)
+        assertEquals(listOf("a1"), deleted.topReplies.map { it.commentId })
+        assertEquals("内容 b", updated.first { it.commentId == "b" }.content)
+        assertFalse(updated.first { it.commentId == "b" }.isDeleted)
+    }
+
+    @Test
     fun mergeCommentPage_appendsAndDedupesById() {
         val first = listOf(comment("a"), comment("b"))
         val merged = mergeCommentPage(first, listOf(comment("b"), comment("c")))

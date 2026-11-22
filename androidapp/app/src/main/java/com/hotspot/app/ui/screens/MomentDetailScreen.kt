@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -81,6 +82,7 @@ import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.TimeFormat
 import com.hotspot.app.util.groupCommentThreads
+import com.hotspot.app.util.markCommentDeleted
 import com.hotspot.app.util.mergeCommentPage
 import com.hotspot.app.util.toggleCommentLike as applyOptimisticLike
 import kotlinx.coroutines.launch
@@ -134,6 +136,11 @@ fun MomentDetailScreen(
     var actionError by remember { mutableStateOf<String?>(null) }
     var pendingIdempotencyKey by remember { mutableStateOf<String?>(null) }
     val likingIds = remember { mutableStateMapOf<String, Boolean>() }
+    // 楼中楼「查看全部回复」加载中的顶层评论 id
+    var expandingReplyIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // 删除确认：仅评论作者本人可删（spec/comments/delete 软删除）
+    var commentDeleteTarget by remember { mutableStateOf<CommentItem?>(null) }
+    var commentDeleting by remember { mutableStateOf(false) }
     val inputFocusRequester = remember { FocusRequester() }
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
@@ -229,6 +236,46 @@ fun MomentDetailScreen(
     fun startReply(parentCommentId: String, nickname: String, userId: String) {
         replyTarget = CommentReplyTarget(parentCommentId, nickname, userId)
         actionError = null
+    }
+
+    /** 「查看全部 N 条回复」：拉取 fetch_replies 全量并回填到该顶层评论的 top_replies。 */
+    fun expandReplies(rootCommentId: String) {
+        if (!loggedIn || rootCommentId in expandingReplyIds) return
+        expandingReplyIds = expandingReplyIds + rootCommentId
+        scope.launch {
+            when (val result = commentRepository.fetchReplies(rootCommentId)) {
+                is ApiResult.Ok -> {
+                    val replies = result.data.items
+                    comments = comments.map { root ->
+                        if (root.commentId == rootCommentId) {
+                            root.copy(topReplies = replies, repliesCount = replies.size)
+                        } else {
+                            root
+                        }
+                    }
+                }
+                is ApiResult.Err -> actionError = result.error.userMessage
+            }
+            expandingReplyIds = expandingReplyIds - rootCommentId
+        }
+    }
+
+    /** 删除自己的评论（软删除：content 清空、保留回复；确认后调用）。 */
+    fun deleteComment(commentId: String) {
+        if (commentDeleting) return
+        commentDeleting = true
+        actionError = null
+        scope.launch {
+            when (val result = commentRepository.deleteComment(commentId)) {
+                is ApiResult.Ok -> {
+                    comments = markCommentDeleted(comments, commentId)
+                    commentCount = (commentCount - 1).coerceAtLeast(0)
+                    commentDeleteTarget = null
+                }
+                is ApiResult.Err -> actionError = result.error.userMessage
+            }
+            commentDeleting = false
+        }
     }
 
     fun onCommentLikeClick(commentId: String) {
@@ -415,11 +462,15 @@ fun MomentDetailScreen(
                                     CommentThreadItem(
                                         thread = thread,
                                         momentAuthorId = data.user.userId,
+                                        currentUserId = currentUser?.userId.orEmpty(),
                                         actionsEnabled = loggedIn,
+                                        expandingReplyIds = expandingReplyIds,
                                         onToggleLike = { commentId, _ -> onCommentLikeClick(commentId) },
                                         onReply = { parentCommentId, nickname, userId ->
                                             startReply(parentCommentId, nickname, userId)
                                         },
+                                        onExpandReplies = { rootCommentId -> expandReplies(rootCommentId) },
+                                        onDelete = { comment -> commentDeleteTarget = comment },
                                     )
                                 }
                             }
@@ -478,6 +529,30 @@ fun MomentDetailScreen(
         }
         // 浮层动作：返回 / 分享（设计稿 87:3687 在 hero 上浮动玻璃圆钮，滚动时固定可见）
         MomentTopOverlay(onBack = onBack, onShare = { shareMoment() })
+    }
+
+    commentDeleteTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!commentDeleting) commentDeleteTarget = null },
+            title = { Text("删除评论") },
+            text = { Text("删除后不可恢复，确定删除这条评论吗？") },
+            confirmButton = {
+                SystemButton(
+                    text = if (commentDeleting) "删除中…" else "删除",
+                    onClick = { deleteComment(target.commentId) },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { commentDeleteTarget = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                )
+            },
+        )
     }
 }
 

@@ -73,6 +73,8 @@ object ApiEndpoint {
 
     const val COMMENTS_FETCH = "/api/v1/comments/fetch"
     const val COMMENTS_CREATE = "/api/v1/comments/create"
+    const val COMMENTS_DELETE = "/api/v1/comments/delete"
+    const val COMMENTS_FETCH_REPLIES = "/api/v1/comments/fetch_replies"
 
     const val REACTIONS_SET = "/api/v1/reactions/set"
 

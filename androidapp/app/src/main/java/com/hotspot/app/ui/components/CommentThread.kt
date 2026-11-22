@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -105,20 +106,27 @@ private fun isMomentAuthor(comment: CommentItem, momentAuthorId: String): Boolea
 fun CommentThreadItem(
     thread: CommentThread,
     momentAuthorId: String,
+    currentUserId: String,
     actionsEnabled: Boolean,
+    expandingReplyIds: Set<String>,
     onToggleLike: (commentId: String, active: Boolean) -> Unit,
     onReply: (parentCommentId: String, nickname: String, userId: String) -> Unit,
+    onExpandReplies: (rootCommentId: String) -> Unit,
+    onDelete: (CommentItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = HotSpotTheme.colors
     var mainRowHeightPx by remember(thread.comment.commentId) { mutableIntStateOf(0) }
     Box(modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth()) {
             MainCommentRow(
                 comment = thread.comment,
                 isAuthor = isMomentAuthor(thread.comment, momentAuthorId),
+                currentUserId = currentUserId,
                 actionsEnabled = actionsEnabled,
                 onToggleLike = onToggleLike,
                 onReply = onReply,
+                onDelete = onDelete,
                 modifier = Modifier
                     .fillMaxWidth()
                     .onSizeChanged { size ->
@@ -145,6 +153,33 @@ fun CommentThreadItem(
                             onReply = onReply,
                         )
                     }
+                }
+            }
+            if (thread.comment.repliesCount > thread.replies.size) {
+                val expanding = thread.comment.commentId in expandingReplyIds
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = MainAvatar + MainAvatarGap)
+                        .heightIn(min = Dimens.minTouchTarget)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            enabled = actionsEnabled && !expanding,
+                            onClick = { onExpandReplies(thread.comment.commentId) },
+                        )
+                        .hotSpotFocusRing(cornerRadius = Tokens.Radius.sm.dp)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = "查看全部回复"
+                        },
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = if (expanding) "正在加载回复…" else "查看全部 " + thread.comment.repliesCount + " 条回复",
+                        style = ActionTextStyle,
+                        color = if (expanding) colors.textSecondary else colors.accent,
+                    )
                 }
             }
         }
@@ -195,9 +230,11 @@ private fun ThreadGuideLine(
 private fun MainCommentRow(
     comment: CommentItem,
     isAuthor: Boolean,
+    currentUserId: String,
     actionsEnabled: Boolean,
     onToggleLike: (commentId: String, active: Boolean) -> Unit,
     onReply: (parentCommentId: String, nickname: String, userId: String) -> Unit,
+    onDelete: (CommentItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = HotSpotTheme.colors
@@ -228,11 +265,13 @@ private fun MainCommentRow(
                 CommentActions(
                     comment = comment,
                     showLike = true,
+                    showDelete = currentUserId.isNotBlank() && comment.user.userId == currentUserId,
                     enabled = actionsEnabled,
                     onToggleLike = { onToggleLike(comment.commentId, !comment.liked) },
                     onReply = {
                         onReply(comment.commentId, comment.user.nickname, comment.user.userId)
                     },
+                    onDelete = { onDelete(comment) },
                 )
             }
         }
@@ -361,9 +400,11 @@ private fun DeletedPlaceholder(isReply: Boolean) {
 private fun CommentActions(
     comment: CommentItem,
     showLike: Boolean,
+    showDelete: Boolean = false,
     enabled: Boolean,
     onToggleLike: () -> Unit,
     onReply: () -> Unit,
+    onDelete: () -> Unit = {},
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -420,6 +461,28 @@ private fun CommentActions(
             contentAlignment = Alignment.CenterStart,
         ) {
             Text(text = "回复", style = ActionTextStyle, color = colors.textSecondary)
+        }
+        if (showDelete) {
+            Spacer(Modifier.width(ActionGap))
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .widthIn(min = Dimens.minTouchTarget)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = enabled,
+                        onClick = onDelete,
+                    )
+                    .hotSpotFocusRing(cornerRadius = Tokens.Radius.sm.dp)
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = "删除我的评论"
+                    },
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(text = "删除", style = ActionTextStyle, color = colors.textSecondary)
+            }
         }
     }
 }

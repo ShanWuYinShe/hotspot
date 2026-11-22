@@ -148,7 +148,9 @@ app/src/main/java/com/hotspot/app/
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音/视频/文件富媒体与 @提及消息的独立通知跳转未做；
    群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
-   评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
+   评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
+   查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）；
+   仍未做：举报评论、点赞回复。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
    验证通过，CI 仍只跑 debug）。
 4. 地图真实底图（高德/OSM 瓦片）、地理编码搜索与设备定位未接：底图暂为示意底色，搜索候选来自
