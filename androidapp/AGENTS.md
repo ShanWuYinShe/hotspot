@@ -147,7 +147,8 @@ app/src/main/java/com/hotspot/app/
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音/视频/文件富媒体与 @提及消息的独立通知跳转未做；
-   群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
+   群管理（改群信息 / 公告与成员管理 / 转让群主）未做；
+   举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报长按他人消息）；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
    查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）、
    举报评论（reports/create target_type=comment，复用 ReportDialog）与楼中楼回复点赞。

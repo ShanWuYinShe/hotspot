@@ -67,6 +67,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
@@ -78,6 +79,7 @@ import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
@@ -188,6 +190,9 @@ fun GroupDetailScreen(
     var showExitDialog by remember(groupId) { mutableStateOf(false) }
     var exiting by remember(groupId) { mutableStateOf(false) }
     var exitError by remember(groupId) { mutableStateOf<String?>(null) }
+    var showReportDialog by remember(groupId) { mutableStateOf(false) }
+    var reportSubmitting by remember(groupId) { mutableStateOf(false) }
+    val context = LocalContext.current
 
     suspend fun loadDetail() {
         detailLoading = detail == null
@@ -309,14 +314,20 @@ fun GroupDetailScreen(
     }
 
     val currentDetail = detail
+    // 退出群组仅成员可用；举报群组对齐 Web：非群主均可举报（未加入也可举报）
+    val canLeaveGroup = currentDetail?.viewerState != null && currentDetail.viewerState.role != "owner"
+    val canReportGroup = currentDetail != null && currentDetail.viewerState?.role != "owner"
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
-            moreEnabled = currentDetail?.viewerState != null,
+            moreEnabled = canLeaveGroup || canReportGroup,
+            canLeaveGroup = canLeaveGroup,
+            canReportGroup = canReportGroup,
             onLeaveGroup = {
                 exitError = null
                 showExitDialog = true
             },
+            onReportGroup = { showReportDialog = true },
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -375,6 +386,32 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showReportDialog) {
+        ReportDialog(
+            title = "举报群组",
+            submitting = reportSubmitting,
+            onDismiss = { if (!reportSubmitting) showReportDialog = false },
+            onSubmit = { reason ->
+                if (reportSubmitting) return@ReportDialog
+                reportSubmitting = true
+                scope.launch {
+                    when (val result = AppContainer.reportsRepository.create("group", groupId, reason)) {
+                        is ApiResult.Ok -> {
+                            showReportDialog = false
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    reportSubmitting = false
+                }
+            },
+        )
+    }
+
     if (showExitDialog && currentDetail != null) {
         GroupExitDialog(
             groupName = currentDetail.group.name,
@@ -388,14 +425,17 @@ fun GroupDetailScreen(
 
 /**
  * 顶部导航：左 42 圆钮返回；右 42 圆钮「更多」。
- * 更多菜单仅在已加入（viewer_state != null）时展示「退出群组」；未加入为禁用态
- * （不提供假动作，无障碍文案说明原因）。返回钮始终可用。
+ * 更多菜单：成员且非群主展示「退出群组」；非群主（含未加入）展示「举报群组」；
+ * 群主/详情未加载时无可用动作，更多钮禁用。返回钮始终可用。
  */
 @Composable
 private fun GroupTopNavBar(
     onBack: () -> Unit,
     moreEnabled: Boolean,
+    canLeaveGroup: Boolean,
+    canReportGroup: Boolean,
     onLeaveGroup: () -> Unit,
+    onReportGroup: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -426,19 +466,36 @@ private fun GroupTopNavBar(
                 tonalElevation = 0.dp,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(Tokens.Radius.sm.dp),
             ) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = "退出群组",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = HotSpotTheme.colors.danger,
-                        )
-                    },
-                    onClick = {
-                        menuExpanded = false
-                        onLeaveGroup()
-                    },
-                )
+                if (canReportGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "举报群组",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.danger,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onReportGroup()
+                        },
+                    )
+                }
+                if (canLeaveGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "退出群组",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.danger,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onLeaveGroup()
+                        },
+                    )
+                }
             }
         }
     }
