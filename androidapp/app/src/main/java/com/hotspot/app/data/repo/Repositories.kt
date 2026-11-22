@@ -491,7 +491,15 @@ class ChatRepository(private val api: ApiClient) {
         },
     )
 
-    suspend fun sendGroupTextMessage(groupId: String, content: String): ApiResult<MessageSentResult> = api.post(
+    /**
+     * 发送群文本消息；mentions 为 @ 的 user_id 列表（spec/api_spec_chat.md：
+     * 服务端对每个被 @ 的群成员推送 GroupMessageMentioned 并落库通知，非成员 ID 忽略）。
+     */
+    suspend fun sendGroupTextMessage(
+        groupId: String,
+        content: String,
+        mentions: List<String> = emptyList(),
+    ): ApiResult<MessageSentResult> = api.post(
         ApiEndpoint.GROUP_MESSAGES_SEND,
         buildJsonObject {
             put("group_id", groupId)
@@ -500,7 +508,7 @@ class ChatRepository(private val api: ApiClient) {
             put("file_id", JsonNull)
             put("share_code", JsonNull)
             put("reply_to_message_id", JsonNull)
-            put("mentions", buildJsonArray { })
+            put("mentions", buildJsonArray { mentions.distinct().forEach { add(JsonPrimitive(it)) } })
         },
         MessageSentResult.serializer(),
         idempotencyKey = UUID.randomUUID().toString(),
