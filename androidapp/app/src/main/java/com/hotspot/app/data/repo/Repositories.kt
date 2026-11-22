@@ -629,6 +629,29 @@ class CommentRepository(private val api: ApiClient) {
         idempotencyKey = idempotencyKey,
     )
 
+    /**
+     * 删除自己的评论（spec/comments/delete：软删除，仅评论作者；顶层删除后子评论保留）。
+     * 平台审核删除走 admin 接口，不在客户端暴露。
+     */
+    suspend fun deleteComment(commentId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.COMMENTS_DELETE,
+        buildJsonObject { put("comment_id", commentId) },
+    )
+
+    /** 楼中楼全量回复（spec/comments/fetch_replies：时间正序；「查看全部 N 条回复」使用）。 */
+    suspend fun fetchReplies(
+        commentId: String,
+        cursor: String? = null,
+        limit: Int = REPLIES_PAGE_SIZE,
+    ): ApiResult<Page<CommentItem>> = api.post(
+        ApiEndpoint.COMMENTS_FETCH_REPLIES,
+        buildJsonObject {
+            put("comment_id", commentId)
+            put("pagination", pagination(cursor, limit))
+        },
+        Page.serializer(CommentItem.serializer()),
+    )
+
     /** 评论点赞/取消（reactions/set target_type=comment；emoji 须在服务端白名单内）。 */
     suspend fun setCommentReaction(commentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.REACTIONS_SET,
@@ -643,6 +666,9 @@ class CommentRepository(private val api: ApiClient) {
     companion object {
         /** 首屏评论页大小（任务契约：limit 50）。 */
         const val COMMENT_PAGE_SIZE = 50
+
+        /** 展开全部回复页大小（与 Web 同口径 limit 100，一次取完常见楼层）。 */
+        const val REPLIES_PAGE_SIZE = 100
 
         /** 点赞 emoji：服务端白名单默认含 👍（与 Web / 鸿蒙同口径）。 */
         const val LIKE_EMOJI = "👍"

@@ -40,6 +40,19 @@ fun groupCommentThreads(items: List<CommentItem>): List<CommentThread> {
     }
 }
 
+/**
+ * 删除成功后的本地软删占位（spec/comments/delete：content 清空、is_deleted=true，
+ * 子评论保留；只替换匹配的顶层评论，不动 top_replies）。
+ */
+fun markCommentDeleted(items: List<CommentItem>, commentId: String): List<CommentItem> =
+    items.map { comment ->
+        if (comment.commentId != commentId) {
+            comment
+        } else {
+            comment.copy(content = "", isDeleted = true, reactions = emptyList())
+        }
+    }
+
 /** 加载更多：追加下一页评论并按 comment_id 去重（cursor 在页面原地重试时不会产生重复行）。 */
 fun mergeCommentPage(current: List<CommentItem>, incoming: List<CommentItem>): List<CommentItem> {
     val known = current.mapTo(mutableSetOf()) { it.commentId }
