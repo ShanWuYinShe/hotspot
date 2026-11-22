@@ -4,6 +4,7 @@ import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.UserInfo
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
@@ -114,6 +115,16 @@ object RealtimeProtocol {
         val exponent = attempt.coerceIn(0, 6)
         val base = RECONNECT_BASE_MS shl exponent
         return (base.coerceAtMost(RECONNECT_MAX_MS) + jitterMs).coerceAtMost(RECONNECT_MAX_MS + 5_000L)
+    }
+
+    /**
+     * ConnectionEstablished.resume_token：缺省 / 显式 null / 空白串均视为无恢复令牌
+     * （走 SetSubscriptions 全量恢复）。不能直接取 JsonNull.content——那会得到字符串 "null"。
+     */
+    fun parseResumeToken(payload: JsonObject): String? {
+        val raw = payload["resume_token"] ?: return null
+        if (raw is JsonNull) return null
+        return runCatching { raw.jsonPrimitive.content }.getOrNull()?.takeIf { it.isNotBlank() }
     }
 
     fun parse(type: String, payload: JsonObject): RealtimeEvent? = when (type) {

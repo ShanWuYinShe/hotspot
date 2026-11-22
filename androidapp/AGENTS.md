@@ -102,7 +102,8 @@ app/src/main/java/com/hotspot/app/
   release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
 - **WebSocket**：端点 `/ws/v1`（spec/api_spec_websocket.md），App 端连接后 5 秒内发 `Auth`
   （access_token + device_id + resume_token）；心跳参数由 `ConnectionEstablished.config` 下发，禁止硬编码；
-  断线指数退避重连，4001 先 refresh token（失败清会话回登录页），1000/1008 不重连；
+  断线指数退避重连（4002 按 `Error.retry_after` 等待），4001 先 refresh token（仅 10100/会话失效才清会话回登录，
+  网络失败保留会话退避重试；fatal Error 不直接登出，登出以 close code 收尾为准），1000/1008 不重连；
   聊天页进入时订阅对端 user / 群 group 频道，离开取消，重连后按本地集合全量 `set` 恢复；
   输入中状态：输入节流 2s 发 `SendPrivateTyping/SendGroupTyping`，停止 3s 发 false；接收 6s 无新事件自动清除
   （规则与文案见 `util/ChatTypingRules.kt`，群聊多人折叠为「A、B、C 等 N 人正在输入…」）。
