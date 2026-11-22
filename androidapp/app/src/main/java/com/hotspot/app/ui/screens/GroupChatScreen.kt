@@ -5,6 +5,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiError
@@ -70,6 +72,7 @@ import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.SystemInput
@@ -121,6 +124,9 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
     var selectedMentionIds by remember { mutableStateOf<Set<String>>(emptySet()) }
     var cursorResetToken by remember { mutableStateOf(0) }
+    // 消息举报：长按他人消息（spec/reports/create target_type=message，服务端冻结快照）
+    var reportTarget by remember { mutableStateOf<GroupMessageItem?>(null) }
+    var reportSubmitting by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -370,6 +376,11 @@ fun GroupChatScreen(onBack: () -> Unit) {
                         GroupMessageRow(
                             message = message,
                             isMine = message.sender.userId == myUserId,
+                            onLongPressReport = if (message.sender.userId != myUserId && message.recalledAt == null && message.type != "system") {
+                                { reportTarget = message }
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -439,6 +450,32 @@ fun GroupChatScreen(onBack: () -> Unit) {
                 loading = sending,
             )
         }
+    }
+
+    reportTarget?.let { target ->
+        ReportDialog(
+            title = "举报消息",
+            submitting = reportSubmitting,
+            onDismiss = { if (!reportSubmitting) reportTarget = null },
+            onSubmit = { reason ->
+                if (reportSubmitting) return@ReportDialog
+                reportSubmitting = true
+                scope.launch {
+                    when (val result = AppContainer.reportsRepository.create("message", target.messageId, reason)) {
+                        is ApiResult.Ok -> {
+                            reportTarget = null
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    reportSubmitting = false
+                }
+            },
+        )
     }
 }
 
@@ -532,7 +569,11 @@ private fun GroupChatHeader(
 
 /** 群聊消息行：系统/撤回消息居中；他人消息带 22dp 头像 + 昵称，自己消息右对齐。 */
 @Composable
-private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
+private fun GroupMessageRow(
+    message: GroupMessageItem,
+    isMine: Boolean,
+    onLongPressReport: (() -> Unit)? = null,
+) {
     val colors = HotSpotTheme.colors
     if (message.type == "system" || message.recalledAt != null) {
         Text(
@@ -578,6 +619,13 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
                         },
                     )
                     .background(if (isMine) colors.accent else colors.island)
+                    .then(
+                        if (onLongPressReport != null) {
+                            Modifier.combinedClickable(onClick = {}, onLongClick = onLongPressReport)
+                        } else {
+                            Modifier
+                        },
+                    )
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url

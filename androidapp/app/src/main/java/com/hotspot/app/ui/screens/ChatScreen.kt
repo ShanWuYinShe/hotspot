@@ -5,6 +5,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
@@ -56,6 +58,7 @@ import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
@@ -92,6 +95,9 @@ fun ChatScreen(onBack: () -> Unit) {
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
+    // 消息举报：长按他人消息弹出（spec/reports/create target_type=message，服务端冻结快照）
+    var reportTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
+    var reportSubmitting by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -277,6 +283,11 @@ fun ChatScreen(onBack: () -> Unit) {
                         MessageBubble(
                             message = message,
                             isMine = message.sender.userId == myUserId,
+                            onLongPressReport = if (message.sender.userId != myUserId && message.recalledAt == null) {
+                                { reportTarget = message }
+                            } else {
+                                null
+                            },
                         )
                     }
                 }
@@ -334,6 +345,32 @@ fun ChatScreen(onBack: () -> Unit) {
             )
         }
     }
+
+    reportTarget?.let { target ->
+        ReportDialog(
+            title = "举报消息",
+            submitting = reportSubmitting,
+            onDismiss = { if (!reportSubmitting) reportTarget = null },
+            onSubmit = { reason ->
+                if (reportSubmitting) return@ReportDialog
+                reportSubmitting = true
+                scope.launch {
+                    when (val result = AppContainer.reportsRepository.create("message", target.messageId, reason)) {
+                        is ApiResult.Ok -> {
+                            reportTarget = null
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    reportSubmitting = false
+                }
+            },
+        )
+    }
 }
 
 private fun mergePrivateMessage(
@@ -346,6 +383,7 @@ private fun mergePrivateMessage(
 private fun MessageBubble(
     message: PrivateMessageItem,
     isMine: Boolean,
+    onLongPressReport: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -372,6 +410,13 @@ private fun MessageBubble(
                         },
                     )
                     .background(if (isMine) colors.accent else colors.island)
+                    .then(
+                        if (onLongPressReport != null) {
+                            Modifier.combinedClickable(onClick = {}, onLongClick = onLongPressReport)
+                        } else {
+                            Modifier
+                        },
+                    )
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url
