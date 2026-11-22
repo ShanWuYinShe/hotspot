@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hotspot/backend-go/internal/platform/aftercommit"
+	"strings"
 	"time"
 
 	"hotspot/backend-go/internal/modules/users"
@@ -73,6 +74,68 @@ type Service struct {
 	// tx 事务执行器（bootstrap/NewRuntime 注入）：陌生人配额的检查与消息写入
 	// 须在同一事务内经咨询锁串行化；nil（测试）时 fn 直接执行。
 	tx persistence.TxRunner
+	// mediaURLSigner 把聊天媒体的存储 key 签成短时读 URL（bootstrap 注入
+	// media.Service）；nil（测试/降级）时保留存储 key，行为与旧版一致。
+	mediaURLSigner mediaURLSigner
+}
+
+// mediaURLSigner 是 media 模块读 URL 签名能力的最小接口（避免模块间直接依赖）。
+type mediaURLSigner interface {
+	PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error)
+}
+
+// chatMediaReadTTL 与前端/客户端图片缓存窗口对齐：签名 URL 仅用于即时展示，
+// 客户端不得持久化（spec api_spec_media.md「媒体读取」）。
+const chatMediaReadTTL = 15 * time.Minute
+
+// SetMediaURLSigner 注入聊天媒体读 URL 签名器（bootstrap 装配时调用一次）。
+func (s *Service) SetMediaURLSigner(signer mediaURLSigner) { s.mediaURLSigner = signer }
+
+// signMediaURL 把存储 key 换成短时签名读 URL；签名失败保留原值（客户端按加载失败处理），
+// 不阻塞历史/发送主流程。已是 http(s) 绝对 URL 时幂等返回。
+func (s *Service) signMediaURL(ctx context.Context, storageKey string) string {
+	if s.mediaURLSigner == nil || storageKey == "" {
+		return storageKey
+	}
+	if strings.HasPrefix(storageKey, "http://") || strings.HasPrefix(storageKey, "https://") {
+		return storageKey
+	}
+	signed, err := s.mediaURLSigner.PresignGet(ctx, storageKey, chatMediaReadTTL)
+	if err != nil {
+		observability.FromContext(ctx).Warn("privatemessages.sign_media_url failed", "error", err)
+		return storageKey
+	}
+	return signed
+}
+
+func (s *Service) signMediaModel(ctx context.Context, media *MessageMedia) {
+	if media == nil {
+		return
+	}
+	media.URL = s.signMediaURL(ctx, media.URL)
+	if media.ThumbnailURL != nil && *media.ThumbnailURL != "" {
+		thumbnail := s.signMediaURL(ctx, *media.ThumbnailURL)
+		media.ThumbnailURL = &thumbnail
+	}
+}
+
+func (s *Service) signMediaItems(ctx context.Context, items []PrivateMessageItem) {
+	for i := range items {
+		s.signMediaModel(ctx, items[i].Media)
+	}
+}
+
+// signMediaMap 处理 WS 事件/发送响应中的动态 media 对象（键集合与 spec MessageMedia 一致）。
+func (s *Service) signMediaMap(ctx context.Context, media map[string]any) {
+	if media == nil {
+		return
+	}
+	if url, ok := media["url"].(string); ok {
+		media["url"] = s.signMediaURL(ctx, url)
+	}
+	if thumbnail, ok := media["thumbnail_url"].(string); ok && thumbnail != "" {
+		media["thumbnail_url"] = s.signMediaURL(ctx, thumbnail)
+	}
 }
 
 // SetTxRunner 注入事务执行器（装配时调用一次）。配额检查与 repo.Send 共享
@@ -150,6 +213,13 @@ func (r *Runtime) SetShareValidator(v shareValidator) {
 func (r *Runtime) SetReactionsSource(src MessageReactionsSource) {
 	if svc, ok := r.readService.(*Service); ok {
 		svc.SetReactionsSource(src)
+	}
+}
+
+// SetMediaURLSigner 注入聊天媒体读 URL 签名器（bootstrap 装配，media.Service 实现）。
+func (r *Runtime) SetMediaURLSigner(signer mediaURLSigner) {
+	if svc, ok := r.readService.(*Service); ok {
+		svc.SetMediaURLSigner(signer)
 	}
 }
 
@@ -286,6 +356,7 @@ func (s *Service) History(ctx context.Context, req ListPrivateMessagesRequest) (
 	if err != nil {
 		return PaginatedMessages{}, err
 	}
+	s.signMediaItems(ctx, result.Items)
 	s.attachReactions(ctx, result.Items)
 	return result, nil
 }
@@ -296,13 +367,19 @@ func (s *Service) Recent(ctx context.Context, targetUserID string, limit int, de
 	if err != nil {
 		return PaginatedMessages{}, err
 	}
+	s.signMediaItems(ctx, result.Items)
 	s.attachReactions(ctx, result.Items)
 	return result, nil
 }
 
 func (s *Service) Last(ctx context.Context, targetUserID string, deletedAfter *time.Time) (*PrivateMessageItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.Last(ctx, principal.UserID, targetUserID, deletedAfter)
+	item, err := s.repo.Last(ctx, principal.UserID, targetUserID, deletedAfter)
+	if err != nil || item == nil {
+		return item, err
+	}
+	s.signMediaModel(ctx, item.Media)
+	return item, nil
 }
 
 func (s *Service) UnreadCount(ctx context.Context, targetUserID string, deletedAfter *time.Time) (int, error) {
@@ -314,7 +391,14 @@ func (s *Service) UnreadCount(ctx context.Context, targetUserID string, deletedA
 // 当前用户自己的会话，越权 key 查不到任何行，天然无泄露面）。
 func (s *Service) LastByChatKeys(ctx context.Context, chatKeys []string, boundaries map[string]*time.Time) (map[string]PrivateMessageItem, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
-	return s.repo.LastByChatKeys(ctx, principal.UserID, chatKeys, boundaries)
+	items, err := s.repo.LastByChatKeys(ctx, principal.UserID, chatKeys, boundaries)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range items {
+		s.signMediaModel(ctx, item.Media)
+	}
+	return items, nil
 }
 
 // UnreadCountsByChatKeys 会话列表批量读（viewer 经 principal 解析）。
@@ -591,6 +675,7 @@ func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) ma
 	if err != nil || !ok {
 		return nil
 	}
+	s.signMediaMap(ctx, info)
 	return info
 }
 
