@@ -102,8 +102,11 @@ fun MapScreen(
     var mode by remember { mutableStateOf("empty") }
     var heat by remember { mutableStateOf<List<MapHeatBucket>>(emptyList()) }
     var hotspots by remember { mutableStateOf<List<MapHotspotItem>>(emptyList()) }
-    var loading by remember { mutableStateOf(false) }
+    // 初始即 loading：默认浏览位置/首次视口数据回来前不要先闪一帧 empty 态。
+    var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    // 失败重试只 bump 该 key：直接赋 dataTypeIndex 同值不触发重组，重试会原地踏步。
+    var fetchRetryKey by remember { mutableIntStateOf(0) }
     var selected by remember { mutableStateOf<MapHotspotItem?>(null) }
 
     val filters = listOf("全部", "用户", "群组", "瞬间")
@@ -123,11 +126,13 @@ fun MapScreen(
 
     LaunchedEffect(Unit) { loadLocation() }
 
-    LaunchedEffect(bounds, dataTypeIndex) {
+    LaunchedEffect(bounds, dataTypeIndex, fetchRetryKey) {
         val current = bounds ?: return@LaunchedEffect
-        delay(MAP_FETCH_DEBOUNCE_MS)
+        // 防抖窗口内也保持 loading 并清掉旧错误：否则首次进入/切换筛选会在 250ms 内
+        // 误显示 empty 空态，失败重试时错误卡也会滞留到下一次响应。
         loading = true
         error = null
+        delay(MAP_FETCH_DEBOUNCE_MS)
         when (val result = repo.mapCanvas(current, dataTypes[dataTypeIndex])) {
             is ApiResult.Ok -> {
                 val response = result.data
@@ -259,7 +264,7 @@ fun MapScreen(
                 )
                 error != null -> ErrorState(
                     message = error ?: "地图加载失败",
-                    onRetry = { dataTypeIndex = dataTypeIndex },
+                    onRetry = { fetchRetryKey++ },
                     modifier = Modifier.align(Alignment.Center),
                 )
                 !loading && mode == "empty" -> SystemCard(

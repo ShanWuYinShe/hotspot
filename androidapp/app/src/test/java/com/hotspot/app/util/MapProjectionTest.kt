@@ -49,6 +49,26 @@ class MapProjectionTest {
     }
 
     @Test
+    fun longitudeBoundsStayWithinSpecRange() {
+        // 贴近日期变更线时经度必须夹在 spec 允许的 [-180,180]，否则 map/canvas 会拒绝越界视口。
+        val nearEast = MapProjection.boundsOf(
+            GeoPoint(latitude = 0.0, longitude = 179.99),
+            spanLat = 0.05,
+            spanLng = 0.0675,
+        )
+        assertEquals(180.0, nearEast.east, 1e-9)
+        assertTrue(nearEast.west <= nearEast.east)
+
+        val nearWest = MapProjection.boundsOf(
+            GeoPoint(latitude = 0.0, longitude = -179.99),
+            spanLat = 0.05,
+            spanLng = 0.0675,
+        )
+        assertEquals(-180.0, nearWest.west, 1e-9)
+        assertTrue(nearWest.east >= nearWest.west)
+    }
+
+    @Test
     fun latitudeIsClampedWhenPanningFarNorth() {
         val moved = MapProjection.panCenter(center, dxPx = 0f, dyPx = 100000f, width = 400f, height = 300f, spanLat = spanLat, spanLng = spanLng)
         assertTrue(moved.latitude <= 85.0)

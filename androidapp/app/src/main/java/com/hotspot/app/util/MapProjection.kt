@@ -14,8 +14,10 @@ object MapProjection {
         return MapBounds(
             north = (center.latitude + halfLat).coerceAtMost(90.0),
             south = (center.latitude - halfLat).coerceAtLeast(-90.0),
-            east = center.longitude + halfLng,
-            west = center.longitude - halfLng,
+            // spec 约定 bounds 经度必须在 [-180,180] 且不跨日期变更线（跨线由客户端拆分）；
+            // 贴近 ±180 时先夹住边界，避免把越界视口发给服务端被拒。
+            east = (center.longitude + halfLng).coerceAtMost(180.0),
+            west = (center.longitude - halfLng).coerceAtLeast(-180.0),
         )
     }
 
