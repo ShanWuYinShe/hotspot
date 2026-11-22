@@ -62,3 +62,31 @@ func TestSignMediaKeepsStorageKeyWithoutSignerOrOnError(t *testing.T) {
 		t.Fatalf("sign error must keep key, got %q", item[0].Media.URL)
 	}
 }
+
+func TestServiceHistorySignsMediaURL(t *testing.T) {
+	repo := &stubMsgRepo{histResult: PaginatedMessages{Items: []PrivateMessageItem{{
+		Media: &MessageMedia{URL: "uploads/u1/a.png"},
+	}}}}
+	svc := NewServiceWithDeps(repo, &stubUserReader{})
+	svc.SetMediaURLSigner(&stubMediaURLSigner{})
+	result, err := svc.History(context.Background(), ListPrivateMessagesRequest{})
+	if err != nil {
+		t.Fatalf("history error: %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].Media.URL != "https://cdn.example.com/uploads/u1/a.png" {
+		t.Fatalf("signed media = %#v", result.Items)
+	}
+}
+
+func TestServiceLastSignsMediaURL(t *testing.T) {
+	repo := &stubMsgRepo{lastResult: &PrivateMessageItem{Media: &MessageMedia{URL: "uploads/u1/b.png"}}}
+	svc := NewServiceWithDeps(repo, &stubUserReader{})
+	svc.SetMediaURLSigner(&stubMediaURLSigner{})
+	item, err := svc.Last(context.Background(), "u2", nil)
+	if err != nil || item == nil {
+		t.Fatalf("last error: %v", err)
+	}
+	if item.Media.URL != "https://cdn.example.com/uploads/u1/b.png" {
+		t.Fatalf("signed media = %q", item.Media.URL)
+	}
+}
