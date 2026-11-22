@@ -18,9 +18,14 @@ import com.hotspot.app.data.repo.NearbyRepository
 import com.hotspot.app.data.repo.NotifyRepository
 import com.hotspot.app.data.repo.ProfileRepository
 import com.hotspot.app.data.repo.ReportsRepository
+import com.hotspot.app.data.realtime.HotSpotRealtimeClient
 import com.hotspot.app.data.repo.SearchRepository
 import com.hotspot.app.data.repo.SystemRepository
 import com.hotspot.app.ui.theme.ThemeController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * 应用级依赖容器（无 DI 框架）：Application 启动时初始化一次，Compose 层直接取用。
@@ -60,6 +65,13 @@ object AppContainer {
     lateinit var mediaRepository: MediaRepository
         private set
 
+    /** WebSocket 实时增量通道（登录态驱动；聊天页/消息列表消费 events）。 */
+    lateinit var realtimeClient: HotSpotRealtimeClient
+        private set
+
+    /** 应用级协程作用域：WebSocket 重连/心跳等常驻任务。 */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     @Volatile
     private var initialized = false
 
@@ -84,6 +96,11 @@ object AppContainer {
             reportsRepository = ReportsRepository(apiClient)
             momentsRepository = MomentsRepository(apiClient)
             mediaRepository = MediaRepository(apiClient)
+            realtimeClient = HotSpotRealtimeClient(tokenStore, authRepository, appScope)
+            // 登录态驱动连接生命周期：登出/会话失效自动断开，登录后自动连接并恢复订阅。
+            appScope.launch {
+                tokenStore.session.collect { session -> realtimeClient.onSessionChanged(session) }
+            }
             initialized = true
         }
     }

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.PrivateMessageItem
+import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.ChatTarget
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
@@ -51,7 +52,7 @@ import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.launch
 
 /**
- * 私聊：首版只读历史消息 + 简单文本发送（WebSocket 实时推送 / 已读回执 / 富媒体为登记 TODO）。
+ * 私聊：历史消息 + 文本发送 + WebSocket 实时增量（新消息/编辑/撤回，进入会话订阅对端频道）。
  * 历史消息按 sent_at 倒序返回，reverseLayout = true 让最新消息贴底（对齐前端「短会话底对齐」）。
  */
 @Composable
@@ -89,6 +90,57 @@ fun ChatScreen(onBack: () -> Unit) {
         if (messages.isNotEmpty() && !readMarked) {
             readMarked = true
             chatRepository.markPrivateRead(targetUserId)
+        }
+    }
+
+    // WebSocket 实时增量（spec/api_spec_websocket.md）：进入会话订阅对端 user 频道，离开时取消。
+    // 新消息按 message_id 去重合并；收到对端新消息时补一次 mark_read。
+    LaunchedEffect(targetUserId) {
+        val realtime = AppContainer.realtimeClient
+        realtime.subscribeUsers(listOf(targetUserId))
+        try {
+            realtime.events.collect { event ->
+                when (event) {
+                    is RealtimeEvent.PrivateMessageNew -> {
+                        val message = event.message
+                        val fromPeer = message.sender.userId == targetUserId
+                        val selfEcho = message.sender.userId == myUserId && event.targetUserId == targetUserId
+                        if (fromPeer || selfEcho) {
+                            messages = mergePrivateMessage(messages, message)
+                            if (listState.firstVisibleItemIndex <= 1) {
+                                listState.animateScrollToItem(0)
+                            }
+                            if (fromPeer) {
+                                scope.launch { chatRepository.markPrivateRead(targetUserId) }
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.PrivateMessageEdited -> {
+                        messages = messages.map { message ->
+                            if (message.messageId == event.messageId) {
+                                message.copy(content = event.content, editedAt = event.editedAt)
+                            } else {
+                                message
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.PrivateMessageRecalled -> {
+                        messages = messages.map { message ->
+                            if (message.messageId == event.messageId) {
+                                message.copy(recalledAt = event.recalledAt)
+                            } else {
+                                message
+                            }
+                        }
+                    }
+
+                    else -> Unit
+                }
+            }
+        } finally {
+            realtime.unsubscribeUsers(listOf(targetUserId))
         }
     }
 
@@ -181,6 +233,12 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 }
 
+private fun mergePrivateMessage(
+    current: List<PrivateMessageItem>,
+    incoming: PrivateMessageItem,
+): List<PrivateMessageItem> = (current.filterNot { it.messageId == incoming.messageId } + incoming)
+    .sortedByDescending { it.sentAt }
+
 @Composable
 private fun MessageBubble(
     message: PrivateMessageItem,
@@ -213,7 +271,9 @@ private fun MessageBubble(
                     .background(if (isMine) colors.accent else colors.island)
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
-                val text = when (message.type) {
+                val text = when {
+                    message.recalledAt != null -> "消息已撤回"
+                    else -> when (message.type) {
                     "text" -> message.content ?: ""
                     "image" -> "[图片]"
                     "video" -> "[视频]"
@@ -221,6 +281,7 @@ private fun MessageBubble(
                     "file" -> "[文件]"
                     "share" -> "[分享]"
                     else -> message.content ?: "[消息]"
+                    }
                 }
                 Text(
                     text = text,
