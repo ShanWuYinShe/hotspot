@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +62,9 @@ import com.hotspot.app.ui.components.hotSpotFocusRing
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -72,8 +75,8 @@ import kotlinx.coroutines.launch
  * - 发送 group_messages/send：MUST 幂等，ApiClient 自动携带 Idempotency-Key；
  * - 非群成员返回 10200 → 展示设计稿空态文案（加入后才能查看群消息）。
  *
- * WebSocket 实时：新消息/编辑/撤回/已读数增量（进入群聊订阅 group 频道，离开取消）；
- * 登记 TODO：@ 提及、输入中提示、富媒体消息。
+ * WebSocket 实时：新消息/编辑/撤回/已读数增量 + 输入中提示（进入群聊订阅 group 频道，离开取消）；
+ * 登记 TODO：@ 提及、富媒体消息。
  */
 @Composable
 fun GroupChatScreen(onBack: () -> Unit) {
@@ -83,9 +86,13 @@ fun GroupChatScreen(onBack: () -> Unit) {
     val target = GroupChatTarget
     val groupId = target.groupId
     val scope = rememberCoroutineScope()
+    val realtime = AppContainer.realtimeClient
     val listState = rememberLazyListState()
 
     var messages by remember { mutableStateOf<List<GroupMessageItem>>(emptyList()) }
+    var typingUserIds by remember { mutableStateOf<List<String>>(emptyList()) }
+    var typingVersion by remember { mutableStateOf(0) }
+    var lastTypingSentAt by remember { mutableStateOf(0L) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var notMember by remember { mutableStateOf(false) }
@@ -113,6 +120,17 @@ fun GroupChatScreen(onBack: () -> Unit) {
 
     LaunchedEffect(groupId) { reload() }
 
+    // 输入中成员 6 秒内无新事件自动清空（任一成员继续输入会重置计时）。
+    LaunchedEffect(typingVersion) {
+        if (typingUserIds.isNotEmpty()) {
+            delay(ChatTypingRules.TYPING_AUTO_CLEAR_MS)
+            typingUserIds = emptyList()
+        }
+    }
+    DisposableEffect(groupId) {
+        onDispose { realtime.sendGroupTyping(groupId, false) }
+    }
+
     // 打开群聊即视为已读（对齐 Web：会话停在最新消息近底部时标记已读）；
     // group_messages/mark_read 幂等，失败静默、下次进入重试，不阻塞消息展示。
     LaunchedEffect(messages.isNotEmpty(), readMarked) {
@@ -124,13 +142,17 @@ fun GroupChatScreen(onBack: () -> Unit) {
 
     // WebSocket 实时增量：进入群聊订阅 group 频道，离开取消；新消息去重合并并补 mark_read。
     LaunchedEffect(groupId) {
-        val realtime = AppContainer.realtimeClient
         realtime.subscribeGroups(listOf(groupId))
         try {
             realtime.events.collect { event ->
                 when (event) {
                     is RealtimeEvent.GroupMessageNew -> {
                         if (event.groupId == groupId) {
+                            val senderId = event.message.sender.userId
+                            if (typingUserIds.contains(senderId)) {
+                                typingUserIds = typingUserIds - senderId
+                                typingVersion++
+                            }
                             messages = mergeGroupMessage(messages, event.message)
                             if (listState.firstVisibleItemIndex <= 1) {
                                 listState.animateScrollToItem(0)
@@ -165,6 +187,18 @@ fun GroupChatScreen(onBack: () -> Unit) {
                         }
                     }
 
+                    is RealtimeEvent.GroupTyping -> {
+                        val actorId = event.actor.userId
+                        if (event.groupId == groupId && actorId.isNotBlank() && actorId != myUserId) {
+                            typingUserIds = if (event.isTyping) {
+                                (typingUserIds + actorId).distinct()
+                            } else {
+                                typingUserIds - actorId
+                            }
+                            typingVersion++
+                        }
+                    }
+
                     is RealtimeEvent.GroupMessageReadCountUpdated -> {
                         if (event.groupId == groupId) {
                             messages = messages.map { message ->
@@ -185,6 +219,26 @@ fun GroupChatScreen(onBack: () -> Unit) {
         }
     }
 
+    fun onInputChange(value: String) {
+        input = value
+        val now = System.currentTimeMillis()
+        if (value.isBlank()) {
+            realtime.sendGroupTyping(groupId, false)
+            lastTypingSentAt = 0L
+        } else if (now - lastTypingSentAt >= ChatTypingRules.TYPING_THROTTLE_MS) {
+            realtime.sendGroupTyping(groupId, true)
+            lastTypingSentAt = now
+        }
+    }
+
+    // 停止输入 3 秒后发 is_typing=false（输入变化会取消并重启该计时）。
+    LaunchedEffect(input) {
+        if (input.isBlank()) return@LaunchedEffect
+        delay(ChatTypingRules.TYPING_IDLE_STOP_MS)
+        realtime.sendGroupTyping(groupId, false)
+        lastTypingSentAt = 0L
+    }
+
     fun send() {
         val text = input.trim()
         if (text.isEmpty() || sending) return
@@ -193,6 +247,8 @@ fun GroupChatScreen(onBack: () -> Unit) {
             when (val result = chatRepository.sendGroupTextMessage(groupId, text)) {
                 is ApiResult.Ok -> {
                     input = ""
+                    realtime.sendGroupTyping(groupId, false)
+                    lastTypingSentAt = 0L
                     reload()
                     listState.animateScrollToItem(0)
                 }
@@ -202,12 +258,17 @@ fun GroupChatScreen(onBack: () -> Unit) {
         }
     }
 
+    val typingHint = ChatTypingRules.buildGroupTypingHint(typingUserIds) { userId ->
+        messages.lastOrNull { it.sender.userId == userId }?.sender?.nickname
+    }
+
     Column(Modifier.fillMaxSize()) {
         GroupChatHeader(
             name = target.name.ifBlank { "群聊" },
             avatarUrl = target.avatarUrl,
             membersCount = target.membersCount,
             onlineCount = target.onlineCount,
+            typingHint = typingHint,
             onBack = {
                 GroupChatTarget.clear()
                 onBack()
@@ -263,7 +324,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
         ) {
             SystemInput(
                 value = input,
-                onValueChange = { input = it },
+                onValueChange = { onInputChange(it) },
                 placeholder = "发消息…",
                 modifier = Modifier.weight(1f),
             )
@@ -287,6 +348,7 @@ private fun GroupChatHeader(
     avatarUrl: String?,
     membersCount: Int,
     onlineCount: Int,
+    typingHint: String = "",
     onBack: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -357,10 +419,11 @@ private fun GroupChatHeader(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "$membersCount 位成员",
+                text = if (typingHint.isNotBlank()) typingHint else "$membersCount 位成员",
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.textSecondary,
+                color = if (typingHint.isNotBlank()) colors.accent else colors.textSecondary,
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
