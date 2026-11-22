@@ -4,29 +4,35 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,441 +42,638 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.location.BrowseAnchor
 import com.hotspot.app.data.model.GeoPoint
-import com.hotspot.app.data.model.MapBounds
-import com.hotspot.app.data.model.MapCanvasResponse
-import com.hotspot.app.data.model.MapHeatBucket
 import com.hotspot.app.data.model.MapHotspotItem
-import com.hotspot.app.ui.components.Avatar
-import com.hotspot.app.ui.components.ButtonSize
-import com.hotspot.app.ui.components.ButtonVariant
-import com.hotspot.app.ui.components.ErrorState
-import com.hotspot.app.ui.components.LoadingState
-import com.hotspot.app.ui.components.PageHeader
-import com.hotspot.app.ui.components.SystemButton
-import com.hotspot.app.ui.components.SystemCard
-import com.hotspot.app.ui.components.TabPills
-import com.hotspot.app.ui.components.hotSpotFocusRing
-import com.hotspot.app.ui.theme.Dimens
+import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.theme.HotSpotTextStyles
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.ui.theme.Tokens
+import com.hotspot.app.util.MapPlaceSearch
 import com.hotspot.app.util.MapProjection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 /**
- * 附近地图（原生渲染；设计稿无独立地图画板，按 Web 自研地图契约实现：不接第三方 SDK，
- * 经纬度按视口 bounds 线性投影到画布）。
+ * 地图选点（Figma 87:1866「地图选点 · /map」，390×844）：
+ * 全屏底图 + 顶部返回/筛选浮动条 + 右侧缩放/回中/图层控件 + 中心定位针 +
+ * 底部选点面板（搜索地点/最近使用/设为浏览锚点）。
  *
- * 数据源：spec/api_spec_public.md → /public/v1/map/canvas（heatmap / hotspots / empty 三态互斥）；
- * 视口由默认浏览位置（client_config.defaults.default_location）+ 缩放跨度决定，拖动/捏合后
- * 250ms 防抖重新拉取；筛选 data_type = all/user/group/moment。
+ * 交互：搜索当前视口附近的地点候选（map/canvas hotspots，支持「纬度,经度」坐标），
+ * 选择后中心点/名称更新并写入最近使用；「将地图中心设为浏览锚点」持久化本地锚点，
+ * 附近页按它计算距离与推荐。
  */
 @Composable
 fun MapScreen(
     onBack: () -> Unit,
-    onOpenUser: (String) -> Unit,
-    onOpenGroup: (String) -> Unit,
-    onOpenMoment: (String) -> Unit,
+    onAnchorSaved: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val repo = AppContainer.nearbyRepository
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
 
     var center by remember { mutableStateOf<GeoPoint?>(null) }
-    var locationName by remember { mutableStateOf<String?>(null) }
-    var locationError by remember { mutableStateOf<String?>(null) }
-    var spanLat by remember { mutableDoubleStateOf(DEFAULT_SPAN_LAT) }
-    var dataTypeIndex by remember { mutableIntStateOf(0) }
-    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var locationLabel by remember { mutableStateOf("") }
+    var initialLoading by remember { mutableStateOf(true) }
+    var initialError by remember { mutableStateOf<String?>(null) }
 
-    var mode by remember { mutableStateOf("empty") }
-    var heat by remember { mutableStateOf<List<MapHeatBucket>>(emptyList()) }
-    var hotspots by remember { mutableStateOf<List<MapHotspotItem>>(emptyList()) }
-    // 初始即 loading：默认浏览位置/首次视口数据回来前不要先闪一帧 empty 态。
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    // 失败重试只 bump 该 key：直接赋 dataTypeIndex 同值不触发重组，重试会原地踏步。
-    var fetchRetryKey by remember { mutableIntStateOf(0) }
-    var selected by remember { mutableStateOf<MapHotspotItem?>(null) }
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<PlaceCandidate>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var filterIndex by remember { mutableIntStateOf(0) }
+    var filterMenuOpen by remember { mutableStateOf(false) }
+    var recent by remember { mutableStateOf(AppContainer.browseAnchorStore.recent()) }
+    var zoom by remember { mutableFloatStateOf(1f) }
+    var warmLayer by remember { mutableStateOf(false) }
+    var layerMenuOpen by remember { mutableStateOf(false) }
 
     val filters = listOf("全部", "用户", "群组", "瞬间")
-    val dataTypes = listOf(null, "user", "group", "moment")
-    val bounds: MapBounds? = center?.let { MapProjection.boundsOf(it, spanLat, spanLat * LONGITUDE_SPAN_RATIO) }
+    val filterTypes = listOf(null, "user", "group", "moment")
 
-    suspend fun loadLocation() {
-        locationError = null
+    suspend fun loadInitial() {
+        initialError = null
+        initialLoading = true
         val location = AppContainer.defaultLocation()
         if (location?.point == null) {
-            locationError = "无法获取默认浏览位置，请稍后重试"
-            return
+            initialError = "无法获取默认浏览位置，请稍后重试"
+        } else {
+            center = location.point
+            locationLabel = location.locationName.ifBlank { "默认浏览位置" }
         }
-        center = location.point
-        locationName = location.locationName
+        initialLoading = false
     }
 
-    LaunchedEffect(Unit) { loadLocation() }
+    LaunchedEffect(Unit) { loadInitial() }
 
-    LaunchedEffect(bounds, dataTypeIndex, fetchRetryKey) {
-        val current = bounds ?: return@LaunchedEffect
-        // 防抖窗口内也保持 loading 并清掉旧错误：否则首次进入/切换筛选会在 250ms 内
-        // 误显示 empty 空态，失败重试时错误卡也会滞留到下一次响应。
-        loading = true
-        error = null
-        delay(MAP_FETCH_DEBOUNCE_MS)
-        when (val result = repo.mapCanvas(current, dataTypes[dataTypeIndex])) {
-            is ApiResult.Ok -> {
-                val response = result.data
-                mode = response.mode
-                heat = response.heatmap?.items.orEmpty()
-                hotspots = response.hotspots?.items.orEmpty()
-                selected = null
-            }
-            is ApiResult.Err -> error = result.error.userMessage
+    // 搜索候选：视口附近 hotspots（map/canvas 仅返回聚合或明细之一；0.3° 视口通常为 hotspots）。
+    LaunchedEffect(query, filterIndex, center) {
+        val keyword = query.trim()
+        val base = center
+        if (keyword.isBlank() || base == null) {
+            results = emptyList()
+            searching = false
+            return@LaunchedEffect
         }
-        loading = false
-    }
-
-    Column(Modifier.fillMaxSize().background(colors.page)) {
-        PageHeader(
-            title = "附近地图",
-            subtitle = locationName ?: "默认浏览位置",
-            onBack = onBack,
+        delay(SEARCH_DEBOUNCE_MS)
+        searching = true
+        val candidates = mutableListOf<PlaceCandidate>()
+        MapPlaceSearch.parseCoordinate(keyword)?.let { point ->
+            candidates += PlaceCandidate(
+                label = "使用坐标 " + MapPlaceSearch.formatCoordinate(point),
+                subtitle = "自定义坐标",
+                point = point,
+                objectType = "coordinate",
+            )
+        }
+        val bounds = MapProjection.boundsOf(
+            center = base,
+            spanLat = SEARCH_VIEWPORT_SPAN / zoom,
+            spanLng = SEARCH_VIEWPORT_SPAN * 1.35 / zoom,
         )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .onSizeChanged { canvasSize = it }
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        val currentCenter = center ?: return@detectTransformGestures
-                        if (canvasSize.width > 0 && canvasSize.height > 0) {
-                            center = MapProjection.panCenter(
-                                center = currentCenter,
-                                dxPx = pan.x,
-                                dyPx = pan.y,
-                                width = canvasSize.width.toFloat(),
-                                height = canvasSize.height.toFloat(),
-                                spanLat = spanLat,
-                                spanLng = spanLat * LONGITUDE_SPAN_RATIO,
-                            )
+        when (val response = repo.mapCanvas(bounds, filterTypes[filterIndex])) {
+            is ApiResult.Ok -> {
+                if (response.data.mode == "hotspots") {
+                    response.data.hotspots?.items.orEmpty()
+                        .filter { item -> item.matches(keyword) }
+                        .take(MAX_RESULTS)
+                        .forEach { item ->
+                            val point = item.location.point
+                            if (point != null) {
+                                candidates += item.toCandidate(point)
+                            }
                         }
-                        if (zoom != 1f) {
-                            spanLat = MapProjection.zoomedSpan(spanLat, zoom).first
-                        }
-                    }
-                },
+                }
+            }
+            is ApiResult.Err -> Unit
+        }
+        results = candidates
+        searching = false
+    }
+
+    fun selectCandidate(candidate: PlaceCandidate) {
+        center = candidate.point
+        locationLabel = if (candidate.objectType == "coordinate") "自定义位置" else candidate.label
+        // 选中后清空搜索词，回到「最近使用」展示刚选中的地点（与 Figma 空态/列表同一区域）。
+        query = ""
+        focusManager.clearFocus()
+        AppContainer.browseAnchorStore.addRecent(
+            BrowseAnchor(candidate.point.latitude, candidate.point.longitude, candidate.label),
+        )
+        recent = AppContainer.browseAnchorStore.recent()
+    }
+
+    fun saveAnchor() {
+        val point = center ?: return
+        val label = locationLabel.ifBlank { "自定义位置" }
+        AppContainer.setBrowseAnchor(BrowseAnchor(point.latitude, point.longitude, label))
+        onAnchorSaved()
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(colors.page)
+            .imePadding(),
+    ) {
+        // 底图：surface-page + 左侧淡蓝渐变（对齐 Figma MapTilesLayer + gradient overlay）。
+        Canvas(Modifier.fillMaxSize()) {
+            drawRect(colors.page)
+            if (warmLayer) {
+                drawRect(colors.ambient.glow1.copy(alpha = 0.5f))
+            }
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(colors.accent.copy(alpha = 0.03f), Color.Transparent),
+                    startX = 0f,
+                    endX = size.width * 0.65f,
+                ),
+            )
+        }
+
+        // 顶部浮动操作条：返回（42 圆钮）+ 右侧筛选胶囊（80×36）。
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 14.dp, end = 14.dp, top = 15.dp)
+                .height(42.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            MapBackdrop(
-                bounds = bounds,
-                heat = heat,
-                mode = mode,
+            MapGlassCircle(size = 42.dp, onClick = onBack) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_map_back),
+                    contentDescription = "返回",
+                    modifier = Modifier.size(15.dp),
+                    tint = colors.textSecondary,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            Box {
+                Row(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(36.dp)
+                        .shadow(3.dp, AppShapes.pill)
+                        .clip(AppShapes.pill)
+                        .background(colors.surface)
+                        .border(1.dp, colors.borderSubtle, AppShapes.pill)
+                        .clickable { filterMenuOpen = true },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_filter),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = colors.textSecondary,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "筛选",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.textPrimary,
+                    )
+                }
+                DropdownMenu(expanded = filterMenuOpen, onDismissRequest = { filterMenuOpen = false }) {
+                    filters.forEachIndexed { index, label ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = {
+                                filterIndex = index
+                                filterMenuOpen = false
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        // 右侧浮动控件：缩放（+/-）、回到默认位置、底图切换（图层）。
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 292.dp, end = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(
+                modifier = Modifier
+                    .width(42.dp)
+                    .height(82.dp)
+                    .shadow(4.dp, AppShapes.card)
+                    .clip(AppShapes.card)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, AppShapes.card),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clickable { zoom = (zoom + ZOOM_STEP).coerceAtMost(MAX_ZOOM) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_zoom_in),
+                        contentDescription = "放大地图",
+                        modifier = Modifier.size(16.dp),
+                        tint = colors.textSecondary,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clickable { zoom = (zoom - ZOOM_STEP).coerceAtLeast(MIN_ZOOM) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_zoom_out),
+                        contentDescription = "缩小地图",
+                        modifier = Modifier.size(16.dp),
+                        tint = colors.textSecondary,
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            MapGlassCircle(size = 42.dp, onClick = { scope.launch { loadInitial() } }) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_map_locate),
+                    contentDescription = "回到默认位置",
+                    modifier = Modifier.size(18.dp),
+                    tint = colors.textSecondary,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Box {
+                MapGlassCircle(size = 40.dp, onClick = { layerMenuOpen = true }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_layers),
+                        contentDescription = "切换底图",
+                        modifier = Modifier.size(16.dp),
+                        tint = colors.textSecondary,
+                    )
+                }
+                DropdownMenu(expanded = layerMenuOpen, onDismissRequest = { layerMenuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (warmLayer) "默认底图" else "暖色底图") },
+                        onClick = {
+                            warmLayer = !warmLayer
+                            layerMenuOpen = false
+                        },
+                    )
+                }
+            }
+        }
+
+        // 中心定位针（Figma ModernMapPin 36×50，针尖对准画布中心）。
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-41).dp)
+                .size(width = 36.dp, height = 50.dp),
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(R.drawable.map_pin),
+                contentDescription = "地图中心",
                 modifier = Modifier.fillMaxSize(),
             )
+        }
 
-            if (bounds != null && canvasSize.width > 0) {
-                val density = androidx.compose.ui.platform.LocalDensity.current.density
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    if (mode == "hotspots") {
-                        hotspots.forEach { item ->
-                            val point = item.location.point ?: return@forEach
-                            val (x, y) = MapProjection.project(
-                                point,
-                                bounds,
-                                canvasSize.width.toFloat(),
-                                canvasSize.height.toFloat(),
-                            )
-                            HotspotPin(
-                                item = item,
-                                selected = selected?.objectId == item.objectId,
-                                modifier = Modifier.offset {
-                                    IntOffset(
-                                        (x - PIN_SIZE_PX * density / 2).roundToInt(),
-                                        (y - PIN_SIZE_PX * density / 2).roundToInt(),
-                                    )
-                                },
-                                onClick = { selected = item },
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 视口中心 = 默认浏览位置/用户当前浏览位置：蓝色定位点（对齐 Web 我的位置蓝点）。
-            if (center != null) {
-                Box(Modifier.align(Alignment.Center).size(18.dp).clip(CircleShape).background(colors.accent.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(10.dp).clip(CircleShape).background(colors.accent).border(2.dp, Color.White, CircleShape))
-                }
-            }
-
-            // 顶部筛选 + 右侧控制
+        // 底部选点面板（318dp，Figma 87:3061/3062）：拖拽把手 + 搜索 + 最近使用 + CTA + 版权。
+        // 各元素按设计稿绝对坐标排布：把手 y8、搜索 y20、最近使用区 y67、CTA y201、说明 y251、版权 y266。
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .height(318.dp)
+                .shadow(24.dp, RoundedCornerShape(topStart = Tokens.Radius.sheet.dp, topEnd = Tokens.Radius.sheet.dp))
+                .clip(RoundedCornerShape(topStart = Tokens.Radius.sheet.dp, topEnd = Tokens.Radius.sheet.dp))
+                .background(colors.surface),
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 8.dp)
+                    .width(44.dp)
+                    .height(6.dp)
+                    .clip(AppShapes.pill)
+                    .background(colors.fieldBorderHover.copy(alpha = 0.7f)),
+            )
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
+                    .offset(y = 20.dp)
+                    .padding(horizontal = 16.dp)
                     .fillMaxWidth()
-                    .padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    .height(39.dp)
+                    .clip(AppShapes.pill)
+                    .background(colors.surface)
+                    .border(1.dp, colors.borderSubtle, AppShapes.pill)
+                    .padding(start = 15.dp, end = 15.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                TabPills(
-                    options = filters,
-                    selectedIndex = dataTypeIndex,
-                    onSelected = { dataTypeIndex = it },
-                    modifier = Modifier.fillMaxWidth(),
+                Icon(
+                    painter = painterResource(R.drawable.ic_map_search),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = colors.textSecondary,
                 )
-            }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = Spacing.lg),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                MapControlButton(R.drawable.ic_map_zoom_in, "放大地图") {
-                    spanLat = MapProjection.zoomedSpan(spanLat, 1.5f).first
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                MapControlButton(R.drawable.ic_map_zoom_out, "缩小地图") {
-                    spanLat = MapProjection.zoomedSpan(spanLat, 0.67f).first
-                }
-                Spacer(Modifier.height(Spacing.sm))
-                MapControlButton(R.drawable.ic_map_recenter, "回到默认位置") {
-                    scope.launch { loadLocation() }
-                    spanLat = DEFAULT_SPAN_LAT
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.weight(1f)) {
+                    if (query.isEmpty()) {
+                        Text(
+                            text = "搜索地点、地标或坐标",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = colors.textPrimary.copy(alpha = 0.55f),
+                        )
+                    }
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.textPrimary),
+                        cursorBrush = SolidColor(colors.accent),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
-            when {
-                locationError != null && center == null -> ErrorState(
-                    message = locationError ?: "加载失败",
-                    onRetry = { scope.launch { loadLocation() } },
-                    modifier = Modifier.align(Alignment.Center),
-                )
-                loading && heat.isEmpty() && hotspots.isEmpty() -> LoadingState(
-                    message = "正在加载地图…",
-                    modifier = Modifier.align(Alignment.Center),
-                )
-                error != null -> ErrorState(
-                    message = error ?: "地图加载失败",
-                    onRetry = { fetchRetryKey++ },
-                    modifier = Modifier.align(Alignment.Center),
-                )
-                !loading && mode == "empty" -> SystemCard(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
-                ) {
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 67.dp)
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .height(126.dp),
+            ) {
+                if (query.isNotBlank()) {
+                    SearchResultList(
+                        results = results,
+                        searching = searching,
+                        query = query,
+                        onSelect = { selectCandidate(it) },
+                    )
+                } else {
                     Text(
-                        text = "这片区域还没有可展示的内容",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "最近使用",
+                        style = MaterialTheme.typography.bodySmall,
                         color = colors.textPrimary,
                     )
+                    if (recent.isEmpty()) {
+                        Column(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(top = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.accentSoftBg),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_map_clock),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = colors.textSecondary,
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                "暂无最近记录",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = colors.textPrimary,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "搜索并选择地点后，会记录在这里",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = colors.textSecondary,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            Modifier
+                                .fillMaxSize()
+                                .padding(top = 8.dp),
+                        ) {
+                            items(recent) { anchor ->
+                                PlaceRow(
+                                    title = anchor.label,
+                                    subtitle = MapPlaceSearch.formatCoordinate(GeoPoint(anchor.latitude, anchor.longitude))
+                                        .takeIf { !anchor.label.contains(it) }
+                                        .orEmpty(),
+                                    onClick = {
+                                        center = GeoPoint(anchor.latitude, anchor.longitude)
+                                        locationLabel = anchor.label
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 201.dp)
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .clip(AppShapes.compact)
+                    .background(colors.accent)
+                    .clickable(enabled = center != null) { saveAnchor() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_cta_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = colors.textOnAccent,
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "拖动或缩小地图看看更大的范围",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = colors.textSecondary,
-                        modifier = Modifier.padding(top = Spacing.xs),
+                        text = "将地图中心设为浏览锚点",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.textOnAccent,
                     )
                 }
-                loading -> Text(
-                    text = "正在更新…",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.textSecondary,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 64.dp, end = Spacing.lg),
-                )
             }
+            Text(
+                text = "设置后，附近页按这里计算距离与推荐",
+                style = HotSpotTextStyles.micro,
+                color = colors.textSecondary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 251.dp)
+                    .fillMaxWidth(),
+            )
+            Text(
+                text = "示意底图",
+                style = HotSpotTextStyles.micro,
+                color = colors.textOnStatus,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(y = 266.dp)
+                    .padding(end = 14.dp)
+                    .clip(AppShapes.badge)
+                    .background(colors.scrim)
+                    .padding(horizontal = 7.dp, vertical = 2.dp),
+            )
+        }
 
-            selected?.let { item ->
-                HotspotDetailCard(
-                    item = item,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = Spacing.lg, vertical = Spacing.xl),
-                    onOpen = {
-                        when (item.objectType) {
-                            "user" -> onOpenUser(item.objectId)
-                            "group" -> onOpenGroup(item.objectId)
-                            else -> onOpenMoment(item.objectId)
-                        }
-                    },
-                )
-            }
+        if (initialLoading) {
+            Text(
+                text = "正在获取浏览锚点…",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.textSecondary,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+        if (initialError != null) {
+            Text(
+                text = initialError ?: "",
+                style = MaterialTheme.typography.bodyMedium,
+                color = colors.danger,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp),
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }
 
 @Composable
-private fun MapBackdrop(
-    bounds: MapBounds?,
-    heat: List<MapHeatBucket>,
-    mode: String,
-    modifier: Modifier = Modifier,
+private fun SearchResultList(
+    results: List<PlaceCandidate>,
+    searching: Boolean,
+    query: String,
+    onSelect: (PlaceCandidate) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
-    Canvas(modifier) {
-        drawRect(
-            brush = Brush.linearGradient(
-                colors = listOf(colors.ambient.sky, colors.ambient.horizon),
-                start = Offset.Zero,
-                end = Offset(size.width, size.height),
-            ),
+    when {
+        results.isNotEmpty() -> LazyColumn(Modifier.fillMaxSize()) {
+            items(results) { candidate ->
+                PlaceRow(
+                    title = candidate.label,
+                    subtitle = candidate.subtitle,
+                    onClick = { onSelect(candidate) },
+                )
+            }
+        }
+        searching -> Text("正在搜索…", style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
+        else -> Text(
+            "未找到与「" + query.take(12) + "」匹配的地点，可输入「纬度,经度」",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.textSecondary,
+            modifier = Modifier.padding(top = 6.dp),
         )
-        // 经纬网格：仅作空间参照，不做行政区概念（契约要求）。
-        val step = size.width / 6f
-        var x = 0f
-        while (x <= size.width) {
-            drawLine(colors.ambient.line.copy(alpha = 0.35f), Offset(x, 0f), Offset(x, size.height), 1f)
-            x += step
-        }
-        var y = 0f
-        while (y <= size.height) {
-            drawLine(colors.ambient.line.copy(alpha = 0.35f), Offset(0f, y), Offset(size.width, y), 1f)
-            y += step
-        }
-        if (mode != "heatmap" || bounds == null) return@Canvas
-        val maxCount = heat.maxOfOrNull { it.totalCount }?.coerceAtLeast(1) ?: 1
-        heat.forEach { bucket ->
-            val (px, py) = MapProjection.project(bucket.location, bounds, size.width, size.height)
-            val ratio = bucket.totalCount.toFloat() / maxCount
-            val radius = size.width * (0.05f + 0.12f * ratio)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(colors.markerMoment.copy(alpha = 0.10f + 0.22f * ratio), Color.Transparent),
-                    center = Offset(px, py),
-                    radius = radius,
-                ),
-                radius = radius,
-                center = Offset(px, py),
-            )
-            drawCircle(
-                color = colors.markerMoment.copy(alpha = 0.45f),
-                radius = 3.dp.toPx() + 4.dp.toPx() * ratio,
-                center = Offset(px, py),
-            )
-        }
     }
 }
 
 @Composable
-private fun HotspotPin(
-    item: MapHotspotItem,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
+private fun PlaceRow(title: String, subtitle: String, onClick: () -> Unit) {
     val colors = HotSpotTheme.colors
-    val (tint, icon) = when (item.objectType) {
-        "user" -> colors.markerUser to R.drawable.ic_nav_me
-        "group" -> colors.markerGroup to R.drawable.ic_row_groups
-        else -> colors.markerMoment to R.drawable.ic_nav_home
-    }
-    Box(
-        modifier = modifier
-            .size(if (selected) 44.dp else 36.dp)
-            .shadow(2.dp, CircleShape)
-            .clip(CircleShape)
-            .background(tint)
-            .border(2.dp, Color.White, CircleShape)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 42.dp)
             .clickable(onClick = onClick)
-            .hotSpotFocusRing(cornerRadius = 22.dp),
-        contentAlignment = Alignment.Center,
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
-            painter = painterResource(icon),
-            contentDescription = item.title.ifBlank { "地图标记" },
-            modifier = Modifier.size(Dimens.iconSm),
-            tint = Color.White,
+            painter = painterResource(R.drawable.ic_map_cta_pin),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = colors.accent,
         )
-    }
-}
-
-@Composable
-private fun HotspotDetailCard(
-    item: MapHotspotItem,
-    modifier: Modifier = Modifier,
-    onOpen: () -> Unit,
-) {
-    val colors = HotSpotTheme.colors
-    SystemCard(modifier = modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Avatar(name = item.title, imageUrl = item.coverUrl, size = Dimens.avatarSm)
-            Spacer(Modifier.width(Spacing.sm))
-            Column(Modifier.weight(1f)) {
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle.isNotBlank()) {
                 Text(
-                    text = item.title.ifBlank { "地图条目" },
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = item.subtitle ?: when (item.objectType) {
-                        "user" -> "用户"
-                        "group" -> "群组"
-                        else -> "瞬间"
-                    },
+                    text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(Spacing.sm))
-            SystemButton(
-                text = "查看",
-                onClick = onOpen,
-                variant = ButtonVariant.PRIMARY,
-                size = ButtonSize.SM,
-            )
         }
     }
 }
 
 @Composable
-private fun MapControlButton(iconRes: Int, description: String, onClick: () -> Unit) {
+private fun MapGlassCircle(
+    size: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+    content: @Composable () -> Unit,
+) {
     val colors = HotSpotTheme.colors
     Box(
         modifier = Modifier
-            .size(Dimens.minTouchTarget)
+            .size(size)
+            .shadow(3.dp, CircleShape)
             .clip(CircleShape)
-            .clickable(onClick = onClick)
-            .hotSpotFocusRing(cornerRadius = 22.dp),
+            .background(colors.surface.copy(alpha = 0.86f))
+            .border(1.dp, colors.interactionActive, CircleShape)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(38.dp)
-                .shadow(2.dp, CircleShape)
-                .clip(CircleShape)
-                .background(colors.surface),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = description,
-                modifier = Modifier.size(Dimens.iconSm),
-                tint = colors.textPrimary,
-            )
-        }
+        content()
     }
 }
 
-private const val DEFAULT_SPAN_LAT = 0.05
-private const val LONGITUDE_SPAN_RATIO = 1.35
-private const val MAP_FETCH_DEBOUNCE_MS = 250L
-private const val PIN_SIZE_PX = 36f
+private data class PlaceCandidate(
+    val label: String,
+    val subtitle: String,
+    val point: GeoPoint,
+    val objectType: String,
+)
+
+private fun MapHotspotItem.matches(keyword: String): Boolean {
+    val lower = keyword.lowercase()
+    return title.lowercase().contains(lower) || subtitle.orEmpty().lowercase().contains(lower)
+}
+
+private fun MapHotspotItem.toCandidate(point: GeoPoint): PlaceCandidate = PlaceCandidate(
+    label = title.ifBlank { "未命名地点" },
+    subtitle = subtitle.orEmpty(),
+    point = point,
+    objectType = objectType,
+)
+
+private const val SEARCH_DEBOUNCE_MS = 250L
+private const val SEARCH_VIEWPORT_SPAN = 0.3
+private const val MAX_RESULTS = 20
+private const val ZOOM_STEP = 0.2f
+private const val MIN_ZOOM = 0.6f
+private const val MAX_ZOOM = 2.0f

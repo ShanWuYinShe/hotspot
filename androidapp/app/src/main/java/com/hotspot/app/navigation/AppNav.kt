@@ -125,9 +125,11 @@ private fun MainScaffold() {
                 composable(Routes.NEARBY_MAP) {
                     MapScreen(
                         onBack = { navController.popBackStack() },
-                        onOpenUser = { userId -> openUser(userId) },
-                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
-                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onAnchorSaved = {
+                            // 锚点变更后重建附近枢纽，让距离/推荐按新锚点重新拉取。
+                            navController.popBackStack(Routes.NEARBY, inclusive = true)
+                            navController.navigate(Routes.NEARBY) { launchSingleTop = true }
+                        },
                     )
                 }
                 composable(Routes.PUBLISH) { PublishScreen() }

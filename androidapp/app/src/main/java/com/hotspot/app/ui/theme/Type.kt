@@ -52,6 +52,8 @@ object HotSpotTextStyles {
     val eyebrow = style(fs.xxs, 15f, FontWeight.Medium, letterSpacing = 1.4.sp)
     /** 计数 / 时间戳 / 辅助文字（--text-xs 11）。 */
     val caption = style(fs.xs, 15f)
+    /** 版权/极微说明（--text-xxs 10）。 */
+    val micro = style(fs.xxs, 15f)
     /** 数字强调（点赞/评论计数，tabular 近似用等宽字体）。 */
     val numeric = style(fs.sm, 17f, FontWeight.Medium, letterSpacing = 0.sp)
 }
