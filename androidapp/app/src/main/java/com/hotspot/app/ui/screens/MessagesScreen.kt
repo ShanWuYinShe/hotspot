@@ -35,12 +35,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.hotspot.app.AppContainer
+import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.UserItem
@@ -75,6 +78,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MessagesScreen(
     onOpenChat: (userId: String, nickname: String) -> Unit,
+    onOpenGroupChat: (GroupItem) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val chatRepository = AppContainer.chatRepository
@@ -86,16 +90,35 @@ fun MessagesScreen(
     val loader: suspend (String?) -> ApiResult<Page<PrivateChatItem>> = { cursor ->
         chatRepository.conversations(cursor)
     }
+    val groupRepository = AppContainer.profileRepository
+    var groupChats by remember { mutableStateOf<List<GroupItem>>(emptyList()) }
+    var groupLoading by remember { mutableStateOf(true) }
+    var groupError by remember { mutableStateOf<String?>(null) }
+
+    suspend fun reloadGroups() {
+        groupLoading = true
+        groupError = null
+        when (val result = groupRepository.joinedGroups(null)) {
+            is ApiResult.Ok -> groupChats = result.data.items
+            is ApiResult.Err -> groupError = result.error.userMessage
+        }
+        groupLoading = false
+    }
 
     LaunchedEffect(Unit) { state.initialLoad(loader) }
+    LaunchedEffect(Unit) { reloadGroups() }
     InfiniteScrollHandler(state, listState, loader)
 
-    val totalUnread = state.items.sumOf { it.unreadCount }
+    // 私聊 + 群聊聚合（对齐 Web useChatListData：置顶 → 有未读 → 最新时间倒序）
+    val conversations = remember(state.items, groupChats) {
+        buildConversations(state.items, groupChats)
+    }
+    val totalUnread = conversations.sumOf { it.unread }
     val query = searchQuery.trim()
     val filtered = if (query.isEmpty()) {
-        state.items
+        conversations
     } else {
-        state.items.filter { it.otherUser.nickname.contains(query, ignoreCase = true) }
+        conversations.filter { it.name.contains(query, ignoreCase = true) }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -132,18 +155,22 @@ fun MessagesScreen(
             modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm2),
         )
         when {
-            state.loading && state.items.isEmpty() -> LoadingState(message = "正在加载会话…")
-            state.error != null && state.items.isEmpty() -> ErrorState(
+            (state.loading || groupLoading) && conversations.isEmpty() -> LoadingState(message = "正在加载会话…")
+            state.error != null && conversations.isEmpty() -> ErrorState(
                 message = state.error ?: "加载失败",
                 onRetry = { scope.launch { state.initialLoad(loader) } },
             )
-            state.items.isEmpty() -> EmptyState(
+            groupError != null && conversations.isEmpty() -> ErrorState(
+                message = groupError ?: "群聊加载失败",
+                onRetry = { scope.launch { reloadGroups() } },
+            )
+            conversations.isEmpty() -> EmptyState(
                 title = "还没有会话",
                 description = "和附近的人打个招呼，会话就会出现在这里。",
             )
             filtered.isEmpty() -> EmptyState(
                 title = "没有找到会话",
-                description = "换个昵称再试试。",
+                description = "换个昵称或群名再试试。",
             )
             else -> {
                 Text(
@@ -163,10 +190,24 @@ fun MessagesScreen(
                     ),
                     verticalArrangement = Arrangement.spacedBy(Spacing.half),
                 ) {
-                    items(filtered, key = { it.otherUser.userId }) { chat ->
+                    if (groupError != null && query.isEmpty()) {
+                        item(key = "group-error") {
+                            GroupLoadErrorRow(
+                                message = groupError ?: "",
+                                onRetry = { scope.launch { reloadGroups() } },
+                            )
+                        }
+                    }
+                    items(filtered, key = { it.key }) { entry ->
                         ConversationRow(
-                            chat = chat,
-                            onClick = { onOpenChat(chat.otherUser.userId, chat.otherUser.nickname) },
+                            entry = entry,
+                            onClick = {
+                                if (entry.kind == ConversationKind.PRIVATE) {
+                                    entry.privateChat?.let { onOpenChat(it.otherUser.userId, it.otherUser.nickname) }
+                                } else {
+                                    entry.group?.let(onOpenGroupChat)
+                                }
+                            },
                         )
                     }
                     // 本地过滤时不展示分页尾注（避免「没有更多了」紧跟单条过滤结果）
@@ -196,7 +237,7 @@ fun MessagesScreen(
 
 @Composable
 private fun ConversationRow(
-    chat: PrivateChatItem,
+    entry: ConversationEntry,
     onClick: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -214,12 +255,32 @@ private fun ConversationRow(
     ) {
         Box {
             Avatar(
-                name = chat.otherUser.nickname,
-                imageUrl = chat.otherUser.avatarUrl,
+                name = entry.name,
+                imageUrl = entry.avatarUrl,
                 size = Dimens.avatarMd,
+                // 群聊头像用圆角方（对齐 Web ChatListItem shape=rounded），与私聊圆形 + 在线点区分
+                shape = if (entry.kind == ConversationKind.GROUP) AppShapes.iconTile else CircleShape,
             )
-            if (chat.presenceStatus == "online") {
-                Box(
+            when {
+                entry.kind == ConversationKind.GROUP -> Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(colors.surface)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(colors.accent),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_badge_group),
+                        contentDescription = "群聊",
+                        modifier = Modifier.size(9.dp),
+                        tint = colors.textOnAccent,
+                    )
+                }
+                entry.online -> Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .size(12.dp)
@@ -232,7 +293,7 @@ private fun ConversationRow(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = chat.otherUser.nickname.ifBlank { "匿名用户" },
+                    text = entry.name.ifBlank { "匿名用户" },
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     color = colors.textPrimary,
@@ -241,7 +302,7 @@ private fun ConversationRow(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    text = TimeFormat.relative(chat.lastActivityAt),
+                    text = entry.timeLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = colors.textSecondary,
                 )
@@ -249,17 +310,17 @@ private fun ConversationRow(
             Spacer(Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = previewText(chat),
+                    text = entry.preview,
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
-                if (chat.unreadCount > 0) {
+                if (entry.unread > 0) {
                     Spacer(Modifier.width(Spacing.sm))
                     Badge(
-                        text = if (chat.unreadCount > 99) "99+" else chat.unreadCount.toString(),
+                        text = if (entry.unread > 99) "99+" else entry.unread.toString(),
                         tone = BadgeTone.SOLID,
                         size = BadgeSize.SM,
                     )
@@ -267,6 +328,119 @@ private fun ConversationRow(
             }
         }
     }
+}
+
+/** 群聊加载失败的非阻断提示行：私聊列表仍可用，只提示群会话未加载并提供重试。 */
+@Composable
+private fun GroupLoadErrorRow(message: String, onRetry: () -> Unit) {
+    val colors = HotSpotTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "群聊加载失败：" + message,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.danger,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        SystemButton(
+            text = "重试",
+            onClick = onRetry,
+            variant = ButtonVariant.GHOST,
+            size = ButtonSize.SM,
+        )
+    }
+}
+
+private enum class ConversationKind { PRIVATE, GROUP }
+
+/** 私聊/群聊统一会话行模型（渲染与排序都只用这一层）。 */
+private data class ConversationEntry(
+    val key: String,
+    val kind: ConversationKind,
+    val name: String,
+    val avatarUrl: String?,
+    val preview: String,
+    val timeLabel: String,
+    val timestamp: Long,
+    val unread: Int,
+    val pinned: Boolean,
+    val online: Boolean,
+    val privateChat: PrivateChatItem? = null,
+    val group: GroupItem? = null,
+)
+
+/**
+ * 私聊 + 群聊聚合，排序对齐 Web lib/chat-list compareChatItems：
+ * 置顶 → 有未读 → 最新时间倒序 → id 稳定 tie-breaker。
+ * 群聊数据来自 groups/fetch_joined（viewer_state.unread_count / last_message）。
+ */
+private fun buildConversations(
+    privateChats: List<PrivateChatItem>,
+    groups: List<GroupItem>,
+): List<ConversationEntry> {
+    val priv = privateChats.map { chat ->
+        ConversationEntry(
+            key = "chat-" + chat.otherUser.userId,
+            kind = ConversationKind.PRIVATE,
+            name = chat.otherUser.nickname,
+            avatarUrl = chat.otherUser.avatarUrl,
+            preview = previewText(chat),
+            timeLabel = TimeFormat.relative(chat.lastMessage?.sentAt ?: chat.lastActivityAt),
+            timestamp = parseIso(chat.lastMessage?.sentAt ?: chat.lastActivityAt),
+            unread = chat.unreadCount,
+            pinned = chat.isPinned,
+            online = chat.presenceStatus == "online",
+            privateChat = chat,
+        )
+    }
+    val groupRows = groups.map { item ->
+        ConversationEntry(
+            key = "group-" + item.group.groupId,
+            kind = ConversationKind.GROUP,
+            name = item.group.name.ifBlank { "未命名群组" },
+            avatarUrl = item.group.avatarUrl,
+            preview = groupPreview(item),
+            timeLabel = TimeFormat.relative(item.lastMessage?.sentAt ?: item.lastActivityAt),
+            timestamp = parseIso(item.lastMessage?.sentAt ?: item.lastActivityAt),
+            unread = item.viewerState?.unreadCount ?: 0,
+            pinned = item.viewerState?.isPinned ?: false,
+            online = false,
+            group = item,
+        )
+    }
+    return (priv + groupRows).sortedWith(
+        compareByDescending<ConversationEntry> { it.pinned }
+            .thenByDescending { it.unread > 0 }
+            .thenByDescending { it.timestamp }
+            .thenBy { it.key },
+    )
+}
+
+private fun parseIso(iso: String?): Long =
+    if (iso.isNullOrBlank()) 0L else runCatching { java.time.Instant.parse(iso).toEpochMilli() }.getOrDefault(0L)
+
+/** 群聊预览带发送者前缀（"野原：..."），与 Web 群会话行语义一致。 */
+private fun groupPreview(item: GroupItem): String {
+    val last = item.lastMessage ?: return "群聊已创建"
+    val body = when (last.type) {
+        "text" -> last.content ?: ""
+        "image" -> "[图片]"
+        "video" -> "[视频]"
+        "audio" -> "[语音]"
+        "file" -> "[文件]"
+        "share" -> "[分享]"
+        "system" -> last.content ?: "[系统消息]"
+        else -> last.content ?: ""
+    }
+    val sender = last.sender.nickname
+    return if (sender.isBlank()) body else sender + "：" + body
 }
 
 /**
