@@ -50,6 +50,11 @@ func (m *Module) SetMessageReactionsSource(src MessageReactionsSource) {
 	m.runtime.SetReactionsSource(src)
 }
 
+// SetMediaURLSigner 接线聊天媒体读 URL 签名器（bootstrap 注入 media.Service）。
+func (m *Module) SetMediaURLSigner(signer mediaURLSigner) {
+	m.runtime.SetMediaURLSigner(signer)
+}
+
 func (m *Module) Mount(r chi.Router) {
 	r.Route("/api/v1/private_messages", func(messageRouter chi.Router) {
 		messageRouter.Group(func(group chi.Router) {

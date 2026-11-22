@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"hotspot/backend-go/internal/platform/aftercommit"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,6 +77,49 @@ type Service struct {
 	// 发送/typing 都要过一次成员校验，成员变动低频，适合读穿缓存（TTL 60s +
 	// groups 写路径主动删键）。
 	memberCache *hotcache.Cache
+	// mediaURLSigner 把聊天媒体存储 key 签成短时读 URL（bootstrap 注入
+	// media.Service）；nil（测试/降级）时保留存储 key，行为与旧版一致。
+	mediaURLSigner mediaURLSigner
+}
+
+// mediaURLSigner 是 media 模块读 URL 签名能力的最小接口（避免模块间直接依赖）。
+type mediaURLSigner interface {
+	PresignGet(ctx context.Context, storageKey string, ttl time.Duration) (string, error)
+}
+
+// chatMediaReadTTL 与客户端图片展示窗口对齐；签名 URL 不持久化（spec media.md）。
+const chatMediaReadTTL = 15 * time.Minute
+
+// SetMediaURLSigner 注入聊天媒体读 URL 签名器（bootstrap 装配时调用一次）。
+func (s *Service) SetMediaURLSigner(signer mediaURLSigner) { s.mediaURLSigner = signer }
+
+// signMediaURL 把存储 key 换成短时签名读 URL；签名失败保留原值，不阻塞历史/发送。
+func (s *Service) signMediaURL(ctx context.Context, storageKey string) string {
+	if s.mediaURLSigner == nil || storageKey == "" {
+		return storageKey
+	}
+	if strings.HasPrefix(storageKey, "http://") || strings.HasPrefix(storageKey, "https://") {
+		return storageKey
+	}
+	signed, err := s.mediaURLSigner.PresignGet(ctx, storageKey, chatMediaReadTTL)
+	if err != nil {
+		observability.FromContext(ctx).Warn("groupmessages.sign_media_url failed", "error", err)
+		return storageKey
+	}
+	return signed
+}
+
+// signMediaMap 处理动态 media 对象（键集合与 spec MessageMedia 一致）。
+func (s *Service) signMediaMap(ctx context.Context, media map[string]any) {
+	if media == nil {
+		return
+	}
+	if url, ok := media["url"].(string); ok {
+		media["url"] = s.signMediaURL(ctx, url)
+	}
+	if thumbnail, ok := media["thumbnail_url"].(string); ok && thumbnail != "" {
+		media["thumbnail_url"] = s.signMediaURL(ctx, thumbnail)
+	}
 }
 
 // SetMemberCache 注入群成员关系热缓存（bootstrap 装配；nil 保持直查）。
@@ -324,6 +368,9 @@ func (s *Service) History(ctx context.Context, groupID string, pagination *Pagin
 	if err != nil {
 		return PaginatedGroupMessages{}, err
 	}
+	for i := range result.Items {
+		s.signMediaMap(ctx, result.Items[i].Media)
+	}
 	s.attachReactions(ctx, result.Items)
 	return result, nil
 }
@@ -569,6 +616,7 @@ func (s *Service) buildMedia(ctx context.Context, fileID, ownerUserID string) ma
 	if err != nil || !ok {
 		return nil
 	}
+	s.signMediaMap(ctx, info)
 	return info
 }
 

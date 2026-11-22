@@ -149,6 +149,10 @@ func BuildModulesWithRedisPinger(ctx context.Context, cfg config.Config, factory
 	// 私聊消息是一等模块（架构审计 P1-6）：由 bootstrap 显式装配与挂载；
 	// privatechats 只消费其 ReadService 接口。
 	pmModule := privatemessages.NewModule(factory, sharedAppConfig, shareModule.Service, usersModule.Service)
+	// 聊天媒体读 URL 签名接线：历史/WS 负载里的 storage key 由 media 模块签成短时
+	// 读 URL（spec api_spec_media.md「媒体读取」：客户端不拼接存储地址）。
+	gmModule.Service.SetMediaURLSigner(mediaModule.Service)
+	pmModule.SetMediaURLSigner(mediaModule.Service)
 	pcModule := privatechats.NewModule(factory, sharedAppConfig, usersModule.Service, pmModule.MessageService())
 	pmModule.SetChatEnsurer(pcModule.Service())
 
