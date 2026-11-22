@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,7 +49,9 @@ import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -63,9 +66,13 @@ fun ChatScreen(onBack: () -> Unit) {
     val targetUserId = ChatTarget.userId
     val nickname = ChatTarget.nickname.ifBlank { "私聊" }
     val scope = rememberCoroutineScope()
+    val realtime = AppContainer.realtimeClient
     val listState = rememberLazyListState()
 
     var messages by remember { mutableStateOf<List<PrivateMessageItem>>(emptyList()) }
+    var peerTyping by remember { mutableStateOf(false) }
+    var peerTypingAt by remember { mutableStateOf(0L) }
+    var lastTypingSentAt by remember { mutableStateOf(0L) }
     var readMarked by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -84,6 +91,17 @@ fun ChatScreen(onBack: () -> Unit) {
 
     LaunchedEffect(targetUserId) { reload() }
 
+    // 对端输入中提示：收到 is_typing=true 后 6 秒内无新事件自动清除（防丢包常驻）。
+    LaunchedEffect(peerTypingAt) {
+        if (peerTypingAt > 0L) {
+            delay(ChatTypingRules.TYPING_AUTO_CLEAR_MS)
+            peerTyping = false
+        }
+    }
+    DisposableEffect(targetUserId) {
+        onDispose { realtime.sendPrivateTyping(targetUserId, false) }
+    }
+
     // 打开私聊即视为已读（对齐 Web：会话停在最新消息近底部时 markRead）；
     // private_messages/mark_read(scope='session') 幂等，失败静默、下次进入重试。
     LaunchedEffect(messages.isNotEmpty(), readMarked) {
@@ -96,7 +114,6 @@ fun ChatScreen(onBack: () -> Unit) {
     // WebSocket 实时增量（spec/api_spec_websocket.md）：进入会话订阅对端 user 频道，离开时取消。
     // 新消息按 message_id 去重合并；收到对端新消息时补一次 mark_read。
     LaunchedEffect(targetUserId) {
-        val realtime = AppContainer.realtimeClient
         realtime.subscribeUsers(listOf(targetUserId))
         try {
             realtime.events.collect { event ->
@@ -126,6 +143,13 @@ fun ChatScreen(onBack: () -> Unit) {
                         }
                     }
 
+                    is RealtimeEvent.PrivateTyping -> {
+                        if (event.actor.userId == targetUserId) {
+                            peerTyping = event.isTyping
+                            if (event.isTyping) peerTypingAt = System.currentTimeMillis()
+                        }
+                    }
+
                     is RealtimeEvent.PrivateMessageRecalled -> {
                         messages = messages.map { message ->
                             if (message.messageId == event.messageId) {
@@ -144,6 +168,26 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
+    fun onInputChange(value: String) {
+        input = value
+        val now = System.currentTimeMillis()
+        if (value.isBlank()) {
+            realtime.sendPrivateTyping(targetUserId, false)
+            lastTypingSentAt = 0L
+        } else if (now - lastTypingSentAt >= ChatTypingRules.TYPING_THROTTLE_MS) {
+            realtime.sendPrivateTyping(targetUserId, true)
+            lastTypingSentAt = now
+        }
+    }
+
+    // 停止输入 3 秒后发 is_typing=false（输入变化会取消并重启该计时）。
+    LaunchedEffect(input) {
+        if (input.isBlank()) return@LaunchedEffect
+        delay(ChatTypingRules.TYPING_IDLE_STOP_MS)
+        realtime.sendPrivateTyping(targetUserId, false)
+        lastTypingSentAt = 0L
+    }
+
     fun send() {
         val text = input.trim()
         if (text.isEmpty() || sending) return
@@ -152,6 +196,8 @@ fun ChatScreen(onBack: () -> Unit) {
             when (val result = chatRepository.sendTextMessage(targetUserId, text)) {
                 is ApiResult.Ok -> {
                     input = ""
+                    realtime.sendPrivateTyping(targetUserId, false)
+                    lastTypingSentAt = 0L
                     reload()
                     listState.animateScrollToItem(0)
                 }
@@ -164,7 +210,7 @@ fun ChatScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         PageHeader(
             title = nickname,
-            subtitle = "私聊",
+            subtitle = if (peerTyping) "正在输入…" else "私聊",
             onBack = {
                 ChatTarget.clear()
                 onBack()
@@ -216,7 +262,7 @@ fun ChatScreen(onBack: () -> Unit) {
         ) {
             SystemInput(
                 value = input,
-                onValueChange = { input = it },
+                onValueChange = { onInputChange(it) },
                 placeholder = "发消息…",
                 modifier = Modifier.weight(1f),
             )

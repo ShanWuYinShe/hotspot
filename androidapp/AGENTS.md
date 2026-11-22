@@ -103,7 +103,9 @@ app/src/main/java/com/hotspot/app/
 - **WebSocket**：端点 `/ws/v1`（spec/api_spec_websocket.md），App 端连接后 5 秒内发 `Auth`
   （access_token + device_id + resume_token）；心跳参数由 `ConnectionEstablished.config` 下发，禁止硬编码；
   断线指数退避重连，4001 先 refresh token（失败清会话回登录页），1000/1008 不重连；
-  聊天页进入时订阅对端 user / 群 group 频道，离开取消，重连后按本地集合全量 `set` 恢复。
+  聊天页进入时订阅对端 user / 群 group 频道，离开取消，重连后按本地集合全量 `set` 恢复；
+  输入中状态：输入节流 2s 发 `SendPrivateTyping/SendGroupTyping`，停止 3s 发 false；接收 6s 无新事件自动清除
+  （规则与文案见 `util/ChatTypingRules.kt`，群聊多人折叠为「A、B、C 等 N 人正在输入…」）。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
@@ -128,7 +130,7 @@ app/src/main/java/com/hotspot/app/
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
 2. 地图原生渲染、管理后台；
-   群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新；@ 提及、输入中提示、富媒体消息未做；
+   群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新与输入中提示；@ 提及、富媒体消息未做；
    群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
