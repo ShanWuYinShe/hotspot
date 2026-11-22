@@ -114,8 +114,9 @@ app/src/main/java/com/hotspot/app/
   发送时 `group_messages/send` 的 `mentions` 只提交最终文案里仍存在的被 @ 成员 user_id
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
 - **聊天图片**：输入条左侧相册按钮 → 系统 Photo Picker → `data/media/ChatImageUploader`
-  （chat_image 分类，10MB / JPG·PNG·WebP·GIF 白名单）→ `private_messages/send` /
-  `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL）。
+  （chat_image 分类，先校验 10MB / JPG·PNG·WebP·GIF 白名单再读文件）→ `private_messages/send` /
+  `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL），
+  加载失败回落「[图片]」占位。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
