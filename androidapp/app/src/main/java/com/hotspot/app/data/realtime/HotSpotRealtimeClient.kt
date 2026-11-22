@@ -2,6 +2,8 @@ package com.hotspot.app.data.realtime
 
 import android.util.Log
 import com.hotspot.app.BuildConfig
+import com.hotspot.app.data.api.ApiClient
+import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.auth.AuthSession
 import com.hotspot.app.data.auth.TokenStore
@@ -72,19 +74,32 @@ class HotSpotRealtimeClient(
         .build()
 
     private val lock = Any()
+
+    // webSocket/authenticated/resumeToken/pongDeferred 会被 OkHttp 回调线程与协程交叉读写，
+    // 加 @Volatile 保证可见性（重连时 Auth 必须读到最新 resume_token，Pong 不能漏判超时）。
+    @Volatile
     private var webSocket: WebSocket? = null
     private var connecting = false
     private var started = false
     private var closeRequested = false
+
+    @Volatile
     private var authenticated = false
     private var reconnectAttempt = 0
+
+    @Volatile
     private var resumeToken: String? = null
     private var pingIntervalMs = 30_000L
     private var pingTimeoutMs = 10_000L
+
+    @Volatile
     private var pongDeferred: CompletableDeferred<Unit>? = null
     private var reconnectJob: Job? = null
     private var heartbeatJob: Job? = null
     private var authTimeoutJob: Job? = null
+
+    /** 4002（连接级限流）前服务端 Error.retry_after 下发的建议等待时长（毫秒）。 */
+    private var serverRetryAfterMs: Long? = null
 
     private val _connectionState = MutableStateFlow(RealtimeConnectionState.Disconnected)
     val connectionState: StateFlow<RealtimeConnectionState> = _connectionState.asStateFlow()
@@ -203,12 +218,10 @@ class HotSpotRealtimeClient(
     }
 
     private fun openSocket() {
-        val token: String
         synchronized(lock) {
             if (!started || closeRequested) return
             if (tokenStore.accessToken.isNullOrBlank()) return
             if (webSocket != null || connecting) return
-            token = tokenStore.accessToken ?: return
             connecting = true
             _connectionState.value = RealtimeConnectionState.Connecting
         }
@@ -216,6 +229,11 @@ class HotSpotRealtimeClient(
         val socket = httpClient.newWebSocket(request, Listener())
         synchronized(lock) {
             connecting = false
+            if (!started || closeRequested) {
+                // 建连期间被 stop()/会话切换：丢弃这条连接，避免泄漏一个仍会发 Auth 的 socket。
+                socket.cancel()
+                return
+            }
             webSocket = socket
         }
     }
@@ -281,15 +299,18 @@ class HotSpotRealtimeClient(
 
     private fun handleEstablished(payload: JsonObject) {
         val (interval, timeout) = RealtimeProtocol.parseHeartbeat(payload)
-        Log.i(TAG, "ws established ping=${interval}ms timeout=${timeout}ms")
+        val resume = RealtimeProtocol.parseResumeToken(payload)
         synchronized(lock) {
+            if (!started || closeRequested) return
+            Log.i(TAG, "ws established ping=${interval}ms timeout=${timeout}ms")
             authenticated = true
             authTimeoutJob?.cancel()
             authTimeoutJob = null
             reconnectAttempt = 0
             pingIntervalMs = interval
             pingTimeoutMs = timeout
-            resumeToken = payload["resume_token"]?.jsonPrimitive?.content
+            resumeToken = resume
+            serverRetryAfterMs = null
             _connectionState.value = RealtimeConnectionState.Connected
         }
         val current = subscriptions.value
@@ -314,6 +335,9 @@ class HotSpotRealtimeClient(
                 val pong = withTimeoutOrNull(pingTimeoutMs) { deferred.await() }
                 if (pong == null) {
                     val socket = webSocket
+                    // 心跳超时视为连接已死：先终止底层连接，避免僵尸 socket 与新连接并存、
+                    // 继续把旧连接的事件投递给 UI（表现为消息重复）。
+                    socket?.cancel()
                     handleDisconnect(socket, 0)
                     break
                 }
@@ -334,9 +358,20 @@ class HotSpotRealtimeClient(
             }
             "Error" -> {
                 val severity = payload["severity"]?.jsonPrimitive?.content
+                val code = payload["code"]?.jsonPrimitive?.content?.toIntOrNull()
+                val retryAfterSeconds = payload["retry_after"]?.jsonPrimitive?.content?.toLongOrNull()
+                if (code == CODE_WS_RATE_LIMIT && retryAfterSeconds != null) {
+                    // 4002 连接级限流：按 spec 在重连前等待 retry_after（加上限，防止异常值钉死客户端）。
+                    synchronized(lock) {
+                        serverRetryAfterMs = retryAfterSeconds.coerceIn(1L, 300L) * 1_000L
+                    }
+                }
                 if (severity == "fatal") {
-                    stop()
-                    tokenStore.clear()
+                    // spec「Close Code 规范」：access_token 过期同样先推 fatal Error 再以 4001 断开。
+                    // 此处不能清会话或停连，否则 4001 的 refresh_token 分支永远不可达，用户会被误登出；
+                    // 真正的登出交给 SessionRevoked / AccountBanned 与 4001 刷新失败（10100）分支。
+                    val message = payload["message"]?.jsonPrimitive?.content
+                    Log.w(TAG, "ws fatal error code=" + code + " message=" + message)
                 }
             }
             "SessionRevoked" -> {
@@ -376,17 +411,22 @@ class HotSpotRealtimeClient(
                     closeRequested = true
                 }
                 4001 -> scheduleTokenRefresh()
+                4002 -> {
+                    val retryAfter = serverRetryAfterMs
+                    serverRetryAfterMs = null
+                    scheduleReconnect(delayOverrideMs = retryAfter)
+                }
                 else -> scheduleReconnect()
             }
         }
     }
 
-    private fun scheduleReconnect() {
+    private fun scheduleReconnect(delayOverrideMs: Long? = null) {
         if (reconnectJob != null) return
         val attempt = reconnectAttempt
         reconnectAttempt = min(reconnectAttempt + 1, 10)
         val jitter = Random.nextLong(0, 500)
-        val delayMs = RealtimeProtocol.reconnectDelayMs(attempt, jitter)
+        val delayMs = delayOverrideMs ?: RealtimeProtocol.reconnectDelayMs(attempt, jitter)
         Log.i(TAG, "ws reconnect in " + delayMs + "ms attempt=" + attempt)
         reconnectJob = scope.launch(Dispatchers.Default) {
             delay(delayMs)
@@ -403,8 +443,16 @@ class HotSpotRealtimeClient(
             when (result) {
                 is ApiResult.Ok -> openSocket()
                 is ApiResult.Err -> {
-                    tokenStore.clear()
-                    stop()
+                    val unauthorized = (result.error as? ApiError.Business)?.code == ApiClient.CODE_UNAUTHORIZED
+                    if (unauthorized || tokenStore.session.value == null) {
+                        tokenStore.clear()
+                        stop()
+                    } else {
+                        // 网络/服务端临时故障不代表会话失效：保留会话并退避重连；
+                        // 若 access_token 仍过期，重连鉴权会再次得到 4001 并重试刷新。
+                        Log.w(TAG, "ws token refresh failed: " + result.error.userMessage)
+                        synchronized(lock) { scheduleReconnect() }
+                    }
                 }
             }
         }
@@ -418,22 +466,33 @@ class HotSpotRealtimeClient(
         pongDeferred = null
     }
 
+    /** 回调所属连接是否仍是当前连接（旧连接/被替换连接的迟到消息直接丢弃）。 */
+    private fun isCurrentSocket(socket: WebSocket): Boolean = synchronized(lock) { webSocket === socket }
+
     private inner class Listener : WebSocketListener() {
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            if (!isCurrentSocket(webSocket)) {
+                webSocket.close(1000, "stale connection")
+                return
+            }
             sendAuth(webSocket)
             synchronized(lock) {
                 authTimeoutJob?.cancel()
                 authTimeoutJob = scope.launch {
                     delay(AUTH_TIMEOUT_MS)
-                    if (!authenticated) {
-                        webSocket.close(4001, "auth timeout")
-                        handleDisconnect(webSocket, 4001)
+                    if (!authenticated && isCurrentSocket(webSocket)) {
+                        // 本地 5 秒未收到 ConnectionEstablished 属于连接异常（token 失效会被服务端
+                        // 以 Error + 4001 明确拒绝），按通用退避重连，不触发不必要的 token 刷新。
+                        webSocket.cancel()
+                        handleDisconnect(webSocket, 0)
                     }
                 }
             }
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
+            // 心跳超时/被替换的旧连接可能还有迟到消息，不能投递给 UI（否则新连接会重复收事件）。
+            if (!isCurrentSocket(webSocket)) return
             handleMessage(text)
         }
 
@@ -458,5 +517,8 @@ class HotSpotRealtimeClient(
 
         /** 鉴权必须在连接后 5 秒内完成（spec「连接与鉴权」）。 */
         const val AUTH_TIMEOUT_MS = 5_000L
+
+        /** WS 应用层错误码：连接级限流（spec/api_spec_websocket.md「错误码定义」）。 */
+        const val CODE_WS_RATE_LIMIT = 20300
     }
 }

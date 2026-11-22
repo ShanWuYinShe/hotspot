@@ -95,6 +95,17 @@ class RealtimeProtocolTest {
     }
 
     @Test
+    fun resumeTokenTreatsNullAndBlankAsAbsent() {
+        assertNull(RealtimeProtocol.parseResumeToken(json.parseToJsonElement("""{"resume_token":null}""").jsonObject))
+        assertNull(RealtimeProtocol.parseResumeToken(json.parseToJsonElement("{}").jsonObject))
+        assertNull(RealtimeProtocol.parseResumeToken(json.parseToJsonElement("""{"resume_token":"  "}""").jsonObject))
+        assertEquals(
+            "rt_1",
+            RealtimeProtocol.parseResumeToken(json.parseToJsonElement("""{"resume_token":"rt_1"}""").jsonObject),
+        )
+    }
+
+    @Test
     fun reconnectBackoffGrowsAndCaps() {
         assertEquals(1_000L, RealtimeProtocol.reconnectDelayMs(0))
         assertEquals(2_000L, RealtimeProtocol.reconnectDelayMs(1))
