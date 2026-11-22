@@ -51,3 +51,18 @@ func TestSignGroupMediaKeepsKeyWithoutSignerOrOnError(t *testing.T) {
 		t.Fatalf("sign error must keep key, got %#v", media["url"])
 	}
 }
+
+func TestServiceHistorySignsMediaURL(t *testing.T) {
+	repo := &stubRepo{historyResult: PaginatedGroupMessages{Items: []GroupMessageItem{{
+		Media: map[string]any{"url": "published/u1/a.png"},
+	}}}}
+	svc := NewServiceWithRepo(repo)
+	svc.SetMediaURLSigner(&stubMediaURLSigner{})
+	result, err := svc.History(gmAuthCtx("u1"), "g1", nil)
+	if err != nil {
+		t.Fatalf("history error: %v", err)
+	}
+	if len(result.Items) != 1 || result.Items[0].Media["url"] != "https://cdn.example.com/published/u1/a.png" {
+		t.Fatalf("signed media = %#v", result.Items)
+	}
+}
