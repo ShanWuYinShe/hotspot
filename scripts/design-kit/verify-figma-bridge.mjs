@@ -21,8 +21,15 @@ if (manifest.ui !== 'ui.html') throw new Error('manifest.ui 应为 ui.html');
 if (!manifest.networkAccess || !Array.isArray(manifest.networkAccess.allowedDomains)) {
   throw new Error('manifest 缺少 networkAccess.allowedDomains');
 }
-const hasWsDomain = manifest.networkAccess.allowedDomains.some((d) => d.includes('127.0.0.1:8787'));
-if (!hasWsDomain) throw new Error('manifest 缺少 127.0.0.1:8787 域名授权');
+const allowedDomains = manifest.networkAccess.allowedDomains;
+// Figma 126.x 拒绝 allowedDomains 中的 ws://127.0.0.1:8787，本地开发改用通配 "*"；
+// 通配同样覆盖 bridge 的 HTTP 与 WebSocket 地址。
+const hasBridgeDomain = allowedDomains.includes('*')
+  || allowedDomains.some((d) => d.includes('127.0.0.1:8787'));
+if (!hasBridgeDomain) throw new Error('manifest 缺少 127.0.0.1:8787 域名授权（或本地开发通配 "*"）');
+if (allowedDomains.includes('*') && !manifest.networkAccess.reasoning) {
+  throw new Error('manifest 使用通配 "*" 时必须提供 networkAccess.reasoning');
+}
 
 const codeJs = readFileSync(join(BRIDGE_DIR, 'code.js'), 'utf8');
 if (codeJs.includes('new WebSocket(')) {
