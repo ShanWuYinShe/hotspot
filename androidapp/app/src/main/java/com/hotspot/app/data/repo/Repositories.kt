@@ -462,6 +462,21 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** 发送私聊图片消息（file_id 来自 media/complete_upload，category=chat_image）。 */
+    suspend fun sendImageMessage(targetUserId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.PRIVATE_MESSAGES_SEND,
+        buildJsonObject {
+            put("target_user_id", targetUserId)
+            put("type", "image")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
     /** 私聊已读（spec/api_spec_chat.md → private_messages/mark_read：scope='session' 标记该会话全部已读，幂等）。 */
     suspend fun markPrivateRead(targetUserId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.PRIVATE_MESSAGES_MARK_READ,
@@ -471,7 +486,7 @@ class ChatRepository(private val api: ApiClient) {
         },
     )
 
-    // ── 群聊（spec/api_spec_chat.md → group_messages；首版只读历史 + 文本发送）──
+    // ── 群聊（spec/api_spec_chat.md → group_messages；历史 + 文本/图片发送）──
 
     suspend fun groupMessages(groupId: String, cursor: String?): ApiResult<Page<GroupMessageItem>> = api.post(
         ApiEndpoint.GROUP_MESSAGES_FETCH,
@@ -509,6 +524,22 @@ class ChatRepository(private val api: ApiClient) {
             put("share_code", JsonNull)
             put("reply_to_message_id", JsonNull)
             put("mentions", buildJsonArray { mentions.distinct().forEach { add(JsonPrimitive(it)) } })
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
+    /** 发送群图片消息（file_id 来自 media/complete_upload，category=chat_image）。 */
+    suspend fun sendGroupImageMessage(groupId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.GROUP_MESSAGES_SEND,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("type", "image")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+            put("mentions", buildJsonArray { })
         },
         MessageSentResult.serializer(),
         idempotencyKey = UUID.randomUUID().toString(),

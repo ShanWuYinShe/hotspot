@@ -82,6 +82,7 @@ app/src/main/java/com/hotspot/app/
   data/auth/       # TokenStore（Bearer 持久化）
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
+  data/media/      # 聊天图片上传（presign_upload(category=chat_image) → PUT → complete_upload）
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
@@ -110,6 +111,9 @@ app/src/main/java/com/hotspot/app/
 - **群聊 @ 提及**：输入 `@` 弹出群成员候选（缺省拉取 `groups/members/fetch`），插入「@昵称 」；
   发送时 `group_messages/send` 的 `mentions` 只提交最终文案里仍存在的被 @ 成员 user_id
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
+- **聊天图片**：输入条左侧相册按钮 → 系统 Photo Picker → `data/media/ChatImageUploader`
+  （chat_image 分类，10MB / JPG·PNG·WebP·GIF 白名单）→ `private_messages/send` /
+  `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL）。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
@@ -134,7 +138,9 @@ app/src/main/java/com/hotspot/app/
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
 2. 地图原生渲染、管理后台；
-   群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；富媒体消息、@提及消息的独立通知跳转未做；
+   群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
+   私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
+   语音/视频/文件富媒体与 @提及消息的独立通知跳转未做；
    群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地

@@ -1,5 +1,8 @@
 package com.hotspot.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -41,6 +45,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -49,9 +56,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
+import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.ChatImageUploader
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
@@ -70,6 +81,7 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
+import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.MentionQuery
 import com.hotspot.app.util.MentionRules
 import com.hotspot.app.util.TimeFormat
@@ -77,7 +89,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * 群聊会话（设计稿 87:3529）：首版只读历史 + 文本发送。
+ * 群聊会话（设计稿 87:3529）：历史 + 文本/图片发送。
  *
  * 契约（spec/api_spec_chat.md）：
  * - 历史 group_messages/fetch：按 sent_at 倒序，reverseLayout = true 让最新消息贴底；
@@ -107,6 +119,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var notMember by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
+    var uploading by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
     var readMarked by remember { mutableStateOf(false) }
     var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
@@ -132,6 +145,28 @@ fun GroupChatScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(groupId) { reload() }
+
+    // 发送图片：系统 Photo Picker → chat_image 三步上传 → group_messages/send(type=image, file_id)。
+    val context = LocalContext.current
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            uploading = true
+            error = null
+            ChatImageUploader.upload(context, uri)
+                .onSuccess { uploaded ->
+                    when (val result = chatRepository.sendGroupImageMessage(groupId, uploaded.fileId)) {
+                        is ApiResult.Ok -> {
+                            reload()
+                            listState.animateScrollToItem(0)
+                        }
+                        is ApiResult.Err -> error = result.error.userMessage
+                    }
+                }
+                .onFailure { error = it.message ?: "图片发送失败，请重试" }
+            uploading = false
+        }
+    }
 
     // @ 提及候选：群成员列表（公开信息；失败不阻塞聊天，只是不弹候选）。
     LaunchedEffect(groupId) {
@@ -370,6 +405,24 @@ fun GroupChatScreen(onBack: () -> Unit) {
                 .padding(horizontal = Spacing.md, vertical = Spacing.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = !uploading) {
+                        imagePicker.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_gallery),
+                    contentDescription = if (uploading) "图片发送中" else "发送图片",
+                    modifier = Modifier.size(Dimens.iconMd),
+                    tint = if (uploading) colors.textSecondary else colors.accent,
+                )
+            }
             SystemInput(
                 value = input,
                 onValueChange = { onInputChange(it) },
@@ -528,15 +581,31 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
                     .background(if (isMine) colors.accent else colors.island)
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
-                Text(
-                    text = highlightedMentionText(
-                        text = messageText(message),
-                        mentionColor = if (isMine) colors.textOnAccent else colors.accent,
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Normal,
-                    color = if (isMine) colors.textOnAccent else colors.textPrimary,
-                )
+                val imageUrl = message.media?.url
+                if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(MediaUrls.absolute(imageUrl))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "群聊图片",
+                        modifier = Modifier
+                            .widthIn(max = 220.dp)
+                            .heightIn(max = 240.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Text(
+                        text = highlightedMentionText(
+                            text = messageText(message),
+                            mentionColor = if (isMine) colors.textOnAccent else colors.accent,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Normal,
+                        color = if (isMine) colors.textOnAccent else colors.textPrimary,
+                    )
+                }
             }
             Text(
                 text = TimeFormat.relative(message.sentAt),
