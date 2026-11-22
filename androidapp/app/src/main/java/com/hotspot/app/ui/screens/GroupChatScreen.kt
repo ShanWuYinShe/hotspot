@@ -89,6 +89,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var notMember by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
+    var readMarked by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -109,6 +110,15 @@ fun GroupChatScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(groupId) { reload() }
+
+    // 打开群聊即视为已读（对齐 Web：会话停在最新消息近底部时标记已读）；
+    // group_messages/mark_read 幂等，失败静默、下次进入重试，不阻塞消息展示。
+    LaunchedEffect(messages.isNotEmpty(), readMarked) {
+        if (messages.isNotEmpty() && !readMarked) {
+            readMarked = true
+            chatRepository.markGroupRead(groupId)
+        }
+    }
 
     fun send() {
         val text = input.trim()

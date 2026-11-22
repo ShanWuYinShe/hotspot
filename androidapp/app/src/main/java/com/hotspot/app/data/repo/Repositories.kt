@@ -444,6 +444,15 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** 私聊已读（spec/api_spec_chat.md → private_messages/mark_read：scope='session' 标记该会话全部已读，幂等）。 */
+    suspend fun markPrivateRead(targetUserId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.PRIVATE_MESSAGES_MARK_READ,
+        buildJsonObject {
+            put("scope", "session")
+            put("target_user_id", targetUserId)
+        },
+    )
+
     // ── 群聊（spec/api_spec_chat.md → group_messages；首版只读历史 + 文本发送）──
 
     suspend fun groupMessages(groupId: String, cursor: String?): ApiResult<Page<GroupMessageItem>> = api.post(
@@ -453,6 +462,15 @@ class ChatRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(GroupMessageItem.serializer()),
+    )
+
+    /** 群聊已读（spec/api_spec_chat.md → group_messages/mark_read：scope='group' 标记该群全部已读，幂等）。 */
+    suspend fun markGroupRead(groupId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUP_MESSAGES_MARK_READ,
+        buildJsonObject {
+            put("scope", "group")
+            put("group_id", groupId)
+        },
     )
 
     suspend fun sendGroupTextMessage(groupId: String, content: String): ApiResult<MessageSentResult> = api.post(
