@@ -18,6 +18,8 @@ import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupMessageItem
+import com.hotspot.app.data.model.MapBounds
+import com.hotspot.app.data.model.MapCanvasResponse
 import com.hotspot.app.data.model.MessageSentResult
 import com.hotspot.app.data.model.CompletedUploads
 import com.hotspot.app.data.model.MomentItem
@@ -377,6 +379,47 @@ class NearbyRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(MomentItem.serializer()),
+    )
+
+    /**
+     * 地图视口渲染（spec/api_spec_public.md → map/canvas）：服务端按视口跨度/密度
+     * 返回 heatmap 或 hotspots（互斥）或 empty；dataType = 'user'|'group'|'moment'|null(全部)。
+     */
+    suspend fun mapCanvas(
+        bounds: MapBounds,
+        dataType: String? = null,
+        cursor: String? = null,
+    ): ApiResult<MapCanvasResponse> = api.post(
+        ApiEndpoint.PUBLIC_MAP_CANVAS,
+        buildJsonObject {
+            put(
+                "viewport",
+                buildJsonObject {
+                    put(
+                        "bounds",
+                        buildJsonObject {
+                            put("north", bounds.north)
+                            put("south", bounds.south)
+                            put("east", bounds.east)
+                            put("west", bounds.west)
+                        },
+                    )
+                },
+            )
+            put(
+                "filter",
+                if (dataType == null) {
+                    JsonNull
+                } else {
+                    buildJsonObject {
+                        put("data_type", dataType)
+                        put("time_range", JsonNull)
+                    }
+                },
+            )
+            put("pagination", pagination(cursor, 100))
+        },
+        MapCanvasResponse.serializer(),
     )
 }
 

@@ -19,6 +19,8 @@ object Routes {
     const val NEARBY_PEOPLE = "nearby/people"
     const val NEARBY_GROUPS = "nearby/groups"
     const val NEARBY_MOMENTS = "nearby/moments"
+    // 附近地图（原生 Canvas 渲染；全屏推入页，不显示底栏）
+    const val NEARBY_MAP = "nearby/map"
     const val SEARCH = "search"
     const val NOTIFY = "notify"
     const val SETTINGS = "settings"

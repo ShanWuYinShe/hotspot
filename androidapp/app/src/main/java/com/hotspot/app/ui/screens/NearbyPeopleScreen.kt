@@ -69,7 +69,12 @@ private val PEOPLE_SORTS = listOf("距离最近" to "distance", "最新加入" t
  * 关注走 users/set_follow，本地乐观更新，失败回滚并 Toast 服务端 message。
  */
 @Composable
-fun NearbyPeopleScreen(onBack: () -> Unit, onOpenSearch: () -> Unit, onOpenUser: (String) -> Unit) {
+fun NearbyPeopleScreen(
+    onBack: () -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenUser: (String) -> Unit,
+    onOpenMap: () -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
     var filterIndex by remember { mutableIntStateOf(0) }
@@ -84,7 +89,7 @@ fun NearbyPeopleScreen(onBack: () -> Unit, onOpenSearch: () -> Unit, onOpenUser:
                 HeaderIconButton(
                     icon = Icons.Filled.Place,
                     contentDescription = "附近地图",
-                    onClick = { Toast.makeText(context, "地图原生渲染 TODO（首版占位）", Toast.LENGTH_SHORT).show() },
+                    onClick = onOpenMap,
                 )
             },
         )

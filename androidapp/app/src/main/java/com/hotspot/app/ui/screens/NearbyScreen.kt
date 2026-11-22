@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 /**
  * 附近枢纽（设计稿 87:4409）：顶部「附近 + 定位胶囊 + 搜索/地图」→ 实时附近统计卡
  * → 附近的人预览（含关注）→ 附近瞬间两列预览 → 附近群组两列预览；各段「查看全部」进叶子页。
- * 距离由后端下发，客户端只展示；地图原生渲染仍是已登记 TODO（入口保留并明确提示）。
+ * 距离由后端下发，客户端只展示；地图入口跳原生 NearbyMap（自研 Canvas 投影 + map/canvas 三态）。
  */
 @Composable
 fun NearbyScreen(
@@ -64,6 +64,7 @@ fun NearbyScreen(
     onOpenMoment: (momentId: String) -> Unit,
     onOpenGroup: (groupId: String) -> Unit,
     onOpenUser: (userId: String) -> Unit,
+    onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -163,9 +164,7 @@ fun NearbyScreen(
             HeaderIconButton(
                 icon = Icons.Filled.Place,
                 contentDescription = "附近地图",
-                onClick = {
-                    Toast.makeText(context, "地图原生渲染 TODO（首版占位）", Toast.LENGTH_SHORT).show()
-                },
+                onClick = onOpenMap,
             )
         }
         when {

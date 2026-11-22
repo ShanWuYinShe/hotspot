@@ -27,6 +27,7 @@ import com.hotspot.app.ui.screens.MeMomentsScreen
 import com.hotspot.app.ui.screens.MeScreen
 import com.hotspot.app.ui.screens.MessagesScreen
 import com.hotspot.app.ui.screens.MomentDetailScreen
+import com.hotspot.app.ui.screens.MapScreen
 import com.hotspot.app.ui.screens.NearbyGroupsScreen
 import com.hotspot.app.ui.screens.NearbyMomentsScreen
 import com.hotspot.app.ui.screens.NearbyPeopleScreen
@@ -93,6 +94,7 @@ private fun MainScaffold() {
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                         onOpenUser = { userId -> openUser(userId) },
+                        onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
                 composable(Routes.NEARBY_PEOPLE) {
@@ -100,6 +102,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenUser = { userId -> openUser(userId) },
+                        onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
                 composable(Routes.NEARBY_GROUPS) {
@@ -107,6 +110,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                        onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
                 composable(Routes.NEARBY_MOMENTS) {
@@ -115,6 +119,15 @@ private fun MainScaffold() {
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                         onOpenUser = { userId -> openUser(userId) },
+                        onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
+                    )
+                }
+                composable(Routes.NEARBY_MAP) {
+                    MapScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenUser = { userId -> openUser(userId) },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                     )
                 }
                 composable(Routes.PUBLISH) { PublishScreen() }
