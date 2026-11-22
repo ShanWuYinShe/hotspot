@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -45,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -56,8 +54,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiError
@@ -70,6 +66,7 @@ import com.hotspot.app.navigation.GroupChatTarget
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
@@ -81,7 +78,6 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
-import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.MentionQuery
 import com.hotspot.app.util.MentionRules
 import com.hotspot.app.util.TimeFormat
@@ -153,18 +149,21 @@ fun GroupChatScreen(onBack: () -> Unit) {
         scope.launch {
             uploading = true
             error = null
-            ChatImageUploader.upload(context, uri)
-                .onSuccess { uploaded ->
-                    when (val result = chatRepository.sendGroupImageMessage(groupId, uploaded.fileId)) {
-                        is ApiResult.Ok -> {
-                            reload()
-                            listState.animateScrollToItem(0)
+            try {
+                ChatImageUploader.upload(context, uri)
+                    .onSuccess { uploaded ->
+                        when (val result = chatRepository.sendGroupImageMessage(groupId, uploaded.fileId)) {
+                            is ApiResult.Ok -> {
+                                reload()
+                                listState.animateScrollToItem(0)
+                            }
+                            is ApiResult.Err -> error = result.error.userMessage
                         }
-                        is ApiResult.Err -> error = result.error.userMessage
                     }
-                }
-                .onFailure { error = it.message ?: "图片发送失败，请重试" }
-            uploading = false
+                    .onFailure { error = it.message ?: "图片发送失败，请重试" }
+            } finally {
+                uploading = false
+            }
         }
     }
 
@@ -583,17 +582,10 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
             ) {
                 val imageUrl = message.media?.url
                 if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(MediaUrls.absolute(imageUrl))
-                            .crossfade(true)
-                            .build(),
+                    ChatImageBubble(
+                        imageUrl = imageUrl,
+                        isMine = isMine,
                         contentDescription = "群聊图片",
-                        modifier = Modifier
-                            .widthIn(max = 220.dp)
-                            .heightIn(max = 240.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
                     )
                 } else {
                     Text(

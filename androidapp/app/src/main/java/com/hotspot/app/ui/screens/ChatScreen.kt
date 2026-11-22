@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,13 +38,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
@@ -55,6 +51,7 @@ import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.ChatTarget
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
@@ -66,7 +63,6 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
-import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -116,18 +112,21 @@ fun ChatScreen(onBack: () -> Unit) {
         scope.launch {
             uploading = true
             error = null
-            ChatImageUploader.upload(context, uri)
-                .onSuccess { uploaded ->
-                    when (val result = chatRepository.sendImageMessage(targetUserId, uploaded.fileId)) {
-                        is ApiResult.Ok -> {
-                            reload()
-                            listState.animateScrollToItem(0)
+            try {
+                ChatImageUploader.upload(context, uri)
+                    .onSuccess { uploaded ->
+                        when (val result = chatRepository.sendImageMessage(targetUserId, uploaded.fileId)) {
+                            is ApiResult.Ok -> {
+                                reload()
+                                listState.animateScrollToItem(0)
+                            }
+                            is ApiResult.Err -> error = result.error.userMessage
                         }
-                        is ApiResult.Err -> error = result.error.userMessage
                     }
-                }
-                .onFailure { error = it.message ?: "图片发送失败，请重试" }
-            uploading = false
+                    .onFailure { error = it.message ?: "图片发送失败，请重试" }
+            } finally {
+                uploading = false
+            }
         }
     }
 
@@ -377,17 +376,10 @@ private fun MessageBubble(
             ) {
                 val imageUrl = message.media?.url
                 if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(MediaUrls.absolute(imageUrl))
-                            .crossfade(true)
-                            .build(),
+                    ChatImageBubble(
+                        imageUrl = imageUrl,
+                        isMine = isMine,
                         contentDescription = "聊天图片",
-                        modifier = Modifier
-                            .widthIn(max = 220.dp)
-                            .heightIn(max = 240.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
                     )
                 } else {
                     val text = when {
