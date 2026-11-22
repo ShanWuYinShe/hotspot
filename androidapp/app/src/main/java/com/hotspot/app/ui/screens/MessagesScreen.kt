@@ -47,6 +47,7 @@ import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.UserItem
+import com.hotspot.app.data.realtime.RealtimeProtocol
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
 import com.hotspot.app.ui.components.BadgeSize
@@ -70,10 +71,13 @@ import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private const val REALTIME_REFRESH_DEBOUNCE_MS = 250L
+
 /**
  * 消息列表（设计稿 87:3617：页头「消息 + 全部已读/N 条未读 + 新会话」→ 搜索会话 → 「最近」→ 会话行）。
  * 通知中心入口在「我的」页，消息页不再放铃铛（与设计稿一致）。
  * 新会话为端内扩展弹层（设计稿未出画板）：搜索用户 → 直接进入私聊。
+ * WebSocket 实时：收到聊天类增量后 250ms 防抖补拉私聊会话与群会话列表（WS 只推增量）。
  */
 @Composable
 fun MessagesScreen(
@@ -108,6 +112,17 @@ fun MessagesScreen(
     LaunchedEffect(Unit) { state.initialLoad(loader) }
     LaunchedEffect(Unit) { reloadGroups() }
     InfiniteScrollHandler(state, listState, loader)
+
+    // WebSocket 实时增量：收到聊天类事件后轻量补拉会话列表（spec：WS 只推增量，列表以 HTTP 补拉为准）。
+    LaunchedEffect(Unit) {
+        AppContainer.realtimeClient.events.collect { event ->
+            if (RealtimeProtocol.isChatListAffecting(event)) {
+                delay(REALTIME_REFRESH_DEBOUNCE_MS)
+                state.initialLoad(loader)
+                reloadGroups()
+            }
+        }
+    }
 
     // 私聊 + 群聊聚合（对齐 Web useChatListData：置顶 → 有未读 → 最新时间倒序）
     val conversations = remember(state.items, groupChats) {

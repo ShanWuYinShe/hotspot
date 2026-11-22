@@ -21,8 +21,9 @@
 入口：枢纽用户行、附近的人卡片、附近瞬间作者、瞬间详情作者、搜索用户结果）/
 发布瞬间（无独立设计画板，结构对齐 Web CreateSheet：文案 + 相册选图 + 氛围标签 + 可见范围 + 默认浏览位置；
 media/presign_upload → PUT → complete_upload → moments/create）已实现；
-地图原生渲染、WebSocket 实时、管理后台为**代码内登记 TODO 占位**
-（展示真实空态，禁止造假数据）。
+地图原生渲染、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
+WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
+私聊、群聊与消息列表消费增量事件）。
 
 API 契约见根 `spec/`（只读权威）。距离/位置由后端计算，客户端只展示；所有 `xxx_id` 按 `string` 处理；
 - **发现类请求显式传浏览锚点**：附近/发现接口（`users/search`、`groups/search`、`moments/fetch_nearby`）必须显式传
@@ -81,6 +82,7 @@ app/src/main/java/com/hotspot/app/
   data/auth/       # TokenStore（Bearer 持久化）
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
+  data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
   ui/components/   # 原语：SystemButton/SystemInput/SearchInput/Badge/Tabs/Surfaces/Avatar/States/
@@ -98,6 +100,10 @@ app/src/main/java/com/hotspot/app/
 - Base URL：默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机一律
   `adb reverse tcp:8888 tcp:8888` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建；
   release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
+- **WebSocket**：端点 `/ws/v1`（spec/api_spec_websocket.md），App 端连接后 5 秒内发 `Auth`
+  （access_token + device_id + resume_token）；心跳参数由 `ConnectionEstablished.config` 下发，禁止硬编码；
+  断线指数退避重连，4001 先 refresh token（失败清会话回登录页），1000/1008 不重连；
+  聊天页进入时订阅对端 user / 群 group 频道，离开取消，重连后按本地集合全量 `set` 恢复。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
@@ -121,8 +127,8 @@ app/src/main/java/com/hotspot/app/
 ## 已知待办（首版登记）
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 地图原生渲染、WebSocket 实时、管理后台；
-   群聊会话页仅首版键盘输入（WebSocket 实时、@ 提及、已读人数、撤回/编辑、富媒体消息未做）；
+2. 地图原生渲染、管理后台；
+   群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新；@ 提及、输入中提示、富媒体消息未做；
    群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组未做；
    评论首版未做：删除自己的评论、举报评论、点赞回复、查看全部回复（top_replies 预览之外的回复不展开）。
 3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地

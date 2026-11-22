@@ -66,6 +66,15 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * 回前台补连 WebSocket（spec「重连触发条件」：前台切换）；连接已在线时该方法无操作。
+     * 退后台不主动断连：消息类推送语义要求尽量保持在线，由系统进程生命周期回收。
+     */
+    override fun onStart() {
+        super.onStart()
+        AppContainer.realtimeClient.onForeground()
+    }
 }
 
 /** 状态栏/导航栏图标明暗（亮色主题用深色图标，暗色主题用浅色图标）。 */

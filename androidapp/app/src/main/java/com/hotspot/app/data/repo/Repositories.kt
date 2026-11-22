@@ -115,6 +115,24 @@ class AuthRepository(
         )
     }
 
+    /**
+     * 刷新 Token（spec/api_spec_public.md → POST /public/v1/auth/refresh_token）：
+     * App 端必须带非空 refresh_token + device_id；成功后会轮换 access/refresh 并写回 TokenStore。
+     * 用于 WebSocket close 4001 后的自动恢复；刷新失败返回 10100 时调用方应清会话回登录页。
+     */
+    suspend fun refresh(): ApiResult<AuthSession> {
+        val refreshToken = tokens.session.value?.refreshToken
+        if (refreshToken.isNullOrBlank()) {
+            return ApiResult.Err(ApiError.Network("登录状态已失效，请重新登录"))
+        }
+        val body = buildJsonObject {
+            put("client_type", "app")
+            put("device_id", tokens.deviceId())
+            put("refresh_token", refreshToken)
+        }
+        return toSession(api.post(ApiEndpoint.REFRESH_TOKEN, body, AuthTokenPair.serializer()))
+    }
+
     suspend fun signout(): ApiResult<Unit> {
         val result = api.postVoid(ApiEndpoint.SIGNOUT)
         tokens.clear()

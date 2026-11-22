@@ -47,6 +47,7 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.GroupMessageItem
+import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.GroupChatTarget
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ButtonSize
@@ -71,7 +72,8 @@ import kotlinx.coroutines.launch
  * - 发送 group_messages/send：MUST 幂等，ApiClient 自动携带 Idempotency-Key；
  * - 非群成员返回 10200 → 展示设计稿空态文案（加入后才能查看群消息）。
  *
- * 登记 TODO：WebSocket 实时推送、@ 提及、已读人数展示、撤回/编辑、富媒体消息。
+ * WebSocket 实时：新消息/编辑/撤回/已读数增量（进入群聊订阅 group 频道，离开取消）；
+ * 登记 TODO：@ 提及、输入中提示、富媒体消息。
  */
 @Composable
 fun GroupChatScreen(onBack: () -> Unit) {
@@ -117,6 +119,69 @@ fun GroupChatScreen(onBack: () -> Unit) {
         if (messages.isNotEmpty() && !readMarked) {
             readMarked = true
             chatRepository.markGroupRead(groupId)
+        }
+    }
+
+    // WebSocket 实时增量：进入群聊订阅 group 频道，离开取消；新消息去重合并并补 mark_read。
+    LaunchedEffect(groupId) {
+        val realtime = AppContainer.realtimeClient
+        realtime.subscribeGroups(listOf(groupId))
+        try {
+            realtime.events.collect { event ->
+                when (event) {
+                    is RealtimeEvent.GroupMessageNew -> {
+                        if (event.groupId == groupId) {
+                            messages = mergeGroupMessage(messages, event.message)
+                            if (listState.firstVisibleItemIndex <= 1) {
+                                listState.animateScrollToItem(0)
+                            }
+                            if (event.message.sender.userId != myUserId) {
+                                scope.launch { chatRepository.markGroupRead(groupId) }
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.GroupMessageEdited -> {
+                        if (event.groupId == groupId) {
+                            messages = messages.map { message ->
+                                if (message.messageId == event.messageId) {
+                                    message.copy(content = event.content, editedAt = event.editedAt)
+                                } else {
+                                    message
+                                }
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.GroupMessageRecalled -> {
+                        if (event.groupId == groupId) {
+                            messages = messages.map { message ->
+                                if (message.messageId == event.messageId) {
+                                    message.copy(recalledAt = event.recalledAt)
+                                } else {
+                                    message
+                                }
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.GroupMessageReadCountUpdated -> {
+                        if (event.groupId == groupId) {
+                            messages = messages.map { message ->
+                                if (message.messageId == event.messageId) {
+                                    message.copy(readCount = event.readCount)
+                                } else {
+                                    message
+                                }
+                            }
+                        }
+                    }
+
+                    else -> Unit
+                }
+            }
+        } finally {
+            realtime.unsubscribeGroups(listOf(groupId))
         }
     }
 
@@ -367,6 +432,12 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
         }
     }
 }
+
+private fun mergeGroupMessage(
+    current: List<GroupMessageItem>,
+    incoming: GroupMessageItem,
+): List<GroupMessageItem> = (current.filterNot { it.messageId == incoming.messageId } + incoming)
+    .sortedByDescending { it.sentAt }
 
 /** 首版只渲染文本；其余类型给占位文案（媒体/分享渲染为后续迭代）。 */
 private fun messageText(message: GroupMessageItem): String = when (message.type) {
