@@ -65,6 +65,7 @@ fun ChatScreen(onBack: () -> Unit) {
     val listState = rememberLazyListState()
 
     var messages by remember { mutableStateOf<List<PrivateMessageItem>>(emptyList()) }
+    var readMarked by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
@@ -81,6 +82,15 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(targetUserId) { reload() }
+
+    // 打开私聊即视为已读（对齐 Web：会话停在最新消息近底部时 markRead）；
+    // private_messages/mark_read(scope='session') 幂等，失败静默、下次进入重试。
+    LaunchedEffect(messages.isNotEmpty(), readMarked) {
+        if (messages.isNotEmpty() && !readMarked) {
+            readMarked = true
+            chatRepository.markPrivateRead(targetUserId)
+        }
+    }
 
     fun send() {
         val text = input.trim()
