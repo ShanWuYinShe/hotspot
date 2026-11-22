@@ -113,6 +113,7 @@ fun CommentThreadItem(
     onReply: (parentCommentId: String, nickname: String, userId: String) -> Unit,
     onExpandReplies: (rootCommentId: String) -> Unit,
     onDelete: (CommentItem) -> Unit,
+    onReport: (CommentItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = HotSpotTheme.colors
@@ -127,6 +128,7 @@ fun CommentThreadItem(
                 onToggleLike = onToggleLike,
                 onReply = onReply,
                 onDelete = onDelete,
+                onReport = onReport,
                 modifier = Modifier
                     .fillMaxWidth()
                     .onSizeChanged { size ->
@@ -150,6 +152,7 @@ fun CommentThreadItem(
                             parentNickname = thread.comment.user.nickname,
                             momentAuthorId = momentAuthorId,
                             actionsEnabled = actionsEnabled,
+                            onToggleLike = onToggleLike,
                             onReply = onReply,
                         )
                     }
@@ -235,6 +238,7 @@ private fun MainCommentRow(
     onToggleLike: (commentId: String, active: Boolean) -> Unit,
     onReply: (parentCommentId: String, nickname: String, userId: String) -> Unit,
     onDelete: (CommentItem) -> Unit,
+    onReport: (CommentItem) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = HotSpotTheme.colors
@@ -262,16 +266,19 @@ private fun MainCommentRow(
                     color = colors.textPrimary,
                 )
                 Spacer(Modifier.height(Spacing.xs))
+                val ownComment = currentUserId.isNotBlank() && comment.user.userId == currentUserId
                 CommentActions(
                     comment = comment,
                     showLike = true,
-                    showDelete = currentUserId.isNotBlank() && comment.user.userId == currentUserId,
+                    showDelete = ownComment,
+                    showReport = !ownComment && currentUserId.isNotBlank(),
                     enabled = actionsEnabled,
                     onToggleLike = { onToggleLike(comment.commentId, !comment.liked) },
                     onReply = {
                         onReply(comment.commentId, comment.user.nickname, comment.user.userId)
                     },
                     onDelete = { onDelete(comment) },
+                    onReport = { onReport(comment) },
                 )
             }
         }
@@ -285,6 +292,7 @@ private fun ReplyRow(
     parentNickname: String,
     momentAuthorId: String,
     actionsEnabled: Boolean,
+    onToggleLike: (commentId: String, active: Boolean) -> Unit,
     onReply: (parentCommentId: String, nickname: String, userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -312,12 +320,12 @@ private fun ReplyRow(
                     color = colors.textPrimary,
                 )
                 Spacer(Modifier.height(Spacing.xs))
-                // 回复块的动作行只有「回复」（点赞回复首版不做；回复目标仍挂在所属顶层评论上）
+                // 回复块：点赞 + 回复（回复目标仍挂在所属顶层评论上）
                 CommentActions(
                     comment = reply,
-                    showLike = false,
+                    showLike = true,
                     enabled = actionsEnabled,
-                    onToggleLike = {},
+                    onToggleLike = { onToggleLike(reply.commentId, !reply.liked) },
                     onReply = {
                         onReply(parentCommentId, reply.user.nickname, reply.user.userId)
                     },
@@ -401,10 +409,12 @@ private fun CommentActions(
     comment: CommentItem,
     showLike: Boolean,
     showDelete: Boolean = false,
+    showReport: Boolean = false,
     enabled: Boolean,
     onToggleLike: () -> Unit,
     onReply: () -> Unit,
     onDelete: () -> Unit = {},
+    onReport: () -> Unit = {},
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -462,7 +472,7 @@ private fun CommentActions(
         ) {
             Text(text = "回复", style = ActionTextStyle, color = colors.textSecondary)
         }
-        if (showDelete) {
+        if (showDelete || showReport) {
             Spacer(Modifier.width(ActionGap))
             Box(
                 modifier = Modifier
@@ -472,16 +482,20 @@ private fun CommentActions(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         enabled = enabled,
-                        onClick = onDelete,
+                        onClick = if (showDelete) onDelete else onReport,
                     )
                     .hotSpotFocusRing(cornerRadius = Tokens.Radius.sm.dp)
                     .semantics {
                         role = Role.Button
-                        contentDescription = "删除我的评论"
+                        contentDescription = if (showDelete) "删除我的评论" else "举报评论"
                     },
                 contentAlignment = Alignment.CenterStart,
             ) {
-                Text(text = "删除", style = ActionTextStyle, color = colors.textSecondary)
+                Text(
+                    text = if (showDelete) "删除" else "举报",
+                    style = ActionTextStyle,
+                    color = colors.textSecondary,
+                )
             }
         }
     }

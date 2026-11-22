@@ -71,6 +71,7 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.SystemInput
@@ -79,7 +80,6 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
-import com.hotspot.app.util.ReportCatalog
 import kotlinx.coroutines.launch
 
 private const val SITE_BASE_URL = "https://chaoset.com"
@@ -116,7 +116,6 @@ fun UserProfileScreen(
     var remarkSaving by remember { mutableStateOf(false) }
     var showBlockConfirm by remember { mutableStateOf(false) }
     var showReport by remember { mutableStateOf(false) }
-    var reportReason by remember { mutableStateOf<String?>(null) }
     var reportSubmitting by remember { mutableStateOf(false) }
 
     val gallery = remember { mutableStateListOf<MomentItem>() }
@@ -327,7 +326,6 @@ fun UserProfileScreen(
                             text = { Text("举报用户") },
                             onClick = {
                                 menuOpen = false
-                                reportReason = null
                                 showReport = true
                             },
                         )
@@ -429,55 +427,33 @@ fun UserProfileScreen(
     }
 
     if (showReport) {
-        AlertDialog(
-            onDismissRequest = { showReport = false },
-            title = { Text("举报用户") },
-            text = {
-                Column {
-                    Text(
-                        text = "选择举报原因（处理进度可在「设置 → 我的举报」查看）",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = colors.textSecondary,
-                    )
-                    Spacer(Modifier.height(Spacing.sm))
-                    ReportReasonChips(selected = reportReason, onSelect = { reportReason = it })
-                }
-            },
-            confirmButton = {
-                SystemButton(
-                    text = if (reportSubmitting) "提交中…" else "提交",
-                    onClick = {
-                        val reason = reportReason ?: return@SystemButton
-                        if (reportSubmitting) return@SystemButton
-                        reportSubmitting = true
-                        scope.launch {
-                            when (
-                                val result = AppContainer.reportsRepository.create(
-                                    targetType = "user",
-                                    targetId = userId,
-                                    reason = reason,
-                                )
-                            ) {
-                                is ApiResult.Ok -> {
-                                    showReport = false
-                                    Toast.makeText(
-                                        context,
-                                        if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
-                                        Toast.LENGTH_SHORT,
-                                    ).show()
-                                }
-                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
-                            }
-                            reportSubmitting = false
+        ReportDialog(
+            title = "举报用户",
+            submitting = reportSubmitting,
+            onDismiss = { if (!reportSubmitting) showReport = false },
+            onSubmit = { reason ->
+                if (reportSubmitting) return@ReportDialog
+                reportSubmitting = true
+                scope.launch {
+                    when (
+                        val result = AppContainer.reportsRepository.create(
+                            targetType = "user",
+                            targetId = userId,
+                            reason = reason,
+                        )
+                    ) {
+                        is ApiResult.Ok -> {
+                            showReport = false
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         }
-                    },
-                    variant = ButtonVariant.PRIMARY,
-                    size = ButtonSize.SM,
-                    enabled = reportReason != null && !reportSubmitting,
-                )
-            },
-            dismissButton = {
-                SystemButton(text = "取消", onClick = { showReport = false }, variant = ButtonVariant.SECONDARY, size = ButtonSize.SM)
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    reportSubmitting = false
+                }
             },
         )
     }
@@ -760,34 +736,6 @@ private fun GlassIconButton(iconRes: Int, contentDescription: String, onClick: (
             modifier = Modifier.size(Dimens.iconSm),
             tint = colors.textPrimary,
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ReportReasonChips(selected: String?, onSelect: (String) -> Unit) {
-    val colors = HotSpotTheme.colors
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        ReportCatalog.reasons.forEach { reason ->
-            val active = selected == reason.key
-            Box(
-                modifier = Modifier
-                    .clip(AppShapes.pill)
-                    .background(if (active) colors.accentSoftBg else colors.island)
-                    .border(1.dp, if (active) colors.accentBorder else colors.borderSubtle, AppShapes.pill)
-                    .clickable { onSelect(reason.key) }
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
-            ) {
-                Text(
-                    text = reason.label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (active) colors.textAccentOnSoft else colors.textSecondary,
-                )
-            }
-        }
     }
 }
 
