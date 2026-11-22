@@ -95,7 +95,7 @@ Web/鸿蒙同口径；收藏落 `moments/set_favorite`，与「我的瞬间-收�
 - 图片上传 / 发布（`media/presign_upload` → `moments/create`）
 - WebSocket 实时消息（当前为懒加载 + 手动刷新）
 - 管理后台（不在移动端首版范围）
-- 群管理（改群信息 / 公告与成员管理 / 转让群主）与举报群组
+- 群管理（改群信息 / 公告与成员管理 / 转让群主）
 - 头像上传（media/complete_upload → users/update_account.avatar_file_id；编辑资料页点头像仅提示占位）
 - 关系页「黑名单」tab（依赖拉黑 users/set_block，首版未实现）
 - 设置页「地图与位置」区块（高德/OpenStreetMap 切换）暂不渲染：Android 原生地图仍为 TODO，提供无效开关属造假入口
