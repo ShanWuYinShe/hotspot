@@ -40,13 +40,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.GroupChatTarget
@@ -57,12 +63,15 @@ import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.components.hotSpotFocusRing
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
+import com.hotspot.app.util.MentionQuery
+import com.hotspot.app.util.MentionRules
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -76,7 +85,8 @@ import kotlinx.coroutines.launch
  * - 非群成员返回 10200 → 展示设计稿空态文案（加入后才能查看群消息）。
  *
  * WebSocket 实时：新消息/编辑/撤回/已读数增量 + 输入中提示（进入群聊订阅 group 频道，离开取消）；
- * 登记 TODO：@ 提及、富媒体消息。
+ * @ 提及：输入 @ 弹出群成员候选，插入「@昵称 」并在发送时提交 mentions（spec group_messages/send）。
+ * 登记 TODO：富媒体消息。
  */
 @Composable
 fun GroupChatScreen(onBack: () -> Unit) {
@@ -99,6 +109,9 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var sending by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
     var readMarked by remember { mutableStateOf(false) }
+    var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
+    var selectedMentionIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var cursorResetToken by remember { mutableStateOf(0) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -119,6 +132,14 @@ fun GroupChatScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(groupId) { reload() }
+
+    // @ 提及候选：群成员列表（公开信息；失败不阻塞聊天，只是不弹候选）。
+    LaunchedEffect(groupId) {
+        when (val result = AppContainer.groupRepository.members(groupId, null)) {
+            is ApiResult.Ok -> members = result.data.items
+            is ApiResult.Err -> Unit
+        }
+    }
 
     // 输入中成员 6 秒内无新事件自动清空（任一成员继续输入会重置计时）。
     LaunchedEffect(typingVersion) {
@@ -242,11 +263,17 @@ fun GroupChatScreen(onBack: () -> Unit) {
     fun send() {
         val text = input.trim()
         if (text.isEmpty() || sending) return
+        val mentionIds = MentionRules.activeMentionIds(
+            text = text,
+            candidates = members.map { it.user.userId to it.user.nickname },
+            selectedIds = selectedMentionIds,
+        )
         scope.launch {
             sending = true
-            when (val result = chatRepository.sendGroupTextMessage(groupId, text)) {
+            when (val result = chatRepository.sendGroupTextMessage(groupId, text, mentionIds)) {
                 is ApiResult.Ok -> {
                     input = ""
+                    selectedMentionIds = emptySet()
                     realtime.sendGroupTyping(groupId, false)
                     lastTypingSentAt = 0L
                     reload()
@@ -260,6 +287,15 @@ fun GroupChatScreen(onBack: () -> Unit) {
 
     val typingHint = ChatTypingRules.buildGroupTypingHint(typingUserIds) { userId ->
         messages.lastOrNull { it.sender.userId == userId }?.sender?.nickname
+    }
+    val mentionQuery = MentionRules.findActiveQuery(input)
+    val mentionCandidates = if (mentionQuery == null) {
+        emptyList()
+    } else {
+        members
+            .filter { it.user.userId != myUserId }
+            .filter { it.user.nickname.contains(mentionQuery.keyword, ignoreCase = true) }
+            .take(MENTION_CANDIDATE_LIMIT)
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -313,6 +349,18 @@ fun GroupChatScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = Spacing.lg),
             )
         }
+        if (mentionCandidates.isNotEmpty() && mentionQuery != null) {
+            MentionCandidatePanel(
+                query = mentionQuery,
+                candidates = mentionCandidates,
+                onPick = { member ->
+                    val newValue = MentionRules.insertMention(input, input.length, mentionQuery, member.user.nickname)
+                    selectedMentionIds = selectedMentionIds + member.user.userId
+                    onInputChange(newValue)
+                    cursorResetToken++
+                },
+            )
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -327,6 +375,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
                 onValueChange = { onInputChange(it) },
                 placeholder = "发消息…",
                 modifier = Modifier.weight(1f),
+                cursorResetToken = cursorResetToken,
             )
             Spacer(Modifier.width(Spacing.sm))
             SystemButton(
@@ -480,7 +529,10 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 Text(
-                    text = messageText(message),
+                    text = highlightedMentionText(
+                        text = messageText(message),
+                        mentionColor = if (isMine) colors.textOnAccent else colors.accent,
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Normal,
                     color = if (isMine) colors.textOnAccent else colors.textPrimary,
@@ -496,11 +548,73 @@ private fun GroupMessageRow(message: GroupMessageItem, isMine: Boolean) {
     }
 }
 
+/** @提及候选面板：输入 @ 时展示匹配的群成员，点击插入「@昵称 」。 */
+@Composable
+private fun MentionCandidatePanel(
+    query: MentionQuery,
+    candidates: List<GroupMemberItem>,
+    onPick: (GroupMemberItem) -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    SystemCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+        contentPadding = PaddingValues(vertical = Spacing.xs),
+    ) {
+        Text(
+            text = "选择要 @ 的成员" + if (query.keyword.isBlank()) "" else "（" + query.keyword + "）",
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.textSecondary,
+            modifier = Modifier.padding(horizontal = Spacing.md2, vertical = Spacing.xs),
+        )
+        candidates.forEach { member ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPick(member) }
+                    .padding(horizontal = Spacing.md2, vertical = Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Avatar(
+                    name = member.user.nickname,
+                    imageUrl = member.user.avatarUrl,
+                    size = Dimens.avatarXxs,
+                )
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = member.user.nickname.ifBlank { "群成员" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+/** 消息气泡内 @昵称 高亮（他人消息用强调色加粗，自己气泡用反白加粗保持可读）。 */
+private fun highlightedMentionText(text: String, mentionColor: Color): AnnotatedString {
+    val mentionStyle = SpanStyle(color = mentionColor, fontWeight = FontWeight.SemiBold)
+    return buildAnnotatedString {
+        var last = 0
+        Regex("@[^\\s@]+").findAll(text).forEach { match ->
+            append(text.substring(last, match.range.first))
+            withStyle(mentionStyle) { append(match.value) }
+            last = match.range.last + 1
+        }
+        append(text.substring(last))
+    }
+}
+
 private fun mergeGroupMessage(
     current: List<GroupMessageItem>,
     incoming: GroupMessageItem,
 ): List<GroupMessageItem> = (current.filterNot { it.messageId == incoming.messageId } + incoming)
     .sortedByDescending { it.sentAt }
+
+private const val MENTION_CANDIDATE_LIMIT = 5
 
 /** 首版只渲染文本；其余类型给占位文案（媒体/分享渲染为后续迭代）。 */
 private fun messageText(message: GroupMessageItem): String = when (message.type) {

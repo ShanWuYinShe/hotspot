@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.ui.theme.AppShapes
@@ -52,9 +55,23 @@ fun SystemInput(
     singleLine: Boolean = true,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
+    /** 外部程序化重写文本后（如插入 @提及），用递增 token 将光标移到末尾。 */
+    cursorResetToken: Int = 0,
 ) {
     val colors = HotSpotTheme.colors
     var focused by remember { mutableStateOf(false) }
+    var fieldValue by remember { mutableStateOf(TextFieldValue(value)) }
+    // 外部改写文本（清空/插入提及等）时同步内部 TextFieldValue，并把光标放到末尾。
+    LaunchedEffect(value) {
+        if (fieldValue.text != value) {
+            fieldValue = TextFieldValue(value, selection = TextRange(value.length))
+        }
+    }
+    LaunchedEffect(cursorResetToken) {
+        if (cursorResetToken > 0) {
+            fieldValue = fieldValue.copy(selection = TextRange(fieldValue.text.length))
+        }
+    }
     val shape = AppShapes.compact
     val borderColor = when {
         !enabled -> colors.borderSubtle
@@ -88,8 +105,11 @@ fun SystemInput(
                 Spacer(Modifier.width(Spacing.sm))
             }
             BasicTextField(
-                value = value,
-                onValueChange = onValueChange,
+                value = fieldValue,
+                onValueChange = { newValue ->
+                    fieldValue = newValue
+                    onValueChange(newValue.text)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .onFocusChanged { focused = it.isFocused },
