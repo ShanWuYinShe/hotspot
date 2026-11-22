@@ -21,7 +21,9 @@
 入口：枢纽用户行、附近的人卡片、附近瞬间作者、瞬间详情作者、搜索用户结果）/
 发布瞬间（无独立设计画板，结构对齐 Web CreateSheet：文案 + 相册选图 + 氛围标签 + 可见范围 + 默认浏览位置；
 media/presign_upload → PUT → complete_upload → moments/create）已实现；
-地图原生渲染、管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
+地图原生渲染已接入（附近地图页：`/public/v1/map/canvas` 的 heatmap/hotspots/empty 三态、
+拖动/捏合/按钮缩放、data_type 筛选、热点点击进详情；自研 Canvas 投影，不接第三方地图 SDK）；
+管理后台为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
 WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
 私聊、群聊与消息列表消费增量事件）。
 
@@ -90,7 +92,7 @@ app/src/main/java/com/hotspot/app/
                    #       PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
                    # 评论区：CommentThread（楼中楼+Canvas 导引线）/ CommentInputBar（docked+IME）
                    #       / CommentAuthorBadge（作者微徽章）
-  ui/screens/      # 按业务页面（Home/Nearby/Messages/Chat/Me/Search/Notify/Settings/Login/...）
+  ui/screens/      # 按业务页面（Home/Nearby/Map/Messages/Chat/Me/Search/Notify/Settings/Login/...）
   util/            # 格式化等纯函数；CommentThreading（评论归组/分页去重/乐观点赞）
 ```
 
@@ -137,7 +139,7 @@ app/src/main/java/com/hotspot/app/
 ## 已知待办（首版登记）
 
 1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 地图原生渲染、管理后台；
+2. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音/视频/文件富媒体与 @提及消息的独立通知跳转未做；

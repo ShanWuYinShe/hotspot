@@ -64,6 +64,7 @@ fun NearbyMomentsScreen(
     onOpenSearch: () -> Unit,
     onOpenMoment: (String) -> Unit,
     onOpenUser: (String) -> Unit,
+    onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -78,7 +79,7 @@ fun NearbyMomentsScreen(
                 HeaderIconButton(
                     icon = Icons.Filled.Place,
                     contentDescription = "附近地图",
-                    onClick = { Toast.makeText(context, "地图原生渲染 TODO（首版占位）", Toast.LENGTH_SHORT).show() },
+                    onClick = onOpenMap,
                 )
             },
         )
