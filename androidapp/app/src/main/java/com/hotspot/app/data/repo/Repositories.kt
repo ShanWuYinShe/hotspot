@@ -187,6 +187,25 @@ class FeedRepository(private val api: ApiClient) {
         MomentItem.serializer(),
     )
 
+    /**
+     * 编辑瞬间（仅作者，spec/api_spec_moment.md → moments/update）。
+     * Patch 语义：只提交 description，其余字段不传保持不变；返回更新后的 MomentItem。
+     */
+    suspend fun updateMomentDescription(momentId: String, description: String): ApiResult<MomentItem> = api.post(
+        ApiEndpoint.MOMENTS_UPDATE,
+        buildJsonObject {
+            put("moment_id", momentId)
+            put("description", description)
+        },
+        MomentItem.serializer(),
+    )
+
+    /** 删除瞬间（仅作者，软删除；spec/api_spec_moment.md → moments/delete）。 */
+    suspend fun deleteMoment(momentId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.MOMENTS_DELETE,
+        buildJsonObject { put("moment_id", momentId) },
+    )
+
     /** 收藏 / 取消收藏（spec/api_spec_moment.md → moments/set_favorite，两态统一端点）。 */
     suspend fun setFavorite(momentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.MOMENTS_SET_FAVORITE,
