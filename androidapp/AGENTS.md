@@ -122,8 +122,10 @@ app/src/main/java/com/hotspot/app/
 - **群聊 @ 提及**：输入 `@` 弹出群成员候选（缺省拉取 `groups/members/fetch`），插入「@昵称 」；
   发送时 `group_messages/send` 的 `mentions` 只提交最终文案里仍存在的被 @ 成员 user_id
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
-- **聊天语音**：输入条麦克风按钮 → `RECORD_AUDIO` 权限 → 录音栏（红点/计时/取消/发送）→
+- **聊天语音**：输入条麦克风按钮按住说话（按下开始录音，上滑超过 72dp 进入「松开取消」，
+  松手发送；录音中显示红点/计时与操作提示）→ `RECORD_AUDIO` 权限 →
   `ChatAudioUploader`（chat_audio，20MB / audio/aac，AAC-ADTS，流式上传）→ `type=audio`；
+  无权限时首次点按走系统授权，授权后沿用带取消/发送按钮的录音栏；
   语音气泡点击由应用级 `AudioPlaybackController` 播放/停止（全局单播放器，切换语音先停上一条），
   播放中显示进度条与「已播放 / 总时长」（每 200ms 轮询），播完/停止后显示实际总时长；
   服务端无 duration 时以播放器实际时长为准；离开聊天页自动停止。
