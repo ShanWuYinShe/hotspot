@@ -228,6 +228,10 @@ data class AdminUserItem(
     @SerialName("login_id") val loginId: String = "",
     val email: String? = null,
     val phone: String? = null,
+    @SerialName("register_ip") val registerIp: String? = null,
+    @SerialName("register_location") val registerLocation: String? = null,
+    @SerialName("last_login_ip") val lastLoginIp: String? = null,
+    @SerialName("last_login_location") val lastLoginLocation: String? = null,
 )
 
 /** 管理端群组项（spec/api_spec_admin.md → AdminGroupItem extends GroupItem）：平台视角补充 owner 与创建时间。 */

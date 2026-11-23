@@ -30,6 +30,7 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
 管理后台（设置页对平台管理员显示入口，`rbac/me` 鉴权）已接入：
 - **举报审核**：待处理举报列表 → 通过/驳回 + 处理备注（`reports/fetch|judge`）；
 - **用户管理**：昵称搜索 + 正常/已封禁筛选，封禁（永久/1/7/30 天 + 原因）与解封（`users/search`、`users/set_ban`）；
+  点击用户行打开详情（`users/open_the_door`：账号/隐私/活跃时间，IP 与注册地等 PII 仅 `admin.users.read_ip` 可见，权限不足显示占位）；
 - **群组管理**：群名搜索，展示群主/成员数/创建时间，解散群组（`groups/search`、`groups/dismiss`；
   原因仅进审计日志，成员收到 GroupDismissed 事件）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；

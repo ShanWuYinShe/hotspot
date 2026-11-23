@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +76,7 @@ fun AdminUsersScreen(onBack: () -> Unit) {
     var banBusy by remember { mutableStateOf(false) }
     var unbanTarget by remember { mutableStateOf<AdminUserItem?>(null) }
     var unbanBusy by remember { mutableStateOf(false) }
+    var selectedUserId by remember { mutableStateOf<String?>(null) }
 
     val statusFilter = when (statusIndex) {
         1 -> "normal"
@@ -117,7 +119,7 @@ fun AdminUsersScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader(title = "用户管理", subtitle = "平台用户", onBack = onBack)
+        PageHeader(title = "用户管理", subtitle = "平台用户 · 点击行查看详情", onBack = onBack)
         Column(Modifier.padding(horizontal = Spacing.lg)) {
             SearchInput(value = query, onValueChange = { query = it }, placeholder = "搜索昵称…")
             Spacer(Modifier.height(Spacing.sm2))
@@ -147,6 +149,7 @@ fun AdminUsersScreen(onBack: () -> Unit) {
                         items.forEach { item ->
                             AdminUserRow(
                                 item = item,
+                                onOpen = { selectedUserId = item.user.userId },
                                 onBan = { banTarget = item; banReason = ""; banDurationIndex = 0 },
                                 onUnban = { unbanTarget = item },
                             )
@@ -293,11 +296,16 @@ fun AdminUsersScreen(onBack: () -> Unit) {
             },
         )
     }
+
+    selectedUserId?.let { userId ->
+        AdminUserDetailDialog(userId = userId, onDismiss = { selectedUserId = null })
+    }
 }
 
 @Composable
 private fun AdminUserRow(
     item: AdminUserItem,
+    onOpen: () -> Unit,
     onBan: () -> Unit,
     onUnban: () -> Unit,
 ) {
@@ -306,6 +314,7 @@ private fun AdminUserRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onOpen)
             .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
