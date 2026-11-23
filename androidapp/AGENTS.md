@@ -164,7 +164,8 @@ app/src/main/java/com/hotspot/app/
   `FullscreenImageViewer`；多图查看器可左右滑翻页（底部「当前/总数」、双击放大复位），
   单图查看器保留双指缩放/拖拽；搜索结果中的瞬间行可点击进入详情。
 - **屏蔽与名单**：他人主页「屏蔽」走 `users/set_block`（字段为 `active`，拉黑会解除双方关注）；
-  设置 →「屏蔽名单」展示 `users/fetch_blocked` 列表（昵称/屏蔽时间），支持逐条解除屏蔽；
+  设置 →「屏蔽名单」展示 `users/fetch_blocked` 列表（昵称/屏蔽时间/屏蔽原因），
+  分页拉取（底部「加载更多」）并支持逐条解除屏蔽；
   解除只清拉黑关系，不自动恢复关注。
 - **通知跳转**：通知行点击后先 `notify/mark_read`（scope=ids）再按类型跳转：
   `new_follower`/`mutual_follow` → 用户主页；`moment_commented`/`comment_reply`/`mentioned`

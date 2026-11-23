@@ -61,16 +61,40 @@ fun BlockedUsersScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var retryKey by remember { mutableStateOf(0) }
+    var nextCursor by remember { mutableStateOf<String?>(null) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var endReached by remember { mutableStateOf(false) }
     var closingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(retryKey) {
         loading = true
         error = null
         when (val result = AppContainer.profileRepository.fetchBlocked(cursor = null)) {
-            is ApiResult.Ok -> items = result.data.items
+            is ApiResult.Ok -> {
+                items = result.data.items
+                nextCursor = result.data.nextCursor
+                endReached = result.data.nextCursor == null
+            }
             is ApiResult.Err -> error = result.error.userMessage
         }
         loading = false
+    }
+
+    fun loadMore() {
+        val cursor = nextCursor ?: return
+        if (loading || loadingMore) return
+        loadingMore = true
+        scope.launch {
+            when (val result = AppContainer.profileRepository.fetchBlocked(cursor)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.user.userId }
+                    nextCursor = result.data.nextCursor
+                    endReached = result.data.nextCursor == null
+                }
+                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+            }
+            loadingMore = false
+        }
     }
 
     fun unblock(userId: String) {
@@ -117,7 +141,22 @@ fun BlockedUsersScreen(
                         items.forEach { item -> BlockedUserRow(item, unblocking = item.user.userId in closingIds, onOpen = { onOpenUser(item.user.userId) }, onUnblock = { unblock(item.user.userId) }) }
                     }
                 }
-                item { Box(Modifier.padding(vertical = Spacing.lg)) { ListEnd() } }
+                if (!endReached) {
+                    item {
+                        Box(Modifier.padding(vertical = Spacing.lg)) {
+                            SystemButton(
+                                text = if (loadingMore) "加载中…" else "加载更多",
+                                onClick = { loadMore() },
+                                variant = ButtonVariant.SECONDARY,
+                                size = ButtonSize.SM,
+                                enabled = !loadingMore,
+                                loading = loadingMore,
+                            )
+                        }
+                    }
+                } else {
+                    item { Box(Modifier.padding(vertical = Spacing.lg)) { ListEnd() } }
+                }
             }
         }
     }
@@ -150,9 +189,14 @@ private fun BlockedUserRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = if (item.blockedAt.isNotBlank()) "屏蔽于 " + TimeFormat.relative(item.blockedAt) else "已屏蔽",
+                text = buildString {
+                    append(if (item.blockedAt.isNotBlank()) "屏蔽于 " + TimeFormat.relative(item.blockedAt) else "已屏蔽")
+                    if (!item.reason.isNullOrBlank()) append(" · 原因：" + item.reason)
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         SystemButton(
