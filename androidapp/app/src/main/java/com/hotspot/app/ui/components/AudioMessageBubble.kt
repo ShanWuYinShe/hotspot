@@ -1,9 +1,14 @@
 package com.hotspot.app.ui.components
 
 import android.media.MediaPlayer
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -13,7 +18,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -27,10 +34,12 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
+import kotlinx.coroutines.delay
 
 /**
  * 语音消息气泡：点击播放/停止（MediaPlayer，短时签名 URL）。
- * 不做进度条，按钮 + 「语音/播放中」+ 可选时长（服务端 media.duration 可能为 null）。
+ * 播放中展示进度条与「已播放 / 总时长」，每 200ms 从 MediaPlayer 读当前位置；
+ * 停止/播放结束后复位。服务端 media.duration 可能为 null，此时以播放器实际时长为准。
  */
 @Composable
 fun AudioMessageBubble(
@@ -43,6 +52,8 @@ fun AudioMessageBubble(
     val absoluteUrl = MediaUrls.absolute(audioUrl)
     var playing by remember(absoluteUrl) { mutableStateOf(false) }
     var player by remember(absoluteUrl) { mutableStateOf<MediaPlayer?>(null) }
+    var elapsedMs by remember(absoluteUrl) { mutableLongStateOf(0L) }
+    var totalMs by remember(absoluteUrl) { mutableLongStateOf((durationSeconds ?: 0).toLong() * 1000L) }
     fun stopAndRelease() {
         runCatching { player?.release() }
         player = null
@@ -51,10 +62,27 @@ fun AudioMessageBubble(
         runCatching { player?.stop() }
         stopAndRelease()
         playing = false
+        elapsedMs = 0L
     }
     DisposableEffect(Unit) {
         onDispose { stopAndRelease() }
     }
+    // 播放期间轮询进度；状态变化会取消旧协程，无需手动清理定时器。
+    LaunchedEffect(playing) {
+        while (playing) {
+            player?.let { mediaPlayer ->
+                runCatching {
+                    elapsedMs = mediaPlayer.currentPosition.toLong()
+                    val duration = mediaPlayer.duration
+                    if (duration > 0) totalMs = duration.toLong()
+                }
+            }
+            delay(200)
+        }
+    }
+    val progress = if (totalMs > 0L) (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f) else 0f
+    val foreground = if (isMine) colors.textOnAccent else colors.accent
+    val track = if (isMine) colors.textOnAccent.copy(alpha = 0.28f) else colors.accent.copy(alpha = 0.22f)
     Row(
         modifier = modifier
             .clip(CircleShape)
@@ -63,18 +91,22 @@ fun AudioMessageBubble(
                     stop()
                 } else if (!absoluteUrl.isNullOrBlank()) {
                     stopAndRelease()
+                    elapsedMs = 0L
                     val mediaPlayer = MediaPlayer()
                     player = mediaPlayer
                     mediaPlayer.setOnPreparedListener {
                         it.start()
                         playing = true
+                        if (it.duration > 0) totalMs = it.duration.toLong()
                     }
                     mediaPlayer.setOnCompletionListener {
                         playing = false
+                        elapsedMs = 0L
                         stopAndRelease()
                     }
                     mediaPlayer.setOnErrorListener { _, _, _ ->
                         playing = false
+                        elapsedMs = 0L
                         stopAndRelease()
                         true
                     }
@@ -83,6 +115,7 @@ fun AudioMessageBubble(
                         mediaPlayer.prepareAsync()
                     }.onFailure {
                         playing = false
+                        elapsedMs = 0L
                         stopAndRelease()
                     }
                 }
@@ -94,20 +127,45 @@ fun AudioMessageBubble(
             painter = painterResource(if (playing) R.drawable.ic_pause else R.drawable.ic_action_play),
             contentDescription = if (playing) "停止播放" else "播放语音",
             modifier = Modifier.size(Dimens.iconSm),
-            tint = if (isMine) colors.textOnAccent else colors.accent,
+            tint = foreground,
         )
         Spacer(Modifier.width(Spacing.xs))
-        Text(
-            text = if (playing) {
-                "播放中…"
-            } else if (durationSeconds != null && durationSeconds > 0) {
-                durationSeconds.toString() + " 秒"
-            } else {
-                "语音"
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isMine) colors.textOnAccent else colors.textPrimary,
-        )
+        Column {
+            Text(
+                text = when {
+                    playing -> formatAudioTime(elapsedMs) + " / " + formatAudioTime(totalMs)
+                    totalMs > 0L -> formatAudioTime(totalMs)
+                    else -> "语音"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isMine) colors.textOnAccent else colors.textPrimary,
+            )
+            if (playing) {
+                Spacer(Modifier.height(3.dp))
+                Box(
+                    modifier = Modifier
+                        .width(72.dp)
+                        .height(3.dp)
+                        .clip(CircleShape)
+                        .background(track),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .height(3.dp)
+                            .background(foreground, CircleShape),
+                    )
+                }
+            }
+        }
         Spacer(Modifier.width(Spacing.xs))
     }
+}
+
+/** 毫秒 → m:ss（仅用于语音时长/进度展示）。 */
+private fun formatAudioTime(millis: Long): String {
+    val totalSeconds = (millis / 1000L).coerceAtLeast(0L)
+    val minutes = totalSeconds / 60L
+    val seconds = totalSeconds % 60L
+    return minutes.toString() + ":" + seconds.toString().padStart(2, '0')
 }
