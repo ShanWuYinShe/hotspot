@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -155,8 +156,9 @@ fun MomentDetailScreen(
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
     var favoriteBusy by remember { mutableStateOf(false) }
-    // 全屏图片查看器（点击多图 hero）
-    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
+    // 全屏图片查看器（点击多图 hero；携带整组图片支持查看器内左右翻页）
+    var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var viewerIndex by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
 
     suspend fun loadMoment() {
@@ -427,7 +429,10 @@ fun MomentDetailScreen(
                     contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
                     item(key = "hero") {
-                        MomentHero(data = data, onOpenImage = { viewerImageUrl = it })
+                        MomentHero(data = data, onOpenImage = { images, index ->
+                            viewerImages = images
+                            viewerIndex = index
+                        })
                     }
                     item(key = "moment-body") {
                         MomentBody(
@@ -576,11 +581,12 @@ fun MomentDetailScreen(
         )
     }
 
-    viewerImageUrl?.let { url ->
+    if (viewerImages.isNotEmpty()) {
         FullscreenImageViewer(
-            imageUrl = url,
+            images = viewerImages,
+            initialIndex = viewerIndex,
             contentDescription = "瞬间图片",
-            onDismiss = { viewerImageUrl = null },
+            onDismiss = { viewerImages = emptyList() },
         )
     }
 
@@ -749,7 +755,7 @@ private val MomentHeroNoImageTop = 64.dp
  * 无图瞬间用固定留白占位（纯文字瞬间不造假图）。
  */
 @Composable
-private fun MomentHero(data: MomentItem, onOpenImage: (String) -> Unit) {
+private fun MomentHero(data: MomentItem, onOpenImage: (List<String>, Int) -> Unit) {
     val colors = HotSpotTheme.colors
     val images = data.images.mapNotNull { MediaUrls.absolute(it.url) }.distinct()
     if (images.isEmpty()) {
@@ -769,7 +775,7 @@ private fun MomentHero(data: MomentItem, onOpenImage: (String) -> Unit) {
                 contentDescription = data.description.ifBlank { "瞬间图片" },
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { onOpenImage(images[page]) },
+                    .clickable { onOpenImage(images, page) },
                 contentScale = ContentScale.Crop,
             )
         }
