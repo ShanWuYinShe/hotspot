@@ -55,6 +55,8 @@ import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -88,14 +90,21 @@ fun AdminAuditScreen(onBack: () -> Unit) {
     var searchReloadKey by remember { mutableIntStateOf(0) }
     var actionFilter by remember { mutableStateOf<String?>(null) }
     var showActionSheet by remember { mutableStateOf(false) }
+    var rangeIndex by remember { mutableIntStateOf(0) }
     val searching = query.isNotBlank()
     val shownItems = if (searching) searchItems else items
     val targetType = TARGET_TYPES[targetIndex].second
+    // 时间范围预设：审计契约用 UTC ISO 的 start_time/end_time，这里只传下界。
+    val startTime = when (rangeIndex) {
+        1 -> Instant.now().minus(7, ChronoUnit.DAYS).toString()
+        2 -> Instant.now().minus(30, ChronoUnit.DAYS).toString()
+        else -> null
+    }
 
-    LaunchedEffect(targetType, actionFilter, reloadKey) {
+    LaunchedEffect(targetType, actionFilter, startTime, reloadKey) {
         loading = true
         error = null
-        when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType)) {
+        when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime)) {
             is ApiResult.Ok -> {
                 items = result.data.items
                 cursor = result.data.nextCursor
@@ -106,7 +115,7 @@ fun AdminAuditScreen(onBack: () -> Unit) {
     }
 
     // 搜索：契约无 keyword，自动加载完全部分页后本地匹配操作者/动作/对象/详情。
-    LaunchedEffect(query, targetType, actionFilter, searchReloadKey) {
+    LaunchedEffect(query, targetType, actionFilter, startTime, searchReloadKey) {
         val q = query.trim()
         if (q.isEmpty()) {
             searchItems = emptyList()
@@ -121,7 +130,7 @@ fun AdminAuditScreen(onBack: () -> Unit) {
         val all = mutableListOf<AdminAuditLogItem>()
         var next: String? = null
         for (page in 0 until 10) {
-            when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, cursor = next)) {
+            when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime, cursor = next)) {
                 is ApiResult.Ok -> {
                     all += result.data.items
                     next = result.data.nextCursor
@@ -165,6 +174,20 @@ fun AdminAuditScreen(onBack: () -> Unit) {
                 selectedIndex = targetIndex,
                 onSelected = { targetIndex = it },
             )
+            Spacer(Modifier.height(Spacing.sm))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "时间",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                    modifier = Modifier.width(40.dp),
+                )
+                TabPills(
+                    options = listOf("全部", "近 7 天", "近 30 天"),
+                    selectedIndex = rangeIndex,
+                    onSelected = { rangeIndex = it },
+                )
+            }
             Spacer(Modifier.height(Spacing.sm))
             SystemButton(
                 text = "动作：" + (actionFilter?.let { AUDIT_ACTION_LABELS[it] } ?: "全部"),
