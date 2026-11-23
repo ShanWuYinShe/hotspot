@@ -18,19 +18,20 @@ description: hotspot 鸿蒙端模拟器实测流程：项目事实与测试账�
 | 后端 dev 网关 | 宿主 `http://127.0.0.1:8888`（nginx） |
 | 测试库 | postgres 容器 `hotspot-postgres-1`，库 `hotspot`，用户 `postgres` |
 
-**调试后端地址**：debug 构建按设备类型选：模拟器 `http://10.0.2.2:8888`，真机 `http://192.168.0.100:8888`（见 `AppConstants.ets` 的 `DEV_SERVER`）。模拟器还需额外设置 `hdc -t 127.0.0.1:5555 rport tcp:8888 tcp:8888`：动态封面是后端**持久化 S3 预签名 URL**（本地签发 host 为 `127.0.0.1:8888`，签名含 host），不能改写成 `10.0.2.2`，所以图片走 rport 回宿主；否则 nginx 对封面返回 **403 SignatureDoesNotMatch**、页面显示占位（头像走请求时动态签名，不受影响）。判据：`docker logs hotspot-nginx-1 | grep '/s3/'` 封面响应 200；页面封面不再长期占位。模拟器重启后转发条目不自动恢复，装机前先设好并以 `hdc fport ls` 出现 `[Reverse]` 为准。
+**调试后端地址**：debug 构建按设备类型选：模拟器 `http://10.0.2.2:8888`，真机 `http://<宿主局域网 IP>:8888`（见 `AppConstants.ets` 的 `DEV_SERVER`；宿主 IP 用 `ipconfig getifaddr en0` 现查）。模拟器还需额外设置 `hdc -t <target> rport tcp:8888 tcp:8888`（target 用 `hdc list targets -v` 现查）：动态封面是后端**持久化 S3 预签名 URL**（本地签发 host 为 `127.0.0.1:8888`，签名含 host），不能改写成 `10.0.2.2`，所以图片走 rport 回宿主；否则 nginx 对封面返回 **403 SignatureDoesNotMatch**、页面显示占位（头像走请求时动态签名，不受影响）。判据：`docker logs hotspot-nginx-1 | grep '/s3/'` 封面响应 200；页面封面不再长期占位。模拟器重启后转发条目不自动恢复，装机前先设好并以 `hdc fport ls` 出现 `[Reverse]` 为准。
 
 ## 系统权限弹窗（模拟器，会阻断 uitest）
 
 模拟器上的定位/通知等**系统权限弹窗不属于应用窗口**，`uitest uiInput click` / `uinput -T -c` 都点不中。定位权限还可能在触发 `getCurrentLocation` 时反复弹出，必须用 `atm` 在端上直接授权（仅 debug HAP token 可修改）：
 
 ```bash
-HDC=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc
-TOKEN=$($HDC -t 127.0.0.1:5555 shell "bm dump -n com.lsyb.social" | grep -m1 'accessTokenId:' | sed 's/[^0-9]//g')
-$HDC -t 127.0.0.1:5555 shell "atm perm -g -i $TOKEN -p ohos.permission.LOCATION"
-$HDC -t 127.0.0.1:5555 shell "atm perm -g -i $TOKEN -p ohos.permission.APPROXIMATELY_LOCATION"
-$HDC -t 127.0.0.1:5555 shell aa force-stop com.lsyb.social
-$HDC -t 127.0.0.1:5555 shell aa start -b com.lsyb.social -a EntryAbility
+HDC=$(command -v hdc || echo /Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc)
+TARGET=$($HDC list targets 2>/dev/null | head -1)   # 目标以 hdc list targets -v 为准，例 127.0.0.1:5555
+TOKEN=$($HDC -t "$TARGET" shell "bm dump -n com.lsyb.social" | grep -m1 'accessTokenId:' | sed 's/[^0-9]//g')
+$HDC -t "$TARGET" shell "atm perm -g -i $TOKEN -p ohos.permission.LOCATION"
+$HDC -t "$TARGET" shell "atm perm -g -i $TOKEN -p ohos.permission.APPROXIMATELY_LOCATION"
+$HDC -t "$TARGET" shell aa force-stop com.lsyb.social
+$HDC -t "$TARGET" shell aa start -b com.lsyb.social -a EntryAbility
 ```
 
 判据：重启后进入附近不再弹「允许 HotSpot 访问你的位置」，且 `atm perm` 输出 `Success`。重装 HAP 后 token 会变，需重新取 token 再授权。
@@ -84,12 +85,12 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 ### 1) 启动模拟器（沙盒内直接直启）
 
-`~/.Huawei/Emulator/deployed`（实例镜像，含 `*.qcow2`/`ram.bin`）已由 DSH sandbox-extra-roots 插件放行，沙盒内直接 `Emulator -start <实例名>` 即可（实测约 10s 就绪、`hdc list targets` 出现 `127.0.0.1:5555`）。**不要把实例克隆到 `.workwork/` 或改 `config.ini` 重定向路径**。
+`~/.Huawei/Emulator/deployed`（实例镜像，含 `*.qcow2`/`ram.bin`）已由 DSH sandbox-extra-roots 插件放行，沙盒内直接 `Emulator -start <实例名>` 即可（实例名用 `ls ~/.Huawei/Emulator/deployed` 现查；就绪判据以 `hdc list targets -v` 出现 `Connected` 为准，不固定等待时间）。**不要把实例克隆到 `.workwork/` 或改 `config.ini` 重定向路径**。
 
 - `-stop` 可能 hang，清场用 `pkill -9 -f Emulator`。
 - 只读系统镜像在 `~/Library/Huawei/Sdk/system-image/...`，读不受限，无需搬运。
 - 若报 `EPERM ... Operation not permitted`（注意是 **EPERM 而非 EACCES**，属沙盒拒绝签名）：把报错路径加进 sandbox-extra-roots 的 `extraWritableRoots`（见 `sandbox-adaptation` skill），热生效后重试；配置不可用或仍失败时，按全局流程对单条命令申请更宽松权限（由用户审批），不要自行放宽沙盒。
-- **实例目录 EPERM 的具体形态**：`Emulator -start "Pura 90 Pro"` 报 `Error opening logfile /Users/<me>/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted` 且**进程直接没起来**（`pgrep -f Emulator` 为空）——但 hdc 可能仍留 `127.0.0.1:5555 Offline` 僵尸条目，别把它当「模拟器在启动中」等下去。实测实例目录 `touch` 也是 EPERM（沙盒拒绝签名，不是文件权限问题）；解法同上（把实例目录加进 `extraWritableRoots`）。
+- **实例目录 EPERM 的具体形态**（实例名用 `ls ~/.Huawei/Emulator/deployed` 现查，下面以 Pura 90 Pro 为例）：`Emulator -start "Pura 90 Pro"` 报 `Error opening logfile /Users/<me>/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted` 且**进程直接没起来**（`pgrep -f Emulator` 为空）——但 hdc 可能仍留 `127.0.0.1:5555 Offline` 僵尸条目，别把它当「模拟器在启动中」等下去。实测实例目录 `touch` 也是 EPERM（沙盒拒绝签名，不是文件权限问题）；解法同上（把实例目录加进 `extraWritableRoots`）。
 
 ### 2) 反向转发（rport）与热启动残留
 
@@ -119,7 +120,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 ## 走查流程（已验证）
 
-1. **连接**：`hdc list targets -v` 出现 `Connected`（本机模拟器为 `127.0.0.1:5555`）。
+1. **连接**：`hdc list targets -v` 出现 `Connected`（目标地址以该命令输出为准）。
 2. **冷启动**：`aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`。
 3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新由 auth 事件驱动，与挂载顺序无关）；坐标一律 `dumpLayout` 取 bounds 后点击，实测基线见 `references/coords-baselines.md`。
 4. **进个人中心**：点底部「我的」Tab，然后 `uitest uiInput fling 628 2150 628 900 3500` 滚到动作行。
@@ -130,7 +131,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
    - 模拟器**系统地理编码无数据**：地点搜索（geocodeMultiple 走系统 geocoder）对任何关键词都返回「未找到该地点」，且锚点名只会是「未知位置」——这是模拟器环境限制，真机不受影响；历史锚点持久化在偏好文件 `anchor_history`；
    - **地图画布在模拟器空白是服务权限问题，不是渲染/模拟器问题**：地图页（附近 → 右上地图）只有顶栏/缩放/底部选点面板，画布灰白。取证命令：`hdc shell hilog -x | grep OHMapSDK`，命中 `The app does not have map permission` / `checkMapPermission:false` 即 Map Kit 未开通（AGC 侧需按调试证书指纹开通 Map Kit 服务）；与模拟器无关，真机同样会空白。此时不要继续按「marker 偏移」排查——marker 用 `iconKey` + 经纬度投影，画布不渲染就看不到任何 marker。
    - 快速体验游客的**会话 token 持久化在 Asset Store**，冷启动由 `Index.validateSessionOnColdStart` 校验并恢复 profile；判断是否有会话必须用 `HttpUtil.getToken()`（Asset）；Preferences 的 `access_token` 不参与会话判断（恒为空，会让 UI 显示未登录而 WebSocket 仍带旧 token）。**重置登录态**：`bm clean` 不清 Asset Store 里的 token，需 `hdc uninstall com.lsyb.social` 后重装；登录页邮箱/密码为自定义安全输入，`uitest uiInput inputText` 不写入，QA/管理员登录需人工输入。锚点与 AppStorage 瞬态仍可能冷启动清空，重装(-r)保留偏好但锚点需重设；暗色等偏好（`dark_mode_preference`）在 `geotalk` 偏好文件中持久化。
-8. **密度/尺寸标定**：本机模拟器（Pura 90 Pro 实例）密度 ≈3.917（1256px / ≈320vp 逻辑宽），dump bounds 换算 vp 用 3.917，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
+8. **密度/尺寸标定**：密度随实例/分辨率变化，先 `uitest dumpLayout` 取屏幕像素宽，再按设计 vp 宽反推（本机某实例曾为 ≈3.917，仅作示例）；dump bounds 换算 vp 用实测密度，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
 
 ## 登录/切号后的角色行刷新（与挂载顺序无关）
 
@@ -212,7 +213,7 @@ App 端 marker 由 `@kit.MapKit` 的 `MapMarker(latitude, longitude)` 渲染，�
 cd frontend && bunx vitest run src/components/map/__tests__
 ```
 
-（含 `MapCanvas.zoom-anchor` / `wheel` / `pinch` / 投影与 GCJ 纠偏，共 35 项。）
+（含 `MapCanvas.zoom-anchor` / `wheel` / `pinch` / 投影与 GCJ 纠偏；项数以该 vitest 输出的 Tests 行现取，不写死。）
 
 **真机无线调试**：`hdc tconn <手机IP>:<端口>` 后 `hdc list targets -v` 应出现 `<IP>:<端口> TCP Connected`；安装/截图/uitest 均用 `hdc -t <IP>:<端口>`。真机有可用输入法，`uitest uiInput text` 可正常注入中文（模拟器首次输入会弹小艺输入法隐私弹窗，可能反复出现）。
 
