@@ -11,12 +11,13 @@
 	import AdminListView from '../shared/AdminListView.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import Input from '@/components/forms/Input.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import * as Dialog from '@/components/ui/dialog';
 	import Button from '@/components/ui/button.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
-	import { META_MONO } from '../shared/table';
+	import { META_MONO, TOOLBAR, SEARCH_WRAP } from '../shared/table';
 	import { REPORT_REASON_LABELS, REPORT_STATUS_LABELS, REPORT_TARGET_LABELS } from '../shared/labels';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -41,6 +42,73 @@
 	];
 	let status = $state('');
 	let targetType = $state('');
+	let query = $state('');
+	let searchReloadKey = $state(0);
+	const searching = $derived(query.trim().length > 0);
+	let searchItems = $state<AdminReportItem[]>([]);
+	let searchLoaded = $state(0);
+	let searchLoading = $state(false);
+	let searchError = $state<string | null>(null);
+
+	// 举报契约（reports/fetch）无 keyword 参数：搜索时先按当前筛选自动加载完全部分页
+	// （最多 10 页），再本地匹配举报人/对象 ID/理由/说明/处理备注；清空后回到常规分页。
+	function reportMatches(r: AdminReportItem, q: string): boolean {
+		const hay = [
+			r.report_id,
+			r.target_id,
+			r.reporter?.nickname ?? '',
+			r.reporter?.user_id ?? '',
+			REPORT_REASON_LABELS[r.reason] ?? '',
+			REPORT_STATUS_LABELS[r.status] ?? '',
+			r.description ?? '',
+			r.message_snapshot?.snapshot_content ?? '',
+			r.handle_note ?? ''
+		].join(' ').toLowerCase();
+		return hay.includes(q.toLowerCase());
+	}
+
+	$effect(() => {
+		const q = query.trim();
+		const st = status;
+		const tt = targetType;
+		void searchReloadKey;
+		if (!q) {
+			searchItems = [];
+			searchLoaded = 0;
+			searchLoading = false;
+			searchError = null;
+			return;
+		}
+		let cancelled = false;
+		searchLoading = true;
+		searchError = null;
+		void (async () => {
+			const all: AdminReportItem[] = [];
+			let cursor: string | undefined;
+			for (let page = 0; page < 10; page++) {
+				const res = await adminListReports({
+					status: (st || null) as ReportStatus | null,
+					target_type: (tt || null) as ReportTargetType | null,
+					pagination: { limit: 20, cursor }
+				}).catch(() => null);
+				if (cancelled) return;
+				if (!res || res.code !== 0 || !res.data) {
+					searchError = res?.message ?? '搜索失败';
+					break;
+				}
+				all.push(...(res.data.items ?? []));
+				cursor = res.data.next_cursor ?? undefined;
+				if (!cursor) break;
+			}
+			if (cancelled) return;
+			searchLoaded = all.length;
+			searchItems = all.filter((r) => reportMatches(r, q));
+			searchLoading = false;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	const hasFilter = $derived(Boolean(status || targetType));
 	const clearFilters = () => {
@@ -53,6 +121,7 @@
 			adminListReports({ status: (status || null) as ReportStatus | null, target_type: (targetType || null) as ReportTargetType | null, pagination: { limit, cursor } }),
 		() => `${status}|${targetType}`
 	);
+	const shownItems = $derived(searching ? searchItems : list.items);
 
 	// 状态徽章 tone（设计稿规范化 §1.3）：待处理=warning 琥珀、已确认=online 翡翠、已驳回=中性；
 	// 类型徽章=accent 柔蓝。均走 Badge 软底语义档（§20.13），不使用实底抢视觉。
@@ -126,37 +195,54 @@
 {:else}
 	<div class="flex flex-col gap-4">
 		<!-- 筛选行：状态 TabBar（左）+ 目标类型下拉（右）；移动端堆叠 -->
-		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<div class="flex flex-col gap-3">
 			<TabBar items={STATUS_TABS} value={status} onChange={(id) => (status = id)} />
-			<Select value={targetType} onChange={(v) => (targetType = v)} ariaLabel="目标类型" density="compact" class="w-full sm:w-auto">
-				{#each TARGET_TYPES as t (t.value)}
-					<option value={t.value}>{t.label}</option>
-				{/each}
-			</Select>
+			<div class={TOOLBAR}>
+				<div class={SEARCH_WRAP}>
+					<SearchInput
+						value={query}
+						onChange={(v) => (query = v)}
+						placeholder="搜索举报人 / 对象 ID / 理由…"
+						ariaLabel="搜索举报"
+					/>
+				</div>
+				<Select value={targetType} onChange={(v) => (targetType = v)} ariaLabel="目标类型" density="compact" class="w-full sm:w-auto">
+					{#each TARGET_TYPES as t (t.value)}
+						<option value={t.value}>{t.label}</option>
+					{/each}
+				</Select>
+			</div>
+			{#if searching && !searchLoading && !searchError}
+				<p class="text-xs text-text-secondary">已加载 {searchLoaded} 条 · 匹配 {searchItems.length} 条</p>
+			{/if}
 		</div>
 
 		<AdminListView
-			loading={list.loading}
-			error={list.error}
-			count={list.count}
-			hasMore={list.hasMore}
-			loadingMore={list.loadingMore}
-			onReload={list.reload}
-			onLoadMore={list.loadMore}
-			loadingLabel="加载举报列表…"
-			emptyTitle="没有匹配的举报"
-			emptyDescription="当前筛选条件下暂无举报，切换状态或目标类型再试。"
+			loading={searching ? searchLoading : list.loading}
+			error={searching ? searchError : list.error}
+			count={searching ? searchItems.length : list.count}
+			hasMore={searching ? false : list.hasMore}
+			loadingMore={searching ? false : list.loadingMore}
+			onReload={searching ? () => searchReloadKey++ : list.reload}
+			onLoadMore={searching ? () => {} : list.loadMore}
+			loadingLabel={searching ? '搜索举报…' : '加载举报列表…'}
+			emptyTitle={searching ? '没有匹配的举报' : '没有匹配的举报'}
+			emptyDescription={searching
+				? '换个举报人/对象 ID/理由关键词试试，或清空搜索词后重试。'
+				: '当前筛选条件下暂无举报，切换状态或目标类型再试。'}
 			emptyIcon={Flag}
 		>
 			{#snippet emptyAction()}
-				{#if hasFilter}
+				{#if searching}
+					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+				{:else if hasFilter}
 					<Button type="button" variant="secondary" size="sm" onclick={clearFilters}>清除筛选</Button>
 				{/if}
 			{/snippet}
 
 			<!-- 桌面两列卡片（内容链路较长，2 列兼顾密度与可读；≥md=960 起） -->
 			<ul class="grid grid-cols-1 gap-3 md:grid-cols-2">
-				{#each list.items as r (r.report_id)}
+				{#each shownItems as r (r.report_id)}
 					{@const target = TARGET_META[r.target_type]}
 					{@const TargetIcon = target.icon}
 					<li>
