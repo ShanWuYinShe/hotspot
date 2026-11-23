@@ -11,6 +11,7 @@ import com.hotspot.app.data.model.AppLimits
 import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.DefaultLocation
 import com.hotspot.app.data.model.GeoPoint
+import com.hotspot.app.data.repo.AdminRepository
 import com.hotspot.app.data.repo.AuthRepository
 import com.hotspot.app.data.repo.ChatRepository
 import com.hotspot.app.data.repo.CommentRepository
@@ -64,6 +65,8 @@ object AppContainer {
         private set
     lateinit var reportsRepository: ReportsRepository
         private set
+    lateinit var adminRepository: AdminRepository
+        private set
     lateinit var momentsRepository: MomentsRepository
         private set
     lateinit var mediaRepository: MediaRepository
@@ -111,6 +114,7 @@ object AppContainer {
             groupRepository = GroupRepository(apiClient)
             systemRepository = SystemRepository(apiClient)
             reportsRepository = ReportsRepository(apiClient)
+            adminRepository = AdminRepository(apiClient)
             momentsRepository = MomentsRepository(apiClient)
             mediaRepository = MediaRepository(apiClient)
             audioPlaybackController = AudioPlaybackController()

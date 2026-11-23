@@ -16,6 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
+import com.hotspot.app.ui.screens.AdminReportsScreen
 import com.hotspot.app.ui.screens.BlockedUsersScreen
 import com.hotspot.app.ui.screens.ChatScreen
 import com.hotspot.app.ui.screens.EditProfileScreen
@@ -220,6 +221,7 @@ private fun MainScaffold() {
                         onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
                         onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
                         onOpenBlocked = { navController.navigate(Routes.ME_BLOCKED) },
+                        onOpenAdmin = { navController.navigate(Routes.ADMIN_REPORTS) },
                         onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
@@ -231,6 +233,9 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenUser = { userId -> openUser(userId) },
                     )
+                }
+                composable(Routes.ADMIN_REPORTS) {
+                    AdminReportsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,
