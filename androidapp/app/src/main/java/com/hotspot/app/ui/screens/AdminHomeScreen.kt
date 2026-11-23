@@ -22,6 +22,7 @@ fun AdminHomeScreen(
     onBack: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenUsers: () -> Unit,
+    onOpenGroups: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxSize()) {
@@ -52,6 +53,11 @@ fun AdminHomeScreen(
                         title = "用户管理",
                         subtitle = "搜索用户、查看账号状态、封禁与解封",
                         onClick = onOpenUsers,
+                    )
+                    ListRow(
+                        title = "群组管理",
+                        subtitle = "搜索群组、查看群主与成员数、解散违规群组",
+                        onClick = onOpenGroups,
                     )
                 }
             }

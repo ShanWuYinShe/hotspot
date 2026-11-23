@@ -195,6 +195,18 @@ data class AdminUserItem(
     val phone: String? = null,
 )
 
+/** 管理端群组项（spec/api_spec_admin.md → AdminGroupItem extends GroupItem）：平台视角补充 owner 与创建时间。 */
+@Serializable
+data class AdminGroupItem(
+    val group: GroupInfo = GroupInfo(),
+    val description: String? = null,
+    val tags: List<String> = emptyList(),
+    @SerialName("owner_id") val ownerId: String? = null,
+    val owner: UserInfo = UserInfo(),
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("last_activity_at") val lastActivityAt: String? = null,
+)
+
 /** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
 @Serializable
 data class AdminReportsPage(
