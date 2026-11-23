@@ -470,6 +470,13 @@ data class NotifyItem(
 )
 
 @Serializable
+data class BlockedUserItem(
+    val user: UserInfo = UserInfo(),
+    @SerialName("blocked_at") val blockedAt: String = "",
+    val reason: String? = null,
+)
+
+@Serializable
 data class UnreadSummary(
     val total: Int = 0,
 )

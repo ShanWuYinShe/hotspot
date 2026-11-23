@@ -14,6 +14,8 @@ object Routes {
     const val ME_EDIT = "me/edit"
     // 我的举报（设计稿 87:3350，入口：设置 → 系统与关于）
     const val ME_REPORTS = "me/reports"
+    // 屏蔽名单（入口：设置 → 系统与关于）
+    const val ME_BLOCKED = "me/blocked"
     const val RELATIONSHIPS = "me/relationships?tab={tab}"
     // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
     const val NEARBY_PEOPLE = "nearby/people"

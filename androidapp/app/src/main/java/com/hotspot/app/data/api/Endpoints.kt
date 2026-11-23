@@ -45,6 +45,7 @@ object ApiEndpoint {
     const val USERS_FETCH_MOMENTS = "/api/v1/users/fetch_moments"
     const val USERS_SET_REMARK = "/api/v1/users/set_remark"
     const val USERS_SET_BLOCK = "/api/v1/users/set_block"
+    const val USERS_FETCH_BLOCKED = "/api/v1/users/fetch_blocked"
     // 我的举报记录（spec/api_spec_report.md → reports/fetch，命名空间天生私有）
     const val REPORTS_FETCH = "/api/v1/reports/fetch"
     const val REPORTS_CREATE = "/api/v1/reports/create"
