@@ -17,7 +17,9 @@ object Routes {
     // 屏蔽名单（入口：设置 → 系统与关于）
     const val ME_BLOCKED = "me/blocked"
     // 管理后台（仅平台管理员可从设置进入）
+    const val ADMIN_HOME = "admin"
     const val ADMIN_REPORTS = "admin/reports"
+    const val ADMIN_USERS = "admin/users"
     const val RELATIONSHIPS = "me/relationships?tab={tab}"
     // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
     const val NEARBY_PEOPLE = "nearby/people"

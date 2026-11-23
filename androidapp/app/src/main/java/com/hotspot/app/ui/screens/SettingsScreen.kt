@@ -328,7 +328,7 @@ fun SettingsScreen(
                 if (isAdmin) {
                     ListRow(
                         title = "管理后台",
-                        subtitle = "举报审核与平台管理",
+                        subtitle = "举报审核与用户管理",
                         onClick = onOpenAdmin,
                     )
                 }
