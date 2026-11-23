@@ -319,6 +319,23 @@ data class AdminGeoStatsResponse(
     val trends: List<AdminGeoStatsTrendPoint> = emptyList(),
 )
 
+/** 管理端区域下钻明细项（spec → AdminGeoDrilldownItem）。 */
+@Serializable
+data class AdminGeoDrilldownItem(
+    @SerialName("object_id") val objectId: String = "",
+    val title: String = "",
+    @SerialName("location_name") val locationName: String? = null,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+@Serializable
+data class AdminGeoDrilldownPage(
+    val items: List<AdminGeoDrilldownItem> = emptyList(),
+    @SerialName("next_cursor") val nextCursor: String? = null,
+)
+
 /** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
 @Serializable
 data class AdminReportsPage(

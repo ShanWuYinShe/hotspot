@@ -10,6 +10,7 @@ import com.hotspot.app.data.model.AdminRoleItem
 import com.hotspot.app.data.model.AdminRoleList
 import com.hotspot.app.data.model.AdminTagItem
 import com.hotspot.app.data.model.AdminAnnouncementItem
+import com.hotspot.app.data.model.AdminGeoDrilldownPage
 import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminGroupItem
 import com.hotspot.app.data.model.AdminReportsPage
@@ -192,6 +193,24 @@ class AdminRepository(private val api: ApiClient) {
             put("trend_days", trendDays?.let(::JsonPrimitive) ?: JsonNull)
         },
         AdminGeoStatsResponse.serializer(),
+    )
+
+    /** 区域下钻：按 S2 网格桶 + 实体类型返回明细（keyset 分页）。 */
+    suspend fun fetchGeoDrilldown(
+        cellToken: String,
+        level: Int,
+        entityType: String,
+        cursor: String? = null,
+    ): ApiResult<AdminGeoDrilldownPage> = api.post(
+        ApiEndpoint.ADMIN_STATS_GEO_DRILLDOWN,
+        buildJsonObject {
+            put("cell_token", cellToken)
+            put("level", level)
+            put("entity_type", entityType)
+            put("time_range", JsonNull)
+            put("pagination", pagination(cursor, limit = 20))
+        },
+        AdminGeoDrilldownPage.serializer(),
     )
 
     /** 系统公告列表（平台管理视角，含创建人/推送状态/阅读数）。 */
