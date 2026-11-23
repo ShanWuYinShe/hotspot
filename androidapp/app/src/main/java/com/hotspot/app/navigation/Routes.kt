@@ -27,7 +27,8 @@ object Routes {
     const val NOTIFY = "notify"
     const val SETTINGS = "settings"
     const val CHAT = "chat/{userId}"
-    const val MOMENT_DETAIL = "moment/{momentId}"
+    // 瞬间详情可携带 commentId（评论通知/提及），进入后滚动定位到对应评论线程
+    const val MOMENT_DETAIL = "moment/{momentId}?commentId={commentId}"
     // 群详情（推入页；设计稿 87:1696，入口：我的群组 / 附近群组 / 搜索群组结果）
     const val GROUP = "group/{groupId}"
     // 群聊会话（设计稿 87:3529；入口：群详情「打开群聊」，群成员可见）
@@ -54,7 +55,8 @@ object Routes {
 
     fun chat(userId: String): String = "chat/" + userId
 
-    fun moment(momentId: String): String = "moment/" + momentId
+    fun moment(momentId: String, commentId: String? = null): String =
+        if (commentId.isNullOrBlank()) "moment/" + momentId else "moment/" + momentId + "?commentId=" + commentId
 
     fun group(groupId: String): String = "group/" + groupId
 

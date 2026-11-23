@@ -64,6 +64,7 @@ fun NotifyScreen(
     onBack: () -> Unit,
     onOpenUser: (String) -> Unit,
     onOpenMoment: (String) -> Unit,
+    onOpenMomentComment: (String, String) -> Unit,
     onOpenGroup: (String) -> Unit,
     onOpenGroupChat: (String) -> Unit,
     onOpenReports: () -> Unit,
@@ -102,7 +103,14 @@ fun NotifyScreen(
                 val userId = payload["actor"]?.jsonObject?.get("user_id")?.jsonPrimitive?.contentOrNull
                 if (!userId.isNullOrBlank()) onOpenUser(userId)
             }
-            "moment_commented", "comment_reply", "mentioned", "nearby_new_moment" -> field("moment_id")?.let(onOpenMoment)
+            "moment_commented", "comment_reply", "mentioned" -> {
+                val momentId = field("moment_id")
+                val commentId = field("comment_id") ?: field("reply_id")
+                if (!momentId.isNullOrBlank()) {
+                    if (!commentId.isNullOrBlank()) onOpenMomentComment(momentId, commentId) else onOpenMoment(momentId)
+                }
+            }
+            "nearby_new_moment" -> field("moment_id")?.let(onOpenMoment)
             "group_mentioned" -> field("group_id")?.let(onOpenGroupChat)
             "group_invite_received",
             "group_application_received",
