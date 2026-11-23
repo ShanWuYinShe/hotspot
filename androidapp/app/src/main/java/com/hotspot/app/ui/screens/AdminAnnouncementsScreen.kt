@@ -35,10 +35,12 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.components.SystemTextArea
@@ -81,6 +83,8 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
     var saving by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<AdminAnnouncementItem?>(null) }
     var deleting by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var searchLoadingAll by remember { mutableStateOf(false) }
 
     val severityFilter = if (severityIndex == 0) null else AnnouncementSeverities[severityIndex - 1].first
 
@@ -110,6 +114,35 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
                 is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
             }
             loadingMore = false
+        }
+    }
+
+    // 契约的 announcements/fetch 没有关键词参数：搜索时先加载完分页（最多 10 页），再做本地筛选。
+    LaunchedEffect(query, severityIndex, reloadKey) {
+        if (query.isBlank() || loading) return@LaunchedEffect
+        var next: String? = cursor ?: return@LaunchedEffect
+        searchLoadingAll = true
+        var pages = 0
+        while (next != null && pages < 10) {
+            when (val result = AppContainer.adminRepository.fetchAnnouncements(severityFilter, next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.announcementId }
+                    cursor = result.data.nextCursor
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+        searchLoadingAll = false
+    }
+
+    val filteredItems = remember(items, query) {
+        val keyword = query.trim()
+        if (keyword.isBlank()) items else items.filter { item ->
+            item.title.contains(keyword, ignoreCase = true) ||
+                item.content.contains(keyword, ignoreCase = true) ||
+                item.createdBy.nickname.contains(keyword, ignoreCase = true)
         }
     }
 
@@ -183,6 +216,12 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
                 selectedIndex = severityIndex,
                 onSelected = { severityIndex = it },
             )
+            Spacer(Modifier.height(Spacing.sm2))
+            SearchInput(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "搜索标题 / 内容 / 发布人…",
+            )
             Spacer(Modifier.height(Spacing.sm))
         }
         when {
@@ -192,6 +231,10 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
                 title = "还没有系统公告",
                 description = "发布全站公告，用户会在通知中心与公告入口看到。",
             )
+            filteredItems.isEmpty() -> EmptyState(
+                title = "没有匹配的公告",
+                description = "换个标题、正文或发布人关键词试试。",
+            )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -200,8 +243,16 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
                 ),
             ) {
                 item {
+                    Text(
+                        text = "共 " + items.size + " 条" + if (query.isNotBlank()) " · 匹配 " + filteredItems.size + " 条" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.padding(vertical = Spacing.sm, horizontal = Spacing.xs),
+                    )
+                }
+                item {
                     ListGroup {
-                        items.forEach { item ->
+                        filteredItems.forEach { item ->
                             AnnouncementRow(
                                 item = item,
                                 onEdit = { openEditor(item) },
@@ -210,7 +261,9 @@ fun AdminAnnouncementsScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                if (cursor != null) {
+                if (searchLoadingAll) {
+                    item { InlineLoading(text = "正在加载全部公告用于搜索…") }
+                } else if (query.isBlank() && cursor != null) {
                     item {
                         Box(Modifier.padding(vertical = Spacing.lg)) {
                             SystemButton(
