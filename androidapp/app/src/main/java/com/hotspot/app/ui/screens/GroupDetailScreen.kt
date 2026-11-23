@@ -655,7 +655,7 @@ fun GroupDetailScreen(
                 }
             },
             onDismiss = { if (!groupSettingsSaving) showGroupSettings = false },
-            onSubmit = { isSearchable, membersSearchable, requiresApproval, maxMembers ->
+            onSubmit = { isSearchable, membersSearchable, requiresApproval, maxMembers, joinMethod, password, clearPassword ->
                 if (groupSettingsSaving) return@GroupSettingsDialog
                 groupSettingsSaving = true
                 groupSettingsSaveError = null
@@ -667,6 +667,9 @@ fun GroupDetailScreen(
                             membersSearchable = membersSearchable,
                             requiresApproval = requiresApproval,
                             maxMembers = maxMembers,
+                            joinMethod = joinMethod,
+                            password = password,
+                            clearPassword = clearPassword,
                         )
                     ) {
                         is ApiResult.Ok -> {

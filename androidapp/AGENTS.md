@@ -143,9 +143,10 @@ app/src/main/java/com/hotspot/app/
   同意后刷新成员列表与详情，拒绝后仅从收件箱移除。
 - **转让群主**：成员操作面板中仅 owner 显示「转让群主」→ 二次确认 → `groups/admin/transfer_ownership`；
   成功后刷新详情与成员列表，原 owner 变管理员、新 owner 徽章即时更新。
-- **群设置**：更多菜单（owner/admin）→ 搜索可见性、成员列表可见性、入群审批、人数上限；
-  读取 `groups/admin/settings`，保存走 `groups/admin/update`（只提交四个字段，其余 null 不改）；
-  加入方式/密码只读展示，编辑密码留后续。
+- **群设置**：更多菜单（owner/admin）→ 搜索可见性、成员列表可见性、入群审批、人数上限、
+  加入方式（公开/密码/仅限邀请）与群密码（8-32 位；留空保持原密码，可清除）；
+  读取 `groups/admin/settings`，保存走 `groups/admin/update`（只提交改动字段，其余 null 不改；
+  password 与 clear_password 互斥）。
 - **群成员管理**：成员 tab 中 owner/admin 对非群主、非自己的成员显示「管理」→ 操作面板
   （设为/取消管理员、禁言 1 小时/解除禁言、移除成员）；分别走 `groups/admin/members/set_role`、
   `set_mute`、`remove`，群主/自己不可被操作，服务端 10400 兜底；成功后刷新成员列表与群详情。
