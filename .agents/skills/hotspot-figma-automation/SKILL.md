@@ -280,7 +280,7 @@ Figma 设计稿云端自动化修改、清洗与同步规程。基于 Figma MCP 
 Session 失效或新建任务时，调用 `mcp.ts` 生成会话：
 
 ```bash
-cd /Users/liyou/work/hotspot/.workwork/figma-mcp
+cd "$(git rev-parse --show-toplevel)/.workwork/figma-mcp"
 bun run mcp.ts call create_session '{"fileKey":"<fileKey>","description":"automation sync"}'
 ```
 
@@ -301,7 +301,7 @@ bash /Users/liyou/work/hotspot/.workwork/figma-capture/use-figma.sh \
 ### 3. 获取截图并核验
 
 ```bash
-cd /Users/liyou/work/hotspot/.workwork/figma-mcp
+cd "$(git rev-parse --show-toplevel)/.workwork/figma-mcp"
 bun run mcp.ts call get_screenshot '{"nodeId":"<nodeId>","fileKey":"<fileKey>"}'
 ```
 

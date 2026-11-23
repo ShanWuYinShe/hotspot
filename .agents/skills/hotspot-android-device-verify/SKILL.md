@@ -49,7 +49,7 @@ sed -i '' -E 's/^hw\.lcd\.density *=.*/hw.lcd.density = 420/' "$CFG"
 "$ANDROID_HOME/emulator/emulator" -avd HotSpotPhone \
   -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot \
   -netdelay none -netspeed full      # 首次 / 需要重置状态时加 -wipe-data
-# 就绪判据：adb devices 出现 device 且 adb shell getprop sys.boot_completed 输出 1（冷启动约 30s）
+# 就绪判据：轮询 adb shell getprop sys.boot_completed 输出 1（带超时上限；冷启动耗时不固定）
 ```
 
 ## 网络联调（关键事实）

@@ -41,7 +41,7 @@
 全绿 → `gh pr merge --rebase --delete-branch` → 本地 `git pull --ff-only` 并清理 worktree。
 
 - 本地（提交前，秒级）：`git commit` 的 husky 钩子按改动路径跑对应门禁（`frontend/` → `bun run check`；`backend-go/` → gofmt + 受影响包 `go build`/`go vet`/`go test -short`；`harmonyapp/` → hvigor `assembleApp`，工具链缺失时告警跳过），另有 `gofmt -l backend-go`、`go vet -C backend-go ./...` 等秒级复核命令。**不跑**：`go test ./...`（全量/含 `-race`）、`bun run test`、`bun run build`、生产镜像构建（`docker compose --profile prod build`）；本地 dev 容器（`docker-compose.dev.yml`）仅在交互式调试时按需构建/启动。
-- CI 覆盖（`.github/workflows/ci.yml`，`push: main` + `pull_request: main`，共 8 个 job）：
+- CI 覆盖（`.github/workflows/ci.yml`，`push: main` + `pull_request: main`；job 列表与数量以该文件为准，数量用 `yq '.jobs | keys | length' .github/workflows/ci.yml` 现取）：
   - `Go Backend (Unit Tests)`：go build、gofmt、go vet、govulncheck、staticcheck、gosec、迁移序号校验、`go test` + 覆盖率门禁。
   - `Go Backend (Postgres Integration)`：真实 Postgres 迁移与 schema/索引校验、迁移幂等、真实库 repository 集成测试、模块覆盖率 ≥90%、SeaweedFS、后端 + nginx 网关 HTTP E2E。
   - `Frontend (SvelteKit)`：`bun install`、svelte-check、vitest、`bun build`。
