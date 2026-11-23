@@ -63,6 +63,7 @@ import com.hotspot.app.ui.components.ChatVideoBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.FullscreenImageViewer
 import com.hotspot.app.ui.components.MessageActionSheet
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.ReportDialog
@@ -111,6 +112,8 @@ fun ChatScreen(onBack: () -> Unit) {
     var reportSubmitting by remember { mutableStateOf(false) }
     // 长按消息操作面板（复制/撤回/举报）
     var actionTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
+    // 全屏图片查看器（点击聊天气泡内图片）
+    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -340,6 +343,7 @@ fun ChatScreen(onBack: () -> Unit) {
                             } else {
                                 null
                             },
+                            onImageClick = { viewerImageUrl = it },
                         )
                     }
                 }
@@ -482,6 +486,14 @@ fun ChatScreen(onBack: () -> Unit) {
             },
         )
     }
+
+    viewerImageUrl?.let { url ->
+        FullscreenImageViewer(
+            imageUrl = url,
+            contentDescription = "聊天图片",
+            onDismiss = { viewerImageUrl = null },
+        )
+    }
 }
 
 private fun mergePrivateMessage(
@@ -495,6 +507,7 @@ private fun MessageBubble(
     message: PrivateMessageItem,
     isMine: Boolean,
     onLongPress: (() -> Unit)? = null,
+    onImageClick: ((String) -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -536,6 +549,7 @@ private fun MessageBubble(
                         imageUrl = imageUrl,
                         isMine = isMine,
                         contentDescription = "聊天图片",
+                        onClick = onImageClick?.let { click -> { click(imageUrl) } },
                     )
                 } else if (!message.isRecalled && message.type == "video") {
                     ChatVideoBubble(
