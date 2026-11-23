@@ -5,6 +5,7 @@ import com.hotspot.app.data.api.ApiEndpoint
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminPermissions
 import com.hotspot.app.data.model.AdminAnnouncementItem
+import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminGroupItem
 import com.hotspot.app.data.model.AdminReportsPage
 import com.hotspot.app.data.model.AdminUserItem
@@ -52,6 +53,22 @@ class AdminRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(AdminUserItem.serializer()),
+    )
+
+    /** 地理统计聚合快照（全站存量 + 区域/热门地点排名 + 每日新增趋势）。 */
+    suspend fun fetchGeoStats(
+        level: Int? = 8,
+        limit: Int? = 10,
+        trendDays: Int? = 7,
+    ): ApiResult<AdminGeoStatsResponse> = api.post(
+        ApiEndpoint.ADMIN_STATS_GEO,
+        buildJsonObject {
+            put("level", level?.let(::JsonPrimitive) ?: JsonNull)
+            put("time_range", JsonNull)
+            put("limit", limit?.let(::JsonPrimitive) ?: JsonNull)
+            put("trend_days", trendDays?.let(::JsonPrimitive) ?: JsonNull)
+        },
+        AdminGeoStatsResponse.serializer(),
     )
 
     /** 系统公告列表（平台管理视角，含创建人/推送状态/阅读数）。 */

@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.AdminAnnouncementsScreen
+import com.hotspot.app.ui.screens.AdminStatsScreen
 import com.hotspot.app.ui.screens.AdminGroupsScreen
 import com.hotspot.app.ui.screens.AdminHomeScreen
 import com.hotspot.app.ui.screens.AdminReportsScreen
@@ -245,6 +246,7 @@ private fun MainScaffold() {
                         onOpenUsers = { navController.navigate(Routes.ADMIN_USERS) },
                         onOpenGroups = { navController.navigate(Routes.ADMIN_GROUPS) },
                         onOpenAnnouncements = { navController.navigate(Routes.ADMIN_ANNOUNCEMENTS) },
+                        onOpenStats = { navController.navigate(Routes.ADMIN_STATS) },
                     )
                 }
                 composable(Routes.ADMIN_REPORTS) {
@@ -258,6 +260,9 @@ private fun MainScaffold() {
                 }
                 composable(Routes.ADMIN_ANNOUNCEMENTS) {
                     AdminAnnouncementsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.ADMIN_STATS) {
+                    AdminStatsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,
