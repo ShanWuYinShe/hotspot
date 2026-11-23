@@ -80,6 +80,7 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.MoodChips
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SegmentedTabs
 import com.hotspot.app.ui.components.SystemButton
@@ -172,6 +173,7 @@ fun MomentDetailScreen(
     var editPrivacy by remember { mutableStateOf("public") }
     var editPrivacyKnown by remember { mutableStateOf(false) }
     var editPreparing by remember { mutableStateOf(false) }
+    var maxMomentTags by remember { mutableIntStateOf(5) }
     var editSaving by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteConfirmOpen by remember { mutableStateOf(false) }
@@ -399,7 +401,10 @@ fun MomentDetailScreen(
         }
     }
 
-    LaunchedEffect(momentId) { loadMoment() }
+    LaunchedEffect(momentId) {
+        loadMoment()
+        runCatching { AppContainer.limits() }.getOrNull()?.let { maxMomentTags = it.maxMomentTags.coerceAtLeast(1) }
+    }
     LaunchedEffect(momentId) { loadComments() }
     LaunchedEffect(loggedIn) {
         if (!loggedIn || currentUser != null) return@LaunchedEffect
@@ -662,15 +667,17 @@ fun MomentDetailScreen(
         MomentEditDialog(
             initialDescription = moment?.description.orEmpty(),
             initialPrivacy = if (editPrivacyKnown) editPrivacy else null,
+            initialTags = moment?.tags.orEmpty(),
+            maxTags = maxMomentTags,
             saving = editSaving,
             error = editError,
             onDismiss = { if (!editSaving) editDialogOpen = false },
-            onSubmit = { description, privacyLevel ->
+            onSubmit = { description, privacyLevel, tags ->
                 if (editSaving) return@MomentEditDialog
                 editSaving = true
                 editError = null
                 scope.launch {
-                    when (val result = feedRepository.updateMoment(momentId, description, privacyLevel)) {
+                    when (val result = feedRepository.updateMoment(momentId, description, privacyLevel, tags)) {
                         is ApiResult.Ok -> {
                             moment = result.data
                             editDialogOpen = false
@@ -1194,13 +1201,17 @@ private fun OwnerActionRow(text: String, color: Color, onClick: () -> Unit) {
 private fun MomentEditDialog(
     initialDescription: String,
     initialPrivacy: String?,
+    initialTags: List<String>,
+    maxTags: Int,
     saving: Boolean,
     error: String?,
     onDismiss: () -> Unit,
-    onSubmit: (description: String, privacyLevel: String?) -> Unit,
+    onSubmit: (description: String, privacyLevel: String?, tags: List<String>) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     var description by remember(initialDescription) { mutableStateOf(initialDescription) }
+    var selectedTags by remember(initialTags) { mutableStateOf(initialTags) }
     var privacyIndex by remember(initialPrivacy) {
         mutableIntStateOf(if (initialPrivacy == "private") 1 else 0)
     }
@@ -1215,6 +1226,35 @@ private fun MomentEditDialog(
                     label = "瞬间文案",
                     placeholder = "这一刻的想法…",
                     minHeight = Dimens.inputHeight * 3,
+                )
+                Spacer(Modifier.height(Spacing.md))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "此刻氛围",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.textPrimary,
+                    )
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(
+                        text = selectedTags.size.toString() + "/" + maxTags,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.sm))
+                MoodChips(
+                    selected = selectedTags,
+                    extraTags = initialTags,
+                    onToggle = { tag ->
+                        selectedTags = when {
+                            selectedTags.contains(tag) -> selectedTags - tag
+                            selectedTags.size >= maxTags -> {
+                                Toast.makeText(context, "最多选择 " + maxTags + " 个标签", Toast.LENGTH_SHORT).show()
+                                selectedTags
+                            }
+                            else -> selectedTags + tag
+                        }
+                    },
                 )
                 Spacer(Modifier.height(Spacing.md))
                 Text(
@@ -1255,6 +1295,7 @@ private fun MomentEditDialog(
                         onSubmit(
                             description.trim(),
                             initialPrivacy?.let { if (privacyIndex == 1) "private" else "public" },
+                            selectedTags,
                         )
                     }
                 },
