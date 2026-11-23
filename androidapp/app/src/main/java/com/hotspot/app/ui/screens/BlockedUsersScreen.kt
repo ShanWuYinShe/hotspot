@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,15 +36,18 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -65,6 +69,9 @@ fun BlockedUsersScreen(
     var loadingMore by remember { mutableStateOf(false) }
     var endReached by remember { mutableStateOf(false) }
     var closingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var query by remember { mutableStateOf("") }
+    var searchLoadingAll by remember { mutableStateOf(false) }
+    var searchReloadKey by remember { mutableStateOf(0) }
 
     LaunchedEffect(retryKey) {
         loading = true
@@ -97,6 +104,36 @@ fun BlockedUsersScreen(
         }
     }
 
+    // 契约没有关键词参数：搜索时先加载完全部分页（最多 10 页），再本地筛选。
+    LaunchedEffect(query, searchReloadKey) {
+        if (query.isBlank() || loading) return@LaunchedEffect
+        var next: String? = nextCursor ?: return@LaunchedEffect
+        searchLoadingAll = true
+        var pages = 0
+        while (next != null && pages < 10) {
+            when (val result = AppContainer.profileRepository.fetchBlocked(next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.user.userId }
+                    nextCursor = result.data.nextCursor
+                    endReached = result.data.nextCursor == null
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+        searchLoadingAll = false
+    }
+
+    val filteredItems = remember(items, query) {
+        val keyword = query.trim()
+        if (keyword.isBlank()) items else items.filter { item ->
+            item.user.nickname.contains(keyword, ignoreCase = true) ||
+                item.user.userId.contains(keyword, ignoreCase = true) ||
+                item.reason.orEmpty().contains(keyword, ignoreCase = true)
+        }
+    }
+
     fun unblock(userId: String) {
         if (userId in closingIds) return
         closingIds = closingIds + userId
@@ -111,6 +148,14 @@ fun BlockedUsersScreen(
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(title = "屏蔽名单", onBack = onBack)
+        Column(Modifier.padding(horizontal = Spacing.lg)) {
+            SearchInput(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "搜索昵称 / 用户 ID / 屏蔽原因…",
+            )
+            Spacer(Modifier.height(Spacing.sm))
+        }
         when {
             loading -> LoadingState(message = "正在加载屏蔽名单…")
             error != null && items.isEmpty() -> ErrorState(
@@ -121,6 +166,10 @@ fun BlockedUsersScreen(
                 title = "还没有屏蔽任何人",
                 description = "在他人主页选择「屏蔽」后，会出现在这里；解除后可以重新互动。",
             )
+            filteredItems.isEmpty() -> EmptyState(
+                title = "没有匹配的屏蔽用户",
+                description = "换个昵称、用户 ID 或屏蔽原因关键词试试。",
+            )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -130,7 +179,8 @@ fun BlockedUsersScreen(
             ) {
                 item {
                     Text(
-                        text = "解除屏蔽不会自动恢复关注关系，需要重新关注。",
+                        text = "解除屏蔽不会自动恢复关注关系，需要重新关注。" +
+                            if (query.isNotBlank()) " 已加载 " + items.size + " 条 · 匹配 " + filteredItems.size + " 条" else "",
                         style = MaterialTheme.typography.labelSmall,
                         color = HotSpotTheme.colors.textSecondary,
                         modifier = Modifier.padding(vertical = Spacing.sm, horizontal = Spacing.xs),
@@ -138,10 +188,12 @@ fun BlockedUsersScreen(
                 }
                 item {
                     ListGroup {
-                        items.forEach { item -> BlockedUserRow(item, unblocking = item.user.userId in closingIds, onOpen = { onOpenUser(item.user.userId) }, onUnblock = { unblock(item.user.userId) }) }
+                        filteredItems.forEach { item -> BlockedUserRow(item, unblocking = item.user.userId in closingIds, onOpen = { onOpenUser(item.user.userId) }, onUnblock = { unblock(item.user.userId) }) }
                     }
                 }
-                if (!endReached) {
+                if (searchLoadingAll) {
+                    item { InlineLoading(text = "正在加载全部屏蔽用户用于搜索…") }
+                } else if (query.isBlank() && !endReached) {
                     item {
                         Box(Modifier.padding(vertical = Spacing.lg)) {
                             SystemButton(
