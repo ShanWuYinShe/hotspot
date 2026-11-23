@@ -52,7 +52,6 @@ import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -118,8 +117,14 @@ fun NotifyScreen(
     }
 
     // 通知契约没有关键词参数：搜索时先加载完分页（最多 10 页），再本地筛选。
-    LaunchedEffect(query, retryKey) {
-        if (query.isBlank() || loading) return@LaunchedEffect
+    // 把 loading 纳入 key：首屏未加载完时输入关键词不会漏掉「加载完成后再补全分页」。
+    LaunchedEffect(query, retryKey, loading) {
+        if (query.isBlank()) {
+            // 搜索中被清空时 effect 会被取消，这里复位，避免底部一直显示「正在加载」。
+            searchLoadingAll = false
+            return@LaunchedEffect
+        }
+        if (loading) return@LaunchedEffect
         var next: String? = cursor ?: return@LaunchedEffect
         searchLoadingAll = true
         var pages = 0
@@ -150,8 +155,13 @@ fun NotifyScreen(
     fun openNotification(item: NotifyItem) {
         if (!item.isRead) {
             scope.launch {
-                AppContainer.notifyRepository.markRead(item.notifyId)
-                load()
+                when (val result = AppContainer.notifyRepository.markRead(item.notifyId)) {
+                    // 只更新本地已读态：重新拉首屏会丢掉分页/搜索已加载的条目。
+                    is ApiResult.Ok -> items = items.map {
+                        if (it.notifyId == item.notifyId) it.copy(isRead = true) else it
+                    }
+                    is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                }
             }
         }
         val payload = item.payload as? JsonObject ?: return
@@ -192,9 +202,12 @@ fun NotifyScreen(
                             if (marking) return@SystemButton
                             scope.launch {
                                 marking = true
-                                AppContainer.notifyRepository.markAllRead()
+                                when (val result = AppContainer.notifyRepository.markAllRead()) {
+                                    // 只更新本地已读态，保留已加载的分页与搜索结果。
+                                    is ApiResult.Ok -> items = items.map { it.copy(isRead = true) }
+                                    is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
                                 marking = false
-                                load()
                             }
                         },
                         variant = ButtonVariant.SOFT,
@@ -221,6 +234,7 @@ fun NotifyScreen(
                 title = "暂时没有通知",
                 description = "互动、关注与系统消息都会出现在这里",
             )
+            searchLoadingAll && filteredItems.isEmpty() -> LoadingState(message = "正在加载全部通知用于搜索…")
             filteredItems.isEmpty() -> EmptyState(
                 title = "没有匹配的通知",
                 description = "换个通知内容、用户 ID 或类型关键词试试",
