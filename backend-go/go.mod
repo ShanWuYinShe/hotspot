@@ -7,7 +7,7 @@ require (
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang/geo v0.0.0-20251030142647-5906ab3d21fa
-	github.com/gorilla/websocket v1.5.3
+	github.com/gorilla/websocket v1.5.4-0.20240701034025-d67f41855da4
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/prometheus/client_golang v1.25.0
 	go.uber.org/zap v1.27.0
@@ -21,6 +21,7 @@ require (
 	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 )
