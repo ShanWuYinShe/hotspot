@@ -123,6 +123,8 @@ app/src/main/java/com/hotspot/app/
   `group_messages/send` 的 `type=image|video` + `file_id`；图片气泡用 Coil 加载 `media.url`，
   加载失败回落「[图片]」；视频气泡优先展示 `media.thumbnail_url` + 播放角标，无缩略图用深色占位，点击用
   系统 ACTION_VIEW 打开签名 URL。
+- **邀请成员**：更多菜单（owner/admin）→「邀请成员」→ 搜索昵称/账号 → 邀请；
+  走 `groups/admin/invites/create`，被邀请者已是成员时服务端 no-op（invite_id 为 null），客户端提示「对方已是群成员」。
 - **入群申请审批**：更多菜单（owner/admin）→「入群申请」列表，逐条同意/拒绝（`groups/admin/applications/fetch|approve|reject`）；
   同意后刷新成员列表与详情，拒绝后仅从收件箱移除。
 - **转让群主**：成员操作面板中仅 owner 显示「转让群主」→ 二次确认 → `groups/admin/transfer_ownership`；
@@ -168,7 +170,7 @@ app/src/main/java/com/hotspot/app/
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音消息与 @提及消息的独立通知跳转未做（图片/视频/文件消息已接入）；
-   群管理（邀请成员 / 封禁列表）未做；群信息编辑、群设置、公告管理、成员管理（角色/禁言/移除）、转让群主与入群申请审批已接入（owner/admin）；
+   群管理（封禁列表）未做；群信息编辑、群设置、公告管理、成员管理（角色/禁言/移除）、转让群主、入群申请审批与邀请成员已接入（owner/admin）；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
    消息长按操作面板已接入：复制文本 / 撤回自己未超时消息 / 举报他人消息；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、

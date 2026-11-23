@@ -79,6 +79,7 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
+import com.hotspot.app.data.model.UserItem
 import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.ui.components.AnnouncementEditorDialog
@@ -91,6 +92,7 @@ import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.GroupApplicationsDialog
 import com.hotspot.app.ui.components.GroupInfoEditorDialog
+import com.hotspot.app.ui.components.InviteMemberDialog
 import com.hotspot.app.ui.components.GroupSettingsDialog
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
@@ -117,6 +119,7 @@ import com.hotspot.app.util.TimeFormat
 import com.hotspot.app.util.formatDistanceShort
 import com.hotspot.app.util.groupRoleLabel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /*
@@ -227,6 +230,14 @@ fun GroupDetailScreen(
     var applicationsLoading by remember(groupId) { mutableStateOf(false) }
     var applicationsError by remember(groupId) { mutableStateOf<String?>(null) }
     var applicationProcessingId by remember(groupId) { mutableStateOf<String?>(null) }
+    // 邀请成员（owner/admin）：搜索用户 → 发送邀请
+    var showInvite by remember(groupId) { mutableStateOf(false) }
+    var inviteQuery by remember(groupId) { mutableStateOf("") }
+    var inviteResults by remember(groupId) { mutableStateOf<List<UserItem>>(emptyList()) }
+    var inviteSearching by remember(groupId) { mutableStateOf(false) }
+    var inviteError by remember(groupId) { mutableStateOf<String?>(null) }
+    var invitedIds by remember(groupId) { mutableStateOf<Set<String>>(emptySet()) }
+    var invitingUserId by remember(groupId) { mutableStateOf<String?>(null) }
     // 群成员管理（owner/admin）：角色 / 禁言 / 移除
     var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
@@ -363,6 +374,24 @@ fun GroupDetailScreen(
         currentDetail?.viewerState?.role == "admin"
     val canManageAnnouncements = canManageGroup
     val isGroupOwner = currentDetail?.viewerState?.role == "owner"
+
+    LaunchedEffect(showInvite, inviteQuery) {
+        if (!showInvite) return@LaunchedEffect
+        val keyword = inviteQuery.trim()
+        if (keyword.isBlank()) {
+            inviteResults = emptyList()
+            inviteError = null
+            return@LaunchedEffect
+        }
+        delay(300)
+        inviteSearching = true
+        inviteError = null
+        when (val result = AppContainer.searchRepository.searchUsers(keyword, null)) {
+            is ApiResult.Ok -> inviteResults = result.data.items
+            is ApiResult.Err -> inviteError = result.error.userMessage
+        }
+        inviteSearching = false
+    }
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
@@ -391,6 +420,13 @@ fun GroupDetailScreen(
                     }
                     applicationsLoading = false
                 }
+            },
+            onOpenInvite = {
+                showInvite = true
+                inviteQuery = ""
+                inviteResults = emptyList()
+                inviteError = null
+                invitedIds = emptySet()
             },
             onOpenGroupSettings = {
                 groupSettings = null
@@ -708,6 +744,41 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showInvite) {
+        InviteMemberDialog(
+            query = inviteQuery,
+            onQueryChange = {
+                inviteQuery = it
+                inviteError = null
+            },
+            results = inviteResults,
+            searching = inviteSearching,
+            error = inviteError,
+            invitedIds = invitedIds,
+            invitingId = invitingUserId,
+            onInvite = { item ->
+                val userId = item.user.userId
+                if (invitingUserId != null || userId in invitedIds) return@InviteMemberDialog
+                invitingUserId = userId
+                scope.launch {
+                    when (val result = repository.createInvite(groupId, userId)) {
+                        is ApiResult.Ok -> {
+                            if (result.data.inviteId == null) {
+                                Toast.makeText(context, "对方已是群成员", Toast.LENGTH_SHORT).show()
+                            } else {
+                                invitedIds = invitedIds + userId
+                                Toast.makeText(context, "邀请已发送", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    invitingUserId = null
+                }
+            },
+            onDismiss = { if (invitingUserId == null) showInvite = false },
+        )
+    }
+
     if (showApplications) {
         GroupApplicationsDialog(
             applications = applications,
@@ -863,6 +934,7 @@ private fun GroupTopNavBar(
     onEditGroupInfo: () -> Unit,
     onOpenGroupSettings: () -> Unit,
     onOpenApplications: () -> Unit,
+    onOpenInvite: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -935,6 +1007,21 @@ private fun GroupTopNavBar(
                         onClick = {
                             menuExpanded = false
                             onOpenApplications()
+                        },
+                    )
+                }
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "邀请成员",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenInvite()
                         },
                     )
                 }

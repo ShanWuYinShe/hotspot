@@ -305,6 +305,15 @@ data class GroupMemberItem(
     @SerialName("last_online_at") val lastOnlineAt: String? = null,
 )
 
+/**
+ * 邀请响应（spec/api_spec_group.md → Invitation）：已是成员时为 no-op 成功，invite_id/expires_at 均为 null。
+ */
+@Serializable
+data class GroupInvitation(
+    @SerialName("invite_id") val inviteId: String? = null,
+    @SerialName("expires_at") val expiresAt: String? = null,
+)
+
 /** 入群申请项（spec/api_spec_group.md → GroupApplicationItem，群管理员收件箱）。 */
 @Serializable
 data class GroupApplicationItem(

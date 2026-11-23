@@ -17,6 +17,7 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
+import com.hotspot.app.data.model.GroupInvitation
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.GroupMessageItem
@@ -989,6 +990,17 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 邀请成员（owner/admin；被邀请者已是成员时返回 no-op 成功，inviteId 为 null）。 */
+    suspend fun createInvite(groupId: String, userId: String, message: String? = null): ApiResult<GroupInvitation> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_INVITES_CREATE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("user_id", userId)
+            put("message", message)
+        },
+        GroupInvitation.serializer(),
+    )
+
     /** 入群申请列表（群收件箱，默认 pending；owner/admin 守卫）。 */
     suspend fun applications(groupId: String, status: String = "pending"): ApiResult<List<GroupApplicationItem>> {
         val result = api.post(
