@@ -1347,6 +1347,15 @@ class NotifyRepository(private val api: ApiClient) {
     suspend fun unreadSummary(): ApiResult<UnreadSummary> =
         api.post(ApiEndpoint.NOTIFY_UNREAD_SUMMARY, emptyObject(), UnreadSummary.serializer())
 
+    /** 把单条通知标记为已读（点击通知跳转时调用，spec notify/mark_read scope=ids）。 */
+    suspend fun markRead(notifyId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.NOTIFY_MARK_READ,
+        buildJsonObject {
+            put("scope", "ids")
+            put("notify_ids", buildJsonArray { add(JsonPrimitive(notifyId)) })
+        },
+    )
+
     suspend fun markAllRead(): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.NOTIFY_MARK_READ,
         buildJsonObject {

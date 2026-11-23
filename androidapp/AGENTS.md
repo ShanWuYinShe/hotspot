@@ -17,7 +17,8 @@
 关系页（87:3300：好友/关注/粉丝三 tab + 搜索；好友发消息、关注两态）/
 编辑资料（87:3128：昵称/简介/性别/兴趣标签 ≤5，users/update_account patch）/
 设置（87:4864：账号卡 / 三主题预览卡 × 明暗三档 / 地图与位置区块 / 系统与关于）/
-我的举报（87:3350：状态筛选 + 处理结果，reports/fetch 分页）/
+我的举报（87:3350：状态筛选 + 处理结果，reports/fetch 分页）/ 通知中心（列表 + 未读标记 + 全部已读，
+点击按 payload 跳转：用户主页/瞬间详情/群详情/群聊/我的举报，并单条标记已读）/
 他人主页（87:5163：资料卡 + 瞬间/粉丝/关注 + 关注/私信 + 最近瞬间带图画廊 + 分享/备注/屏蔽/举报；
 入口：枢纽用户行、附近的人卡片、附近瞬间作者、瞬间详情作者、搜索用户结果）/
 发布瞬间（无独立设计画板，结构对齐 Web CreateSheet：文案 + 相册选图 + 氛围标签 + 可见范围 + 默认浏览位置；
@@ -156,6 +157,10 @@ app/src/main/java/com/hotspot/app/
 - **瞬间多图**：详情 hero 使用 `HorizontalPager` 横滑（多图时底部圆点指示器），点击当前图打开
   `FullscreenImageViewer`；多图查看器可左右滑翻页（底部「当前/总数」、双击放大复位），
   单图查看器保留双指缩放/拖拽；搜索结果中的瞬间行可点击进入详情。
+- **通知跳转**：通知行点击后先 `notify/mark_read`（scope=ids）再按类型跳转：
+  `new_follower`/`mutual_follow` → 用户主页；`moment_commented`/`comment_reply`/`mentioned`/`nearby_new_moment`
+  → 瞬间详情；`group_mentioned` → 群聊；群邀请/入群申请 → 群详情；举报处理 → 我的举报；
+  无可跳转目标（系统公告等）只标记已读。
 - **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
@@ -189,7 +194,7 @@ app/src/main/java/com/hotspot/app/
 1. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
-   @提及消息的独立通知跳转未做；语音消息已接入（录制 + 播放，chat_audio）；
+   通知中心点击已按 payload 跳转（含 @提及瞬间/群聊）；语音消息已接入（录制 + 播放，chat_audio）；
    群管理已接入（owner/admin）：群信息编辑、群设置、公告管理、成员管理（角色/禁言/移除/封禁）、
    转让群主、入群申请审批与邀请成员；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；

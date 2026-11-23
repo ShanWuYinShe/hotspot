@@ -201,7 +201,14 @@ private fun MainScaffold() {
                     )
                 }
                 composable(Routes.NOTIFY) {
-                    NotifyScreen(onBack = { navController.popBackStack() })
+                    NotifyScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenUser = { userId -> openUser(userId) },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
+                        onOpenGroupChat = { groupId -> navController.navigate(Routes.groupChat(groupId)) },
+                        onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
+                    )
                 }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
