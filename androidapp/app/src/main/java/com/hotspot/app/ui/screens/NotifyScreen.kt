@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,6 +49,7 @@ import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
@@ -58,7 +60,14 @@ import kotlinx.serialization.json.jsonPrimitive
  * payload 是多态 JSON（spec/api_spec_notify.md），首版按类型映射标题并从 payload 抽取预览文本。
  */
 @Composable
-fun NotifyScreen(onBack: () -> Unit) {
+fun NotifyScreen(
+    onBack: () -> Unit,
+    onOpenUser: (String) -> Unit,
+    onOpenMoment: (String) -> Unit,
+    onOpenGroup: (String) -> Unit,
+    onOpenGroupChat: (String) -> Unit,
+    onOpenReports: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     var items by remember { mutableStateOf<List<NotifyItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -77,6 +86,33 @@ fun NotifyScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(retryKey) { load() }
+
+    /** 点击通知：先标记已读，再按 payload 跳到对应页面（无可跳转目标时只标已读）。 */
+    fun openNotification(item: NotifyItem) {
+        if (!item.isRead) {
+            scope.launch {
+                AppContainer.notifyRepository.markRead(item.notifyId)
+                load()
+            }
+        }
+        val payload = item.payload as? JsonObject ?: return
+        fun field(key: String): String? = payload[key]?.jsonPrimitive?.contentOrNull
+        when (item.type) {
+            "new_follower", "mutual_follow" -> {
+                val userId = payload["actor"]?.jsonObject?.get("user_id")?.jsonPrimitive?.contentOrNull
+                if (!userId.isNullOrBlank()) onOpenUser(userId)
+            }
+            "moment_commented", "comment_reply", "mentioned", "nearby_new_moment" -> field("moment_id")?.let(onOpenMoment)
+            "group_mentioned" -> field("group_id")?.let(onOpenGroupChat)
+            "group_invite_received",
+            "group_application_received",
+            "group_application_accepted",
+            "group_application_rejected",
+            -> field("group_id")?.let(onOpenGroup)
+            "report_resolved", "report_dismissed" -> onOpenReports()
+            "reaction_added" -> if (field("target_type") == "moment") field("target_id")?.let(onOpenMoment)
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(
@@ -120,7 +156,7 @@ fun NotifyScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
                 items(items, key = { it.notifyId }) { item ->
-                    NotificationRow(item)
+                    NotificationRow(item, onClick = { openNotification(item) })
                 }
             }
         }
@@ -128,13 +164,14 @@ fun NotifyScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun NotificationRow(item: NotifyItem) {
+private fun NotificationRow(item: NotifyItem, onClick: () -> Unit) {
     val colors = HotSpotTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
             .background(if (item.isRead) colors.surface else colors.accentSoftBg)
+            .clickable(onClick = onClick)
             .padding(horizontal = Spacing.md, vertical = Spacing.md2),
         verticalAlignment = Alignment.Top,
     ) {
