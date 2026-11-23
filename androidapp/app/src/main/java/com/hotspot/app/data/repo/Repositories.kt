@@ -1144,6 +1144,9 @@ class GroupRepository(private val api: ApiClient) {
         membersSearchable: Boolean,
         requiresApproval: Boolean,
         maxMembers: Int,
+        joinMethod: String? = null,
+        password: String? = null,
+        clearPassword: Boolean = false,
     ): ApiResult<Unit> {
         val result = api.post(
             ApiEndpoint.GROUPS_ADMIN_UPDATE,
@@ -1153,9 +1156,10 @@ class GroupRepository(private val api: ApiClient) {
                 put("description", JsonNull)
                 put("avatar_file_id", JsonNull)
                 put("tags", JsonNull)
-                put("password", JsonNull)
-                put("clear_password", JsonNull)
-                put("join_method", JsonNull)
+                // password 与 clear_password 互斥：有密码时只传 password，清除时只传 clear_password。
+                put("password", password?.let(::JsonPrimitive) ?: JsonNull)
+                put("clear_password", if (clearPassword) JsonPrimitive(true) else JsonNull)
+                put("join_method", joinMethod?.let(::JsonPrimitive) ?: JsonNull)
                 put("requires_approval", requiresApproval)
                 put("next_activity_at", JsonNull)
                 put("is_searchable", isSearchable)
