@@ -121,7 +121,8 @@ app/src/main/java/com/hotspot/app/
   `ChatImageUploader`（chat_image，10MB / JPG·PNG·WebP·GIF）或 `ChatVideoUploader`
   （chat_video，100MB / video/mp4·video/quicktime，流式上传）→ `private_messages/send` /
   `group_messages/send` 的 `type=image|video` + `file_id`；图片气泡用 Coil 加载 `media.url`，
-  加载失败回落「[图片]」；视频气泡优先展示 `media.thumbnail_url` + 播放角标，无缩略图用深色占位，点击用
+  加载失败回落「[图片]」；点击图片打开全屏查看器（黑底、双指缩放/拖拽、双击放大/复位、关闭）；
+  视频气泡优先展示 `media.thumbnail_url` + 播放角标，无缩略图用深色占位，点击用
   系统 ACTION_VIEW 打开签名 URL。
 - **封禁成员**：成员操作面板「封禁成员」→ 二次确认，走 `groups/admin/members/set_ban`（active=true
   移出群组并禁止再加入）；更多菜单「封禁列表」→ `fetch_banned` 展示封禁原因/时间并支持解除封禁，

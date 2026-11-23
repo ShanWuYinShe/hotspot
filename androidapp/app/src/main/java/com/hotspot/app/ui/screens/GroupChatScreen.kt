@@ -78,6 +78,7 @@ import com.hotspot.app.ui.components.ChatVideoBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.FullscreenImageViewer
 import com.hotspot.app.ui.components.MessageActionSheet
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
@@ -140,6 +141,8 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var reportSubmitting by remember { mutableStateOf(false) }
     // 长按消息操作面板（复制/撤回/举报）
     var actionTarget by remember { mutableStateOf<GroupMessageItem?>(null) }
+    // 全屏图片查看器（点击群聊图片）
+    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -434,6 +437,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
                             } else {
                                 null
                             },
+                            onImageClick = { viewerImageUrl = it },
                         )
                     }
                 }
@@ -589,6 +593,14 @@ fun GroupChatScreen(onBack: () -> Unit) {
             },
         )
     }
+
+    viewerImageUrl?.let { url ->
+        FullscreenImageViewer(
+            imageUrl = url,
+            contentDescription = "群聊图片",
+            onDismiss = { viewerImageUrl = null },
+        )
+    }
 }
 
 /** 群聊头部：返回钮 + 群头像（在线点）+ 群名 + 成员数（设计稿 87:3529）。 */
@@ -685,6 +697,7 @@ private fun GroupMessageRow(
     message: GroupMessageItem,
     isMine: Boolean,
     onLongPress: (() -> Unit)? = null,
+    onImageClick: ((String) -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     if (message.type == "system" || message.isRecalled) {
@@ -746,6 +759,7 @@ private fun GroupMessageRow(
                         imageUrl = imageUrl,
                         isMine = isMine,
                         contentDescription = "群聊图片",
+                        onClick = onImageClick?.let { click -> { click(imageUrl) } },
                     )
                 } else if (!message.isRecalled && message.type == "video") {
                     ChatVideoBubble(

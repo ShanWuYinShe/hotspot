@@ -1,5 +1,6 @@
 package com.hotspot.app.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ fun ChatImageBubble(
     imageUrl: String?,
     isMine: Boolean,
     contentDescription: String,
+    onClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val absoluteUrl = MediaUrls.absolute(imageUrl)
@@ -51,7 +53,8 @@ fun ChatImageBubble(
             modifier = Modifier
                 .widthIn(max = 220.dp)
                 .heightIn(max = 240.dp)
-                .clip(AppShapes.iconTile),
+                .clip(AppShapes.iconTile)
+                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
             contentScale = ContentScale.Crop,
             onError = { loadFailed = true },
         )
