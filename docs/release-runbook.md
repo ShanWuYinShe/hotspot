@@ -109,6 +109,18 @@ cd androidapp && ./gradlew --no-daemon assembleRelease
   androidapp/app/build/outputs/apk/release/app-release.apk | head -2
 ```
 
+- 本地安装冒烟（可选，不进入发版硬门禁）：
+
+```bash
+# debug 与 release 签名不同，覆盖安装前先卸载旧包，否则会 INSTALL_FAILED_UPDATE_INCOMPATIBLE
+adb uninstall com.hotspot.app || true
+adb install androidapp/app/build/outputs/apk/release/app-release.apk
+adb shell am start -W -n com.hotspot.app/.MainActivity
+adb shell dumpsys package com.hotspot.app | grep -E 'versionCode|versionName'
+# release 不可调试：应输出 package not debuggable
+adb shell run-as com.hotspot.app pwd
+```
+
 - 附到 Release（tag 的 Release 工作流跑完后）：
 
 ```bash
