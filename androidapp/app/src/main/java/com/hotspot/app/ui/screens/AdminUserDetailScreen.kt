@@ -136,7 +136,7 @@ fun AdminUserDetailScreen(userId: String, onBack: () -> Unit) {
                                 InfoDivider(colors)
                                 InfoRow("手机", data.phone?.takeIf { it.isNotBlank() } ?: "未绑定")
                                 InfoDivider(colors)
-                                InfoRow("隐私等级", data.privacyLevel)
+                                InfoRow("隐私等级", privacyLevelLabel(data.privacyLevel))
                                 InfoDivider(colors)
                                 InfoRow("注册时间", TimeFormat.relative(data.createdAt))
                                 InfoDivider(colors)
@@ -145,7 +145,7 @@ fun AdminUserDetailScreen(userId: String, onBack: () -> Unit) {
                                     InfoDivider(colors)
                                     InfoRow(
                                         "封禁到期",
-                                        data.bannedUntil?.let { TimeFormat.relative(it) } ?: "永久",
+                                        data.bannedUntil?.let { TimeFormat.absolute(it) } ?: "永久",
                                         valueColor = colors.danger,
                                     )
                                 }
@@ -171,6 +171,13 @@ fun AdminUserDetailScreen(userId: String, onBack: () -> Unit) {
             }
         }
     }
+}
+
+/** 隐私等级展示：契约值为 public/private，管理界面用产品术语，未知值原样兜底。 */
+private fun privacyLevelLabel(level: String): String = when (level) {
+    "public" -> "公开账号"
+    "private" -> "私密账号"
+    else -> level.ifBlank { "—" }
 }
 
 @Composable
