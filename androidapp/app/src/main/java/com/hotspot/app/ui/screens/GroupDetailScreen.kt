@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,10 +78,12 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.Page
+import com.hotspot.app.ui.components.AnnouncementEditorDialog
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.BadgeTone
+import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
@@ -192,6 +195,13 @@ fun GroupDetailScreen(
     var exitError by remember(groupId) { mutableStateOf<String?>(null) }
     var showReportDialog by remember(groupId) { mutableStateOf(false) }
     var reportSubmitting by remember(groupId) { mutableStateOf(false) }
+    // 群公告管理（owner/admin）：发布/编辑弹窗 + 删除确认
+    var showAnnouncementEditor by remember(groupId) { mutableStateOf(false) }
+    var editingAnnouncement by remember(groupId) { mutableStateOf<GroupAnnouncementItem?>(null) }
+    var announcementSubmitting by remember(groupId) { mutableStateOf(false) }
+    var announcementEditorError by remember(groupId) { mutableStateOf<String?>(null) }
+    var deletingAnnouncement by remember(groupId) { mutableStateOf<GroupAnnouncementItem?>(null) }
+    var announcementDeleting by remember(groupId) { mutableStateOf(false) }
     val context = LocalContext.current
 
     suspend fun loadDetail() {
@@ -317,6 +327,8 @@ fun GroupDetailScreen(
     // 退出群组仅成员可用；举报群组对齐 Web：非群主均可举报（未加入也可举报）
     val canLeaveGroup = currentDetail?.viewerState != null && currentDetail.viewerState.role != "owner"
     val canReportGroup = currentDetail != null && currentDetail.viewerState?.role != "owner"
+    val canManageAnnouncements = currentDetail?.viewerState?.role == "owner" ||
+        currentDetail?.viewerState?.role == "admin"
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
@@ -354,6 +366,18 @@ fun GroupDetailScreen(
                         expandedAnnouncementId = if (expandedAnnouncementId == id) null else id
                     },
                     onRetryAnnouncements = { scope.launch { loadAnnouncements() } },
+                    canManageAnnouncements = canManageAnnouncements,
+                    onCreateAnnouncement = {
+                        editingAnnouncement = null
+                        announcementEditorError = null
+                        showAnnouncementEditor = true
+                    },
+                    onEditAnnouncement = { announcement ->
+                        editingAnnouncement = announcement
+                        announcementEditorError = null
+                        showAnnouncementEditor = true
+                    },
+                    onDeleteAnnouncement = { announcement -> deletingAnnouncement = announcement },
                     onRetryMembersFirst = { scope.launch { membersState.initialLoad(memberLoader) } },
                     onRetryMembersMore = { scope.launch { membersState.loadMore(memberLoader) } },
                 )
@@ -419,6 +443,84 @@ fun GroupDetailScreen(
             exiting = exiting,
             onConfirm = { confirmExit() },
             onDismiss = { if (!exiting) showExitDialog = false },
+        )
+    }
+
+    if (showAnnouncementEditor) {
+        val target = editingAnnouncement
+        AnnouncementEditorDialog(
+            title = if (target == null) "发布群公告" else "编辑群公告",
+            initialTitle = target?.title.orEmpty(),
+            initialContent = target?.content.orEmpty(),
+            initialPinned = target?.isPinned == true,
+            submitting = announcementSubmitting,
+            error = announcementEditorError,
+            onDismiss = { if (!announcementSubmitting) showAnnouncementEditor = false },
+            onSubmit = { title, content, pinned ->
+                if (announcementSubmitting) return@AnnouncementEditorDialog
+                announcementSubmitting = true
+                announcementEditorError = null
+                scope.launch {
+                    val result = if (target == null) {
+                        repository.createAnnouncement(groupId, title, content, pinned)
+                    } else {
+                        repository.updateAnnouncement(groupId, target.announcementId, title, content, pinned)
+                    }
+                    when (result) {
+                        is ApiResult.Ok -> {
+                            showAnnouncementEditor = false
+                            editingAnnouncement = null
+                            loadAnnouncements()
+                            loadDetail()
+                            Toast.makeText(context, if (target == null) "公告已发布" else "公告已更新", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> announcementEditorError = result.error.userMessage
+                    }
+                    announcementSubmitting = false
+                }
+            },
+        )
+    }
+
+    deletingAnnouncement?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!announcementDeleting) deletingAnnouncement = null },
+            title = { Text("删除公告") },
+            text = { Text("确定删除「${target.title.ifBlank { "无标题公告" }}」？删除后不可恢复。") },
+            confirmButton = {
+                SystemButton(
+                    text = if (announcementDeleting) "删除中…" else "删除",
+                    onClick = {
+                        if (announcementDeleting) return@SystemButton
+                        announcementDeleting = true
+                        scope.launch {
+                            when (val result = repository.deleteAnnouncement(groupId, target.announcementId)) {
+                                is ApiResult.Ok -> {
+                                    deletingAnnouncement = null
+                                    loadAnnouncements()
+                                    loadDetail()
+                                    Toast.makeText(context, "公告已删除", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            announcementDeleting = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !announcementDeleting,
+                    loading = announcementDeleting,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!announcementDeleting) deletingAnnouncement = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !announcementDeleting,
+                )
+            },
         )
     }
 }
@@ -564,6 +666,10 @@ private fun GroupDetailContent(
     expandedAnnouncementId: String?,
     onToggleAnnouncement: (String) -> Unit,
     onRetryAnnouncements: () -> Unit,
+    canManageAnnouncements: Boolean,
+    onCreateAnnouncement: () -> Unit,
+    onEditAnnouncement: (GroupAnnouncementItem) -> Unit,
+    onDeleteAnnouncement: (GroupAnnouncementItem) -> Unit,
     onRetryMembersFirst: () -> Unit,
     onRetryMembersMore: () -> Unit,
 ) {
@@ -606,6 +712,10 @@ private fun GroupDetailContent(
                 expandedAnnouncementId = expandedAnnouncementId,
                 onToggle = onToggleAnnouncement,
                 onRetry = onRetryAnnouncements,
+                canManage = canManageAnnouncements,
+                onCreate = onCreateAnnouncement,
+                onEdit = onEditAnnouncement,
+                onDelete = onDeleteAnnouncement,
             )
         }
         Spacer(Modifier.height(Spacing.xxl))
@@ -1079,26 +1189,42 @@ private fun GroupAnnouncementsTab(
     expandedAnnouncementId: String?,
     onToggle: (String) -> Unit,
     onRetry: () -> Unit,
+    canManage: Boolean,
+    onCreate: () -> Unit,
+    onEdit: (GroupAnnouncementItem) -> Unit,
+    onDelete: (GroupAnnouncementItem) -> Unit,
 ) {
-    when {
-        loading && announcements == null -> LoadingState(message = "正在加载公告…")
-        error != null && announcements == null -> ErrorState(message = error, onRetry = onRetry)
-        announcements.isNullOrEmpty() -> EmptyState(
-            title = "还没有群公告",
-            description = "群主发布公告后会显示在这里",
-        )
-        else -> {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+        if (canManage) {
+            SystemButton(
+                text = "发布公告",
+                onClick = onCreate,
+                variant = ButtonVariant.PRIMARY,
+                size = ButtonSize.SM,
+                fillMaxWidth = true,
+            )
+        }
+        when {
+            loading && announcements == null -> LoadingState(message = "正在加载公告…")
+            error != null && announcements == null -> ErrorState(message = error, onRetry = onRetry)
+            announcements.isNullOrEmpty() -> EmptyState(
+                title = "还没有群公告",
+                description = if (canManage) "点击上方按钮发布第一条公告" else "群主发布公告后会显示在这里",
+            )
+            else -> {
                 announcements.forEach { announcement ->
                     AnnouncementCard(
                         announcement = announcement,
                         expanded = announcement.announcementId == expandedAnnouncementId,
                         onToggle = { onToggle(announcement.announcementId) },
+                        canManage = canManage,
+                        onEdit = { onEdit(announcement) },
+                        onDelete = { onDelete(announcement) },
                     )
                 }
+                // 公告为单次全量返回（契约无分页），列表渲染完即到底
+                ListEnd()
             }
-            // 公告为单次全量返回（契约无分页），列表渲染完即到底
-            ListEnd()
         }
     }
 }
@@ -1108,6 +1234,9 @@ private fun AnnouncementCard(
     announcement: GroupAnnouncementItem,
     expanded: Boolean,
     onToggle: () -> Unit,
+    canManage: Boolean = false,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {},
 ) {
     val colors = HotSpotTheme.colors
     val shape = AppShapes.card
@@ -1158,6 +1287,34 @@ private fun AnnouncementCard(
             maxLines = if (expanded) Int.MAX_VALUE else 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (expanded && canManage) {
+            Spacer(Modifier.height(Spacing.sm))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "编辑",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.accent,
+                    modifier = Modifier
+                        .clip(AppShapes.compact)
+                        .clickable(onClick = onEdit)
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+                )
+                Spacer(Modifier.width(Spacing.sm))
+                Text(
+                    text = "删除",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.danger,
+                    modifier = Modifier
+                        .clip(AppShapes.compact)
+                        .clickable(onClick = onDelete)
+                        .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+                )
+            }
+        }
     }
 }
 

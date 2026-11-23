@@ -956,6 +956,50 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 发布/更新/删除群公告（spec/api_spec_group.md → groups/admin/announcements 的 create/update/delete，owner/admin 守卫）。 */
+    suspend fun createAnnouncement(
+        groupId: String,
+        title: String,
+        content: String,
+        isPinned: Boolean,
+    ): ApiResult<GroupAnnouncementItem> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_ANNOUNCEMENTS_CREATE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("title", title)
+            put("content", content)
+            put("is_pinned", isPinned)
+        },
+        GroupAnnouncementItem.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
+    suspend fun updateAnnouncement(
+        groupId: String,
+        announcementId: String,
+        title: String,
+        content: String,
+        isPinned: Boolean,
+    ): ApiResult<GroupAnnouncementItem> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_ANNOUNCEMENTS_UPDATE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("announcement_id", announcementId)
+            put("title", title)
+            put("content", content)
+            put("is_pinned", isPinned)
+        },
+        GroupAnnouncementItem.serializer(),
+    )
+
+    suspend fun deleteAnnouncement(groupId: String, announcementId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_ANNOUNCEMENTS_DELETE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("announcement_id", announcementId)
+        },
+    )
+
     suspend fun announcements(groupId: String): ApiResult<List<GroupAnnouncementItem>> {
         val result = api.post(
             ApiEndpoint.GROUPS_ANNOUNCEMENTS_FETCH,
