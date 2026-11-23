@@ -391,11 +391,14 @@ fun GroupDetailScreen(
         if (keyword.isBlank()) {
             inviteResults = emptyList()
             inviteError = null
+            // 搜索中清空关键词/关闭弹窗会取消上面的协程，这里不复位就会一直停在「正在搜索…」
+            inviteSearching = false
             return@LaunchedEffect
         }
-        delay(300)
+        // 防抖窗口也算搜索中：先置位，避免把「还没发请求」显示成「没有找到匹配的用户」
         inviteSearching = true
         inviteError = null
+        delay(300)
         when (val result = AppContainer.searchRepository.searchUsers(keyword, null)) {
             is ApiResult.Ok -> inviteResults = result.data.items
             is ApiResult.Err -> inviteError = result.error.userMessage
