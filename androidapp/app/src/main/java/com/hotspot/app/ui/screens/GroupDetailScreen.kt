@@ -86,6 +86,7 @@ import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
+import com.hotspot.app.ui.components.GroupInfoEditorDialog
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
@@ -202,6 +203,10 @@ fun GroupDetailScreen(
     var announcementEditorError by remember(groupId) { mutableStateOf<String?>(null) }
     var deletingAnnouncement by remember(groupId) { mutableStateOf<GroupAnnouncementItem?>(null) }
     var announcementDeleting by remember(groupId) { mutableStateOf(false) }
+    // 群信息编辑（owner/admin）：名称 + 简介
+    var showGroupInfoEditor by remember(groupId) { mutableStateOf(false) }
+    var groupInfoSaving by remember(groupId) { mutableStateOf(false) }
+    var groupInfoError by remember(groupId) { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
     suspend fun loadDetail() {
@@ -327,12 +332,13 @@ fun GroupDetailScreen(
     // 退出群组仅成员可用；举报群组对齐 Web：非群主均可举报（未加入也可举报）
     val canLeaveGroup = currentDetail?.viewerState != null && currentDetail.viewerState.role != "owner"
     val canReportGroup = currentDetail != null && currentDetail.viewerState?.role != "owner"
-    val canManageAnnouncements = currentDetail?.viewerState?.role == "owner" ||
+    val canManageGroup = currentDetail?.viewerState?.role == "owner" ||
         currentDetail?.viewerState?.role == "admin"
+    val canManageAnnouncements = canManageGroup
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
-            moreEnabled = canLeaveGroup || canReportGroup,
+            moreEnabled = canManageGroup || canLeaveGroup || canReportGroup,
             canLeaveGroup = canLeaveGroup,
             canReportGroup = canReportGroup,
             onLeaveGroup = {
@@ -340,6 +346,11 @@ fun GroupDetailScreen(
                 showExitDialog = true
             },
             onReportGroup = { showReportDialog = true },
+            canManageGroup = canManageGroup,
+            onEditGroupInfo = {
+                groupInfoError = null
+                showGroupInfoEditor = true
+            },
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
@@ -482,6 +493,32 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showGroupInfoEditor && currentDetail != null) {
+        GroupInfoEditorDialog(
+            initialName = currentDetail.group.name,
+            initialDescription = currentDetail.description.orEmpty(),
+            submitting = groupInfoSaving,
+            error = groupInfoError,
+            onDismiss = { if (!groupInfoSaving) showGroupInfoEditor = false },
+            onSubmit = { name, description ->
+                if (groupInfoSaving) return@GroupInfoEditorDialog
+                groupInfoSaving = true
+                groupInfoError = null
+                scope.launch {
+                    when (val result = repository.updateGroupInfo(groupId, name, description.ifBlank { null })) {
+                        is ApiResult.Ok -> {
+                            detail = result.data
+                            showGroupInfoEditor = false
+                            Toast.makeText(context, "群信息已更新", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> groupInfoError = result.error.userMessage
+                    }
+                    groupInfoSaving = false
+                }
+            },
+        )
+    }
+
     deletingAnnouncement?.let { target ->
         AlertDialog(
             onDismissRequest = { if (!announcementDeleting) deletingAnnouncement = null },
@@ -536,8 +573,10 @@ private fun GroupTopNavBar(
     moreEnabled: Boolean,
     canLeaveGroup: Boolean,
     canReportGroup: Boolean,
+    canManageGroup: Boolean,
     onLeaveGroup: () -> Unit,
     onReportGroup: () -> Unit,
+    onEditGroupInfo: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -568,6 +607,21 @@ private fun GroupTopNavBar(
                 tonalElevation = 0.dp,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(Tokens.Radius.sm.dp),
             ) {
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "编辑群信息",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onEditGroupInfo()
+                        },
+                    )
+                }
                 if (canReportGroup) {
                     DropdownMenuItem(
                         text = {

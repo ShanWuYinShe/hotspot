@@ -123,6 +123,8 @@ app/src/main/java/com/hotspot/app/
   `group_messages/send` 的 `type=image|video` + `file_id`；图片气泡用 Coil 加载 `media.url`，
   加载失败回落「[图片]」；视频气泡优先展示 `media.thumbnail_url` + 播放角标，无缩略图用深色占位，点击用
   系统 ACTION_VIEW 打开签名 URL。
+- **群信息编辑**：群详情更多菜单（owner/admin）→ 名称/简介弹窗，走 `groups/admin/update`；
+  其余字段传 null 不改，成功用返回的 GroupItem 直接刷新头部。
 - **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
@@ -156,7 +158,7 @@ app/src/main/java/com/hotspot/app/
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音消息与 @提及消息的独立通知跳转未做（图片/视频/文件消息已接入）；
-   群管理（改群信息 / 成员管理 / 转让群主）未做；群公告管理已接入（owner/admin 发布/编辑/删除，支持置顶）；
+   群管理（成员管理 / 转让群主 / 群设置）未做；群信息编辑（名称/简介）与公告管理已接入（owner/admin）；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
    消息长按操作面板已接入：复制文本 / 撤回自己未超时消息 / 举报他人消息；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
