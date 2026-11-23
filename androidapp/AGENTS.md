@@ -26,7 +26,7 @@
 media/presign_upload → PUT → complete_upload → moments/create）已实现；
 地图选点页已接入（Figma 移动端 `87:1866`「地图选点 · /map」：全屏底图 + 顶部返回/筛选浮动条 +
 右侧缩放/回中/图层控件 + 中心定位针 + 底部搜索/最近使用/「设为浏览锚点」面板；锚点持久化到本地
-并驱动附近页 reference_point；不接第三方地图 SDK，底图暂为示意底色）；
+并驱动附近页 reference_point；同一页支持 `pickMode` 供瞬间详情修改位置复用；不接第三方地图 SDK，底图暂为示意底色）；
 管理后台（设置页对平台管理员显示入口，`rbac/me` 鉴权）已接入：
 - **举报审核**：待处理举报列表 → 通过/驳回 + 处理备注（`reports/fetch|judge`）；
 - **用户管理**：昵称搜索 + 正常/已封禁筛选，封禁（永久/1/7/30 天 + 原因）与解封（`users/search`、`users/set_ban`）；
@@ -171,7 +171,8 @@ app/src/main/java/com/hotspot/app/
 - **瞬间操作**：详情右上角「更多操作」按角色分流——自己的瞬间：编辑文案、氛围标签与可见范围
   （`moments/update` patch 语义，只提交 description/tags/privacy_level；标签预设与发布页共用 `MoodChips`，
   并额外展示瞬间已有自定义标签；可见范围初值需先从 `moments/fetch_created` 的 owner 视角取 privacy_level，
-  `open_the_door` 不含该字段）/ 删除瞬间（`moments/delete` 软删除）；
+  `open_the_door` 不含该字段）/ 修改位置（复用地图选点页的 pick 模式，确认后 `moments/update` 只提交 location；
+  坐标输入时位置名回退「自定义位置」）/ 删除瞬间（`moments/delete` 软删除）；
   他人瞬间：举报瞬间（`reports/create target_type=moment`，复用 `ReportDialog`）。
   删除成功后返回上一页并保留列表软删占位规则。
 - **瞬间多图**：详情 hero 使用 `HorizontalPager` 横滑（多图时底部圆点指示器），点击当前图打开

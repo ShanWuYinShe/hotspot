@@ -80,6 +80,10 @@ import kotlinx.coroutines.launch
 fun MapScreen(
     onBack: () -> Unit,
     onAnchorSaved: () -> Unit,
+    pickMode: Boolean = false,
+    initialPoint: GeoPoint? = null,
+    initialLocationName: String? = null,
+    onPicked: ((GeoPoint, String) -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val repo = AppContainer.nearbyRepository
@@ -107,12 +111,25 @@ fun MapScreen(
     suspend fun loadInitial() {
         initialError = null
         initialLoading = true
-        val location = AppContainer.defaultLocation()
-        if (location?.point == null) {
-            initialError = "无法获取默认浏览位置，请稍后重试"
+        if (pickMode) {
+            // 瞬间位置编辑：以该瞬间当前坐标为初始中心；缺失时回退默认浏览位置。
+            val start = initialPoint ?: AppContainer.defaultLocation()?.point
+            if (start == null) {
+                initialError = "无法获取当前位置，请稍后重试"
+            } else {
+                center = start
+                locationLabel = initialLocationName?.takeIf { it.isNotBlank() }
+                    ?: AppContainer.defaultLocation()?.locationName?.ifBlank { "当前位置" }
+                    ?: "当前位置"
+            }
         } else {
-            center = location.point
-            locationLabel = location.locationName.ifBlank { "默认浏览位置" }
+            val location = AppContainer.defaultLocation()
+            if (location?.point == null) {
+                initialError = "无法获取默认浏览位置，请稍后重试"
+            } else {
+                center = location.point
+                locationLabel = location.locationName.ifBlank { "默认浏览位置" }
+            }
         }
         initialLoading = false
     }
@@ -179,6 +196,10 @@ fun MapScreen(
     fun saveAnchor() {
         val point = center ?: return
         val label = locationLabel.ifBlank { "自定义位置" }
+        if (pickMode) {
+            onPicked?.invoke(point, label)
+            return
+        }
         AppContainer.setBrowseAnchor(BrowseAnchor(point.latitude, point.longitude, label))
         onAnchorSaved()
     }
@@ -512,14 +533,14 @@ fun MapScreen(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "将地图中心设为浏览锚点",
+                        text = if (pickMode) "将地图中心设为瞬间位置" else "将地图中心设为浏览锚点",
                         style = MaterialTheme.typography.labelMedium,
                         color = colors.textOnAccent,
                     )
                 }
             }
             Text(
-                text = "设置后，附近页按这里计算距离与推荐",
+                text = if (pickMode) "确认后更新该瞬间的位置" else "设置后，附近页按这里计算距离与推荐",
                 style = HotSpotTextStyles.micro,
                 color = colors.textSecondary,
                 textAlign = TextAlign.Center,
