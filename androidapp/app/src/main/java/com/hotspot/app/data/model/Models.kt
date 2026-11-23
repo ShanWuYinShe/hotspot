@@ -305,6 +305,17 @@ data class GroupMemberItem(
     @SerialName("last_online_at") val lastOnlineAt: String? = null,
 )
 
+/** 群设置（spec/api_spec_types.md → GroupSettings，groups/admin/settings 返回）。 */
+@Serializable
+data class GroupSettings(
+    @SerialName("join_method") val joinMethod: String = "direct",
+    @SerialName("requires_approval") val requiresApproval: Boolean = false,
+    @SerialName("has_password") val hasPassword: Boolean = false,
+    @SerialName("is_searchable") val isSearchable: Boolean = true,
+    @SerialName("members_searchable") val membersSearchable: Boolean = true,
+    @SerialName("max_members") val maxMembers: Int = 200,
+)
+
 /** 群公告列表项（spec/api_spec_types.md → GroupAnnouncementItem）。 */
 @Serializable
 data class GroupAnnouncementItem(

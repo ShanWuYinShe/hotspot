@@ -78,6 +78,7 @@ import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
+import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.ui.components.AnnouncementEditorDialog
 import com.hotspot.app.ui.components.Avatar
@@ -88,6 +89,7 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.GroupInfoEditorDialog
+import com.hotspot.app.ui.components.GroupSettingsDialog
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
@@ -210,6 +212,13 @@ fun GroupDetailScreen(
     var showGroupInfoEditor by remember(groupId) { mutableStateOf(false) }
     var groupInfoSaving by remember(groupId) { mutableStateOf(false) }
     var groupInfoError by remember(groupId) { mutableStateOf<String?>(null) }
+    // 群设置（owner/admin）：搜索可见性、成员可搜索、入群审批、人数上限
+    var showGroupSettings by remember(groupId) { mutableStateOf(false) }
+    var groupSettings by remember(groupId) { mutableStateOf<GroupSettings?>(null) }
+    var groupSettingsLoading by remember(groupId) { mutableStateOf(false) }
+    var groupSettingsError by remember(groupId) { mutableStateOf<String?>(null) }
+    var groupSettingsSaveError by remember(groupId) { mutableStateOf<String?>(null) }
+    var groupSettingsSaving by remember(groupId) { mutableStateOf(false) }
     // 群成员管理（owner/admin）：角色 / 禁言 / 移除
     var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
@@ -358,6 +367,20 @@ fun GroupDetailScreen(
             onEditGroupInfo = {
                 groupInfoError = null
                 showGroupInfoEditor = true
+            },
+            onOpenGroupSettings = {
+                groupSettings = null
+                groupSettingsError = null
+                groupSettingsSaveError = null
+                showGroupSettings = true
+                scope.launch {
+                    groupSettingsLoading = true
+                    when (val result = repository.settings(groupId)) {
+                        is ApiResult.Ok -> groupSettings = result.data
+                        is ApiResult.Err -> groupSettingsError = result.error.userMessage
+                    }
+                    groupSettingsLoading = false
+                }
             },
         )
         Box(Modifier.weight(1f).fillMaxWidth()) {
@@ -530,6 +553,52 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showGroupSettings) {
+        GroupSettingsDialog(
+            settings = groupSettings,
+            loading = groupSettingsLoading,
+            loadError = groupSettingsError,
+            submitting = groupSettingsSaving,
+            saveError = groupSettingsSaveError,
+            onRetry = {
+                scope.launch {
+                    groupSettingsLoading = true
+                    groupSettingsError = null
+                    when (val result = repository.settings(groupId)) {
+                        is ApiResult.Ok -> groupSettings = result.data
+                        is ApiResult.Err -> groupSettingsError = result.error.userMessage
+                    }
+                    groupSettingsLoading = false
+                }
+            },
+            onDismiss = { if (!groupSettingsSaving) showGroupSettings = false },
+            onSubmit = { isSearchable, membersSearchable, requiresApproval, maxMembers ->
+                if (groupSettingsSaving) return@GroupSettingsDialog
+                groupSettingsSaving = true
+                groupSettingsSaveError = null
+                scope.launch {
+                    when (
+                        val result = repository.updateSettings(
+                            groupId = groupId,
+                            isSearchable = isSearchable,
+                            membersSearchable = membersSearchable,
+                            requiresApproval = requiresApproval,
+                            maxMembers = maxMembers,
+                        )
+                    ) {
+                        is ApiResult.Ok -> {
+                            showGroupSettings = false
+                            loadDetail()
+                            Toast.makeText(context, "群设置已保存", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> groupSettingsSaveError = result.error.userMessage
+                    }
+                    groupSettingsSaving = false
+                }
+            },
+        )
+    }
+
     managedMember?.let { target ->
         val actions = buildList {
             if (target.role == "admin") add(MemberAction.UNSET_ADMIN) else add(MemberAction.SET_ADMIN)
@@ -670,6 +739,7 @@ private fun GroupTopNavBar(
     onLeaveGroup: () -> Unit,
     onReportGroup: () -> Unit,
     onEditGroupInfo: () -> Unit,
+    onOpenGroupSettings: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -712,6 +782,21 @@ private fun GroupTopNavBar(
                         onClick = {
                             menuExpanded = false
                             onEditGroupInfo()
+                        },
+                    )
+                }
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "群设置",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenGroupSettings()
                         },
                     )
                 }

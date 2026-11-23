@@ -17,6 +17,7 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
+import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.model.MapBounds
 import com.hotspot.app.data.model.MapCanvasResponse
@@ -987,6 +988,47 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 群设置（管理视角 GroupSettings，owner/admin 守卫）。 */
+    suspend fun settings(groupId: String): ApiResult<GroupSettings> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_SETTINGS,
+        buildJsonObject { put("group_id", groupId) },
+        GroupSettings.serializer(),
+    )
+
+    /** 更新群设置（只提交本轮可编辑的四个字段，其余字段 null 不改）。 */
+    suspend fun updateSettings(
+        groupId: String,
+        isSearchable: Boolean,
+        membersSearchable: Boolean,
+        requiresApproval: Boolean,
+        maxMembers: Int,
+    ): ApiResult<Unit> {
+        val result = api.post(
+            ApiEndpoint.GROUPS_ADMIN_UPDATE,
+            buildJsonObject {
+                put("group_id", groupId)
+                put("name", JsonNull)
+                put("description", JsonNull)
+                put("avatar_file_id", JsonNull)
+                put("tags", JsonNull)
+                put("password", JsonNull)
+                put("clear_password", JsonNull)
+                put("join_method", JsonNull)
+                put("requires_approval", requiresApproval)
+                put("next_activity_at", JsonNull)
+                put("is_searchable", isSearchable)
+                put("members_searchable", membersSearchable)
+                put("max_members", maxMembers)
+                put("location", JsonNull)
+            },
+            GroupItem.serializer(),
+        )
+        return when (result) {
+            is ApiResult.Ok -> ApiResult.Ok(Unit)
+            is ApiResult.Err -> result
+        }
+    }
+
     /** 设置成员角色（owner/admin 守卫；role 为 admin/member；服务端保护最后一个管理员）。 */
     suspend fun setMemberRole(groupId: String, userId: String, role: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.GROUPS_ADMIN_MEMBERS_SET_ROLE,
