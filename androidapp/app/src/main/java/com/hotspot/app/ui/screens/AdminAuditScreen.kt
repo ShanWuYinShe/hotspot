@@ -1,6 +1,8 @@
 package com.hotspot.app.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -91,6 +94,7 @@ fun AdminAuditScreen(onBack: () -> Unit) {
     var actionFilter by remember { mutableStateOf<String?>(null) }
     var showActionSheet by remember { mutableStateOf(false) }
     var rangeIndex by remember { mutableIntStateOf(0) }
+    var detailItem by remember { mutableStateOf<AdminAuditLogItem?>(null) }
     val searching = query.isNotBlank()
     val shownItems = if (searching) searchItems else items
     val targetType = TARGET_TYPES[targetIndex].second
@@ -224,7 +228,7 @@ fun AdminAuditScreen(onBack: () -> Unit) {
                 item {
                     ListGroup {
                         shownItems.forEachIndexed { index, item ->
-                            AuditRow(item = item)
+                            AuditRow(item = item, onClick = { detailItem = item })
                             if (index != shownItems.lastIndex) HorizontalDivider(color = colors.borderSubtle)
                         }
                     }
@@ -249,6 +253,10 @@ fun AdminAuditScreen(onBack: () -> Unit) {
         }
     }
 
+    detailItem?.let { item ->
+        AuditDetailDialog(item = item, onDismiss = { detailItem = null })
+    }
+
     if (showActionSheet) {
         AuditActionSheet(
             selected = actionFilter,
@@ -257,6 +265,78 @@ fun AdminAuditScreen(onBack: () -> Unit) {
                 showActionSheet = false
             },
             onDismiss = { showActionSheet = false },
+        )
+    }
+}
+
+/** 审计详情：列表只展示摘要，点击行查看全量字段（含 details / IP / 设备 / 日志 ID）。 */
+@Composable
+private fun AuditDetailDialog(item: AdminAuditLogItem, onDismiss: () -> Unit) {
+    val colors = HotSpotTheme.colors
+    val actionLabel = AUDIT_ACTION_LABELS[item.action] ?: item.action.ifBlank { "—" }
+    val targetLabel = AUDIT_TARGET_LABELS[item.targetType] ?: item.targetType.ifBlank { "—" }
+    val target = item.targetName?.takeIf { it.isNotBlank() } ?: item.targetId
+    val detailLines = formatAuditDetailsLines(item.details)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = actionLabel) },
+        text = {
+            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+                DetailLine("操作者", item.operator.nickname.ifBlank { "系统" } + "（" + item.operator.userId + "）")
+                DetailLine("对象", targetLabel + "：" + target)
+                DetailLine("时间", TimeFormat.absolute(item.createdAt))
+                DetailLine("IP 归属", item.ipLocation ?: "—")
+                DetailLine("IP 地址", item.ipAddress ?: "无权限 / 未记录")
+                DetailLine("设备", item.deviceSummary ?: "—")
+                if (detailLines.isNotEmpty()) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        text = "详情",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                    detailLines.forEach { (label, value) ->
+                        Text(
+                            text = label + "：" + value,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = colors.textPrimary,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    text = "日志 ID：" + item.logId,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+            }
+        },
+        confirmButton = {
+            SystemButton(
+                text = "关闭",
+                onClick = onDismiss,
+                variant = ButtonVariant.SECONDARY,
+                size = ButtonSize.SM,
+            )
+        },
+    )
+}
+
+@Composable
+private fun DetailLine(label: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = HotSpotTheme.colors.textSecondary,
+            modifier = Modifier.width(72.dp),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = HotSpotTheme.colors.textPrimary,
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -322,11 +402,16 @@ private fun AuditActionSheet(
 }
 
 @Composable
-private fun AuditRow(item: AdminAuditLogItem) {
+private fun AuditRow(item: AdminAuditLogItem, onClick: () -> Unit) {
     val colors = HotSpotTheme.colors
     val actionLabel = AUDIT_ACTION_LABELS[item.action] ?: item.action.ifBlank { "—" }
     val targetLabel = AUDIT_TARGET_LABELS[item.targetType] ?: item.targetType.ifBlank { "—" }
-    Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm2)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = actionLabel,
@@ -408,6 +493,13 @@ private fun formatAuditDetails(details: JsonElement?): String {
     }
 }
 
+private fun formatAuditDetailsLines(details: JsonElement?): List<Pair<String, String>> {
+    if (details !is JsonObject) return emptyList()
+    return details.entries
+        .filter { it.key != "type" }
+        .map { (key, value) -> (AUDIT_DETAIL_LABELS[key] ?: key) to formatJsonValue(value) }
+}
+
 private fun formatJsonValue(value: JsonElement): String = when (value) {
     is JsonPrimitive -> value.content
     is JsonArray -> value.joinToString(", ") { formatJsonValue(it) }
@@ -425,6 +517,30 @@ private val TARGET_TYPES = listOf(
     "举报" to "report",
     "标签" to "tag",
     "配置" to "config",
+)
+
+private val AUDIT_DETAIL_LABELS = mapOf(
+    "reason" to "原因",
+    "duration_days" to "封禁天数",
+    "duration_minutes" to "禁言分钟",
+    "title" to "标题",
+    "changed_fields" to "变更字段",
+    "role_name" to "角色",
+    "permissions" to "权限",
+    "added_permissions" to "新增权限",
+    "removed_permissions" to "移除权限",
+    "target_user_id" to "目标用户",
+    "role_ids" to "角色 ID",
+    "award_all_permissions" to "授予全部权限",
+    "report_id" to "举报 ID",
+    "action" to "处理动作",
+    "note" to "备注",
+    "name" to "名称",
+    "active" to "启用",
+    "config_key" to "配置键",
+    "old_value" to "旧值",
+    "new_value" to "新值",
+    "group_id" to "群组 ID",
 )
 
 private val AUDIT_TARGET_LABELS = mapOf(
