@@ -63,6 +63,7 @@ import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.PresignFileInput
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.MoodChips
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SegmentedTabs
 import com.hotspot.app.ui.components.SystemButton
@@ -75,8 +76,6 @@ import com.hotspot.app.ui.theme.Spacing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-private val MOOD_TAGS = listOf("松弛", "漫游", "咖啡", "展览", "自然", "夜色")
 
 /**
  * 发布瞬间（Android 首版落地）：文案 + 图片（相册选择 → media/presign_upload → PUT → complete_upload）
@@ -355,38 +354,6 @@ fun PublishScreen() {
         }
     }
 }
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MoodChips(selected: List<String>, onToggle: (String) -> Unit) {
-    val colors = HotSpotTheme.colors
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
-        verticalArrangement = Arrangement.spacedBy(Spacing.sm),
-    ) {
-        MOOD_TAGS.forEach { tag ->
-            val isSelected = selected.contains(tag)
-            Box(
-                modifier = Modifier
-                    .clip(AppShapes.pill)
-                    .background(if (isSelected) colors.accentSoftBg else colors.island)
-                    .border(1.dp, if (isSelected) colors.accentBorder else colors.borderSubtle, AppShapes.pill)
-                    .clickable { onToggle(tag) }
-                    .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
-            ) {
-                Text(
-                    text = "#" + tag,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-                    color = if (isSelected) colors.textAccentOnSoft else colors.textSecondary,
-                )
-            }
-        }
-    }
-}
-
-
 
 private suspend fun uploadImagesForPublish(
     context: Context,

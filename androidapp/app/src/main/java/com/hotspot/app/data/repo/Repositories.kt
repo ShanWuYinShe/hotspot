@@ -200,12 +200,15 @@ class FeedRepository(private val api: ApiClient) {
         momentId: String,
         description: String? = null,
         privacyLevel: String? = null,
+        tags: List<String>? = null,
     ): ApiResult<MomentItem> = api.post(
         ApiEndpoint.MOMENTS_UPDATE,
         buildJsonObject {
             put("moment_id", momentId)
             if (description != null) put("description", description)
             if (privacyLevel != null) put("privacy_level", privacyLevel)
+            // tags 传空数组表示清空（patch 语义：null 保持不变）
+            if (tags != null) put("tags", buildJsonArray { tags.forEach { add(JsonPrimitive(it)) } })
         },
         MomentItem.serializer(),
     )

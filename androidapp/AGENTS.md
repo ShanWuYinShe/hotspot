@@ -154,9 +154,10 @@ app/src/main/java/com/hotspot/app/
   `set_mute`、`remove`，群主/自己不可被操作，服务端 10400 兜底；成功后刷新成员列表与群详情。
 - **群信息编辑**：群详情更多菜单（owner/admin）→ 名称/简介弹窗，走 `groups/admin/update`；
   其余字段传 null 不改，成功用返回的 GroupItem 直接刷新头部。
-- **瞬间操作**：详情右上角「更多操作」按角色分流——自己的瞬间：编辑文案与可见范围
-  （`moments/update` patch 语义，只提交 description/privacy_level；可见范围初值需先从
-  `moments/fetch_created` 的 owner 视角取 privacy_level，`open_the_door` 不含该字段）/ 删除瞬间（`moments/delete` 软删除）；
+- **瞬间操作**：详情右上角「更多操作」按角色分流——自己的瞬间：编辑文案、氛围标签与可见范围
+  （`moments/update` patch 语义，只提交 description/tags/privacy_level；标签预设与发布页共用 `MoodChips`，
+  并额外展示瞬间已有自定义标签；可见范围初值需先从 `moments/fetch_created` 的 owner 视角取 privacy_level，
+  `open_the_door` 不含该字段）/ 删除瞬间（`moments/delete` 软删除）；
   他人瞬间：举报瞬间（`reports/create target_type=moment`，复用 `ReportDialog`）。
   删除成功后返回上一页并保留列表软删占位规则。
 - **瞬间多图**：详情 hero 使用 `HorizontalPager` 横滑（多图时底部圆点指示器），点击当前图打开
