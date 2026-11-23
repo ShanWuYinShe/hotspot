@@ -15,6 +15,8 @@ import com.hotspot.app.data.model.AdminReportsPage
 import com.hotspot.app.data.model.AdminUserItem
 import com.hotspot.app.data.model.Page
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -69,6 +71,26 @@ class AdminRepository(private val api: ApiClient) {
         ApiEndpoint.ADMIN_RBAC_PERMISSIONS_FETCH,
         ApiClient.emptyBody(),
         AdminPermissionDictionary.serializer(),
+    )
+
+    /** 授予/更新平台管理员：awardAll=true 时忽略 roleIds（仅 superadmin 可传 true）。 */
+    suspend fun awardAdmin(
+        userId: String,
+        awardAllPermissions: Boolean,
+        roleIds: List<String>,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_RBAC_ADMINS_AWARD,
+        buildJsonObject {
+            put("user_id", userId)
+            put("award_all_permissions", if (awardAllPermissions) JsonPrimitive(true) else JsonNull)
+            put("role_ids", buildJsonArray { roleIds.forEach { add(JsonPrimitive(it)) } })
+        },
+    )
+
+    /** 撤销平台管理员（superadmin 的撤销仅 superadmin 可执行）。 */
+    suspend fun revokeAdmin(userId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_RBAC_ADMINS_REVOKE,
+        buildJsonObject { put("user_id", userId) },
     )
 
     /** 平台管理员列表（按最近授权时间倒序）。 */
