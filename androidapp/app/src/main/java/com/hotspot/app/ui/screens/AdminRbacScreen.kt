@@ -9,8 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -30,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminOperatorItem
@@ -83,6 +87,14 @@ fun AdminRbacScreen(onBack: () -> Unit) {
     var awardSaving by remember { mutableStateOf(false) }
     var revokeTarget by remember { mutableStateOf<AdminOperatorItem?>(null) }
     var revoking by remember { mutableStateOf(false) }
+    var roleEditorOpen by remember { mutableStateOf(false) }
+    var editingRole by remember { mutableStateOf<AdminRoleItem?>(null) }
+    var roleName by remember { mutableStateOf("") }
+    var roleDescription by remember { mutableStateOf("") }
+    var rolePermissionKeys by remember { mutableStateOf(setOf<String>()) }
+    var roleSaving by remember { mutableStateOf(false) }
+    var deleteRoleTarget by remember { mutableStateOf<AdminRoleItem?>(null) }
+    var deletingRole by remember { mutableStateOf(false) }
 
     LaunchedEffect(reloadKey) {
         loading = true
@@ -144,6 +156,21 @@ fun AdminRbacScreen(onBack: () -> Unit) {
             subtitle = "平台管理员",
             onBack = onBack,
             actions = {
+                if (tabIndex == 1) {
+                    SystemButton(
+                        text = "新建角色",
+                        onClick = {
+                            editingRole = null
+                            roleName = ""
+                            roleDescription = ""
+                            rolePermissionKeys = emptySet()
+                            roleEditorOpen = true
+                        },
+                        variant = ButtonVariant.PRIMARY,
+                        size = ButtonSize.SM,
+                    )
+                    Spacer(Modifier.width(Spacing.sm))
+                }
                 if (tabIndex == 0) {
                     SystemButton(
                         text = "授权",
@@ -239,7 +266,17 @@ fun AdminRbacScreen(onBack: () -> Unit) {
                         item {
                             ListGroup {
                                 roles.forEachIndexed { index, role ->
-                                    RoleRow(role)
+                                    RoleRow(
+                                        role = role,
+                                        onEdit = {
+                                            editingRole = role
+                                            roleName = role.name
+                                            roleDescription = role.description.orEmpty()
+                                            rolePermissionKeys = role.permissions.toSet()
+                                            roleEditorOpen = true
+                                        },
+                                        onDelete = { deleteRoleTarget = role },
+                                    )
                                     if (index != roles.lastIndex) {
                                         HorizontalDivider(color = colors.borderSubtle)
                                     }
@@ -466,6 +503,192 @@ fun AdminRbacScreen(onBack: () -> Unit) {
             },
         )
     }
+    if (roleEditorOpen) {
+        AlertDialog(
+            onDismissRequest = { if (!roleSaving) roleEditorOpen = false },
+            title = { Text(if (editingRole == null) "新建角色" else "编辑角色") },
+            text = {
+                Column(
+                    Modifier
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    SystemInput(
+                        value = roleName,
+                        onValueChange = { roleName = it },
+                        label = "角色名称",
+                        placeholder = "例如：内容审核员…",
+                        enabled = !roleSaving,
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    SystemInput(
+                        value = roleDescription,
+                        onValueChange = { roleDescription = it },
+                        label = "描述（可选）",
+                        placeholder = "这个角色负责哪些工作…",
+                        enabled = !roleSaving,
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        text = "权限（" + rolePermissionKeys.size + " 项已选）",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.textPrimary,
+                    )
+                    permissions.forEach { permission ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !roleSaving) {
+                                    rolePermissionKeys = if (permission.key in rolePermissionKeys) {
+                                        rolePermissionKeys - permission.key
+                                    } else {
+                                        rolePermissionKeys + permission.key
+                                    }
+                                }
+                                .padding(vertical = Spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Checkbox(
+                                checked = permission.key in rolePermissionKeys,
+                                onCheckedChange = null,
+                                enabled = !roleSaving,
+                            )
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    text = permission.key,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = colors.textPrimary,
+                                )
+                                Text(
+                                    text = permission.description,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.textSecondary,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (roleSaving) "保存中…" else "保存",
+                    onClick = {
+                        if (roleSaving) return@SystemButton
+                        if (roleName.isBlank()) {
+                            Toast.makeText(context, "角色名称不能为空", Toast.LENGTH_SHORT).show()
+                            return@SystemButton
+                        }
+                        roleSaving = true
+                        scope.launch {
+                            val target = editingRole
+                            if (target == null) {
+                                when (val created = AppContainer.adminRepository.createRole(
+                                    name = roleName.trim(),
+                                    description = roleDescription.trim().ifBlank { null },
+                                )) {
+                                    is ApiResult.Ok -> {
+                                        if (rolePermissionKeys.isNotEmpty()) {
+                                            val permResult = AppContainer.adminRepository.setRolePermissions(
+                                                created.data.roleId,
+                                                rolePermissionKeys.toList(),
+                                            )
+                                            if (permResult is ApiResult.Err) {
+                                                Toast.makeText(context, permResult.error.userMessage, Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        roleEditorOpen = false
+                                        reloadKey += 1
+                                        Toast.makeText(context, "角色已创建", Toast.LENGTH_SHORT).show()
+                                    }
+                                    is ApiResult.Err -> Toast.makeText(context, created.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                when (val updated = AppContainer.adminRepository.updateRole(
+                                    roleId = target.roleId,
+                                    name = roleName.trim(),
+                                    description = roleDescription.trim().ifBlank { null },
+                                    clearDescription = roleDescription.isBlank() && !target.description.isNullOrBlank(),
+                                )) {
+                                    is ApiResult.Ok -> {
+                                        val permResult = AppContainer.adminRepository.setRolePermissions(
+                                            target.roleId,
+                                            rolePermissionKeys.toList(),
+                                        )
+                                        if (permResult is ApiResult.Err) {
+                                            Toast.makeText(context, permResult.error.userMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                        roleEditorOpen = false
+                                        reloadKey += 1
+                                        Toast.makeText(context, "角色已更新", Toast.LENGTH_SHORT).show()
+                                    }
+                                    is ApiResult.Err -> Toast.makeText(context, updated.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            roleSaving = false
+                        }
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    enabled = !roleSaving,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { roleEditorOpen = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !roleSaving,
+                )
+            },
+        )
+    }
+
+    deleteRoleTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!deletingRole) deleteRoleTarget = null },
+            title = { Text("删除角色") },
+            text = {
+                Text(
+                    text = "删除角色「" + target.name + "」？仍被管理员引用的角色无法删除。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary,
+                )
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (deletingRole) "删除中…" else "删除",
+                    onClick = {
+                        if (deletingRole) return@SystemButton
+                        deletingRole = true
+                        scope.launch {
+                            when (val result = AppContainer.adminRepository.deleteRole(target.roleId)) {
+                                is ApiResult.Ok -> {
+                                    deleteRoleTarget = null
+                                    reloadKey += 1
+                                    Toast.makeText(context, "角色已删除", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            deletingRole = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !deletingRole,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { deleteRoleTarget = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !deletingRole,
+                )
+            },
+        )
+    }
 }
 
 @Composable
@@ -517,7 +740,11 @@ private fun roleSuffix(item: AdminOperatorItem): String =
     if (item.roles.isEmpty()) "" else " · 角色：" + item.roles.joinToString("、") { it.name }
 
 @Composable
-private fun RoleRow(role: AdminRoleItem) {
+private fun RoleRow(
+    role: AdminRoleItem,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm2)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -550,6 +777,22 @@ private fun RoleRow(role: AdminRoleItem) {
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
+        Spacer(Modifier.height(Spacing.xs))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.End) {
+            SystemButton(
+                text = "编辑",
+                onClick = onEdit,
+                variant = ButtonVariant.SECONDARY,
+                size = ButtonSize.SM,
+            )
+            Spacer(Modifier.width(Spacing.xs))
+            SystemButton(
+                text = "删除",
+                onClick = onDelete,
+                variant = ButtonVariant.SECONDARY,
+                size = ButtonSize.SM,
+            )
+        }
     }
 }
 

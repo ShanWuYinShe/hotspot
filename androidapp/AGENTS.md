@@ -36,11 +36,11 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
 - **权限与角色**：查看平台管理员列表（角色/权限摘要/授权时间）、RBAC 角色与权限字典，
   支持授权（按角色授权或 superadmin 授予全部权限）与撤销（superadmin 行不显示撤销入口，避免误撤自己）
-  （`rbac/admins/fetch|award|revoke`、`rbac/roles/fetch`、`rbac/permissions/fetch`；
-  角色增删改/set_permissions 待补）；
+  （`rbac/admins/fetch|award|revoke`、`rbac/roles/fetch`、`rbac/permissions/fetch`）；
+  角色支持新建/编辑名称描述/删除/按权限字典勾选 set_permissions（`'*'` 全量权限仅 superadmin，未在 App 暴露）；
 - **标签管理**：标签名搜索（含已屏蔽项）、使用次数排序、软屏蔽/解屏蔽（`tags/search|set_ban`；
   物理删除 hard_delete 不在 UI 暴露）；
-管理后台其余扩展（RBAC 角色写操作等）仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
+管理后台模块（举报/用户/群组/公告/统计/权限角色/标签）已接入；其余扩展仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
 WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
 私聊、群聊与消息列表消费增量事件）。
 
@@ -225,8 +225,8 @@ app/src/main/java/com/hotspot/app/
 
 ## 已知待办（首版登记）
 
-1. 管理后台（举报审核、用户管理、群组管理、系统公告、统计分析、权限与角色、标签管理已接入，
-   RBAC 角色增删改/set_permissions 待补）；
+1. 管理后台（举报审核、用户管理、群组管理、系统公告、统计分析、权限与角色、标签管理已接入；
+   RBAC 角色权限仅支持权限字典内 key，superadmin 的 `'*'` 未在 App 暴露）；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    通知中心点击已按 payload 跳转（含 @提及瞬间/群聊）；语音消息已接入（录制 + 播放，chat_audio）；

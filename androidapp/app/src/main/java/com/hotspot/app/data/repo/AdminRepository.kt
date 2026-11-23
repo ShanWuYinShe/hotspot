@@ -6,6 +6,7 @@ import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminOperatorItem
 import com.hotspot.app.data.model.AdminPermissionDictionary
 import com.hotspot.app.data.model.AdminPermissions
+import com.hotspot.app.data.model.AdminRoleItem
 import com.hotspot.app.data.model.AdminRoleList
 import com.hotspot.app.data.model.AdminTagItem
 import com.hotspot.app.data.model.AdminAnnouncementItem
@@ -56,6 +57,54 @@ class AdminRepository(private val api: ApiClient) {
             put("name", name)
             put("active", active)
             put("hard_delete", if (active) JsonPrimitive(hardDelete) else JsonNull)
+        },
+    )
+
+    /** 创建角色（重名返回 10400）。 */
+    suspend fun createRole(name: String, description: String?): ApiResult<AdminRoleItem> = api.post(
+        ApiEndpoint.ADMIN_RBAC_ROLES_CREATE,
+        buildJsonObject {
+            put("name", name)
+            put("description", description?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+        },
+        AdminRoleItem.serializer(),
+    )
+
+    /** 更新角色名称/描述（clearDescription=true 清空描述）。 */
+    suspend fun updateRole(
+        roleId: String,
+        name: String?,
+        description: String?,
+        clearDescription: Boolean = false,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_RBAC_ROLES_UPDATE,
+        buildJsonObject {
+            put("role_id", roleId)
+            put("name", name?.let(::JsonPrimitive) ?: JsonNull)
+            put(
+                "description",
+                when {
+                    clearDescription -> JsonPrimitive("")
+                    description != null -> JsonPrimitive(description)
+                    else -> JsonNull
+                },
+            )
+            put("clear_description", if (clearDescription) JsonPrimitive(true) else JsonNull)
+        },
+    )
+
+    /** 删除角色（仍被管理员引用时服务端返回 10400）。 */
+    suspend fun deleteRole(roleId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_RBAC_ROLES_DELETE,
+        buildJsonObject { put("role_id", roleId) },
+    )
+
+    /** 设置角色权限（permission_keys 必须来自权限字典）。 */
+    suspend fun setRolePermissions(roleId: String, permissionKeys: List<String>): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_RBAC_ROLES_SET_PERMISSIONS,
+        buildJsonObject {
+            put("role_id", roleId)
+            put("permission_keys", buildJsonArray { permissionKeys.forEach { add(JsonPrimitive(it)) } })
         },
     )
 
