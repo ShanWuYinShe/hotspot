@@ -153,6 +153,12 @@ object AppContainer {
         browseAnchorValue = anchor
     }
 
+    /** 清除本地浏览锚点，恢复回退 client_config.defaults.default_location。 */
+    fun clearBrowseAnchor() {
+        browseAnchorStore.clear()
+        browseAnchorValue = null
+    }
+
     /** 发布器限额；配置不可用时退回 spec 默认值（9 图 / 9 标签 / 280 字）。 */
     suspend fun limits(): AppLimits = clientConfig()?.limits ?: AppLimits()
 }

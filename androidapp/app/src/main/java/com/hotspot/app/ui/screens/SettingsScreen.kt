@@ -30,6 +30,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +47,7 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.BuildConfig
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.location.BrowseAnchor
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
@@ -67,23 +72,39 @@ import kotlinx.coroutines.launch
  * 设置（设计稿 87:4864）：账号信息（编辑资料入口）/ 外观与显示（三主题 + 明暗三档）/
  * 系统与关于（版本、我的举报、退出登录）。
  * 主题偏好持久化在 ThemeController（SharedPreferences），切换即时生效。
- * 设计稿的「地图与位置」区块 Android 端暂不渲染：原生地图仍是 TODO，提供无效开关属于造假入口。
+ * 「地图与位置」展示当前浏览锚点（/map 选点页写入；未设置时回退默认位置），可跳转地图选点或恢复默认。
  */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val themeController = AppContainer.themeController
     val uiTheme by themeController.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var anchor by remember { mutableStateOf(AppContainer.browseAnchorStore.current()) }
+    var fallbackLocationName by remember { mutableStateOf<String?>(null) }
     var account by remember { mutableStateOf<AccountData?>(null) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
 
+    // 从地图选点页返回时刷新当前锚点（该页在返回栈中，不一定重新组合）。
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                anchor = AppContainer.browseAnchorStore.current()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     LaunchedEffect(Unit) {
+        fallbackLocationName = AppContainer.defaultLocation()?.locationName
         when (val result = AppContainer.profileRepository.account()) {
             is ApiResult.Ok -> account = result.data
             is ApiResult.Err -> Unit
@@ -227,6 +248,58 @@ fun SettingsScreen(
                 }
             }
             Spacer(Modifier.height(Spacing.xl))
+            SettingsSectionTitle(title = "地图与位置", subtitle = "附近与发现使用的浏览锚点，可在选点页重新选择")
+            Spacer(Modifier.height(Spacing.sm))
+            SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_map_cta_pin),
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.iconSm),
+                        tint = colors.textSecondary,
+                    )
+                    Spacer(Modifier.width(Spacing.sm2))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            text = anchor?.label ?: (fallbackLocationName?.ifBlank { null } ?: "默认位置"),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = anchor?.let { "已自定义 · " + formatAnchorCoordinates(it) }
+                                ?: "跟随默认位置（未自定义）",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(Spacing.sm))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    SystemButton(
+                        text = "去地图选点",
+                        onClick = onOpenMap,
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                    )
+                    if (anchor != null) {
+                        SystemButton(
+                            text = "恢复默认",
+                            onClick = {
+                                AppContainer.clearBrowseAnchor()
+                                anchor = null
+                            },
+                            variant = ButtonVariant.SECONDARY,
+                            size = ButtonSize.SM,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(Spacing.xl))
             SettingsSectionTitle(title = "系统与关于", subtitle = "客户端版本及当前设备会话状态")
             Spacer(Modifier.height(Spacing.sm))
             SystemCard(contentPadding = PaddingValues(vertical = Spacing.xs)) {
@@ -282,6 +355,9 @@ fun SettingsScreen(
         )
     }
 }
+
+private fun formatAnchorCoordinates(anchor: BrowseAnchor): String =
+    String.format(java.util.Locale.US, "%.4f, %.4f", anchor.latitude, anchor.longitude)
 
 @Composable
 private fun SettingsSubtitleChip(text: String) {

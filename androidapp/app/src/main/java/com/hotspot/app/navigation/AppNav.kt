@@ -126,9 +126,14 @@ private fun MainScaffold() {
                     MapScreen(
                         onBack = { navController.popBackStack() },
                         onAnchorSaved = {
-                            // 锚点变更后重建附近枢纽，让距离/推荐按新锚点重新拉取。
-                            navController.popBackStack(Routes.NEARBY, inclusive = true)
-                            navController.navigate(Routes.NEARBY) { launchSingleTop = true }
+                            if (navController.previousBackStackEntry?.destination?.route == Routes.SETTINGS) {
+                                // 从设置进入选点：保存后回到设置，让「地图与位置」区块即时刷新。
+                                navController.popBackStack()
+                            } else {
+                                // 锚点变更后重建附近枢纽，让距离/推荐按新锚点重新拉取。
+                                navController.popBackStack(Routes.NEARBY, inclusive = true)
+                                navController.navigate(Routes.NEARBY) { launchSingleTop = true }
+                            }
                         },
                     )
                 }
@@ -202,6 +207,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
                         onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
+                        onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
                 composable(Routes.ME_REPORTS) {
