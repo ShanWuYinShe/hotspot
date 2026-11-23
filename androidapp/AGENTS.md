@@ -191,6 +191,7 @@ app/src/main/java/com/hotspot/app/
 - **屏蔽与名单**：他人主页「屏蔽」走 `users/set_block`（字段为 `active`，拉黑会解除双方关注）；
   设置 →「屏蔽名单」展示 `users/fetch_blocked` 列表（昵称/屏蔽时间/屏蔽原因），
   分页拉取（底部「加载更多」）并支持逐条解除屏蔽；
+  支持按昵称/用户 ID/屏蔽原因搜索（契约无关键词参数：搜索时先加载完全部分页再本地筛选）；
   解除只清拉黑关系，不自动恢复关注。
 - **通知跳转**：通知行点击后先 `notify/mark_read`（scope=ids）再按类型跳转：
   `new_follower`/`mutual_follow` → 用户主页；`moment_commented`/`comment_reply`/`mentioned`
