@@ -77,6 +77,8 @@ fun AdminStatsScreen(onBack: () -> Unit) {
     var drilldownMoreLoading by remember { mutableStateOf(false) }
     var drilldownError by remember { mutableStateOf<String?>(null) }
     var drilldownReloadKey by remember { mutableIntStateOf(0) }
+    var drilldownUserId by remember { mutableStateOf<String?>(null) }
+    var drilldownGroupId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(reloadKey) {
         loading = true
@@ -247,6 +249,14 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                             selectedIndex = drilldownTypeIndex,
                             onSelected = { drilldownTypeIndex = it },
                         )
+                        if (drilldownTypeIndex != 2) {
+                            Text(
+                                text = "点击行查看" + if (drilldownTypeIndex == 0) "用户详情" else "群组详情",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = colors.textSecondary,
+                                modifier = Modifier.padding(top = Spacing.xs, start = Spacing.xs),
+                            )
+                        }
                         Spacer(Modifier.height(Spacing.sm2))
                     }
                     when {
@@ -272,6 +282,13 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                                         Column(
                                             Modifier
                                                 .fillMaxWidth()
+                                                .clickable(enabled = drilldownTypeIndex != 2) {
+                                                    if (drilldownTypeIndex == 0) {
+                                                        drilldownUserId = item.objectId
+                                                    } else if (drilldownTypeIndex == 1) {
+                                                        drilldownGroupId = item.objectId
+                                                    }
+                                                }
                                                 .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
                                         ) {
                                             Text(
@@ -319,6 +336,13 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                 }
             }
         }
+    }
+
+    drilldownUserId?.let { userId ->
+        AdminUserDetailDialog(userId = userId, onDismiss = { drilldownUserId = null })
+    }
+    drilldownGroupId?.let { groupId ->
+        AdminGroupDetailDialog(groupId = groupId, onDismiss = { drilldownGroupId = null })
     }
 }
 
