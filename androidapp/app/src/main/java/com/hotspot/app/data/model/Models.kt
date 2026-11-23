@@ -160,6 +160,41 @@ data class AdminRoleBasic(
     val name: String = "",
 )
 
+/** 平台管理员角色（spec → AdminRoleItem）。 */
+@Serializable
+data class AdminRoleItem(
+    @SerialName("role_id") val roleId: String = "",
+    val name: String = "",
+    val description: String? = null,
+    val permissions: List<String> = emptyList(),
+)
+
+@Serializable
+data class AdminRoleList(
+    val items: List<AdminRoleItem> = emptyList(),
+)
+
+/** 权限字典项（spec → AdminPermissionItem）。 */
+@Serializable
+data class AdminPermissionItem(
+    val key: String = "",
+    val description: String = "",
+)
+
+@Serializable
+data class AdminPermissionDictionary(
+    val items: List<AdminPermissionItem> = emptyList(),
+)
+
+/** 平台管理员列表项（spec → AdminOperatorItem）。 */
+@Serializable
+data class AdminOperatorItem(
+    val user: UserInfo = UserInfo(),
+    @SerialName("granted_at") val grantedAt: String = "",
+    val permissions: List<String> = emptyList(),
+    val roles: List<AdminRoleBasic> = emptyList(),
+)
+
 /** 管理端举报项（spec → AdminReportItem extends ReportItem）。 */
 @Serializable
 data class AdminReportItem(
