@@ -57,6 +57,7 @@ fun SearchScreen(
     onBack: () -> Unit,
     onOpenGroup: (String) -> Unit,
     onOpenUser: (String) -> Unit,
+    onOpenMoment: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     var query by remember { mutableStateOf("") }
@@ -86,7 +87,7 @@ fun SearchScreen(
         }
         when (tabIndex) {
             0 -> UserResults(query = submitted, onOpenUser = onOpenUser)
-            1 -> MomentResults(query = submitted)
+            1 -> MomentResults(query = submitted, onOpenMoment = onOpenMoment)
             else -> GroupResults(query = submitted, onOpenGroup = onOpenGroup)
         }
     }
@@ -142,7 +143,7 @@ private fun UserResults(query: String, onOpenUser: (String) -> Unit) {
 }
 
 @Composable
-private fun MomentResults(query: String) {
+private fun MomentResults(query: String, onOpenMoment: (String) -> Unit) {
     val state = rememberSingleLoadState<MomentItem>()
     var retryKey by remember { mutableIntStateOf(0) }
     LaunchedEffect(query, retryKey) {
@@ -178,6 +179,7 @@ private fun MomentResults(query: String) {
                             shape = AppShapes.compact,
                         )
                     },
+                    onClick = { onOpenMoment(moment.momentId) },
                 )
             }
         }
