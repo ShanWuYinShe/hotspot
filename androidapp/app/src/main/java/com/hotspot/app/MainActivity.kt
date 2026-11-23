@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hotspot.app.navigation.HotSpotApp
 import com.hotspot.app.ui.components.AmbientCanvas
+import com.hotspot.app.ui.theme.ChromeInsets
 import com.hotspot.app.ui.theme.DarkModePref
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.ThemeController
@@ -47,18 +48,22 @@ class MainActivity : ComponentActivity() {
                 DarkModePref.LIGHT -> false
                 DarkModePref.DARK -> true
             }
-            SystemBarsAppearance(dark = dark)
+            // 沉浸头图页：图片铺到状态栏下并压暗，状态栏图标强制浅色；其余页面跟随主题。
+            val lightStatusBarIcons = ChromeInsets.lightStatusBarIcons
+            SystemBarsAppearance(dark = lightStatusBarIcons || dark)
             HotSpotTheme(uiTheme = uiTheme) {
                 Box(Modifier.fillMaxSize()) {
                     AmbientCanvas(Modifier.fillMaxSize())
+                    val immersiveTop = ChromeInsets.edgeToEdgeTop
+                    val contentInsets = if (immersiveTop) {
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                    } else {
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                    }
                     Column(
                         Modifier
                             .fillMaxSize()
-                            .windowInsetsPadding(
-                                WindowInsets.safeDrawing.only(
-                                    WindowInsetsSides.Top + WindowInsetsSides.Horizontal,
-                                ),
-                            ),
+                            .windowInsetsPadding(contentInsets),
                     ) {
                         HotSpotApp()
                     }

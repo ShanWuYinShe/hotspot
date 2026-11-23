@@ -200,6 +200,11 @@ app/src/main/java/com/hotspot/app/
 - **安全区一律取系统 `WindowInsets`**：根 `MainActivity` 统一注入 `safeDrawing` 的 Top/Horizontal；底部贴底组件
   （BottomNav / CommentInputBar / GroupActionDock）自行使用 `navigationBars`/`ime`。**禁止在页面写死顶/底部安全区 dp 值**——
   状态栏高度、挖孔、手势条因设备而异，写死会顶出多余留白或压到系统栏。
+- **通栏头图页（瞬间详情）的沉浸式规则**：根布局默认给所有页面加 Top 安全区，纯色页面状态栏与背景同色、视觉连续；
+  头图页若也内缩，状态栏会露出一条背景色，与图片割裂。此类页面进入时置 `ChromeInsets.edgeToEdgeTop`
+  （根不再加 Top 内边距，内容从屏幕顶开始），页面内用 `WindowInsets.statusBars` 给顶部浮层/无图占位留白；
+  头图顶部加随内容滚动的压暗渐变，`ChromeInsets.lightStatusBarIcons` 按头图是否仍覆盖状态栏切换（滚出后切回主题图标），
+  离开页面必须复位。**仍禁止在页面写死状态栏高度。**
 - 列表必须三态（loading/empty/error）；分页列表有到底提示；不得用假数据填充空态。
 - 主题：3 主题（vibrant/forest/inkwash）× 明暗三档（跟随系统/浅/深），系统栏颜色随主题。
 - 新增页面前先对照设计稿（Figma）移动端对应画板与 `docs/ui-components.md` 的同类契约。
