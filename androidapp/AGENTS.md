@@ -148,7 +148,8 @@ app/src/main/java/com/hotspot/app/
 - **群信息编辑**：群详情更多菜单（owner/admin）→ 名称/简介弹窗，走 `groups/admin/update`；
   其余字段传 null 不改，成功用返回的 GroupItem 直接刷新头部。
 - **瞬间多图**：详情 hero 使用 `HorizontalPager` 横滑（多图时底部圆点指示器），点击当前图打开
-  `FullscreenImageViewer`；搜索结果中的瞬间行可点击进入详情。
+  `FullscreenImageViewer`；多图查看器可左右滑翻页（底部「当前/总数」、双击放大复位），
+  单图查看器保留双指缩放/拖拽；搜索结果中的瞬间行可点击进入详情。
 - **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
