@@ -16,7 +16,7 @@
 个人中心（设计稿 87:3393：资料卡 + 瞬间/粉丝/群组指标 + 编辑资料/设置 + 我的内容 5 行计数入口）/
 关系页（87:3300：好友/关注/粉丝三 tab + 搜索；好友发消息、关注两态）/
 编辑资料（87:3128：昵称/简介/性别/兴趣标签 ≤5，users/update_account patch）/
-设置（87:4864：账号卡 / 三主题预览卡 × 明暗三档 / 系统与关于）/
+设置（87:4864：账号卡 / 三主题预览卡 × 明暗三档 / 地图与位置区块 / 系统与关于）/
 我的举报（87:3350：状态筛选 + 处理结果，reports/fetch 分页）/
 他人主页（87:5163：资料卡 + 瞬间/粉丝/关注 + 关注/私信 + 最近瞬间带图画廊 + 分享/备注/屏蔽/举报；
 入口：枢纽用户行、附近的人卡片、附近瞬间作者、瞬间详情作者、搜索用户结果）/
@@ -150,6 +150,8 @@ app/src/main/java/com/hotspot/app/
 - **聊天文件**：输入条相册右侧文件按钮 → 系统 DocumentsUI → `data/media/ChatFileUploader`
   （chat_file 分类，100MB 上限 + 扩展名/MIME 双黑名单，PUT 走流式 `putObjectStream` 不整份读内存）→
   `private_messages/send` / `group_messages/send` 的 `type=file` + `file_id`；气泡展示文件名/大小，点击 `ACTION_VIEW` 打开签名 URL。
+- **设置·地图与位置**：展示当前浏览锚点（自定义地点 + 坐标；未设置时回退默认位置）；
+  「去地图选点」跳转 `/map`，选点保存后回到设置并刷新；「恢复默认」清除本地锚点。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
