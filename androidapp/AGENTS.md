@@ -84,7 +84,7 @@ JAVA_HOME=... ANDROID_HOME=... ./gradlew --no-daemon assembleRelease   # R8 + �
 app/src/main/java/com/hotspot/app/
   MainActivity.kt / HotSpotApplication.kt / AppContainer.kt   # 入口与依赖装配
   data/api/        # ApiClient（OkHttp + 信封解析）、Endpoints（唯一路径定义处）
-  data/auth/       # TokenStore（Bearer 持久化）
+  data/auth/       # TokenStore（Bearer 持久化，Keystore AES/GCM 加密）
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
   data/location/   # 浏览锚点本地存储（地图选点页写入；附近页 reference_point 优先用它）
@@ -104,6 +104,9 @@ app/src/main/java/com/hotspot/app/
 
 - 仅 POST + JSON（RPC 风格），路径必须经 `data/api/Endpoints.kt`（禁止页面硬编码路径）。
 - 成功判定只认 `code === 0`；`10100` 清会话回登录；MUST 幂等接口带 `Idempotency-Key`。
+- **Token 安全**：access/refresh token 使用 Android Keystore AES/GCM 加密后写入 SharedPreferences
+  （密钥不可导出、每条密文带随机 IV）；旧版本明文 token 首次读取时自动加密迁移并删除明文键；
+  Keystore 解密失败按未登录处理；`device_id`/`user_id` 非敏感保持明文。
 - Base URL：默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机一律
   `adb reverse tcp:8888 tcp:8888` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建；
   release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
@@ -174,8 +177,7 @@ app/src/main/java/com/hotspot/app/
 
 ## 已知待办（首版登记）
 
-1. token 存储从 SharedPreferences 迁移到 EncryptedSharedPreferences/Keystore（上线前必须）。
-2. 管理后台；
+1. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    @提及消息的独立通知跳转未做；语音消息已接入（录制 + 播放，chat_audio）；
@@ -186,7 +188,7 @@ app/src/main/java/com/hotspot/app/
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
    查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）、
    举报评论（reports/create target_type=comment，复用 ReportDialog）与楼中楼回复点赞。
-3. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
+2. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
    验证通过，CI 仍只跑 debug）。
-4. 地图真实底图（高德/OSM 瓦片）、地理编码搜索与设备定位未接：底图暂为示意底色，搜索候选来自
+3. 地图真实底图（高德/OSM 瓦片）、地理编码搜索与设备定位未接：底图暂为示意底色，搜索候选来自
    `map/canvas` hotspots + 「纬度,经度」坐标，版权标为「示意底图」而非地图服务商。
