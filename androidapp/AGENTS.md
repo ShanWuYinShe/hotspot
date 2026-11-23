@@ -29,6 +29,7 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
 并驱动附近页 reference_point；同一页支持 `pickMode` 供瞬间详情修改位置复用；不接第三方地图 SDK，底图暂为示意底色）；
 管理后台（设置页对平台管理员显示入口，`rbac/me` 鉴权）已接入：
 - **举报审核**：待处理举报列表 → 通过/驳回 + 处理备注（`reports/fetch|judge`）；
+  支持按举报人/对象 ID/原因关键词搜索（契约无关键词参数：搜索时先加载完全部分页，再本地筛选）；
 - **用户管理**：昵称搜索 + 正常/已封禁筛选，封禁（永久/1/7/30 天 + 原因）与解封（`users/search`、`users/set_ban`）；
   点击用户行打开详情（`users/open_the_door`：账号/隐私/活跃时间，IP 与注册地等 PII 仅 `admin.users.read_ip` 可见，权限不足显示占位）；
 - **群组管理**：群名搜索，展示群主/成员数/创建时间，解散群组（`groups/search`、`groups/dismiss`；
@@ -36,6 +37,7 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
   点击群组行打开详情（`groups/open_the_door`：群主/成员数/标签/创建与最近活跃/简介；解散仍在列表操作）；
   详情内展示只读成员列表（`groups/members/fetch`，按加入时间正序 + 加载更多；成员可见性受限时显示错误与重试）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；
+  支持按标题/正文/发布人搜索（同样先加载完全部分页再本地筛选）；
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
   区域 Top 可下钻查看用户/群组/瞬间明细（`stats/geo/drilldown`，按实体类型切换 + keyset 分页；
   用户/群组行可继续打开对应管理详情，瞬间行只读）；

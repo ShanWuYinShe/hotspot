@@ -2,6 +2,7 @@ package com.hotspot.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,15 +32,19 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.InlineLoading
+import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ReportCatalog
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -56,6 +61,10 @@ fun AdminReportsScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var retryKey by remember { mutableStateOf(0) }
+    var query by remember { mutableStateOf("") }
+    var cursor by remember { mutableStateOf<String?>(null) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var searchLoadingAll by remember { mutableStateOf(false) }
     var judgeTarget by remember { mutableStateOf<AdminReportItem?>(null) }
     var judgeAction by remember { mutableStateOf("dismiss") }
     var note by remember { mutableStateOf("") }
@@ -68,10 +77,59 @@ fun AdminReportsScreen(onBack: () -> Unit) {
             is ApiResult.Ok -> {
                 items = result.data.items
                 total = result.data.total
+                cursor = result.data.nextCursor
             }
             is ApiResult.Err -> error = result.error.userMessage
         }
         loading = false
+    }
+
+    fun loadMore() {
+        val next = cursor ?: return
+        if (loadingMore || loading) return
+        loadingMore = true
+        scope.launch {
+            when (val result = AppContainer.adminRepository.fetchReports(status = "pending", cursor = next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.reportId }
+                    cursor = result.data.nextCursor
+                }
+                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+            }
+            loadingMore = false
+        }
+    }
+
+    // 契约的 reports/fetch 没有关键词参数：搜索时先把待处理分页加载完（最多 10 页），再做本地筛选。
+    LaunchedEffect(query, retryKey) {
+        if (query.isBlank() || loading) return@LaunchedEffect
+        var next: String? = cursor ?: return@LaunchedEffect
+        searchLoadingAll = true
+        var pages = 0
+        while (next != null && pages < 10) {
+            when (val result = AppContainer.adminRepository.fetchReports(status = "pending", cursor = next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.reportId }
+                    cursor = result.data.nextCursor
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+        searchLoadingAll = false
+    }
+
+    val filteredItems = remember(items, query) {
+        val keyword = query.trim()
+        if (keyword.isBlank()) items else items.filter { report ->
+            report.reporter.nickname.contains(keyword, ignoreCase = true) ||
+                report.reporter.userId.contains(keyword, ignoreCase = true) ||
+                report.targetId.contains(keyword, ignoreCase = true) ||
+                report.reportId.contains(keyword, ignoreCase = true) ||
+                report.reason.contains(keyword, ignoreCase = true) ||
+                report.description.orEmpty().contains(keyword, ignoreCase = true)
+        }
     }
 
     fun openJudge(report: AdminReportItem, action: String) {
@@ -110,12 +168,24 @@ fun AdminReportsScreen(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(title = "管理后台", subtitle = "举报审核", onBack = onBack)
+        Column(Modifier.padding(horizontal = Spacing.lg)) {
+            SearchInput(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "搜索举报人 / 对象 ID / 原因…",
+            )
+            Spacer(Modifier.height(Spacing.sm))
+        }
         when {
             loading -> LoadingState(message = "正在加载待处理举报…")
             error != null && items.isEmpty() -> ErrorState(message = error ?: "加载失败", onRetry = { retryKey += 1 })
             items.isEmpty() -> EmptyState(
                 title = "暂无待处理举报",
                 description = "用户提交的举报会出现在这里，审核后自动通知举报人。",
+            )
+            filteredItems.isEmpty() -> EmptyState(
+                title = "没有匹配的举报",
+                description = "换个举报人昵称、对象 ID 或原因关键词试试。",
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -126,7 +196,8 @@ fun AdminReportsScreen(onBack: () -> Unit) {
             ) {
                 item {
                     Text(
-                        text = "待处理 " + (total ?: items.size) + " 条",
+                        text = "待处理 " + (total ?: items.size) + " 条 · 已加载 " + items.size + " 条" +
+                            if (query.isNotBlank()) " · 匹配 " + filteredItems.size + " 条" else "",
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.textSecondary,
                         modifier = Modifier.padding(vertical = Spacing.sm, horizontal = Spacing.xs),
@@ -134,7 +205,7 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                 }
                 item {
                     ListGroup {
-                        items.forEach { report ->
+                        filteredItems.forEach { report ->
                             AdminReportRow(
                                 report = report,
                                 onResolve = { openJudge(report, "resolve") },
@@ -143,7 +214,24 @@ fun AdminReportsScreen(onBack: () -> Unit) {
                         }
                     }
                 }
-                item { Spacer(Modifier.height(Spacing.lg)) }
+                if (searchLoadingAll) {
+                    item { InlineLoading(text = "正在加载全部待处理举报用于搜索…") }
+                } else if (query.isBlank() && cursor != null) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) {
+                            SystemButton(
+                                text = if (loadingMore) "加载中…" else "加载更多",
+                                onClick = { loadMore() },
+                                variant = ButtonVariant.SECONDARY,
+                                size = ButtonSize.SM,
+                                enabled = !loadingMore,
+                                loading = loadingMore,
+                            )
+                        }
+                    }
+                } else {
+                    item { Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) { ListEnd() } }
+                }
             }
         }
     }
