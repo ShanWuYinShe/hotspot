@@ -74,7 +74,8 @@ import kotlinx.coroutines.launch
  *
  * 交互：搜索当前视口附近的地点候选（map/canvas hotspots，支持「纬度,经度」坐标），
  * 选择后中心点/名称更新并写入最近使用；「将地图中心设为浏览锚点」持久化本地锚点，
- * 附近页按它计算距离与推荐。
+ * 附近页按它计算距离与推荐。`pickMode` 供瞬间详情修改位置：确认时只把中心点与名称
+ * 回传给调用方，不写本地锚点。
  */
 @Composable
 fun MapScreen(
@@ -113,14 +114,18 @@ fun MapScreen(
         initialLoading = true
         if (pickMode) {
             // 瞬间位置编辑：以该瞬间当前坐标为初始中心；缺失时回退默认浏览位置。
-            val start = initialPoint ?: AppContainer.defaultLocation()?.point
+            val fallback = AppContainer.defaultLocation()
+            val start = initialPoint ?: fallback?.point
             if (start == null) {
                 initialError = "无法获取当前位置，请稍后重试"
             } else {
                 center = start
-                locationLabel = initialLocationName?.takeIf { it.isNotBlank() }
-                    ?: AppContainer.defaultLocation()?.locationName?.ifBlank { "当前位置" }
-                    ?: "当前位置"
+                // 名称必须与中心点来源一致：瞬间自带坐标时不要借用默认浏览位置的名字。
+                locationLabel = if (initialPoint != null) {
+                    initialLocationName?.takeIf { it.isNotBlank() } ?: "当前位置"
+                } else {
+                    fallback?.locationName?.ifBlank { "当前位置" } ?: "当前位置"
+                }
             }
         } else {
             val location = AppContainer.defaultLocation()
@@ -332,7 +337,7 @@ fun MapScreen(
             MapGlassCircle(size = 42.dp, onClick = { scope.launch { loadInitial() } }) {
                 Icon(
                     painter = painterResource(R.drawable.ic_map_locate),
-                    contentDescription = "回到默认位置",
+                    contentDescription = if (pickMode) "回到瞬间位置" else "回到默认位置",
                     modifier = Modifier.size(18.dp),
                     tint = colors.textSecondary,
                 )
@@ -565,7 +570,7 @@ fun MapScreen(
 
         if (initialLoading) {
             Text(
-                text = "正在获取浏览锚点…",
+                text = if (pickMode) "正在获取瞬间位置…" else "正在获取浏览锚点…",
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.textSecondary,
                 modifier = Modifier.align(Alignment.Center),
