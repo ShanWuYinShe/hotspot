@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import android.net.Uri
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -261,8 +262,26 @@ private fun MainScaffold() {
                 composable(Routes.ADMIN_USERS) {
                     AdminUsersScreen(onBack = { navController.popBackStack() })
                 }
+                composable(
+                    route = Routes.ADMIN_USERS_FILTER,
+                    arguments = listOf(navArgument("query") { type = NavType.StringType }),
+                ) { entry ->
+                    AdminUsersScreen(
+                        onBack = { navController.popBackStack() },
+                        initialQuery = entry.arguments?.getString("query").orEmpty(),
+                    )
+                }
                 composable(Routes.ADMIN_GROUPS) {
                     AdminGroupsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(
+                    route = Routes.ADMIN_GROUPS_FILTER,
+                    arguments = listOf(navArgument("query") { type = NavType.StringType }),
+                ) { entry ->
+                    AdminGroupsScreen(
+                        onBack = { navController.popBackStack() },
+                        initialQuery = entry.arguments?.getString("query").orEmpty(),
+                    )
                 }
                 composable(Routes.ADMIN_ANNOUNCEMENTS) {
                     AdminAnnouncementsScreen(onBack = { navController.popBackStack() })
@@ -277,7 +296,15 @@ private fun MainScaffold() {
                     AdminTagsScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.ADMIN_AUDIT) {
-                    AdminAuditScreen(onBack = { navController.popBackStack() })
+                    AdminAuditScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenUser = { name ->
+                            navController.navigate("admin/users/filter?query=" + Uri.encode(name))
+                        },
+                        onOpenGroup = { name ->
+                            navController.navigate("admin/groups/filter?query=" + Uri.encode(name))
+                        },
+                    )
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,
