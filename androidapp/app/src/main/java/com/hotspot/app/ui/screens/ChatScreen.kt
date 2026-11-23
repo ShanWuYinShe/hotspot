@@ -47,12 +47,14 @@ import android.widget.Toast
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.ChatFileUploader
 import com.hotspot.app.data.media.ChatImageUploader
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
 import com.hotspot.app.navigation.ChatTarget
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.ChatFileBubble
 import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
@@ -94,6 +96,7 @@ fun ChatScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
+    var fileUploading by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
     // 消息举报：长按他人消息弹出（spec/reports/create target_type=message，服务端冻结快照）
     var reportTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
@@ -132,6 +135,30 @@ fun ChatScreen(onBack: () -> Unit) {
                     .onFailure { error = it.message ?: "图片发送失败，请重试" }
             } finally {
                 uploading = false
+            }
+        }
+    }
+
+    // 发送文件：系统 DocumentsUI → chat_file 流式三步上传 → private_messages/send(type=file, file_id)。
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            fileUploading = true
+            error = null
+            try {
+                ChatFileUploader.upload(context, uri)
+                    .onSuccess { uploaded ->
+                        when (val result = chatRepository.sendFileMessage(targetUserId, uploaded.fileId)) {
+                            is ApiResult.Ok -> {
+                                reload()
+                                listState.animateScrollToItem(0)
+                            }
+                            is ApiResult.Err -> error = result.error.userMessage
+                        }
+                    }
+                    .onFailure { error = it.message ?: "文件发送失败，请重试" }
+            } finally {
+                fileUploading = false
             }
         }
     }
@@ -283,7 +310,7 @@ fun ChatScreen(onBack: () -> Unit) {
                         MessageBubble(
                             message = message,
                             isMine = message.sender.userId == myUserId,
-                            onLongPressReport = if (message.sender.userId != myUserId && message.recalledAt == null) {
+                            onLongPressReport = if (message.sender.userId != myUserId && !message.isRecalled) {
                                 { reportTarget = message }
                             } else {
                                 null
@@ -326,6 +353,20 @@ fun ChatScreen(onBack: () -> Unit) {
                     contentDescription = if (uploading) "图片发送中" else "发送图片",
                     modifier = Modifier.size(Dimens.iconMd),
                     tint = if (uploading) colors.textSecondary else colors.accent,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = !fileUploading) { filePicker.launch(arrayOf("*/*")) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_file),
+                    contentDescription = if (fileUploading) "文件发送中" else "发送文件",
+                    modifier = Modifier.size(Dimens.iconMd),
+                    tint = if (fileUploading) colors.textSecondary else colors.accent,
                 )
             }
             SystemInput(
@@ -420,15 +461,22 @@ private fun MessageBubble(
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url
-                if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
+                if (!message.isRecalled && message.type == "image" && !imageUrl.isNullOrBlank()) {
                     ChatImageBubble(
                         imageUrl = imageUrl,
                         isMine = isMine,
                         contentDescription = "聊天图片",
                     )
+                } else if (!message.isRecalled && message.type == "file") {
+                    ChatFileBubble(
+                        fileName = message.media?.fileName,
+                        fileSize = message.media?.fileSize,
+                        fileUrl = imageUrl,
+                        isMine = isMine,
+                    )
                 } else {
                     val text = when {
-                        message.recalledAt != null -> "消息已撤回"
+                        message.isRecalled -> "消息已撤回"
                         else -> when (message.type) {
                         "text" -> message.content ?: ""
                         "image" -> "[图片]"
