@@ -36,7 +36,8 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
   点击群组行打开详情（`groups/open_the_door`：群主/成员数/标签/创建与最近活跃/简介；解散仍在列表操作）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
-  区域 Top 可下钻查看用户/群组/瞬间明细（`stats/geo/drilldown`，按实体类型切换 + keyset 分页）；
+  区域 Top 可下钻查看用户/群组/瞬间明细（`stats/geo/drilldown`，按实体类型切换 + keyset 分页；
+  用户/群组行可继续打开对应管理详情，瞬间行只读）；
 - **权限与角色**：查看平台管理员列表（角色/权限摘要/授权时间）、RBAC 角色与权限字典，
   支持授权（按角色授权或 superadmin 授予全部权限）与撤销（superadmin 行不显示撤销入口，避免误撤自己）
   （`rbac/admins/fetch|award|revoke`、`rbac/roles/fetch`、`rbac/permissions/fetch`）；
