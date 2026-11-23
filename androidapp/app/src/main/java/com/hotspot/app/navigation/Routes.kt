@@ -21,6 +21,7 @@ object Routes {
     const val ADMIN_REPORTS = "admin/reports"
     const val ADMIN_USERS = "admin/users"
     const val ADMIN_GROUPS = "admin/groups"
+    const val ADMIN_ANNOUNCEMENTS = "admin/announcements"
     const val RELATIONSHIPS = "me/relationships?tab={tab}"
     // 附近三个叶子页（设计稿 87:3798 / 87:3995 / 87:4192；入口 = 附近枢纽各段「查看全部」）
     const val NEARBY_PEOPLE = "nearby/people"

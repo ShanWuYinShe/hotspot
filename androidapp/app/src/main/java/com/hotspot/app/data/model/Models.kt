@@ -207,6 +207,24 @@ data class AdminGroupItem(
     @SerialName("last_activity_at") val lastActivityAt: String? = null,
 )
 
+/**
+ * 管理端系统公告（spec/api_spec_admin.md → AdminAnnouncementItem extends SystemAnnouncementItem）。
+ * severity: info / warning / error。
+ */
+@Serializable
+data class AdminAnnouncementItem(
+    @SerialName("announcement_id") val announcementId: String = "",
+    val title: String = "",
+    val content: String = "",
+    val severity: String = "info",
+    @SerialName("action_url") val actionUrl: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("created_by") val createdBy: UserInfo = UserInfo(),
+    @SerialName("send_push") val sendPush: Boolean = false,
+    @SerialName("push_sent_at") val pushSentAt: String? = null,
+    @SerialName("view_count") val viewCount: Int = 0,
+)
+
 /** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
 @Serializable
 data class AdminReportsPage(
