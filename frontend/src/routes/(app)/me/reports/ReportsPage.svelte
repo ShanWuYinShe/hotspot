@@ -14,6 +14,7 @@
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { listReports } from '@/api/client';
 	import type { ReportItem, ReportStatus } from '@/api/types';
 	import { formatMomentTime } from '@/lib/utils';
@@ -85,6 +86,68 @@
 	let loadError = $state<string | null>(null);
 	let needsAuth = $state(false);
 	let reloadKey = $state(0);
+	let query = $state('');
+	let searchReloadKey = $state(0);
+	const searching = $derived(query.trim().length > 0);
+	let searchItems = $state<ReportItem[]>([]);
+	let searchLoaded = $state(0);
+	let searchLoading = $state(false);
+	let searchError = $state<string | null>(null);
+
+	// 举报契约（reports/fetch）无 keyword 参数：搜索时按当前状态自动加载完全部分页
+	// （最多 10 页），再按对象 ID/类型/理由/说明/处理结果本地匹配；清空后回到常规分页。
+	function reportMatches(r: ReportItem, q: string): boolean {
+		const hay = [
+			r.report_id,
+			r.target_id,
+			TARGET_LABELS[r.target_type] ?? '',
+			REASON_LABELS[r.reason] ?? '',
+			STATUS_LABELS[r.status] ?? '',
+			r.description ?? '',
+			r.resolution?.action === 'resolve' ? '已确认处理' : r.resolution ? '未构成违规' : '',
+			r.resolution?.note ?? '',
+			r.created_at
+		].join(' ').toLowerCase();
+		return hay.includes(q.toLowerCase());
+	}
+
+	$effect(() => {
+		const q = query.trim();
+		const st = statusParam;
+		void searchReloadKey;
+		if (!q) {
+			searchItems = [];
+			searchLoaded = 0;
+			searchLoading = false;
+			searchError = null;
+			return;
+		}
+		let cancelled = false;
+		searchLoading = true;
+		searchError = null;
+		void (async () => {
+			const all: ReportItem[] = [];
+			let cursor: string | undefined;
+			for (let page = 0; page < 10; page++) {
+				const res = await listReports({ status: st, pagination: { limit: 20, cursor } }).catch(() => null);
+				if (cancelled) return;
+				if (!res || res.code !== 0 || !res.data) {
+					searchError = res?.message ?? '搜索失败';
+					break;
+				}
+				all.push(...(res.data.items ?? []));
+				cursor = res.data.next_cursor ?? undefined;
+				if (!cursor) break;
+			}
+			if (cancelled) return;
+			searchLoaded = all.length;
+			searchItems = all.filter((r) => reportMatches(r, q));
+			searchLoading = false;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	// status 过滤参数：all → 不传；其余 tab 直传对应状态
 	const statusParam = $derived(activeTab === 'all' ? null : activeTab);
@@ -152,6 +215,8 @@
 
 	// 鉴权失效类报错（token 过期/术语型 message）：与 10100 同走登录引导，
 	// 避免「重试」死循环（Gemini UI 审查 r70——过期后点重试依然失败）
+	const shownItems = $derived(searching ? searchItems : items);
+
 	const authExpired = $derived(
 		needsAuth || (loadError !== null && /token|令牌|重新登录|登录状态/i.test(loadError))
 	);
@@ -173,7 +238,7 @@
 		>
 			{#snippet trailing()}
 				{#if !loading && !loadError && !authExpired}
-					<span class="text-text-secondary text-xs" aria-live="polite">{items.length} 条</span>
+					<span class="text-text-secondary text-xs" aria-live="polite">{shownItems.length} 条</span>
 				{/if}
 			{/snippet}
 			{#snippet below()}
@@ -190,6 +255,27 @@
 			{/snippet}
 		</PageHeader>
 	{/snippet}
+
+	{#if !needsAuth && !authExpired}
+		<div class="mb-3 flex flex-col gap-2">
+			<SearchInput
+				value={query}
+				onChange={(v) => (query = v)}
+				placeholder="搜索对象 ID / 理由 / 说明…"
+				ariaLabel="搜索我的举报"
+			/>
+			{#if searching && searchLoading}
+				<p class="text-xs text-text-secondary">搜索中…</p>
+			{:else if searching && searchError}
+				<p class="text-xs text-text-status-danger-on-soft">
+					搜索失败：{searchError}
+					<button type="button" class="link-btn ml-1 focus-ring" onclick={() => searchReloadKey++}>重试</button>
+				</p>
+			{:else if searching}
+				<p class="text-xs text-text-secondary">已加载 {searchLoaded} 条 · 匹配 {shownItems.length} 条</p>
+			{/if}
+		</div>
+	{/if}
 
 	{#if loading}
 		<InlineLoading label="加载举报记录…" />
@@ -209,13 +295,15 @@
 		</div>
 	{:else if loadError}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
-	{:else if items.length === 0}
+	{:else if shownItems.length === 0}
 		<EmptyState
 			pageCentered
 			spotlight
 			iconTone="accent"
-			title="暂无举报记录"
-			description="在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。"
+			title={searching ? '没有匹配的举报' : '暂无举报记录'}
+			description={searching
+				? '换个对象 ID/理由/说明关键词试试，或清空搜索词。'
+				: '在动态、评论或聊天中遇到违规内容时，可通过「举报」提交，处理结果会在这里同步。'}
 		>
 			{#snippet icon()}
 				<ShieldCheck class="size-7" strokeWidth={1.5} />
@@ -223,7 +311,7 @@
 		</EmptyState>
 	{:else}
 		<ListContainer bordered class="overflow-hidden" ariaLabel="举报记录列表">
-			{#each items as item (item.report_id)}
+			{#each shownItems as item (item.report_id)}
 				<ListItem class="px-3 py-3" ariaLabel={`${STATUS_LABELS[item.status]}：举报${TARGET_LABELS[item.target_type]}`}>
 					<div class="flex min-w-0 flex-1 flex-col gap-1 py-1">
 						<!-- 标题 + 状态胶囊：胶囊固定行尾（ml-auto），不随标题长度漂移（R13 评审 P2-9） -->
@@ -254,7 +342,7 @@
 				</ListItem>
 			{/each}
 		</ListContainer>
-		{#if nextCursor}
+		{#if !searching && nextCursor}
 			<div class="py-2">
 				<!-- 滚到底自动续载；失败时停止自动重试，避免故障期刷穿接口 -->
 				<InfiniteSentinel
