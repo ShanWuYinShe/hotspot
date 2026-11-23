@@ -17,6 +17,7 @@ import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
+import com.hotspot.app.data.model.AdminBannedMemberItem
 import com.hotspot.app.data.model.GroupInvitation
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupSettings
@@ -990,6 +991,38 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 封禁/解封成员（owner/admin；active=true 会移出群组并禁止再加入；群主保护 10400）。 */
+    suspend fun setBan(
+        groupId: String,
+        userId: String,
+        active: Boolean,
+        reason: String? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_MEMBERS_SET_BAN,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("user_id", userId)
+            put("active", active)
+            put("reason", reason)
+        },
+    )
+
+    /** 封禁列表（owner/admin；普通成员 10200）。 */
+    suspend fun bannedMembers(groupId: String): ApiResult<List<AdminBannedMemberItem>> {
+        val result = api.post(
+            ApiEndpoint.GROUPS_ADMIN_MEMBERS_FETCH_BANNED,
+            buildJsonObject {
+                put("group_id", groupId)
+                put("pagination", pagination(null, 50))
+            },
+            Page.serializer(AdminBannedMemberItem.serializer()),
+        )
+        return when (result) {
+            is ApiResult.Ok -> ApiResult.Ok(result.data.items)
+            is ApiResult.Err -> result
+        }
+    }
+
     /** 邀请成员（owner/admin；被邀请者已是成员时返回 no-op 成功，inviteId 为 null）。 */
     suspend fun createInvite(groupId: String, userId: String, message: String? = null): ApiResult<GroupInvitation> = api.post(
         ApiEndpoint.GROUPS_ADMIN_INVITES_CREATE,

@@ -75,6 +75,7 @@ import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.AdminBannedMemberItem
 import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupItem
@@ -85,6 +86,7 @@ import com.hotspot.app.data.model.Page
 import com.hotspot.app.ui.components.AnnouncementEditorDialog
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
+import com.hotspot.app.ui.components.BannedMembersDialog
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.ButtonSize
@@ -238,6 +240,14 @@ fun GroupDetailScreen(
     var inviteError by remember(groupId) { mutableStateOf<String?>(null) }
     var invitedIds by remember(groupId) { mutableStateOf<Set<String>>(emptySet()) }
     var invitingUserId by remember(groupId) { mutableStateOf<String?>(null) }
+    // 封禁/解封（owner/admin）
+    var banningMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
+    var banBusy by remember(groupId) { mutableStateOf(false) }
+    var showBanned by remember(groupId) { mutableStateOf(false) }
+    var bannedMembers by remember(groupId) { mutableStateOf<List<AdminBannedMemberItem>?>(null) }
+    var bannedLoading by remember(groupId) { mutableStateOf(false) }
+    var bannedError by remember(groupId) { mutableStateOf<String?>(null) }
+    var unbanningId by remember(groupId) { mutableStateOf<String?>(null) }
     // 群成员管理（owner/admin）：角色 / 禁言 / 移除
     var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
@@ -419,6 +429,19 @@ fun GroupDetailScreen(
                         is ApiResult.Err -> applicationsError = result.error.userMessage
                     }
                     applicationsLoading = false
+                }
+            },
+            onOpenBanned = {
+                bannedMembers = null
+                bannedError = null
+                showBanned = true
+                scope.launch {
+                    bannedLoading = true
+                    when (val result = repository.bannedMembers(groupId)) {
+                        is ApiResult.Ok -> bannedMembers = result.data
+                        is ApiResult.Err -> bannedError = result.error.userMessage
+                    }
+                    bannedLoading = false
                 }
             },
             onOpenInvite = {
@@ -665,6 +688,7 @@ fun GroupDetailScreen(
             add(MemberAction.MUTE_1H)
             add(MemberAction.UNMUTE)
             add(MemberAction.REMOVE)
+            add(MemberAction.BAN)
             if (isGroupOwner) add(MemberAction.TRANSFER_OWNER)
         }
         MemberActionSheet(
@@ -676,6 +700,8 @@ fun GroupDetailScreen(
                     removingMember = target
                 } else if (action == MemberAction.TRANSFER_OWNER) {
                     transferTarget = target
+                } else if (action == MemberAction.BAN) {
+                    banningMember = target
                 } else {
                     if (memberActionBusy) return@MemberActionSheet
                     memberActionBusy = true
@@ -779,6 +805,41 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showBanned) {
+        BannedMembersDialog(
+            members = bannedMembers,
+            loading = bannedLoading,
+            error = bannedError,
+            processingUserId = unbanningId,
+            onRetry = {
+                scope.launch {
+                    bannedLoading = true
+                    bannedError = null
+                    when (val result = repository.bannedMembers(groupId)) {
+                        is ApiResult.Ok -> bannedMembers = result.data
+                        is ApiResult.Err -> bannedError = result.error.userMessage
+                    }
+                    bannedLoading = false
+                }
+            },
+            onUnban = { member ->
+                if (unbanningId != null) return@BannedMembersDialog
+                unbanningId = member.user.userId
+                scope.launch {
+                    when (val result = repository.setBan(groupId, member.user.userId, false)) {
+                        is ApiResult.Ok -> {
+                            bannedMembers = bannedMembers?.filterNot { it.user.userId == member.user.userId }
+                            Toast.makeText(context, "已解除封禁", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    unbanningId = null
+                }
+            },
+            onDismiss = { if (unbanningId == null) showBanned = false },
+        )
+    }
+
     if (showApplications) {
         GroupApplicationsDialog(
             applications = applications,
@@ -827,6 +888,50 @@ fun GroupDetailScreen(
                 }
             },
             onDismiss = { if (applicationProcessingId == null) showApplications = false },
+        )
+    }
+
+    banningMember?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!banBusy) banningMember = null },
+            title = { Text("封禁成员") },
+            text = {
+                Text("确定封禁" + "「" + target.user.nickname.ifBlank { "该成员" } + "」？封禁后将被移出群组且无法再次加入。")
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (banBusy) "封禁中…" else "封禁",
+                    onClick = {
+                        if (banBusy) return@SystemButton
+                        banBusy = true
+                        scope.launch {
+                            when (val result = repository.setBan(groupId, target.user.userId, true)) {
+                                is ApiResult.Ok -> {
+                                    banningMember = null
+                                    membersState.initialLoad(memberLoader)
+                                    loadDetail()
+                                    Toast.makeText(context, "成员已封禁", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            banBusy = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !banBusy,
+                    loading = banBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!banBusy) banningMember = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !banBusy,
+                )
+            },
         )
     }
 
@@ -935,6 +1040,7 @@ private fun GroupTopNavBar(
     onOpenGroupSettings: () -> Unit,
     onOpenApplications: () -> Unit,
     onOpenInvite: () -> Unit,
+    onOpenBanned: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -1022,6 +1128,21 @@ private fun GroupTopNavBar(
                         onClick = {
                             menuExpanded = false
                             onOpenInvite()
+                        },
+                    )
+                }
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "封禁列表",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenBanned()
                         },
                     )
                 }

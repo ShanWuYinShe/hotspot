@@ -305,6 +305,15 @@ data class GroupMemberItem(
     @SerialName("last_online_at") val lastOnlineAt: String? = null,
 )
 
+/** 封禁成员项（spec/api_spec_group.md → AdminBannedMemberItem，守卫子树可见）。 */
+@Serializable
+data class AdminBannedMemberItem(
+    val user: UserInfo = UserInfo(),
+    @SerialName("banned_at") val bannedAt: String = "",
+    val reason: String? = null,
+    @SerialName("banned_by") val bannedBy: UserInfo? = null,
+)
+
 /**
  * 邀请响应（spec/api_spec_group.md → Invitation）：已是成员时为 no-op 成功，invite_id/expires_at 均为 null。
  */
