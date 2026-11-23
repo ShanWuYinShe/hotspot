@@ -17,8 +17,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +43,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -55,10 +59,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -90,6 +96,7 @@ import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.hotSpotFocusRing
 import com.hotspot.app.ui.components.replyChipLabel
 import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.theme.ChromeInsets
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.HotSpotTextStyles
@@ -174,6 +181,30 @@ fun MomentDetailScreen(
     var editPrivacyKnown by remember { mutableStateOf(false) }
     var editPreparing by remember { mutableStateOf(false) }
     var maxMomentTags by remember { mutableIntStateOf(5) }
+
+    // 头图通栏：本页内容从屏幕顶开始（图片铺到状态栏下），离开时恢复全局安全区。
+    DisposableEffect(Unit) {
+        ChromeInsets.edgeToEdgeTop = true
+        ChromeInsets.lightStatusBarIcons = false
+        onDispose {
+            ChromeInsets.edgeToEdgeTop = false
+            ChromeInsets.lightStatusBarIcons = false
+        }
+    }
+    val hasHeroImage = moment?.images?.isNotEmpty() == true
+    // 头图还在状态栏下方时才用浅色图标；图片滚出后及时切回主题图标，避免白底白字。
+    val statusBarPx = with(LocalDensity.current) {
+        WindowInsets.statusBars.getTop(LocalDensity.current).toFloat()
+    }
+    val heroCoversStatusBar by remember(hasHeroImage) {
+        derivedStateOf {
+            if (!hasHeroImage) return@derivedStateOf false
+            val hero = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == 0 }
+                ?: return@derivedStateOf false
+            hero.offset + hero.size > statusBarPx
+        }
+    }
+    LaunchedEffect(heroCoversStatusBar) { ChromeInsets.lightStatusBarIcons = heroCoversStatusBar }
     var editSaving by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteConfirmOpen by remember { mutableStateOf(false) }
@@ -458,7 +489,11 @@ fun MomentDetailScreen(
     }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .then(if (moment == null) Modifier.windowInsetsPadding(WindowInsets.statusBars) else Modifier),
+        ) {
         when {
             loading && moment == null -> LoadingState()
             error != null && moment == null -> ErrorState(
@@ -934,6 +969,9 @@ private const val MomentHeroAspect = 390f / 280f
 /** 无图瞬间的顶部留白：让出浮层按钮高度，避免作者栏被返回/分享钮压住。 */
 private val MomentHeroNoImageTop = 64.dp
 
+/** 头图顶部压暗渐变高度（状态栏 + 浮动圆钮可读即可，不压暗整张图）。 */
+private val MomentHeroScrimHeight = 120.dp
+
 /**
  * hero 头图：通栏贴边、无圆角；多图瞬间用 HorizontalPager + 底部圆点指示器，点击当前图打开全屏查看器。
  * 无图瞬间用固定留白占位（纯文字瞬间不造假图）。
@@ -943,7 +981,12 @@ private fun MomentHero(data: MomentItem, onOpenImage: (List<String>, Int) -> Uni
     val colors = HotSpotTheme.colors
     val images = data.images.mapNotNull { MediaUrls.absolute(it.url) }.distinct()
     if (images.isEmpty()) {
-        Spacer(Modifier.height(MomentHeroNoImageTop))
+        // 无图瞬间没有头图可衬托，仍让出系统状态栏 + 浮层按钮高度。
+        Spacer(
+            Modifier
+                .height(MomentHeroNoImageTop)
+                .windowInsetsPadding(WindowInsets.statusBars),
+        )
         return
     }
     val pagerState = rememberPagerState(pageCount = { images.size })
@@ -963,6 +1006,18 @@ private fun MomentHero(data: MomentItem, onOpenImage: (List<String>, Int) -> Uni
                 contentScale = ContentScale.Crop,
             )
         }
+        // 顶部压暗：状态栏图标与浮动圆钮在亮图上仍可读；随 hero 一起滚动，不污染正文。
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(MomentHeroScrimHeight)
+                .align(Alignment.TopCenter)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color.Black.copy(alpha = 0.45f), Color.Transparent),
+                    ),
+                ),
+        )
         if (images.size > 1) {
             Row(
                 modifier = Modifier
@@ -1003,6 +1058,7 @@ private fun MomentTopOverlay(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
