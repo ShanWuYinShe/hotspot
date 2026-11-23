@@ -987,6 +987,28 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 更新群名称/简介（spec/api_spec_group.md → groups/admin/update，owner/admin 守卫；其余字段传 null 不改）。 */
+    suspend fun updateGroupInfo(groupId: String, name: String, description: String?): ApiResult<GroupItem> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_UPDATE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("name", name)
+            put("description", description)
+            put("avatar_file_id", JsonNull)
+            put("tags", JsonNull)
+            put("password", JsonNull)
+            put("clear_password", JsonNull)
+            put("join_method", JsonNull)
+            put("requires_approval", JsonNull)
+            put("next_activity_at", JsonNull)
+            put("is_searchable", JsonNull)
+            put("members_searchable", JsonNull)
+            put("max_members", JsonNull)
+            put("location", JsonNull)
+        },
+        GroupItem.serializer(),
+    )
+
     /** 发布/更新/删除群公告（spec/api_spec_group.md → groups/admin/announcements 的 create/update/delete，owner/admin 守卫）。 */
     suspend fun createAnnouncement(
         groupId: String,
