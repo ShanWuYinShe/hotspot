@@ -110,8 +110,8 @@ app/src/main/java/com/hotspot/app/
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
-  ui/components/   # 原语：SystemButton/SystemInput/SearchInput/Badge/Tabs/Surfaces/Avatar/States/
-                   #       PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
+  ui/components/   # 原语：SystemButton/SystemInput/SystemTextArea/SearchInput/Badge/Tabs/Surfaces/
+                   #       Avatar/States/PageHeader/BottomNav/AmbientCanvas/MomentCard/Focus
                    # 评论区：CommentThread（楼中楼+Canvas 导引线）/ CommentInputBar（docked+IME）
                    #       / CommentAuthorBadge（作者微徽章）
   ui/screens/      # 按业务页面（Home/Nearby/Map/Messages/Chat/Me/Search/Notify/Settings/Login/...）
@@ -210,7 +210,7 @@ app/src/main/java/com/hotspot/app/
   （home/compass/plus/message-circle/circle-user）；**禁止用 `Icons.Filled.*` 实心 Material 图标充当导航图标**。
 - **禁止 Unicode 字符当图标**（`›`、`⌄`、`❝❝`、`✓`、`▶` 等）：用 vector drawable（`ic_*`，路径对齐 Lucide 同名图标）
   + `Icon(painterResource(...), contentDescription = …)`；emoji 仅可作为反应/内容数据，不得进图标位。
-- 原语优先：按钮 `SystemButton`、输入 `SystemInput`、徽章 `Badge`、Tab `SegmentedTabs/TabPills`、
+- 原语优先：按钮 `SystemButton`、输入 `SystemInput`（单行）/ `SystemTextArea`（多行）、徽章 `Badge`、Tab `SegmentedTabs/TabPills`、
   软岛 `Surfaces`、空/加载/错误态 `States`、页头 `PageHeader`、底部导航 `BottomNav`。禁止页面手写重复样式。
 - 触控热区 ≥44dp；焦点可见；尊重系统动画缩放（reduced-motion 直接终态）；图片统一 `Avatar`/coil 渐显。
 - **安全区一律取系统 `WindowInsets`**：根 `MainActivity` 统一注入 `safeDrawing` 的 Top/Horizontal；底部贴底组件

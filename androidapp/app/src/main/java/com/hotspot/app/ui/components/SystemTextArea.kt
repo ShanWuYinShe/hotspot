@@ -19,13 +19,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 
-/** 多行输入（公告正文等长文本）：与 SystemInput 同一表面语言，默认至少 3 行高。 */
+/**
+ * 多行输入（公告正文等长文本）：与 SystemInput 同一表面语言，默认至少 3 行高；
+ * 超过 [maxHeight]（默认 5×输入框高 = 215dp）后输入区内部滚动，避免长正文把所在弹窗撑出屏幕。
+ */
 @Composable
 fun SystemTextArea(
     value: String,
@@ -35,7 +39,8 @@ fun SystemTextArea(
     label: String? = null,
     errorText: String? = null,
     enabled: Boolean = true,
-    minHeight: androidx.compose.ui.unit.Dp = Dimens.inputHeight * 3,
+    minHeight: Dp = Dimens.inputHeight * 3,
+    maxHeight: Dp = Dimens.inputHeight * 5,
 ) {
     val colors = HotSpotTheme.colors
     var focused by remember { mutableStateOf(false) }
@@ -61,7 +66,7 @@ fun SystemTextArea(
             onValueChange = onValueChange,
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = minHeight)
+                .heightIn(min = minHeight, max = maxHeight)
                 .clip(shape)
                 .background(if (enabled) colors.fieldBg else colors.fieldBgDisabled, shape)
                 .border(borderWidth, borderColor, shape)

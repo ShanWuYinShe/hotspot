@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,6 +60,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -107,6 +109,7 @@ import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.MemberAction
 import com.hotspot.app.ui.components.MemberActionSheet
 import com.hotspot.app.ui.components.MediaBadge
+import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.components.TabPills
@@ -120,11 +123,13 @@ import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.ui.theme.Tokens
 import com.hotspot.app.util.MediaUrls
 import com.hotspot.app.util.TimeFormat
+import com.hotspot.app.util.canManageGroupAnnouncements
 import com.hotspot.app.util.formatDistanceShort
 import com.hotspot.app.util.groupRoleLabel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 /*
  * 群详情（推入页 group/{groupId}，设计稿移动端画板 87:1696，路由示例 /groups/group_seed_1）。
@@ -215,6 +220,8 @@ fun GroupDetailScreen(
     var editingAnnouncement by remember(groupId) { mutableStateOf<GroupAnnouncementItem?>(null) }
     var announcementSubmitting by remember(groupId) { mutableStateOf(false) }
     var announcementEditorError by remember(groupId) { mutableStateOf<String?>(null) }
+    // 发布公告的幂等键：同一弹窗内的重试/双击复用，成功或取消后作废（spec：create MUST 幂等）。
+    var announcementCreateKey by remember(groupId) { mutableStateOf<String?>(null) }
     var deletingAnnouncement by remember(groupId) { mutableStateOf<GroupAnnouncementItem?>(null) }
     var announcementDeleting by remember(groupId) { mutableStateOf(false) }
     // 群信息编辑（owner/admin）：名称 + 简介
@@ -284,6 +291,14 @@ fun GroupDetailScreen(
             is ApiResult.Err -> announcementsError = result.error.userMessage
         }
         announcementsLoading = false
+    }
+
+    /** 公告写操作成功后并行刷新列表与详情（详情里的公告计数同步）。 */
+    suspend fun refreshAfterAnnouncementChange() {
+        coroutineScope {
+            launch { loadAnnouncements() }
+            launch { loadDetail() }
+        }
     }
 
     /** 加入/退出成功后刷新「详情 + 成员」：viewer_state 与成员规模以服务端真值决定，不在本地伪造。 */
@@ -391,7 +406,7 @@ fun GroupDetailScreen(
     val canReportGroup = currentDetail != null && currentDetail.viewerState?.role != "owner"
     val canManageGroup = currentDetail?.viewerState?.role == "owner" ||
         currentDetail?.viewerState?.role == "admin"
-    val canManageAnnouncements = canManageGroup
+    val canManageAnnouncements = canManageGroupAnnouncements(currentDetail?.viewerState?.role)
     val isGroupOwner = currentDetail?.viewerState?.role == "owner"
 
     LaunchedEffect(showInvite, inviteQuery) {
@@ -520,11 +535,13 @@ fun GroupDetailScreen(
                     onCreateAnnouncement = {
                         editingAnnouncement = null
                         announcementEditorError = null
+                        announcementCreateKey = UUID.randomUUID().toString()
                         showAnnouncementEditor = true
                     },
                     onEditAnnouncement = { announcement ->
                         editingAnnouncement = announcement
                         announcementEditorError = null
+                        announcementCreateKey = null
                         showAnnouncementEditor = true
                     },
                     onDeleteAnnouncement = { announcement -> deletingAnnouncement = announcement },
@@ -608,28 +625,39 @@ fun GroupDetailScreen(
             initialPinned = target?.isPinned == true,
             submitting = announcementSubmitting,
             error = announcementEditorError,
-            onDismiss = { if (!announcementSubmitting) showAnnouncementEditor = false },
+            onDismiss = {
+                if (!announcementSubmitting) {
+                    showAnnouncementEditor = false
+                    announcementCreateKey = null
+                }
+            },
             onSubmit = { title, content, pinned ->
                 if (announcementSubmitting) return@AnnouncementEditorDialog
                 announcementSubmitting = true
                 announcementEditorError = null
                 scope.launch {
                     val result = if (target == null) {
-                        repository.createAnnouncement(groupId, title, content, pinned)
+                        val key = announcementCreateKey ?: UUID.randomUUID().toString().also {
+                            announcementCreateKey = it
+                        }
+                        repository.createAnnouncement(groupId, title, content, pinned, key)
                     } else {
                         repository.updateAnnouncement(groupId, target.announcementId, title, content, pinned)
                     }
                     when (result) {
                         is ApiResult.Ok -> {
+                            announcementSubmitting = false
                             showAnnouncementEditor = false
                             editingAnnouncement = null
-                            loadAnnouncements()
-                            loadDetail()
+                            announcementCreateKey = null
+                            refreshAfterAnnouncementChange()
                             Toast.makeText(context, if (target == null) "公告已发布" else "公告已更新", Toast.LENGTH_SHORT).show()
                         }
-                        is ApiResult.Err -> announcementEditorError = result.error.userMessage
+                        is ApiResult.Err -> {
+                            announcementEditorError = result.error.userMessage
+                            announcementSubmitting = false
+                        }
                     }
-                    announcementSubmitting = false
                 }
             },
         )
@@ -1086,13 +1114,15 @@ fun GroupDetailScreen(
                             when (val result = repository.deleteAnnouncement(groupId, target.announcementId)) {
                                 is ApiResult.Ok -> {
                                     deletingAnnouncement = null
-                                    loadAnnouncements()
-                                    loadDetail()
+                                    announcementDeleting = false
+                                    refreshAfterAnnouncementChange()
                                     Toast.makeText(context, "公告已删除", Toast.LENGTH_SHORT).show()
                                 }
-                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                is ApiResult.Err -> {
+                                    announcementDeleting = false
+                                    Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
                             }
-                            announcementDeleting = false
                         }
                     },
                     variant = ButtonVariant.DANGER,
@@ -2017,27 +2047,40 @@ private fun AnnouncementCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = "编辑",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.accent,
-                    modifier = Modifier
-                        .clip(AppShapes.compact)
-                        .clickable(onClick = onEdit)
-                        .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
-                )
+                AnnouncementAction(label = "编辑", color = colors.accent, onClick = onEdit)
                 Spacer(Modifier.width(Spacing.sm))
-                Text(
-                    text = "删除",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = colors.danger,
-                    modifier = Modifier
-                        .clip(AppShapes.compact)
-                        .clickable(onClick = onDelete)
-                        .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
-                )
+                AnnouncementAction(label = "删除", color = colors.danger, onClick = onDelete)
             }
         }
+    }
+}
+
+/** 公告卡内文字动作：视觉是 label，触控热区撑到 44dp 并保留焦点环。 */
+@Composable
+private fun AnnouncementAction(
+    label: String,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .heightIn(min = Dimens.minTouchTarget)
+            .clip(AppShapes.compact)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .hotSpotFocusRing(cornerRadius = Tokens.Radius.sm.dp)
+            .semantics { role = Role.Button }
+            .padding(horizontal = Spacing.md),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+        )
     }
 }
 
