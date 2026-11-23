@@ -76,6 +76,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
+import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminBannedMemberItem
 import com.hotspot.app.data.model.GroupAnnouncementItem
@@ -654,6 +655,11 @@ fun GroupDetailScreen(
                             Toast.makeText(context, if (target == null) "公告已发布" else "公告已更新", Toast.LENGTH_SHORT).show()
                         }
                         is ApiResult.Err -> {
+                            // 22000/22001 按契约要求换新 key 重试；22002（处理中）保留原 key。
+                            val idempotencyCode = (result.error as? ApiError.Business)?.code
+                            if (target == null && (idempotencyCode == 22000 || idempotencyCode == 22001)) {
+                                announcementCreateKey = null
+                            }
                             announcementEditorError = result.error.userMessage
                             announcementSubmitting = false
                         }
