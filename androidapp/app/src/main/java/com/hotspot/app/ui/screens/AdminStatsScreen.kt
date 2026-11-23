@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -15,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,26 +26,34 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.AdminGeoDrilldownItem
 import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminPlaceRankItem
 import com.hotspot.app.data.model.AdminRegionRankItem
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.TabPills
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.launch
 
 /**
  * 管理后台 · 统计分析（仅平台管理员）：全站存量、近 7 日新增趋势、热门地点与区域 Top。
@@ -49,11 +61,22 @@ import com.hotspot.app.util.TimeFormat
  */
 @Composable
 fun AdminStatsScreen(onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
     val colors = HotSpotTheme.colors
     var stats by remember { mutableStateOf<AdminGeoStatsResponse?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
+    var drilldownToken by remember { mutableStateOf<String?>(null) }
+    var drilldownLevel by remember { mutableIntStateOf(8) }
+    var drilldownRegionLabel by remember { mutableStateOf("") }
+    var drilldownTypeIndex by remember { mutableIntStateOf(0) }
+    var drilldownItems by remember { mutableStateOf<List<AdminGeoDrilldownItem>>(emptyList()) }
+    var drilldownCursor by remember { mutableStateOf<String?>(null) }
+    var drilldownLoading by remember { mutableStateOf(false) }
+    var drilldownMoreLoading by remember { mutableStateOf(false) }
+    var drilldownError by remember { mutableStateOf<String?>(null) }
+    var drilldownReloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reloadKey) {
         loading = true
@@ -63,6 +86,41 @@ fun AdminStatsScreen(onBack: () -> Unit) {
             is ApiResult.Err -> error = result.error.userMessage
         }
         loading = false
+    }
+
+    LaunchedEffect(drilldownToken, drilldownTypeIndex, drilldownReloadKey) {
+        val token = drilldownToken ?: return@LaunchedEffect
+        drilldownLoading = true
+        drilldownError = null
+        drilldownItems = emptyList()
+        drilldownCursor = null
+        val types = listOf("user", "group", "moment")
+        when (val result = AppContainer.adminRepository.fetchGeoDrilldown(token, drilldownLevel, types[drilldownTypeIndex], null)) {
+            is ApiResult.Ok -> {
+                drilldownItems = result.data.items
+                drilldownCursor = result.data.nextCursor
+            }
+            is ApiResult.Err -> drilldownError = result.error.userMessage
+        }
+        drilldownLoading = false
+    }
+
+    fun loadMoreDrilldown() {
+        val token = drilldownToken ?: return
+        val next = drilldownCursor ?: return
+        if (drilldownMoreLoading) return
+        drilldownMoreLoading = true
+        scope.launch {
+            val types = listOf("user", "group", "moment")
+            when (val result = AppContainer.adminRepository.fetchGeoDrilldown(token, drilldownLevel, types[drilldownTypeIndex], next)) {
+                is ApiResult.Ok -> {
+                    drilldownItems = (drilldownItems + result.data.items).distinctBy { it.objectId }
+                    drilldownCursor = result.data.nextCursor
+                }
+                is ApiResult.Err -> Unit
+            }
+            drilldownMoreLoading = false
+        }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -144,11 +202,20 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                         }
                     }
                     if (data.regions.isNotEmpty()) {
-                        item { SectionTitle("区域 Top " + data.regions.size + "（S2 网格）") }
+                        item { SectionTitle("区域 Top " + data.regions.size + "（S2 网格，点击查看明细）") }
                         item {
                             ListGroup {
                                 data.regions.forEachIndexed { index, region ->
-                                    RegionRow(index + 1, region)
+                                    RegionRow(
+                                        rank = index + 1,
+                                        region = region,
+                                        onClick = {
+                                            drilldownToken = region.cellToken
+                                            drilldownLevel = region.level
+                                            drilldownRegionLabel = "网格 " + region.cellToken.take(12)
+                                            drilldownTypeIndex = 0
+                                        },
+                                    )
                                     if (index != data.regions.lastIndex) {
                                         HorizontalDivider(color = colors.borderSubtle)
                                     }
@@ -157,6 +224,98 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                         }
                     }
                     item { Spacer(Modifier.height(Spacing.lg)) }
+                }
+            }
+        }
+    }
+
+    if (drilldownToken != null) {
+        Dialog(
+            onDismissRequest = { drilldownToken = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Surface(Modifier.fillMaxSize(), color = colors.page) {
+                Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    PageHeader(
+                        title = "区域明细",
+                        subtitle = drilldownRegionLabel,
+                        onBack = { drilldownToken = null },
+                    )
+                    Column(Modifier.padding(horizontal = Spacing.lg)) {
+                        TabPills(
+                            options = listOf("用户", "群组", "瞬间"),
+                            selectedIndex = drilldownTypeIndex,
+                            onSelected = { drilldownTypeIndex = it },
+                        )
+                        Spacer(Modifier.height(Spacing.sm2))
+                    }
+                    when {
+                        drilldownLoading -> LoadingState(message = "正在加载区域明细…")
+                        drilldownError != null -> ErrorState(
+                            message = drilldownError ?: "加载失败",
+                            onRetry = { drilldownReloadKey += 1 },
+                        )
+                        drilldownItems.isEmpty() -> EmptyState(
+                            title = "该区域暂无明细",
+                            description = "切换用户/群组/瞬间，或换个网格看看。",
+                        )
+                        else -> LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                horizontal = Spacing.lg,
+                                vertical = Spacing.sm,
+                            ),
+                        ) {
+                            item {
+                                ListGroup {
+                                    drilldownItems.forEachIndexed { index, item ->
+                                        Column(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+                                        ) {
+                                            Text(
+                                                text = item.title.ifBlank { item.objectId },
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                color = colors.textPrimary,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                            Text(
+                                                text = (item.locationName?.takeIf { it.isNotBlank() } ?: "未知位置") +
+                                                    " · " + String.format("%.4f", item.latitude) + ", " +
+                                                    String.format("%.4f", item.longitude) +
+                                                    " · " + TimeFormat.relative(item.createdAt),
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = colors.textSecondary,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
+                                        if (index != drilldownItems.lastIndex) {
+                                            HorizontalDivider(color = colors.borderSubtle)
+                                        }
+                                    }
+                                }
+                            }
+                            if (drilldownCursor != null) {
+                                item {
+                                    Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) {
+                                        SystemButton(
+                                            text = if (drilldownMoreLoading) "加载中…" else "加载更多",
+                                            onClick = { loadMoreDrilldown() },
+                                            variant = ButtonVariant.SECONDARY,
+                                            size = ButtonSize.SM,
+                                            enabled = !drilldownMoreLoading,
+                                            loading = drilldownMoreLoading,
+                                        )
+                                    }
+                                }
+                            } else {
+                                item { Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) { ListEnd() } }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -276,10 +435,17 @@ private fun PlaceRow(rank: Int, place: AdminPlaceRankItem) {
 }
 
 @Composable
-private fun RegionRow(rank: Int, region: AdminRegionRankItem) {
+private fun RegionRow(
+    rank: Int,
+    region: AdminRegionRankItem,
+    onClick: () -> Unit,
+) {
     val colors = HotSpotTheme.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
