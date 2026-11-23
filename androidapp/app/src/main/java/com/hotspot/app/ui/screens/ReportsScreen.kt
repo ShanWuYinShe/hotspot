@@ -22,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -43,10 +44,12 @@ import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -113,17 +116,77 @@ private fun ReportsContent(status: String?) {
     val loader: suspend (String?) -> ApiResult<Page<ReportItem>> = { cursor ->
         AppContainer.reportsRepository.fetch(status = status, cursor = cursor)
     }
+    var query by remember { mutableStateOf("") }
+    var searchItems by remember { mutableStateOf<List<ReportItem>?>(null) }
+    var searchLoading by remember { mutableStateOf(false) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var searchReloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { state.initialLoad(loader) }
     InfiniteScrollHandler(state, listState, loader)
 
+    // 举报契约没有关键词参数：搜索时先加载完全部分页（最多 10 页），再本地筛选。
+    LaunchedEffect(query, status, searchReloadKey) {
+        if (query.isBlank()) {
+            searchItems = null
+            searchError = null
+            return@LaunchedEffect
+        }
+        delay(350)
+        searchLoading = true
+        searchError = null
+        val loaded = mutableListOf<ReportItem>()
+        var next: String? = null
+        var pages = 0
+        while (pages < 10) {
+            when (val result = AppContainer.reportsRepository.fetch(status = status, cursor = next)) {
+                is ApiResult.Ok -> {
+                    loaded += result.data.items
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> {
+                    if (loaded.isEmpty()) searchError = result.error.userMessage
+                    break
+                }
+            }
+            pages += 1
+            if (next == null) break
+        }
+        searchItems = loaded.distinctBy { it.reportId }
+        searchLoading = false
+    }
+
+    val searching = query.isNotBlank()
+    val keyword = query.trim()
+    val baseItems = if (searching) searchItems.orEmpty() else state.items
+    val filteredItems = if (!searching) {
+        baseItems
+    } else {
+        baseItems.filter { item ->
+            item.reportId.contains(keyword, ignoreCase = true) ||
+                item.targetId.contains(keyword, ignoreCase = true) ||
+                item.reason.contains(keyword, ignoreCase = true) ||
+                item.status.contains(keyword, ignoreCase = true) ||
+                item.description.orEmpty().contains(keyword, ignoreCase = true)
+        }
+    }
     val countLabel = when {
+        searching && searchLoading -> "正在加载全部举报用于搜索…"
+        searching -> "已加载 " + baseItems.size + " 条 · 匹配 " + filteredItems.size + " 条"
         state.items.isEmpty() -> null
         state.endReached -> state.items.size.toString() + " 条"
         else -> state.items.size.toString() + "+ 条"
     }
 
     Column(Modifier.fillMaxSize()) {
+        Column(Modifier.padding(horizontal = Spacing.lg)) {
+            SearchInput(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "搜索对象 ID / 原因 / 描述…",
+            )
+            Spacer(Modifier.height(Spacing.sm))
+        }
         if (countLabel != null) {
             Text(
                 text = countLabel,
@@ -135,14 +198,23 @@ private fun ReportsContent(status: String?) {
             )
         }
         when {
-            state.loading && state.items.isEmpty() -> LoadingState(message = "正在加载举报记录…")
-            state.error != null && state.items.isEmpty() -> ErrorState(
+            searching && searchLoading && filteredItems.isEmpty() -> LoadingState(message = "正在搜索举报记录…")
+            searching && searchError != null && filteredItems.isEmpty() -> ErrorState(
+                message = searchError ?: "搜索失败",
+                onRetry = { searchReloadKey++ },
+            )
+            !searching && state.loading && state.items.isEmpty() -> LoadingState(message = "正在加载举报记录…")
+            !searching && state.error != null && state.items.isEmpty() -> ErrorState(
                 message = state.error ?: "加载失败",
                 onRetry = { scope.launch { state.initialLoad(loader) } },
             )
-            state.items.isEmpty() -> EmptyState(
+            !searching && state.items.isEmpty() -> EmptyState(
                 title = if (status == null) "还没有举报记录" else "没有" + REPORT_FILTERS.first { it.second == status }.first + "的举报",
                 description = if (status == null) "在瞬间/评论/消息等页面的更多菜单里可以举报违规内容" else "换个筛选看看",
+            )
+            searching && filteredItems.isEmpty() -> EmptyState(
+                title = "没有匹配的举报",
+                description = "换个对象 ID、原因或描述关键词试试",
             )
             else -> LazyColumn(
                 state = listState,
@@ -156,9 +228,9 @@ private fun ReportsContent(status: String?) {
             ) {
                 item {
                     SystemCard(contentPadding = PaddingValues(Spacing.lg)) {
-                        state.items.forEachIndexed { index, item ->
+                        filteredItems.forEachIndexed { index, item ->
                             ReportRow(item = item)
-                            if (index != state.items.lastIndex) {
+                            if (index != filteredItems.lastIndex) {
                                 Spacer(Modifier.height(Spacing.md))
                                 Box(
                                     Modifier
@@ -173,6 +245,8 @@ private fun ReportsContent(status: String?) {
                 }
                 item {
                     when {
+                        searching && searchLoading -> InlineLoading()
+                        searching -> ListEnd()
                         state.loadingMore -> InlineLoading()
                         state.endReached -> ListEnd()
                         else -> Box(Modifier.height(1.dp))
