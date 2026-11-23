@@ -112,6 +112,7 @@
 							members={gd.members}
 							total={gd.detail.members}
 							onlineMemberIds={gd.onlineMemberIds}
+							groupId={params.groupId}
 							canManageMembers={page.canManageMembers}
 							canManageMember={page.canManageMember}
 							hasMore={gd.hasMoreMembers()}
