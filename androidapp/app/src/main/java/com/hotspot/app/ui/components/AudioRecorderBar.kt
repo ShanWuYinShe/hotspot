@@ -69,3 +69,39 @@ fun AudioRecorderBar(
         )
     }
 }
+
+
+/** 按住说话时的状态条：计时 + 「松开发送 · 上滑取消」；上滑后切换为「松开取消」。 */
+@Composable
+fun AudioHoldHintBar(
+    seconds: Int,
+    slideCancel: Boolean,
+) {
+    val colors = HotSpotTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (slideCancel) colors.dangerBg else colors.island)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(
+            Modifier
+                .size(10.dp)
+                .background(if (slideCancel) colors.danger else colors.accent, CircleShape),
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Text(
+            text = String.format("%02d:%02d", seconds / 60, seconds % 60),
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (slideCancel) colors.danger else colors.textPrimary,
+        )
+        Spacer(Modifier.width(Spacing.sm))
+        Text(
+            text = if (slideCancel) "松开取消" else "松开发送 · 上滑取消",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (slideCancel) colors.danger else colors.textSecondary,
+        )
+    }
+}
+

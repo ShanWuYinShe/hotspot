@@ -65,6 +65,7 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.ChatFileBubble
 import com.hotspot.app.ui.components.AudioMessageBubble
+import com.hotspot.app.ui.components.AudioHoldHintBar
 import com.hotspot.app.ui.components.AudioRecorderBar
 import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.ChatVideoBubble
@@ -78,6 +79,7 @@ import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.components.HoldToTalkMicButton
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
@@ -219,13 +221,24 @@ fun ChatScreen(onBack: () -> Unit) {
             }
             .onFailure { Toast.makeText(context, it.message ?: "无法开始录音", Toast.LENGTH_SHORT).show() }
     }
+    var micGranted by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+    }
+    // 按住说话：录音期间输入行保持组合，另在顶部显示「松开发送 · 上滑取消」提示条。
+    var gestureHolding by remember { mutableStateOf(false) }
+    var slideCancel by remember { mutableStateOf(false) }
     val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) {
+            micGranted = true
             beginVoiceRecording()
         } else {
             Toast.makeText(context, "需要麦克风权限才能发送语音", Toast.LENGTH_SHORT).show()
         }
     }
+    val requestMicPermission = { micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) }
     fun sendVoiceRecording() {
         if (audioSending) return
         val audio = recorder.stop().getOrNull()
@@ -253,13 +266,6 @@ fun ChatScreen(onBack: () -> Unit) {
                 audio.file.delete()
                 audioSending = false
             }
-        }
-    }
-    val startRecording = {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-            beginVoiceRecording()
-        } else {
-            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
         }
     }
     LaunchedEffect(recording) {
@@ -438,8 +444,12 @@ fun ChatScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = Spacing.lg),
             )
         }
-        if (recording || audioSending) {
-            Box(
+        Column(Modifier.fillMaxWidth()) {
+            if (gestureHolding) {
+                AudioHoldHintBar(seconds = recordingSeconds, slideCancel = slideCancel)
+            }
+            if ((recording && !gestureHolding) || audioSending) {
+                Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(colors.surface)
@@ -467,19 +477,45 @@ fun ChatScreen(onBack: () -> Unit) {
                     .padding(horizontal = Spacing.md, vertical = Spacing.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable { startRecording() },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_mic),
-                        contentDescription = "录制语音",
-                        modifier = Modifier.size(Dimens.iconMd),
+                if (micGranted) {
+                    HoldToTalkMicButton(
+                        enabled = !uploading,
                         tint = colors.accent,
+                        modifier = Modifier.size(44.dp),
+                        onPressStart = {
+                            gestureHolding = true
+                            slideCancel = false
+                            beginVoiceRecording()
+                        },
+                        onSlideCancelChange = { slideCancel = it },
+                        onRelease = { cancelled ->
+                            gestureHolding = false
+                            slideCancel = false
+                            if (cancelled) {
+                                recorder.cancel()
+                                recording = false
+                                recordingSeconds = 0
+                                Toast.makeText(context, "已取消录音", Toast.LENGTH_SHORT).show()
+                            } else {
+                                sendVoiceRecording()
+                            }
+                        },
                     )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable { requestMicPermission() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_mic),
+                            contentDescription = "按住说话",
+                            modifier = Modifier.size(Dimens.iconMd),
+                            tint = colors.accent,
+                        )
+                    }
                 }
                 Box(
                     modifier = Modifier
@@ -530,6 +566,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 )
             }
         }
+    }
     }
 
     actionTarget?.let { target ->
