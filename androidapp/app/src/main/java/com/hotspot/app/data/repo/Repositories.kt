@@ -586,6 +586,18 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** 撤回私聊消息（仅作者；时间窗由服务端 AppConfig 控制，超时 10400）。 */
+    suspend fun recallPrivateMessage(messageId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.PRIVATE_MESSAGES_RECALL,
+        buildJsonObject { put("message_id", messageId) },
+    )
+
+    /** 撤回自己发送的群聊消息（仅作者；管理员撤回走 groups/admin/messages/recall）。 */
+    suspend fun recallGroupMessage(messageId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUP_MESSAGES_RECALL,
+        buildJsonObject { put("message_id", messageId) },
+    )
+
     /** 私聊已读（spec/api_spec_chat.md → private_messages/mark_read：scope='session' 标记该会话全部已读，幂等）。 */
     suspend fun markPrivateRead(targetUserId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.PRIVATE_MESSAGES_MARK_READ,

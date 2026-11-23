@@ -120,6 +120,9 @@ app/src/main/java/com/hotspot/app/
   （chat_image 分类，先校验 10MB / JPG·PNG·WebP·GIF 白名单再读文件）→ `private_messages/send` /
   `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL），
   加载失败回落「[图片]」占位。
+- **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
+  举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
+  服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
 - **聊天文件**：输入条相册右侧文件按钮 → 系统 DocumentsUI → `data/media/ChatFileUploader`
   （chat_file 分类，100MB 上限 + 扩展名/MIME 双黑名单，PUT 走流式 `putObjectStream` 不整份读内存）→
   `private_messages/send` / `group_messages/send` 的 `type=file` + `file_id`；气泡展示文件名/大小，点击 `ACTION_VIEW` 打开签名 URL。
@@ -151,7 +154,8 @@ app/src/main/java/com/hotspot/app/
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    语音/视频富媒体与 @提及消息的独立通知跳转未做（文件消息已接入）；
    群管理（改群信息 / 公告与成员管理 / 转让群主）未做；
-   举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报长按他人消息）；
+   举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
+   消息长按操作面板已接入：复制文本 / 撤回自己未超时消息 / 举报他人消息；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
    查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）、
    举报评论（reports/create target_type=comment，复用 ReportDialog）与楼中楼回复点赞。

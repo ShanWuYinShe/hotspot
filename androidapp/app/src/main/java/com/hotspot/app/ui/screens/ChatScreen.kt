@@ -43,6 +43,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.widget.Toast
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
@@ -59,6 +61,7 @@ import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.MessageActionSheet
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
@@ -68,7 +71,10 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
+import com.hotspot.app.util.MessageAction
+import com.hotspot.app.util.MessageActionRules
 import com.hotspot.app.util.TimeFormat
+import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -101,6 +107,8 @@ fun ChatScreen(onBack: () -> Unit) {
     // 消息举报：长按他人消息弹出（spec/reports/create target_type=message，服务端冻结快照）
     var reportTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
     var reportSubmitting by remember { mutableStateOf(false) }
+    // 长按消息操作面板（复制/撤回/举报）
+    var actionTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
 
     suspend fun reload() {
         loading = messages.isEmpty()
@@ -310,8 +318,8 @@ fun ChatScreen(onBack: () -> Unit) {
                         MessageBubble(
                             message = message,
                             isMine = message.sender.userId == myUserId,
-                            onLongPressReport = if (message.sender.userId != myUserId && !message.isRecalled) {
-                                { reportTarget = message }
+                            onLongPress = if (!message.isRecalled) {
+                                { actionTarget = message }
                             } else {
                                 null
                             },
@@ -387,6 +395,51 @@ fun ChatScreen(onBack: () -> Unit) {
         }
     }
 
+    actionTarget?.let { target ->
+        val actions = MessageActionRules.availableActions(
+            isMine = target.sender.userId == myUserId,
+            isRecalled = target.isRecalled,
+            type = target.type,
+            content = target.content,
+        )
+        if (actions.isNotEmpty()) {
+            MessageActionSheet(
+                actions = actions,
+                onDismiss = { actionTarget = null },
+                onAction = { action ->
+                    actionTarget = null
+                    when (action) {
+                        MessageAction.COPY -> {
+                            val text = target.content.orEmpty()
+                            if (text.isNotBlank()) {
+                                val clipboard = context.getSystemService(ClipboardManager::class.java)
+                                clipboard?.setPrimaryClip(ClipData.newPlainText("消息", text))
+                                Toast.makeText(context, "已复制", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        MessageAction.RECALL -> scope.launch {
+                            when (val result = chatRepository.recallPrivateMessage(target.messageId)) {
+                                is ApiResult.Ok -> {
+                                    messages = messages.map { message ->
+                                        if (message.messageId == target.messageId) {
+                                            message.copy(recalledAt = Instant.now().toString())
+                                        } else {
+                                            message
+                                        }
+                                    }
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        MessageAction.REPORT -> reportTarget = target
+                    }
+                },
+            )
+        } else {
+            actionTarget = null
+        }
+    }
+
     reportTarget?.let { target ->
         ReportDialog(
             title = "举报消息",
@@ -424,7 +477,7 @@ private fun mergePrivateMessage(
 private fun MessageBubble(
     message: PrivateMessageItem,
     isMine: Boolean,
-    onLongPressReport: (() -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -452,8 +505,8 @@ private fun MessageBubble(
                     )
                     .background(if (isMine) colors.accent else colors.island)
                     .then(
-                        if (onLongPressReport != null) {
-                            Modifier.combinedClickable(onClick = {}, onLongClick = onLongPressReport)
+                        if (onLongPress != null) {
+                            Modifier.combinedClickable(onClick = {}, onLongClick = onLongPress)
                         } else {
                             Modifier
                         },
