@@ -225,6 +225,55 @@ data class AdminAnnouncementItem(
     @SerialName("view_count") val viewCount: Int = 0,
 )
 
+/** 管理端地理统计（spec/api_spec_admin.md → AdminGeoStatsResponse）。 */
+@Serializable
+data class AdminGeoStatsTotals(
+    val user: Int = 0,
+    val group: Int = 0,
+    val moment: Int = 0,
+    val total: Int = 0,
+)
+
+@Serializable
+data class AdminStatsBreakdown(
+    val user: Int = 0,
+    val group: Int = 0,
+    val moment: Int = 0,
+)
+
+@Serializable
+data class AdminRegionRankItem(
+    @SerialName("cell_token") val cellToken: String = "",
+    val level: Int = 0,
+    val center: GeoPoint = GeoPoint(),
+    @SerialName("total_count") val totalCount: Int = 0,
+    val breakdown: AdminStatsBreakdown = AdminStatsBreakdown(),
+)
+
+@Serializable
+data class AdminPlaceRankItem(
+    @SerialName("location_name") val locationName: String = "",
+    @SerialName("total_count") val totalCount: Int = 0,
+    val breakdown: AdminStatsBreakdown = AdminStatsBreakdown(),
+)
+
+@Serializable
+data class AdminGeoStatsTrendPoint(
+    val date: String = "",
+    val user: Int = 0,
+    val group: Int = 0,
+    val moment: Int = 0,
+)
+
+@Serializable
+data class AdminGeoStatsResponse(
+    @SerialName("generated_at") val generatedAt: String = "",
+    val totals: AdminGeoStatsTotals = AdminGeoStatsTotals(),
+    val regions: List<AdminRegionRankItem> = emptyList(),
+    val places: List<AdminPlaceRankItem> = emptyList(),
+    val trends: List<AdminGeoStatsTrendPoint> = emptyList(),
+)
+
 /** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
 @Serializable
 data class AdminReportsPage(

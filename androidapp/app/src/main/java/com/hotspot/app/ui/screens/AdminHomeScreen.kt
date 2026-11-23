@@ -24,6 +24,7 @@ fun AdminHomeScreen(
     onOpenUsers: () -> Unit,
     onOpenGroups: () -> Unit,
     onOpenAnnouncements: () -> Unit,
+    onOpenStats: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxSize()) {
@@ -64,6 +65,11 @@ fun AdminHomeScreen(
                         title = "系统公告",
                         subtitle = "发布、编辑与删除全站公告",
                         onClick = onOpenAnnouncements,
+                    )
+                    ListRow(
+                        title = "统计分析",
+                        subtitle = "全站存量、新增趋势与热门地点/区域排名",
+                        onClick = onOpenStats,
                     )
                 }
             }
