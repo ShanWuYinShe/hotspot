@@ -66,6 +66,7 @@ object ApiEndpoint {
     const val GROUPS_ADMIN_APPLICATIONS_FETCH = "/api/v1/groups/admin/applications/fetch"
     const val GROUPS_ADMIN_APPLICATIONS_APPROVE = "/api/v1/groups/admin/applications/approve"
     const val GROUPS_ADMIN_APPLICATIONS_REJECT = "/api/v1/groups/admin/applications/reject"
+    const val GROUPS_ADMIN_INVITES_CREATE = "/api/v1/groups/admin/invites/create"
     const val GROUPS_ADMIN_MEMBERS_SET_ROLE = "/api/v1/groups/admin/members/set_role"
     const val GROUPS_ADMIN_MEMBERS_SET_MUTE = "/api/v1/groups/admin/members/set_mute"
     const val GROUPS_ADMIN_MEMBERS_REMOVE = "/api/v1/groups/admin/members/remove"
