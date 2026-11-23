@@ -81,6 +81,7 @@ import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.UserItem
+import com.hotspot.app.data.model.GroupSentInviteItem
 import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.ui.components.AnnouncementEditorDialog
@@ -93,6 +94,7 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.GroupApplicationsDialog
+import com.hotspot.app.ui.components.GroupSentInvitesDialog
 import com.hotspot.app.ui.components.GroupInfoEditorDialog
 import com.hotspot.app.ui.components.InviteMemberDialog
 import com.hotspot.app.ui.components.GroupSettingsDialog
@@ -240,6 +242,13 @@ fun GroupDetailScreen(
     var inviteError by remember(groupId) { mutableStateOf<String?>(null) }
     var invitedIds by remember(groupId) { mutableStateOf<Set<String>>(emptySet()) }
     var invitingUserId by remember(groupId) { mutableStateOf<String?>(null) }
+    // 邀请记录（owner/admin）：展示全部状态，待接受可撤销
+    var showSentInvites by remember(groupId) { mutableStateOf(false) }
+    var sentInvites by remember(groupId) { mutableStateOf<List<GroupSentInviteItem>?>(null) }
+    var sentInvitesLoading by remember(groupId) { mutableStateOf(false) }
+    var sentInvitesError by remember(groupId) { mutableStateOf<String?>(null) }
+    var revokeInviteTarget by remember(groupId) { mutableStateOf<GroupSentInviteItem?>(null) }
+    var revokingInviteId by remember(groupId) { mutableStateOf<String?>(null) }
     // 封禁/解封（owner/admin）
     var banningMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var banBusy by remember(groupId) { mutableStateOf(false) }
@@ -453,6 +462,19 @@ fun GroupDetailScreen(
                 inviteResults = emptyList()
                 inviteError = null
                 invitedIds = emptySet()
+            },
+            onOpenSentInvites = {
+                showSentInvites = true
+                sentInvites = null
+                sentInvitesError = null
+                scope.launch {
+                    sentInvitesLoading = true
+                    when (val result = repository.sentInvites(groupId, status = "all")) {
+                        is ApiResult.Ok -> sentInvites = result.data.items
+                        is ApiResult.Err -> sentInvitesError = result.error.userMessage
+                    }
+                    sentInvitesLoading = false
+                }
             },
             onOpenGroupSettings = {
                 groupSettings = null
@@ -897,6 +919,70 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showSentInvites) {
+        GroupSentInvitesDialog(
+            invites = sentInvites,
+            loading = sentInvitesLoading,
+            error = sentInvitesError,
+            revokingId = revokingInviteId,
+            onRetry = {
+                scope.launch {
+                    sentInvitesLoading = true
+                    sentInvitesError = null
+                    when (val result = repository.sentInvites(groupId, status = "all")) {
+                        is ApiResult.Ok -> sentInvites = result.data.items
+                        is ApiResult.Err -> sentInvitesError = result.error.userMessage
+                    }
+                    sentInvitesLoading = false
+                }
+            },
+            onRevoke = { invite -> revokeInviteTarget = invite },
+            onDismiss = { if (revokingInviteId == null) showSentInvites = false },
+        )
+    }
+
+    revokeInviteTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (revokingInviteId == null) revokeInviteTarget = null },
+            title = { Text("撤销邀请") },
+            text = { Text("撤销后「" + target.invitee.nickname.ifBlank { "对方" } + "」将不能再通过这条邀请入群，确定撤销吗？") },
+            confirmButton = {
+                SystemButton(
+                    text = if (revokingInviteId != null) "撤销中…" else "撤销",
+                    onClick = {
+                        if (revokingInviteId != null) return@SystemButton
+                        revokingInviteId = target.inviteId
+                        scope.launch {
+                            when (val result = repository.revokeInvite(groupId, target.inviteId)) {
+                                is ApiResult.Ok -> {
+                                    sentInvites = sentInvites?.map {
+                                        if (it.inviteId == target.inviteId) it.copy(status = "revoked") else it
+                                    }
+                                    revokeInviteTarget = null
+                                    Toast.makeText(context, "邀请已撤销", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            revokingInviteId = null
+                        }
+                    },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = revokingInviteId == null,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { revokeInviteTarget = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = revokingInviteId == null,
+                )
+            },
+        )
+    }
+
     banningMember?.let { target ->
         AlertDialog(
             onDismissRequest = { if (!banBusy) banningMember = null },
@@ -1046,6 +1132,7 @@ private fun GroupTopNavBar(
     onOpenGroupSettings: () -> Unit,
     onOpenApplications: () -> Unit,
     onOpenInvite: () -> Unit,
+    onOpenSentInvites: () -> Unit,
     onOpenBanned: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -1134,6 +1221,21 @@ private fun GroupTopNavBar(
                         onClick = {
                             menuExpanded = false
                             onOpenInvite()
+                        },
+                    )
+                }
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "邀请记录",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenSentInvites()
                         },
                     )
                 }
