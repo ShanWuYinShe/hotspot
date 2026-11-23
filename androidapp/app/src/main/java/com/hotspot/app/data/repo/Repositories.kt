@@ -8,6 +8,7 @@ import com.hotspot.app.data.auth.AuthSession
 import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.data.model.AuthTokenPair
+import com.hotspot.app.data.model.BlockedUserItem
 import com.hotspot.app.data.model.ClientConfig
 import com.hotspot.app.data.model.CommentItem
 import com.hotspot.app.data.model.DefaultLocation
@@ -981,8 +982,17 @@ class ProfileRepository(private val api: ApiClient) {
         ApiEndpoint.USERS_SET_BLOCK,
         buildJsonObject {
             put("user_id", userId)
-            put("blocked", blocked)
+            // spec BlockRequest 字段为 active（历史实现误写 blocked，导致拉黑请求被服务端按默认 false 处理）
+            put("active", blocked)
+            put("reason", JsonNull)
         },
+    )
+
+    /** 我的拉黑列表（spec users/fetch_blocked，按 blocked_at 倒序）。 */
+    suspend fun fetchBlocked(cursor: String?): ApiResult<Page<BlockedUserItem>> = api.post(
+        ApiEndpoint.USERS_FETCH_BLOCKED,
+        buildJsonObject { put("pagination", pagination(cursor)) },
+        Page.serializer(BlockedUserItem.serializer()),
     )
 }
 

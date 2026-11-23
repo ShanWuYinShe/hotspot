@@ -79,6 +79,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenBlocked: () -> Unit,
     onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -312,6 +313,11 @@ fun SettingsScreen(
                     title = "我的举报",
                     subtitle = "查看举报处理进度与结果",
                     onClick = onOpenReports,
+                )
+                ListRow(
+                    title = "屏蔽名单",
+                    subtitle = "管理你屏蔽的用户，解除后可重新互动",
+                    onClick = onOpenBlocked,
                 )
                 ListRow(
                     title = "退出登录",
