@@ -1,13 +1,16 @@
 package com.hotspot.app.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
  * 群详情纯逻辑单测（不依赖 Android / Compose）：
  * - 指标「距你」格式化（<1km 用 m，否则 km 一位小数；null 显示占位由 UI 层负责）
  * - 成员角色徽章文案（owner/admin 显示，member 不显示）
+ * - 公告管理入口权限（仅 owner/admin）
  */
 class GroupFormatTest {
 
@@ -39,5 +42,14 @@ class GroupFormatTest {
         assertNull(groupRoleLabel("member"))
         assertNull(groupRoleLabel(null))
         assertNull(groupRoleLabel("unknown"))
+    }
+
+    @Test
+    fun canManageGroupAnnouncements_onlyOwnerOrAdmin() {
+        assertTrue(canManageGroupAnnouncements("owner"))
+        assertTrue(canManageGroupAnnouncements("admin"))
+        assertFalse(canManageGroupAnnouncements("member"))
+        assertFalse(canManageGroupAnnouncements(null))
+        assertFalse(canManageGroupAnnouncements("unknown"))
     }
 }

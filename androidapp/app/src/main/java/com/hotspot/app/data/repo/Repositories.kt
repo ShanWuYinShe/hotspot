@@ -1079,7 +1079,6 @@ class GroupRepository(private val api: ApiClient) {
         Page.serializer(GroupMemberItem.serializer()),
     )
 
-    /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
     /** 封禁/解封成员（owner/admin；active=true 会移出群组并禁止再加入；群主保护 10400）。 */
     suspend fun setBan(
         groupId: String,
@@ -1296,12 +1295,18 @@ class GroupRepository(private val api: ApiClient) {
         GroupItem.serializer(),
     )
 
-    /** 发布/更新/删除群公告（spec/api_spec_group.md → groups/admin/announcements 的 create/update/delete，owner/admin 守卫）。 */
+
+    /**
+     * 发布群公告（spec/api_spec_group.md → groups/admin/announcements/create，owner/admin 守卫）。
+     * create 为契约幂等端点：同一笔提交的重试/双击必须复用同一个 [idempotencyKey]，
+     * 不能每次调用重新生成，否则超时重试会产生重复公告。
+     */
     suspend fun createAnnouncement(
         groupId: String,
         title: String,
         content: String,
         isPinned: Boolean,
+        idempotencyKey: String,
     ): ApiResult<GroupAnnouncementItem> = api.post(
         ApiEndpoint.GROUPS_ADMIN_ANNOUNCEMENTS_CREATE,
         buildJsonObject {
@@ -1311,9 +1316,10 @@ class GroupRepository(private val api: ApiClient) {
             put("is_pinned", isPinned)
         },
         GroupAnnouncementItem.serializer(),
-        idempotencyKey = UUID.randomUUID().toString(),
+        idempotencyKey = idempotencyKey,
     )
 
+    /** 更新群公告（spec → groups/admin/announcements/update；全量提交标题/正文/置顶）。 */
     suspend fun updateAnnouncement(
         groupId: String,
         announcementId: String,
@@ -1332,6 +1338,7 @@ class GroupRepository(private val api: ApiClient) {
         GroupAnnouncementItem.serializer(),
     )
 
+    /** 删除群公告（spec → groups/admin/announcements/delete；服务端软删，列表以重新拉取为准）。 */
     suspend fun deleteAnnouncement(groupId: String, announcementId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.GROUPS_ADMIN_ANNOUNCEMENTS_DELETE,
         buildJsonObject {
@@ -1340,6 +1347,7 @@ class GroupRepository(private val api: ApiClient) {
         },
     )
 
+    /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
     suspend fun announcements(groupId: String): ApiResult<List<GroupAnnouncementItem>> {
         val result = api.post(
             ApiEndpoint.GROUPS_ANNOUNCEMENTS_FETCH,

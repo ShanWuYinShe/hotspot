@@ -72,6 +72,9 @@ fun groupRoleLabel(role: String?): String? = when (role) {
     else -> null
 }
 
+/** 群公告管理权限（owner/admin；服务端 10200 仍是最终兜底）。 */
+fun canManageGroupAnnouncements(role: String?): Boolean = role == "owner" || role == "admin"
+
 /** 主机名展示（设置页 About 用；URL 非法时原样返回）。 */
 fun originLabel(baseUrl: String): String = try {
     URI(baseUrl).host ?: baseUrl

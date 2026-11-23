@@ -1421,6 +1421,7 @@ frontend/src/styles/theme/themes/{vibrant,forest,inkwash}.css + semantic.css + s
 |---|---|
 | `SystemButton` | primary/secondary/soft/ghost/danger × SM 32 / MD 42 / LG 48，全圆角胶囊，按下缩放 + 状态色，热区 ≥44dp |
 | `SystemInput` | 43 高 / 圆角 16 / 三态边框（默认·焦点 accent 22% 环·错误 danger 24% 环），支持前置图标槽 |
+| `SystemTextArea` | 多行输入（公告正文等）：与 `SystemInput` 同表面（fieldBg / 16 圆角 / 焦点 2dp accent / 错误 danger / disabled 弱底），最小 3 行、默认最高 215dp（超出后内部滚动） |
 | `SearchInput` | 39 高 / 全圆角胶囊（搜索派唯一壳）：左搜索图标 16 + 12 字号，焦点转 fieldRing；表单输入仍走 `SystemInput`，两派不在页面内互换 |
 | `Badge` | sm 20 / md 24 + 语义 tone（accent/online/warning/danger/neutral），数字未读用同族 accent |
 | `SegmentedTabs` / `Tabs` | 34 高胶囊分段 / 34 高 Tab 行，选中态底色 + 文字色切换，垂直居中 |
