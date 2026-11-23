@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
@@ -93,6 +94,8 @@ import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.ListRow
 import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.MemberAction
+import com.hotspot.app.ui.components.MemberActionSheet
 import com.hotspot.app.ui.components.MediaBadge
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
@@ -207,6 +210,11 @@ fun GroupDetailScreen(
     var showGroupInfoEditor by remember(groupId) { mutableStateOf(false) }
     var groupInfoSaving by remember(groupId) { mutableStateOf(false) }
     var groupInfoError by remember(groupId) { mutableStateOf<String?>(null) }
+    // 群成员管理（owner/admin）：角色 / 禁言 / 移除
+    var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
+    var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
+    var memberActionBusy by remember(groupId) { mutableStateOf(false) }
+    val myUserId = AppContainer.tokenStore.session.value?.userId
     val context = LocalContext.current
 
     suspend fun loadDetail() {
@@ -389,6 +397,9 @@ fun GroupDetailScreen(
                         showAnnouncementEditor = true
                     },
                     onDeleteAnnouncement = { announcement -> deletingAnnouncement = announcement },
+                    canManageMembers = canManageGroup,
+                    myUserId = myUserId,
+                    onManageMember = { member -> managedMember = member },
                     onRetryMembersFirst = { scope.launch { membersState.initialLoad(memberLoader) } },
                     onRetryMembersMore = { scope.launch { membersState.loadMore(memberLoader) } },
                 )
@@ -515,6 +526,88 @@ fun GroupDetailScreen(
                     }
                     groupInfoSaving = false
                 }
+            },
+        )
+    }
+
+    managedMember?.let { target ->
+        val actions = buildList {
+            if (target.role == "admin") add(MemberAction.UNSET_ADMIN) else add(MemberAction.SET_ADMIN)
+            add(MemberAction.MUTE_1H)
+            add(MemberAction.UNMUTE)
+            add(MemberAction.REMOVE)
+        }
+        MemberActionSheet(
+            actions = actions,
+            onDismiss = { managedMember = null },
+            onAction = { action ->
+                managedMember = null
+                if (action == MemberAction.REMOVE) {
+                    removingMember = target
+                } else {
+                    if (memberActionBusy) return@MemberActionSheet
+                    memberActionBusy = true
+                    scope.launch {
+                        val result = when (action) {
+                            MemberAction.SET_ADMIN -> repository.setMemberRole(groupId, target.user.userId, "admin")
+                            MemberAction.UNSET_ADMIN -> repository.setMemberRole(groupId, target.user.userId, "member")
+                            MemberAction.MUTE_1H -> repository.setMemberMute(groupId, target.user.userId, true, 60)
+                            MemberAction.UNMUTE -> repository.setMemberMute(groupId, target.user.userId, false, null)
+                            else -> return@launch
+                        }
+                        when (result) {
+                            is ApiResult.Ok -> {
+                                membersState.initialLoad(memberLoader)
+                                loadDetail()
+                                Toast.makeText(context, "成员操作已生效", Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                        }
+                        memberActionBusy = false
+                    }
+                }
+            },
+        )
+    }
+
+    removingMember?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!memberActionBusy) removingMember = null },
+            title = { Text("移除成员") },
+            text = { Text("确定将「${target.user.nickname.ifBlank { "该成员" }}」移出群组？") },
+            confirmButton = {
+                SystemButton(
+                    text = if (memberActionBusy) "移除中…" else "移除",
+                    onClick = {
+                        if (memberActionBusy) return@SystemButton
+                        memberActionBusy = true
+                        scope.launch {
+                            when (val result = repository.removeMember(groupId, target.user.userId)) {
+                                is ApiResult.Ok -> {
+                                    removingMember = null
+                                    membersState.initialLoad(memberLoader)
+                                    loadDetail()
+                                    Toast.makeText(context, "成员已移除", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            memberActionBusy = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !memberActionBusy,
+                    loading = memberActionBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!memberActionBusy) removingMember = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !memberActionBusy,
+                )
             },
         )
     }
@@ -724,6 +817,9 @@ private fun GroupDetailContent(
     onCreateAnnouncement: () -> Unit,
     onEditAnnouncement: (GroupAnnouncementItem) -> Unit,
     onDeleteAnnouncement: (GroupAnnouncementItem) -> Unit,
+    canManageMembers: Boolean,
+    myUserId: String?,
+    onManageMember: (GroupMemberItem) -> Unit,
     onRetryMembersFirst: () -> Unit,
     onRetryMembersMore: () -> Unit,
 ) {
@@ -756,6 +852,9 @@ private fun GroupDetailContent(
             1 -> GroupMembersTab(
                 state = membersState,
                 totalCount = group.group.membersCount,
+                canManage = canManageMembers,
+                myUserId = myUserId,
+                onManageMember = onManageMember,
                 onRetryFirstPage = onRetryMembersFirst,
                 onRetryLoadMore = onRetryMembersMore,
             )
@@ -1171,6 +1270,9 @@ private fun AnnouncementPreviewCard(
 private fun GroupMembersTab(
     state: PagedListState<GroupMemberItem>,
     totalCount: Int,
+    canManage: Boolean,
+    myUserId: String?,
+    onManageMember: (GroupMemberItem) -> Unit,
     onRetryFirstPage: () -> Unit,
     onRetryLoadMore: () -> Unit,
 ) {
@@ -1193,7 +1295,13 @@ private fun GroupMembersTab(
             )
             Spacer(Modifier.height(Spacing.sm))
             ListGroup {
-                state.items.forEach { member -> GroupMemberRow(member) }
+                state.items.forEach { member ->
+                    GroupMemberRow(
+                        member = member,
+                        manageable = canManage && member.role != "owner" && member.user.userId != myUserId,
+                        onManage = { onManageMember(member) },
+                    )
+                }
             }
             when {
                 state.loadingMore -> InlineLoading()
@@ -1208,14 +1316,36 @@ private fun GroupMembersTab(
 }
 
 @Composable
-private fun GroupMemberRow(member: GroupMemberItem) {
+private fun GroupMemberRow(
+    member: GroupMemberItem,
+    manageable: Boolean = false,
+    onManage: () -> Unit = {},
+) {
+    val colors = HotSpotTheme.colors
     val roleLabel = groupRoleLabel(member.role)
-    val trailingSlot: (@Composable () -> Unit)? = if (roleLabel != null) {
+    val trailingSlot: (@Composable () -> Unit)? = if (roleLabel != null || manageable) {
         {
-            Badge(
-                text = roleLabel,
-                tone = if (member.role == "owner") BadgeTone.ACCENT else BadgeTone.NEUTRAL,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (roleLabel != null) {
+                    Badge(
+                        text = roleLabel,
+                        tone = if (member.role == "owner") BadgeTone.ACCENT else BadgeTone.NEUTRAL,
+                    )
+                }
+                if (manageable) {
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(
+                        text = "管理",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = colors.accent,
+                        modifier = Modifier
+                            .heightIn(min = Dimens.minTouchTarget)
+                            .clip(AppShapes.compact)
+                            .clickable(onClick = onManage)
+                            .padding(horizontal = Spacing.md),
+                    )
+                }
+            }
         }
     } else {
         null

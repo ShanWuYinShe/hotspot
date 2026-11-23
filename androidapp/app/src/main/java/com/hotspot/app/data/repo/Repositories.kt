@@ -987,6 +987,41 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 设置成员角色（owner/admin 守卫；role 为 admin/member；服务端保护最后一个管理员）。 */
+    suspend fun setMemberRole(groupId: String, userId: String, role: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_MEMBERS_SET_ROLE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("user_id", userId)
+            put("role", role)
+        },
+    )
+
+    /** 设置/解除成员禁言（active=true 时 duration_minutes 必填，1..43200；群主保护由服务端返回 10400）。 */
+    suspend fun setMemberMute(
+        groupId: String,
+        userId: String,
+        active: Boolean,
+        durationMinutes: Int? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_MEMBERS_SET_MUTE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("user_id", userId)
+            put("active", active)
+            put("duration_minutes", durationMinutes)
+        },
+    )
+
+    /** 移除成员（owner/admin 守卫；群主保护由服务端返回 10400）。 */
+    suspend fun removeMember(groupId: String, userId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_MEMBERS_REMOVE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("user_id", userId)
+        },
+    )
+
     /** 更新群名称/简介（spec/api_spec_group.md → groups/admin/update，owner/admin 守卫；其余字段传 null 不改）。 */
     suspend fun updateGroupInfo(groupId: String, name: String, description: String?): ApiResult<GroupItem> = api.post(
         ApiEndpoint.GROUPS_ADMIN_UPDATE,
