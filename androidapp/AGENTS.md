@@ -30,7 +30,9 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
 管理后台（设置页对平台管理员显示入口，`rbac/me` 鉴权）已接入：
 - **举报审核**：待处理举报列表 → 通过/驳回 + 处理备注（`reports/fetch|judge`）；
 - **用户管理**：昵称搜索 + 正常/已封禁筛选，封禁（永久/1/7/30 天 + 原因）与解封（`users/search`、`users/set_ban`）；
-RBAC/群组/公告/标签/统计等其余模块仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
+- **群组管理**：群名搜索，展示群主/成员数/创建时间，解散群组（`groups/search`、`groups/dismiss`；
+  原因仅进审计日志，成员收到 GroupDismissed 事件）；
+RBAC/公告/标签/统计等其余模块仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
 WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
 私聊、群聊与消息列表消费增量事件）。
 
@@ -214,7 +216,7 @@ app/src/main/java/com/hotspot/app/
 
 ## 已知待办（首版登记）
 
-1. 管理后台（举报审核、用户管理已接入，RBAC/群组/公告/标签/统计等其余模块待补）；
+1. 管理后台（举报审核、用户管理、群组管理已接入，RBAC/公告/标签/统计等其余模块待补）；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    通知中心点击已按 payload 跳转（含 @提及瞬间/群聊）；语音消息已接入（录制 + 播放，chat_audio）；

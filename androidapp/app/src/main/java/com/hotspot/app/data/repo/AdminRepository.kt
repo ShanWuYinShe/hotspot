@@ -4,6 +4,7 @@ import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiEndpoint
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminPermissions
+import com.hotspot.app.data.model.AdminGroupItem
 import com.hotspot.app.data.model.AdminReportsPage
 import com.hotspot.app.data.model.AdminUserItem
 import com.hotspot.app.data.model.Page
@@ -50,6 +51,30 @@ class AdminRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(AdminUserItem.serializer()),
+    )
+
+    /** 搜索群组（平台管理）：名称模糊匹配。 */
+    suspend fun searchGroups(
+        name: String?,
+        cursor: String? = null,
+    ): ApiResult<Page<AdminGroupItem>> = api.post(
+        ApiEndpoint.ADMIN_GROUPS_SEARCH,
+        buildJsonObject {
+            put("group_id", JsonNull)
+            put("name", name?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("owner_id", JsonNull)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(AdminGroupItem.serializer()),
+    )
+
+    /** 解散群组（平台管理）：reason 仅进审计日志，不推送给群成员。 */
+    suspend fun dismissGroup(groupId: String, reason: String?): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_GROUPS_DISMISS,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("reason", reason?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+        },
     )
 
     /** 平台封禁/解封用户（两态统一）：durationDays null/0 = 永久。 */
