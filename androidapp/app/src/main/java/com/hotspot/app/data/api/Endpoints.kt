@@ -100,5 +100,10 @@ object ApiEndpoint {
 
     const val NOTIFY_FETCH = "/api/v1/notify/fetch"
     const val NOTIFY_UNREAD_SUMMARY = "/api/v1/notify/unread_summary"
+    // 平台管理端（admin 命名空间，权限由后端 RBAC 校验）
+    const val ADMIN_RBAC_ME = "/admin/api/v1/rbac/me"
+    const val ADMIN_REPORTS_FETCH = "/admin/api/v1/reports/fetch"
+    const val ADMIN_REPORTS_JUDGE = "/admin/api/v1/reports/judge"
+
     const val NOTIFY_MARK_READ = "/api/v1/notify/mark_read"
 }

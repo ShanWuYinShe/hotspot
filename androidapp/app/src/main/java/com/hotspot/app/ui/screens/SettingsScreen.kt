@@ -80,6 +80,7 @@ fun SettingsScreen(
     onOpenEditProfile: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenBlocked: () -> Unit,
+    onOpenAdmin: () -> Unit,
     onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -92,6 +93,11 @@ fun SettingsScreen(
     var account by remember { mutableStateOf<AccountData?>(null) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
+    var isAdmin by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        isAdmin = AppContainer.adminRepository.me() is ApiResult.Ok
+    }
 
     // 从地图选点页返回时刷新当前锚点（该页在返回栈中，不一定重新组合）。
     DisposableEffect(lifecycleOwner) {
@@ -319,6 +325,13 @@ fun SettingsScreen(
                     subtitle = "管理你屏蔽的用户，解除后可重新互动",
                     onClick = onOpenBlocked,
                 )
+                if (isAdmin) {
+                    ListRow(
+                        title = "管理后台",
+                        subtitle = "举报审核与平台管理",
+                        onClick = onOpenAdmin,
+                    )
+                }
                 ListRow(
                     title = "退出登录",
                     subtitle = "退出后需要重新登录才能继续使用",

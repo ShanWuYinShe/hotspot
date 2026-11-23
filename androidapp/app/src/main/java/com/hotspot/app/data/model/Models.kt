@@ -147,6 +147,44 @@ data class ReportCreated(
     @SerialName("is_duplicate") val isDuplicate: Boolean = false,
 )
 
+/** 平台管理员权限（spec/api_spec_admin.md → AdminPermissions；permissions 含 '*' 表示全权限）。 */
+@Serializable
+data class AdminPermissions(
+    val permissions: List<String> = emptyList(),
+    val roles: List<AdminRoleBasic> = emptyList(),
+)
+
+@Serializable
+data class AdminRoleBasic(
+    @SerialName("role_id") val roleId: String = "",
+    val name: String = "",
+)
+
+/** 管理端举报项（spec → AdminReportItem extends ReportItem）。 */
+@Serializable
+data class AdminReportItem(
+    @SerialName("report_id") val reportId: String = "",
+    @SerialName("target_type") val targetType: String = "",
+    @SerialName("target_id") val targetId: String = "",
+    val reason: String = "",
+    val description: String? = null,
+    val status: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("handled_at") val handledAt: String? = null,
+    val resolution: ReportResolution? = null,
+    val reporter: UserInfo = UserInfo(),
+    @SerialName("handled_by") val handledBy: UserInfo? = null,
+    @SerialName("handle_note") val handleNote: String? = null,
+)
+
+/** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
+@Serializable
+data class AdminReportsPage(
+    val items: List<AdminReportItem> = emptyList(),
+    @SerialName("next_cursor") val nextCursor: String? = null,
+    val total: Int? = null,
+)
+
 @Serializable
 data class RelatedUserItem(
     val user: UserItem = UserItem(),
