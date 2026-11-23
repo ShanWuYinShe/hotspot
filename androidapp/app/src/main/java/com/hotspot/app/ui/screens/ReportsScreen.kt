@@ -130,11 +130,14 @@ private fun ReportsContent(status: String?) {
         if (query.isBlank()) {
             searchItems = null
             searchError = null
+            // 搜索中被清空时 effect 会被取消，这里复位，避免下次搜索沿用旧的加载态。
+            searchLoading = false
             return@LaunchedEffect
         }
-        delay(350)
+        // 防抖等待期间也保持加载态，避免先闪一下「没有匹配」再进入搜索。
         searchLoading = true
         searchError = null
+        delay(350)
         val loaded = mutableListOf<ReportItem>()
         var next: String? = null
         var pages = 0
