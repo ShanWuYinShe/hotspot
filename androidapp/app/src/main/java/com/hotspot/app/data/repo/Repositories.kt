@@ -1079,6 +1079,23 @@ class GroupRepository(private val api: ApiClient) {
         Page.serializer(GroupMemberItem.serializer()),
     )
 
+    /** 搜索群成员（按昵称；大群快速定位，弱一致；可见性同 members/fetch）。 */
+    suspend fun searchMembers(
+        groupId: String,
+        keyword: String,
+        cursor: String? = null,
+        limit: Int = GROUP_MEMBERS_PAGE_SIZE,
+    ): ApiResult<Page<GroupMemberItem>> = api.post(
+        ApiEndpoint.GROUPS_MEMBERS_SEARCH,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("keyword", keyword)
+            put("role", JsonNull)
+            put("pagination", pagination(cursor, limit))
+        },
+        Page.serializer(GroupMemberItem.serializer()),
+    )
+
     /** 封禁/解封成员（owner/admin；active=true 会移出群组并禁止再加入；群主保护 10400）。 */
     suspend fun setBan(
         groupId: String,

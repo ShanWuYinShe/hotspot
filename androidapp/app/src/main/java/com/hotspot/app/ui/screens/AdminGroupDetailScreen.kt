@@ -41,6 +41,7 @@ import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
@@ -50,6 +51,7 @@ import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
 import com.hotspot.app.util.groupRoleLabel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -70,6 +72,12 @@ fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
     var membersCursor by remember { mutableStateOf<String?>(null) }
     var membersMoreLoading by remember { mutableStateOf(false) }
     var membersReloadKey by remember { mutableIntStateOf(0) }
+    var memberQuery by remember { mutableStateOf("") }
+    var searchMembers by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
+    var searchCursor by remember { mutableStateOf<String?>(null) }
+    var searchLoading by remember { mutableStateOf(false) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var searchReloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(groupId, membersReloadKey) {
         membersLoading = true
@@ -86,15 +94,49 @@ fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
         membersLoading = false
     }
 
+    LaunchedEffect(memberQuery, searchReloadKey) {
+        val keyword = memberQuery.trim()
+        if (keyword.isBlank()) {
+            searchMembers = emptyList()
+            searchCursor = null
+            searchError = null
+            return@LaunchedEffect
+        }
+        delay(350)
+        searchLoading = true
+        searchError = null
+        searchMembers = emptyList()
+        searchCursor = null
+        when (val result = AppContainer.groupRepository.searchMembers(groupId, keyword, null)) {
+            is ApiResult.Ok -> {
+                searchMembers = result.data.items
+                searchCursor = result.data.nextCursor
+            }
+            is ApiResult.Err -> searchError = result.error.userMessage
+        }
+        searchLoading = false
+    }
+
     fun loadMoreMembers() {
-        val next = membersCursor ?: return
-        if (membersMoreLoading) return
+        val searching = memberQuery.isNotBlank()
+        val next = if (searching) searchCursor else membersCursor
+        if (next == null || membersMoreLoading) return
         membersMoreLoading = true
         scope.launch {
-            when (val result = AppContainer.groupRepository.members(groupId, next)) {
+            val result = if (searching) {
+                AppContainer.groupRepository.searchMembers(groupId, memberQuery.trim(), next)
+            } else {
+                AppContainer.groupRepository.members(groupId, next)
+            }
+            when (result) {
                 is ApiResult.Ok -> {
-                    members = (members + result.data.items).distinctBy { it.user.userId }
-                    membersCursor = result.data.nextCursor
+                    if (searching) {
+                        searchMembers = (searchMembers + result.data.items).distinctBy { it.user.userId }
+                        searchCursor = result.data.nextCursor
+                    } else {
+                        members = (members + result.data.items).distinctBy { it.user.userId }
+                        membersCursor = result.data.nextCursor
+                    }
                 }
                 is ApiResult.Err -> Unit
             }
@@ -201,30 +243,41 @@ fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
                         }
                         item {
                             SectionLabel("成员（" + data.group.membersCount + "）")
+                            SearchInput(
+                                value = memberQuery,
+                                onValueChange = { memberQuery = it },
+                                placeholder = "搜索成员昵称…",
+                            )
+                            Spacer(Modifier.height(Spacing.sm))
+                            val searching = memberQuery.isNotBlank()
+                            val shownMembers = if (searching) searchMembers else members
+                            val shownLoading = if (searching) searchLoading else membersLoading
+                            val shownError = if (searching) searchError else membersError
+                            val shownCursor = if (searching) searchCursor else membersCursor
                             ListGroup {
                                 when {
-                                    membersLoading -> InlineLoading(text = "正在加载成员…")
-                                    membersError != null -> Column(Modifier.fillMaxWidth().padding(Spacing.md)) {
+                                    shownLoading -> InlineLoading(text = "正在加载成员…")
+                                    shownError != null -> Column(Modifier.fillMaxWidth().padding(Spacing.md)) {
                                         Text(
-                                            text = membersError ?: "成员列表加载失败",
+                                            text = shownError ?: "成员列表加载失败",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = colors.textSecondary,
                                         )
                                         Spacer(Modifier.height(Spacing.sm))
                                         SystemButton(
                                             text = "重试",
-                                            onClick = { membersReloadKey += 1 },
+                                            onClick = { if (searching) searchReloadKey += 1 else membersReloadKey += 1 },
                                             variant = ButtonVariant.SECONDARY,
                                             size = ButtonSize.SM,
                                         )
                                     }
-                                    members.isEmpty() -> Text(
-                                        text = "暂无成员",
+                                    shownMembers.isEmpty() -> Text(
+                                        text = if (searching) "没有找到匹配的成员" else "暂无成员",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = colors.textSecondary,
                                         modifier = Modifier.fillMaxWidth().padding(Spacing.md),
                                     )
-                                    else -> members.forEachIndexed { index, member ->
+                                    else -> shownMembers.forEachIndexed { index, member ->
                                         Row(
                                             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm2),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -251,13 +304,13 @@ fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
                                                 )
                                             }
                                         }
-                                        if (index != members.lastIndex) {
+                                        if (index != shownMembers.lastIndex) {
                                             HorizontalDivider(color = colors.borderSubtle)
                                         }
                                     }
                                 }
                             }
-                            if (membersCursor != null && membersError == null) {
+                            if (shownCursor != null && shownError == null) {
                                 Box(Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
                                     SystemButton(
                                         text = if (membersMoreLoading) "加载中…" else "加载更多成员",

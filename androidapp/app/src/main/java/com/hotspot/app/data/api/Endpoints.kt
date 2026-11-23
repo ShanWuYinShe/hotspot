@@ -62,6 +62,7 @@ object ApiEndpoint {
     const val GROUPS_ENTER = "/api/v1/groups/enter"
     const val GROUPS_EXIT = "/api/v1/groups/exit"
     const val GROUPS_MEMBERS_FETCH = "/api/v1/groups/members/fetch"
+    const val GROUPS_MEMBERS_SEARCH = "/api/v1/groups/members/search"
     // 群公告列表仅 public 版（spec/api_spec_public.md：无查看者字段、不设登录镜像）。
     const val GROUPS_ANNOUNCEMENTS_FETCH = "/public/v1/groups/announcements/fetch"
     const val GROUPS_ADMIN_UPDATE = "/api/v1/groups/admin/update"

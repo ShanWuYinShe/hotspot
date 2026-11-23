@@ -36,6 +36,7 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
   原因仅进审计日志，成员收到 GroupDismissed 事件）；
   点击群组行打开详情（`groups/open_the_door`：群主/成员数/标签/创建与最近活跃/简介；解散仍在列表操作）；
   详情内展示只读成员列表（`groups/members/fetch`，按加入时间正序 + 加载更多；成员可见性受限时显示错误与重试）；
+  成员列表支持按昵称搜索（`groups/members/search`，350ms 防抖，搜索模式独立分页与空态）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；
   支持按标题/正文/发布人搜索（同样先加载完全部分页再本地筛选）；
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
