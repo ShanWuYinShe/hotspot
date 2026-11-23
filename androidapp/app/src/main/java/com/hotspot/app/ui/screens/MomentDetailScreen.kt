@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,7 +32,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +82,7 @@ import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.SystemTextArea
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.hotSpotFocusRing
@@ -156,10 +163,18 @@ fun MomentDetailScreen(
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
     var favoriteBusy by remember { mutableStateOf(false) }
+    // 作者操作：更多菜单 / 编辑文案 / 删除瞬间
+    var ownerSheetOpen by remember { mutableStateOf(false) }
+    var editDialogOpen by remember { mutableStateOf(false) }
+    var editSaving by remember { mutableStateOf(false) }
+    var editError by remember { mutableStateOf<String?>(null) }
+    var deleteConfirmOpen by remember { mutableStateOf(false) }
+    var deleteBusy by remember { mutableStateOf(false) }
     // 全屏图片查看器（点击多图 hero；携带整组图片支持查看器内左右翻页）
     var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
     var viewerIndex by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
+    val isOwner = moment?.user?.userId != null && moment?.user?.userId == currentUser?.userId
 
     suspend fun loadMoment() {
         loading = moment == null
@@ -546,7 +561,91 @@ fun MomentDetailScreen(
         }
         }
         // 浮层动作：返回 / 分享（设计稿 87:3687 在 hero 上浮动玻璃圆钮，滚动时固定可见）
-        MomentTopOverlay(onBack = onBack, onShare = { shareMoment() })
+        MomentTopOverlay(
+            onBack = onBack,
+            onShare = { shareMoment() },
+            isOwner = isOwner,
+            onMore = { ownerSheetOpen = true },
+        )
+    }
+
+    if (ownerSheetOpen) {
+        MomentOwnerActionSheet(
+            onDismiss = { ownerSheetOpen = false },
+            onEdit = {
+                ownerSheetOpen = false
+                editError = null
+                editDialogOpen = true
+            },
+            onDelete = {
+                ownerSheetOpen = false
+                deleteConfirmOpen = true
+            },
+        )
+    }
+
+    if (editDialogOpen) {
+        MomentEditDialog(
+            initialDescription = moment?.description.orEmpty(),
+            saving = editSaving,
+            error = editError,
+            onDismiss = { if (!editSaving) editDialogOpen = false },
+            onSubmit = { description ->
+                if (editSaving) return@MomentEditDialog
+                editSaving = true
+                editError = null
+                scope.launch {
+                    when (val result = feedRepository.updateMomentDescription(momentId, description)) {
+                        is ApiResult.Ok -> {
+                            moment = result.data
+                            editDialogOpen = false
+                        }
+                        is ApiResult.Err -> editError = result.error.userMessage
+                    }
+                    editSaving = false
+                }
+            },
+        )
+    }
+
+    if (deleteConfirmOpen) {
+        AlertDialog(
+            onDismissRequest = { if (!deleteBusy) deleteConfirmOpen = false },
+            title = { Text("删除瞬间") },
+            text = { Text("删除后瞬间将从所有列表移除，确定删除吗？") },
+            confirmButton = {
+                SystemButton(
+                    text = if (deleteBusy) "删除中…" else "删除",
+                    onClick = {
+                        if (deleteBusy) return@SystemButton
+                        deleteBusy = true
+                        scope.launch {
+                            when (val result = feedRepository.deleteMoment(momentId)) {
+                                is ApiResult.Ok -> {
+                                    deleteConfirmOpen = false
+                                    onBack()
+                                }
+                                is ApiResult.Err -> {
+                                    actionError = result.error.userMessage
+                                    deleteConfirmOpen = false
+                                }
+                            }
+                            deleteBusy = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { deleteConfirmOpen = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                )
+            },
+        )
     }
 
     commentReportTarget?.let { target ->
@@ -810,7 +909,12 @@ private fun MomentHero(data: MomentItem, onOpenImage: (List<String>, Int) -> Uni
  * 固定在滚动区上层，与 Web DetailHeader 一致。更多菜单（举报/编辑等）待后端能力接入后补。
  */
 @Composable
-private fun MomentTopOverlay(onBack: () -> Unit, onShare: () -> Unit) {
+private fun MomentTopOverlay(
+    onBack: () -> Unit,
+    onShare: () -> Unit,
+    isOwner: Boolean = false,
+    onMore: () -> Unit = {},
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -823,6 +927,14 @@ private fun MomentTopOverlay(onBack: () -> Unit, onShare: () -> Unit) {
             onClick = onBack,
         )
         Spacer(Modifier.weight(1f))
+        if (isOwner) {
+            GlassCircleButton(
+                iconRes = R.drawable.ic_action_more,
+                contentDescription = "更多操作",
+                onClick = onMore,
+            )
+            Spacer(Modifier.width(Spacing.sm))
+        }
         GlassCircleButton(
             iconRes = R.drawable.ic_share,
             contentDescription = "分享瞬间",
@@ -946,3 +1058,106 @@ private fun DetailCount(icon: ImageVector, count: Int) {
         )
     }
 }
+
+
+/** 作者更多操作面板：编辑文案 / 删除瞬间（M3 ModalBottomSheet，与消息操作面板同风格）。 */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MomentOwnerActionSheet(
+    onDismiss: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = colors.surface,
+        shape = AppShapes.sheet,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.lg),
+        ) {
+            OwnerActionRow(text = "编辑文案", color = colors.textPrimary, onClick = onEdit)
+            HorizontalDivider(color = colors.borderSubtle)
+            OwnerActionRow(text = "删除瞬间", color = colors.danger, onClick = onDelete)
+        }
+    }
+}
+
+@Composable
+private fun OwnerActionRow(text: String, color: Color, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = Dimens.minTouchTarget)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Spacing.xs, vertical = Spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = color,
+        )
+    }
+}
+
+/** 编辑瞬间文案：只提交 description（spec moments/update Patch 语义，其余字段保持不变）。 */
+@Composable
+private fun MomentEditDialog(
+    initialDescription: String,
+    saving: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    var description by remember(initialDescription) { mutableStateOf(initialDescription) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑瞬间") },
+        text = {
+            Column {
+                SystemTextArea(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = "瞬间文案",
+                    placeholder = "这一刻的想法…",
+                    minHeight = Dimens.inputHeight * 3,
+                )
+                if (error != null) {
+                    Spacer(Modifier.height(Spacing.sm))
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.danger,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            SystemButton(
+                text = if (saving) "保存中…" else "保存",
+                onClick = { if (!saving) onSubmit(description.trim()) },
+                variant = ButtonVariant.PRIMARY,
+                size = ButtonSize.SM,
+                enabled = !saving,
+            )
+        },
+        dismissButton = {
+            SystemButton(
+                text = "取消",
+                onClick = onDismiss,
+                variant = ButtonVariant.SECONDARY,
+                size = ButtonSize.SM,
+            )
+        },
+    )
+}
+

@@ -21,6 +21,8 @@ object ApiEndpoint {
 
     const val MOMENTS_SEARCH = "/api/v1/moments/search"
     const val MOMENTS_OPEN = "/api/v1/moments/open_the_door"
+    const val MOMENTS_UPDATE = "/api/v1/moments/update"
+    const val MOMENTS_DELETE = "/api/v1/moments/delete"
     const val MOMENTS_FETCH_FOLLOWING = "/api/v1/moments/fetch_following"
     const val MOMENTS_FETCH_NEARBY = "/api/v1/moments/fetch_nearby"
     const val MOMENTS_FETCH_CREATED = "/api/v1/moments/fetch_created"
