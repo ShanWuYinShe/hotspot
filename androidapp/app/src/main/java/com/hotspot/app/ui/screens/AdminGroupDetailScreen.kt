@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,16 +34,23 @@ import androidx.compose.ui.window.DialogProperties
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminGroupItem
+import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.ListGroup
+import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.ButtonSize
+import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotColors
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import com.hotspot.app.util.groupRoleLabel
+import kotlinx.coroutines.launch
 
 /**
  * 管理后台 · 群组详情（仅平台管理视角，只读）。
@@ -49,11 +58,49 @@ import com.hotspot.app.util.TimeFormat
  */
 @Composable
 fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
+    val scope = rememberCoroutineScope()
     val colors = HotSpotTheme.colors
     var group by remember { mutableStateOf<AdminGroupItem?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var reloadKey by remember { mutableIntStateOf(0) }
+    var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
+    var membersLoading by remember { mutableStateOf(true) }
+    var membersError by remember { mutableStateOf<String?>(null) }
+    var membersCursor by remember { mutableStateOf<String?>(null) }
+    var membersMoreLoading by remember { mutableStateOf(false) }
+    var membersReloadKey by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(groupId, membersReloadKey) {
+        membersLoading = true
+        membersError = null
+        members = emptyList()
+        membersCursor = null
+        when (val result = AppContainer.groupRepository.members(groupId, null)) {
+            is ApiResult.Ok -> {
+                members = result.data.items
+                membersCursor = result.data.nextCursor
+            }
+            is ApiResult.Err -> membersError = result.error.userMessage
+        }
+        membersLoading = false
+    }
+
+    fun loadMoreMembers() {
+        val next = membersCursor ?: return
+        if (membersMoreLoading) return
+        membersMoreLoading = true
+        scope.launch {
+            when (val result = AppContainer.groupRepository.members(groupId, next)) {
+                is ApiResult.Ok -> {
+                    members = (members + result.data.items).distinctBy { it.user.userId }
+                    membersCursor = result.data.nextCursor
+                }
+                is ApiResult.Err -> Unit
+            }
+            membersMoreLoading = false
+        }
+    }
 
     LaunchedEffect(groupId, reloadKey) {
         loading = true
@@ -149,6 +196,77 @@ fun AdminGroupDetailScreen(groupId: String, onBack: () -> Unit) {
                                             color = colors.textSecondary,
                                         )
                                     }
+                                }
+                            }
+                        }
+                        item {
+                            SectionLabel("成员（" + data.group.membersCount + "）")
+                            ListGroup {
+                                when {
+                                    membersLoading -> InlineLoading(text = "正在加载成员…")
+                                    membersError != null -> Column(Modifier.fillMaxWidth().padding(Spacing.md)) {
+                                        Text(
+                                            text = membersError ?: "成员列表加载失败",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = colors.textSecondary,
+                                        )
+                                        Spacer(Modifier.height(Spacing.sm))
+                                        SystemButton(
+                                            text = "重试",
+                                            onClick = { membersReloadKey += 1 },
+                                            variant = ButtonVariant.SECONDARY,
+                                            size = ButtonSize.SM,
+                                        )
+                                    }
+                                    members.isEmpty() -> Text(
+                                        text = "暂无成员",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.textSecondary,
+                                        modifier = Modifier.fillMaxWidth().padding(Spacing.md),
+                                    )
+                                    else -> members.forEachIndexed { index, member ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.md, vertical = Spacing.sm2),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Avatar(
+                                                name = member.user.nickname,
+                                                imageUrl = member.user.avatarUrl,
+                                                size = Dimens.avatarSm,
+                                            )
+                                            Spacer(Modifier.width(Spacing.sm2))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(
+                                                    text = member.user.nickname.ifBlank { member.user.userId },
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    color = colors.textPrimary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                                Text(
+                                                    text = (groupRoleLabel(member.role) ?: "成员") +
+                                                        " · 加入于 " + TimeFormat.relative(member.joinedAt),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = colors.textSecondary,
+                                                )
+                                            }
+                                        }
+                                        if (index != members.lastIndex) {
+                                            HorizontalDivider(color = colors.borderSubtle)
+                                        }
+                                    }
+                                }
+                            }
+                            if (membersCursor != null && membersError == null) {
+                                Box(Modifier.fillMaxWidth().padding(vertical = Spacing.sm)) {
+                                    SystemButton(
+                                        text = if (membersMoreLoading) "加载中…" else "加载更多成员",
+                                        onClick = { loadMoreMembers() },
+                                        variant = ButtonVariant.SECONDARY,
+                                        size = ButtonSize.SM,
+                                        enabled = !membersMoreLoading,
+                                        loading = membersMoreLoading,
+                                    )
                                 }
                             }
                         }
