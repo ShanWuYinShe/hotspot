@@ -4,6 +4,7 @@ import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiEndpoint
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminPermissions
+import com.hotspot.app.data.model.AdminAnnouncementItem
 import com.hotspot.app.data.model.AdminGroupItem
 import com.hotspot.app.data.model.AdminReportsPage
 import com.hotspot.app.data.model.AdminUserItem
@@ -51,6 +52,65 @@ class AdminRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         Page.serializer(AdminUserItem.serializer()),
+    )
+
+    /** 系统公告列表（平台管理视角，含创建人/推送状态/阅读数）。 */
+    suspend fun fetchAnnouncements(
+        severity: String?,
+        cursor: String? = null,
+    ): ApiResult<Page<AdminAnnouncementItem>> = api.post(
+        ApiEndpoint.ADMIN_ANNOUNCEMENTS_FETCH,
+        buildJsonObject {
+            put("severity", severity?.let(::JsonPrimitive) ?: JsonNull)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(AdminAnnouncementItem.serializer()),
+    )
+
+    /** 发布系统公告（sendPush 仅创建时可选）。 */
+    suspend fun createAnnouncement(
+        title: String,
+        content: String,
+        severity: String,
+        actionUrl: String?,
+        sendPush: Boolean,
+    ): ApiResult<AdminAnnouncementItem> = api.post(
+        ApiEndpoint.ADMIN_ANNOUNCEMENTS_CREATE,
+        buildJsonObject {
+            put("title", title)
+            put("content", content)
+            put("severity", severity)
+            put("action_url", actionUrl?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("send_push", sendPush)
+        },
+        AdminAnnouncementItem.serializer(),
+        idempotencyKey = java.util.UUID.randomUUID().toString(),
+    )
+
+    /** 更新系统公告：只提交变化字段（action_url 传空串表示清除）。 */
+    suspend fun updateAnnouncement(
+        announcementId: String,
+        title: String?,
+        content: String?,
+        severity: String?,
+        actionUrl: String?,
+        clearActionUrl: Boolean = false,
+    ): ApiResult<AdminAnnouncementItem> = api.post(
+        ApiEndpoint.ADMIN_ANNOUNCEMENTS_UPDATE,
+        buildJsonObject {
+            put("announcement_id", announcementId)
+            put("title", title?.let(::JsonPrimitive) ?: JsonNull)
+            put("content", content?.let(::JsonPrimitive) ?: JsonNull)
+            put("severity", severity?.let(::JsonPrimitive) ?: JsonNull)
+            put("action_url", if (clearActionUrl) JsonPrimitive("") else actionUrl?.let(::JsonPrimitive) ?: JsonNull)
+        },
+        AdminAnnouncementItem.serializer(),
+    )
+
+    /** 删除系统公告。 */
+    suspend fun deleteAnnouncement(announcementId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_ANNOUNCEMENTS_DELETE,
+        buildJsonObject { put("announcement_id", announcementId) },
     )
 
     /** 搜索群组（平台管理）：名称模糊匹配。 */
