@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -39,6 +41,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -56,6 +59,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
@@ -75,6 +80,8 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.CommentItem
+import com.hotspot.app.data.model.DefaultLocation
+import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.UserInfo
 import com.hotspot.app.ui.components.Avatar
@@ -207,6 +214,8 @@ fun MomentDetailScreen(
     LaunchedEffect(heroCoversStatusBar) { ChromeInsets.lightStatusBarIcons = heroCoversStatusBar }
     var editSaving by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf<String?>(null) }
+    var locationPickerOpen by remember { mutableStateOf(false) }
+    var locationSaving by remember { mutableStateOf(false) }
     var deleteConfirmOpen by remember { mutableStateOf(false) }
     var deleteBusy by remember { mutableStateOf(false) }
     var showMomentReport by remember { mutableStateOf(false) }
@@ -660,6 +669,10 @@ fun MomentDetailScreen(
                     }
                 }
             },
+            onEditLocation = {
+                ownerSheetOpen = false
+                locationPickerOpen = true
+            },
             onDelete = {
                 ownerSheetOpen = false
                 deleteConfirmOpen = true
@@ -831,6 +844,45 @@ fun MomentDetailScreen(
                 )
             },
         )
+    }
+
+    if (locationPickerOpen) {
+        Dialog(
+            onDismissRequest = { if (!locationSaving) locationPickerOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Surface(Modifier.fillMaxSize(), color = HotSpotTheme.colors.page) {
+                Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    MapScreen(
+                        onBack = { if (!locationSaving) locationPickerOpen = false },
+                        onAnchorSaved = {},
+                        pickMode = true,
+                        initialPoint = moment?.location?.point,
+                        initialLocationName = moment?.location?.locationName,
+                        onPicked = { point, label ->
+                            if (!locationSaving) {
+                                locationSaving = true
+                                scope.launch {
+                                    val location = DefaultLocation(
+                                        point = GeoPoint(point.latitude, point.longitude),
+                                        locationName = label.ifBlank { "自定义位置" },
+                                    )
+                                    when (val result = feedRepository.updateMoment(momentId, location = location)) {
+                                        is ApiResult.Ok -> {
+                                            moment = result.data
+                                            locationPickerOpen = false
+                                            Toast.makeText(context, "位置已更新", Toast.LENGTH_SHORT).show()
+                                        }
+                                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                    }
+                                    locationSaving = false
+                                }
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1208,6 +1260,7 @@ private fun MomentActionSheet(
     isOwner: Boolean,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
+    onEditLocation: () -> Unit,
     onDelete: () -> Unit,
     onReport: () -> Unit,
 ) {
@@ -1227,6 +1280,8 @@ private fun MomentActionSheet(
         ) {
             if (isOwner) {
                 OwnerActionRow(text = "编辑文案", color = colors.textPrimary, onClick = onEdit)
+                HorizontalDivider(color = colors.borderSubtle)
+                OwnerActionRow(text = "修改位置", color = colors.textPrimary, onClick = onEditLocation)
                 HorizontalDivider(color = colors.borderSubtle)
                 OwnerActionRow(text = "删除瞬间", color = colors.danger, onClick = onDelete)
             } else {

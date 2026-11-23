@@ -202,6 +202,7 @@ class FeedRepository(private val api: ApiClient) {
         description: String? = null,
         privacyLevel: String? = null,
         tags: List<String>? = null,
+        location: DefaultLocation? = null,
     ): ApiResult<MomentItem> = api.post(
         ApiEndpoint.MOMENTS_UPDATE,
         buildJsonObject {
@@ -210,6 +211,21 @@ class FeedRepository(private val api: ApiClient) {
             if (privacyLevel != null) put("privacy_level", privacyLevel)
             // tags 传空数组表示清空（patch 语义：null 保持不变）
             if (tags != null) put("tags", buildJsonArray { tags.forEach { add(JsonPrimitive(it)) } })
+            if (location != null) {
+                put(
+                    "location",
+                    buildJsonObject {
+                        put(
+                            "point",
+                            buildJsonObject {
+                                put("latitude", location.point.latitude)
+                                put("longitude", location.point.longitude)
+                            },
+                        )
+                        put("location_name", location.locationName)
+                    },
+                )
+            }
         },
         MomentItem.serializer(),
     )
