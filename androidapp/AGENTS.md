@@ -122,7 +122,8 @@ app/src/main/java/com/hotspot/app/
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
 - **聊天语音**：输入条麦克风按钮 → `RECORD_AUDIO` 权限 → 录音栏（红点/计时/取消/发送）→
   `ChatAudioUploader`（chat_audio，20MB / audio/aac，AAC-ADTS，流式上传）→ `type=audio`；
-  语音气泡点击用 MediaPlayer 播放/停止，服务端无 duration 时显示「语音」。
+  语音气泡点击用 MediaPlayer 播放/停止，播放中显示进度条与「已播放 / 总时长」（每 200ms 轮询），
+  播完/停止后显示实际总时长；服务端无 duration 时以播放器实际时长为准。
 - **聊天图片/视频**：输入条相册按钮 → 系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流：
   `ChatImageUploader`（chat_image，10MB / JPG·PNG·WebP·GIF）或 `ChatVideoUploader`
   （chat_video，100MB / video/mp4·video/quicktime，流式上传）→ `private_messages/send` /
