@@ -44,15 +44,18 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.TabPills
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -79,6 +82,9 @@ fun AdminStatsScreen(onBack: () -> Unit) {
     var drilldownReloadKey by remember { mutableIntStateOf(0) }
     var drilldownUserId by remember { mutableStateOf<String?>(null) }
     var drilldownGroupId by remember { mutableStateOf<String?>(null) }
+    var drilldownQuery by remember { mutableStateOf("") }
+    var drilldownSearchLoading by remember { mutableStateOf(false) }
+    var drilldownSearchReloadKey by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(reloadKey) {
         loading = true
@@ -96,6 +102,7 @@ fun AdminStatsScreen(onBack: () -> Unit) {
         drilldownError = null
         drilldownItems = emptyList()
         drilldownCursor = null
+        drilldownQuery = ""
         val types = listOf("user", "group", "moment")
         when (val result = AppContainer.adminRepository.fetchGeoDrilldown(token, drilldownLevel, types[drilldownTypeIndex], null)) {
             is ApiResult.Ok -> {
@@ -105,6 +112,38 @@ fun AdminStatsScreen(onBack: () -> Unit) {
             is ApiResult.Err -> drilldownError = result.error.userMessage
         }
         drilldownLoading = false
+    }
+
+    // 下钻契约没有关键词参数：搜索时先加载完全部分页（最多 10 页），再本地筛选。
+    LaunchedEffect(drilldownQuery, drilldownToken, drilldownTypeIndex, drilldownSearchReloadKey) {
+        if (drilldownQuery.isBlank() || drilldownLoading) return@LaunchedEffect
+        val token = drilldownToken ?: return@LaunchedEffect
+        delay(300)
+        var next: String? = drilldownCursor ?: return@LaunchedEffect
+        drilldownSearchLoading = true
+        val types = listOf("user", "group", "moment")
+        var pages = 0
+        while (next != null && pages < 10) {
+            when (val result = AppContainer.adminRepository.fetchGeoDrilldown(token, drilldownLevel, types[drilldownTypeIndex], next)) {
+                is ApiResult.Ok -> {
+                    drilldownItems = (drilldownItems + result.data.items).distinctBy { it.objectId }
+                    drilldownCursor = result.data.nextCursor
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+        drilldownSearchLoading = false
+    }
+
+    val drilldownFiltered = remember(drilldownItems, drilldownQuery) {
+        val keyword = drilldownQuery.trim()
+        if (keyword.isBlank()) drilldownItems else drilldownItems.filter { item ->
+            item.title.contains(keyword, ignoreCase = true) ||
+                item.objectId.contains(keyword, ignoreCase = true) ||
+                item.locationName.orEmpty().contains(keyword, ignoreCase = true)
+        }
     }
 
     fun loadMoreDrilldown() {
@@ -249,6 +288,12 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                             selectedIndex = drilldownTypeIndex,
                             onSelected = { drilldownTypeIndex = it },
                         )
+                        Spacer(Modifier.height(Spacing.sm))
+                        SearchInput(
+                            value = drilldownQuery,
+                            onValueChange = { drilldownQuery = it },
+                            placeholder = "搜索标题 / 对象 ID / 位置…",
+                        )
                         if (drilldownTypeIndex != 2) {
                             Text(
                                 text = "点击行查看" + if (drilldownTypeIndex == 0) "用户详情" else "群组详情",
@@ -269,6 +314,10 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                             title = "该区域暂无明细",
                             description = "切换用户/群组/瞬间，或换个网格看看。",
                         )
+                        drilldownFiltered.isEmpty() -> EmptyState(
+                            title = "没有匹配的明细",
+                            description = "换个标题、对象 ID 或位置关键词试试。",
+                        )
                         else -> LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -277,8 +326,17 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                             ),
                         ) {
                             item {
+                                Text(
+                                    text = "共 " + drilldownItems.size + " 条" +
+                                        if (drilldownQuery.isNotBlank()) " · 匹配 " + drilldownFiltered.size + " 条" else "",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.textSecondary,
+                                    modifier = Modifier.padding(vertical = Spacing.sm, horizontal = Spacing.xs),
+                                )
+                            }
+                            item {
                                 ListGroup {
-                                    drilldownItems.forEachIndexed { index, item ->
+                                    drilldownFiltered.forEachIndexed { index, item ->
                                         Column(
                                             Modifier
                                                 .fillMaxWidth()
@@ -309,13 +367,15 @@ fun AdminStatsScreen(onBack: () -> Unit) {
                                                 overflow = TextOverflow.Ellipsis,
                                             )
                                         }
-                                        if (index != drilldownItems.lastIndex) {
+                                        if (index != drilldownFiltered.lastIndex) {
                                             HorizontalDivider(color = colors.borderSubtle)
                                         }
                                     }
                                 }
                             }
-                            if (drilldownCursor != null) {
+                            if (drilldownSearchLoading) {
+                                item { InlineLoading(text = "正在加载全部明细用于搜索…") }
+                            } else if (drilldownQuery.isBlank() && drilldownCursor != null) {
                                 item {
                                     Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) {
                                         SystemButton(
