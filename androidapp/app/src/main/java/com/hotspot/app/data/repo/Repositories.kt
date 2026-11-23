@@ -21,6 +21,7 @@ import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.AdminBannedMemberItem
 import com.hotspot.app.data.model.GroupInvitation
 import com.hotspot.app.data.model.GroupMemberItem
+import com.hotspot.app.data.model.GroupSentInviteItem
 import com.hotspot.app.data.model.GroupSettings
 import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.model.MapBounds
@@ -1104,6 +1105,32 @@ class GroupRepository(private val api: ApiClient) {
             put("message", message)
         },
         GroupInvitation.serializer(),
+    )
+
+    /** 我发出的邀请（owner/admin；status=null 默认 pending，'all' 查全部历史）。 */
+    suspend fun sentInvites(
+        groupId: String,
+        status: String? = "pending",
+        cursor: String? = null,
+        limit: Int = 50,
+    ): ApiResult<Page<GroupSentInviteItem>> = api.post(
+        ApiEndpoint.GROUPS_ADMIN_INVITES_FETCH_SENT,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("status", status?.let(::JsonPrimitive) ?: JsonNull)
+            put("pagination", pagination(cursor, limit))
+        },
+        Page.serializer(GroupSentInviteItem.serializer()),
+    )
+
+    /** 撤销待处理邀请（owner/admin）。 */
+    suspend fun revokeInvite(groupId: String, inviteId: String, reason: String? = null): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_INVITES_REVOKE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("invite_id", inviteId)
+            put("reason", reason)
+        },
     )
 
     /** 入群申请列表（群收件箱，默认 pending；owner/admin 守卫）。 */

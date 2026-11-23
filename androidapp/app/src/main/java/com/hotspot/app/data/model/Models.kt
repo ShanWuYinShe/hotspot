@@ -361,6 +361,19 @@ data class GroupInvitation(
     @SerialName("expires_at") val expiresAt: String? = null,
 )
 
+/** 我发出的群邀请（spec/api_spec_group.md → GroupSentInviteItem；status: pending/accepted/rejected/revoked）。 */
+@Serializable
+data class GroupSentInviteItem(
+    @SerialName("invite_id") val inviteId: String = "",
+    val invitee: UserInfo = UserInfo(),
+    val inviter: UserInfo = UserInfo(),
+    val status: String = "pending",
+    val message: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("responded_at") val respondedAt: String? = null,
+)
+
 /** 入群申请项（spec/api_spec_group.md → GroupApplicationItem，群管理员收件箱）。 */
 @Serializable
 data class GroupApplicationItem(

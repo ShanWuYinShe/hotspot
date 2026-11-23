@@ -144,6 +144,8 @@ app/src/main/java/com/hotspot/app/
   解除后仅移除封禁状态、不自动拉回群组。
 - **邀请成员**：更多菜单（owner/admin）→「邀请成员」→ 搜索昵称/账号 → 邀请；
   走 `groups/admin/invites/create`，被邀请者已是成员时服务端 no-op（invite_id 为 null），客户端提示「对方已是群成员」。
+- **邀请记录**：更多菜单（owner/admin）→「邀请记录」展示全部发出邀请（待接受/已加入/已拒绝/已撤销，含邀请人与消息），
+  待接受可撤销（`groups/admin/invites/fetch_sent` status=all + `invites/revoke`，二次确认）。
 - **入群申请审批**：更多菜单（owner/admin）→「入群申请」列表，逐条同意/拒绝（`groups/admin/applications/fetch|approve|reject`）；
   同意后刷新成员列表与详情，拒绝后仅从收件箱移除。
 - **转让群主**：成员操作面板中仅 owner 显示「转让群主」→ 二次确认 → `groups/admin/transfer_ownership`；
