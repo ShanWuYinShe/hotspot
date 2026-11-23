@@ -340,7 +340,7 @@ private fun AdminUserRow(
             Text(
                 text = "账号 " + item.loginId.ifBlank { "—" } +
                     " · 注册于 " + TimeFormat.relative(item.createdAt) +
-                    if (banned && item.bannedUntil != null) " · 到期 " + TimeFormat.relative(item.bannedUntil) else "",
+                    if (banned && item.bannedUntil != null) " · 到期 " + TimeFormat.absolute(item.bannedUntil) else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.textSecondary,
                 maxLines = 2,
