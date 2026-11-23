@@ -161,6 +161,13 @@ class AdminRepository(private val api: ApiClient) {
         AdminReportsPage.serializer(),
     )
 
+    /** 用户详情（平台管理；PII 字段无 read_ip 权限时为 null）。 */
+    suspend fun fetchUserDetail(userId: String): ApiResult<AdminUserItem> = api.post(
+        ApiEndpoint.ADMIN_USERS_OPEN_DOOR,
+        buildJsonObject { put("user_id", userId) },
+        AdminUserItem.serializer(),
+    )
+
     /** 搜索用户（平台管理）：nickname 模糊匹配；status 可选 normal/banned。 */
     suspend fun searchUsers(
         nickname: String?,
