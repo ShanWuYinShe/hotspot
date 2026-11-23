@@ -27,6 +27,7 @@ fun AdminHomeScreen(
     onOpenStats: () -> Unit,
     onOpenRbac: () -> Unit,
     onOpenTags: () -> Unit,
+    onOpenAudit: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxSize()) {
@@ -82,6 +83,11 @@ fun AdminHomeScreen(
                         title = "标签管理",
                         subtitle = "搜索标签、查看使用次数、软屏蔽与解屏蔽",
                         onClick = onOpenTags,
+                    )
+                    ListRow(
+                        title = "审计日志",
+                        subtitle = "查看平台操作留痕：操作者、动作、对象与详情",
+                        onClick = onOpenAudit,
                     )
                 }
             }

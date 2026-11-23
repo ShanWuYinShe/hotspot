@@ -274,6 +274,26 @@ data class AdminAnnouncementItem(
     @SerialName("view_count") val viewCount: Int = 0,
 )
 
+
+/**
+ * 管理端审计日志（spec/api_spec_admin.md → AuditLogItem）：
+ * details 为 action 对应变体（联合类型），客户端按 JSON 原样展示，避免为 17 种动作建全量 DTO。
+ */
+@Serializable
+data class AdminAuditLogItem(
+    @SerialName("log_id") val logId: String = "",
+    val action: String = "",
+    val operator: UserInfo = UserInfo(),
+    @SerialName("target_type") val targetType: String = "",
+    @SerialName("target_id") val targetId: String = "",
+    @SerialName("target_name") val targetName: String? = null,
+    val details: JsonElement? = null,
+    @SerialName("ip_location") val ipLocation: String? = null,
+    @SerialName("ip_address") val ipAddress: String? = null,
+    @SerialName("device_summary") val deviceSummary: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
 /** 管理端地理统计（spec/api_spec_admin.md → AdminGeoStatsResponse）。 */
 @Serializable
 data class AdminGeoStatsTotals(

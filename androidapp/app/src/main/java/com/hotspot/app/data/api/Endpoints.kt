@@ -130,6 +130,7 @@ object ApiEndpoint {
     const val ADMIN_RBAC_ADMINS_REVOKE = "/admin/api/v1/rbac/admins/revoke"
     const val ADMIN_TAGS_SEARCH = "/admin/api/v1/tags/search"
     const val ADMIN_TAGS_SET_BAN = "/admin/api/v1/tags/set_ban"
+    const val ADMIN_AUDIT_FETCH = "/admin/api/v1/audit/fetch"
 
     const val NOTIFY_MARK_READ = "/api/v1/notify/mark_read"
 }

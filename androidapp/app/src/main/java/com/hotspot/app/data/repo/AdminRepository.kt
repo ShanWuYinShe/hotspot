@@ -10,6 +10,7 @@ import com.hotspot.app.data.model.AdminRoleItem
 import com.hotspot.app.data.model.AdminRoleList
 import com.hotspot.app.data.model.AdminTagItem
 import com.hotspot.app.data.model.AdminAnnouncementItem
+import com.hotspot.app.data.model.AdminAuditLogItem
 import com.hotspot.app.data.model.AdminGeoDrilldownPage
 import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminGroupItem
@@ -324,6 +325,29 @@ class AdminRepository(private val api: ApiClient) {
             put("reason", reason?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
             put("duration_days", if (active) durationDays?.let(::JsonPrimitive) ?: JsonNull else JsonNull)
         },
+    )
+
+    /** 审计日志（平台管理）：action/target/operator/时间窗过滤 + keyset 分页；details 原样返回。 */
+    suspend fun fetchAuditLogs(
+        action: String? = null,
+        targetType: String? = null,
+        operatorId: String? = null,
+        targetId: String? = null,
+        startTime: String? = null,
+        endTime: String? = null,
+        cursor: String? = null,
+    ): ApiResult<Page<AdminAuditLogItem>> = api.post(
+        ApiEndpoint.ADMIN_AUDIT_FETCH,
+        buildJsonObject {
+            put("action", action?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("target_type", targetType?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("operator_id", operatorId?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("target_id", targetId?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("start_time", startTime?.let(::JsonPrimitive) ?: JsonNull)
+            put("end_time", endTime?.let(::JsonPrimitive) ?: JsonNull)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(AdminAuditLogItem.serializer()),
     )
 
     /** 裁决举报：resolve=有效 / dismiss=驳回；banDurationDays 仅 resolve 时可选（0=永久）。 */
