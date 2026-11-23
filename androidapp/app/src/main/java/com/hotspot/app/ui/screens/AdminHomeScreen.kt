@@ -26,6 +26,7 @@ fun AdminHomeScreen(
     onOpenAnnouncements: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenRbac: () -> Unit,
+    onOpenTags: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxSize()) {
@@ -76,6 +77,11 @@ fun AdminHomeScreen(
                         title = "权限与角色",
                         subtitle = "查看平台管理员、RBAC 角色与权限字典",
                         onClick = onOpenRbac,
+                    )
+                    ListRow(
+                        title = "标签管理",
+                        subtitle = "搜索标签、查看使用次数、软屏蔽与解屏蔽",
+                        onClick = onOpenTags,
                     )
                 }
             }

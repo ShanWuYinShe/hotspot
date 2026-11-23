@@ -119,6 +119,8 @@ object ApiEndpoint {
     const val ADMIN_RBAC_ROLES_FETCH = "/admin/api/v1/rbac/roles/fetch"
     const val ADMIN_RBAC_PERMISSIONS_FETCH = "/admin/api/v1/rbac/permissions/fetch"
     const val ADMIN_RBAC_ADMINS_FETCH = "/admin/api/v1/rbac/admins/fetch"
+    const val ADMIN_TAGS_SEARCH = "/admin/api/v1/tags/search"
+    const val ADMIN_TAGS_SET_BAN = "/admin/api/v1/tags/set_ban"
 
     const val NOTIFY_MARK_READ = "/api/v1/notify/mark_read"
 }
