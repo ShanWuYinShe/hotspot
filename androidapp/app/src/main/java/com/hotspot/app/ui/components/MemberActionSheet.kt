@@ -29,6 +29,7 @@ enum class MemberAction(val label: String, val destructive: Boolean = false) {
     MUTE_1H("禁言 1 小时"),
     UNMUTE("解除禁言"),
     REMOVE("移除成员", destructive = true),
+    TRANSFER_OWNER("转让群主", destructive = true),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
