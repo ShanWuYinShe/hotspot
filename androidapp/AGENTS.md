@@ -117,6 +117,9 @@ app/src/main/java/com/hotspot/app/
 - **群聊 @ 提及**：输入 `@` 弹出群成员候选（缺省拉取 `groups/members/fetch`），插入「@昵称 」；
   发送时 `group_messages/send` 的 `mentions` 只提交最终文案里仍存在的被 @ 成员 user_id
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
+- **聊天语音**：输入条麦克风按钮 → `RECORD_AUDIO` 权限 → 录音栏（红点/计时/取消/发送）→
+  `ChatAudioUploader`（chat_audio，20MB / audio/aac，AAC-ADTS，流式上传）→ `type=audio`；
+  语音气泡点击用 MediaPlayer 播放/停止，服务端无 duration 时显示「语音」。
 - **聊天图片/视频**：输入条相册按钮 → 系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流：
   `ChatImageUploader`（chat_image，10MB / JPG·PNG·WebP·GIF）或 `ChatVideoUploader`
   （chat_video，100MB / video/mp4·video/quicktime，流式上传）→ `private_messages/send` /
@@ -173,7 +176,7 @@ app/src/main/java/com/hotspot/app/
 2. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
-   语音消息与 @提及消息的独立通知跳转未做（图片/视频/文件消息已接入）；
+   @提及消息的独立通知跳转未做；语音消息已接入（录制 + 播放，chat_audio）；
    群管理已接入（owner/admin）：群信息编辑、群设置、公告管理、成员管理（角色/禁言/移除/封禁）、
    转让群主、入群申请审批与邀请成员；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
