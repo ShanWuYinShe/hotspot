@@ -110,6 +110,7 @@ object ApiEndpoint {
     const val ADMIN_USERS_OPEN_DOOR = "/admin/api/v1/users/open_the_door"
     const val ADMIN_USERS_SET_BAN = "/admin/api/v1/users/set_ban"
     const val ADMIN_GROUPS_SEARCH = "/admin/api/v1/groups/search"
+    const val ADMIN_GROUPS_OPEN_THE_DOOR = "/admin/api/v1/groups/open_the_door"
     const val ADMIN_GROUPS_DISMISS = "/admin/api/v1/groups/dismiss"
     const val ADMIN_ANNOUNCEMENTS_FETCH = "/admin/api/v1/announcements/fetch"
     const val ADMIN_ANNOUNCEMENTS_CREATE = "/admin/api/v1/announcements/create"

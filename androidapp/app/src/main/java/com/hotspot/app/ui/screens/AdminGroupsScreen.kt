@@ -1,6 +1,7 @@
 package com.hotspot.app.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -66,6 +67,7 @@ fun AdminGroupsScreen(onBack: () -> Unit) {
     var reloadKey by remember { mutableIntStateOf(0) }
     var dismissTarget by remember { mutableStateOf<AdminGroupItem?>(null) }
     var dismissReason by remember { mutableStateOf("") }
+    var selectedGroupId by remember { mutableStateOf<String?>(null) }
     var dismissBusy by remember { mutableStateOf(false) }
 
     LaunchedEffect(query, reloadKey) {
@@ -99,7 +101,7 @@ fun AdminGroupsScreen(onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader(title = "群组管理", subtitle = "平台群组", onBack = onBack)
+        PageHeader(title = "群组管理", subtitle = "平台群组 · 点击行查看详情", onBack = onBack)
         Column(Modifier.padding(horizontal = Spacing.lg)) {
             SearchInput(value = query, onValueChange = { query = it }, placeholder = "搜索群名…")
             Spacer(Modifier.height(Spacing.sm2))
@@ -121,7 +123,11 @@ fun AdminGroupsScreen(onBack: () -> Unit) {
                 item {
                     ListGroup {
                         items.forEach { item ->
-                            AdminGroupRow(item = item, onDismiss = { dismissTarget = item; dismissReason = "" })
+                            AdminGroupRow(
+                                item = item,
+                                onOpen = { selectedGroupId = item.group.groupId },
+                                onDismiss = { dismissTarget = item; dismissReason = "" },
+                            )
                         }
                     }
                 }
@@ -204,17 +210,23 @@ fun AdminGroupsScreen(onBack: () -> Unit) {
             },
         )
     }
+
+    selectedGroupId?.let { groupId ->
+        AdminGroupDetailDialog(groupId = groupId, onDismiss = { selectedGroupId = null })
+    }
 }
 
 @Composable
 private fun AdminGroupRow(
     item: AdminGroupItem,
+    onOpen: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onOpen)
             .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
