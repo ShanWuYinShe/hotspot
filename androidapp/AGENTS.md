@@ -88,7 +88,7 @@ app/src/main/java/com/hotspot/app/
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
   data/location/   # 浏览锚点本地存储（地图选点页写入；附近页 reference_point 优先用它）
-  data/media/      # 聊天图片/文件上传（chat_image 10MB 图片白名单；chat_file 100MB 流式上传 + 黑名单校验）
+  data/media/      # 聊天媒体上传（chat_image 10MB；chat_video 100MB MP4/MOV；chat_file 100MB + 黑名单）
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
@@ -117,10 +117,12 @@ app/src/main/java/com/hotspot/app/
 - **群聊 @ 提及**：输入 `@` 弹出群成员候选（缺省拉取 `groups/members/fetch`），插入「@昵称 」；
   发送时 `group_messages/send` 的 `mentions` 只提交最终文案里仍存在的被 @ 成员 user_id
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
-- **聊天图片**：输入条左侧相册按钮 → 系统 Photo Picker → `data/media/ChatImageUploader`
-  （chat_image 分类，先校验 10MB / JPG·PNG·WebP·GIF 白名单再读文件）→ `private_messages/send` /
-  `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL），
-  加载失败回落「[图片]」占位。
+- **聊天图片/视频**：输入条相册按钮 → 系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流：
+  `ChatImageUploader`（chat_image，10MB / JPG·PNG·WebP·GIF）或 `ChatVideoUploader`
+  （chat_video，100MB / video/mp4·video/quicktime，流式上传）→ `private_messages/send` /
+  `group_messages/send` 的 `type=image|video` + `file_id`；图片气泡用 Coil 加载 `media.url`，
+  加载失败回落「[图片]」；视频气泡优先展示 `media.thumbnail_url` + 播放角标，无缩略图用深色占位，点击用
+  系统 ACTION_VIEW 打开签名 URL。
 - **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
@@ -153,7 +155,7 @@ app/src/main/java/com/hotspot/app/
 2. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
-   语音/视频富媒体与 @提及消息的独立通知跳转未做（文件消息已接入）；
+   语音消息与 @提及消息的独立通知跳转未做（图片/视频/文件消息已接入）；
    群管理（改群信息 / 成员管理 / 转让群主）未做；群公告管理已接入（owner/admin 发布/编辑/删除，支持置顶）；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
    消息长按操作面板已接入：复制文本 / 撤回自己未超时消息 / 举报他人消息；

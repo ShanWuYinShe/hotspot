@@ -571,6 +571,21 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** 发送私聊视频消息（file_id 来自 media/complete_upload，category=chat_video）。 */
+    suspend fun sendVideoMessage(targetUserId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.PRIVATE_MESSAGES_SEND,
+        buildJsonObject {
+            put("target_user_id", targetUserId)
+            put("type", "video")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
     /** 发送私聊文件消息（file_id 来自 media/complete_upload，category=chat_file）。 */
     suspend fun sendFileMessage(targetUserId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
         ApiEndpoint.PRIVATE_MESSAGES_SEND,
@@ -656,6 +671,22 @@ class ChatRepository(private val api: ApiClient) {
         buildJsonObject {
             put("group_id", groupId)
             put("type", "image")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+            put("mentions", buildJsonArray { })
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
+    /** 发送群视频消息（file_id 来自 media/complete_upload，category=chat_video）。 */
+    suspend fun sendGroupVideoMessage(groupId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.GROUP_MESSAGES_SEND,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("type", "video")
             put("content", JsonNull)
             put("file_id", fileId)
             put("share_code", JsonNull)

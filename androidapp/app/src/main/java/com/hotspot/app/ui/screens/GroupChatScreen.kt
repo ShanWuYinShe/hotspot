@@ -64,6 +64,7 @@ import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.media.ChatFileUploader
 import com.hotspot.app.data.media.ChatImageUploader
+import com.hotspot.app.data.media.ChatVideoUploader
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
@@ -73,6 +74,7 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.ChatFileBubble
 import com.hotspot.app.ui.components.ChatImageBubble
+import com.hotspot.app.ui.components.ChatVideoBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
@@ -185,23 +187,39 @@ fun GroupChatScreen(onBack: () -> Unit) {
             }
         }
     }
+    // 发送图片/视频：系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流 chat_image / chat_video 三步上传。
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             uploading = true
             error = null
             try {
-                ChatImageUploader.upload(context, uri)
-                    .onSuccess { uploaded ->
-                        when (val result = chatRepository.sendGroupImageMessage(groupId, uploaded.fileId)) {
-                            is ApiResult.Ok -> {
-                                reload()
-                                listState.animateScrollToItem(0)
+                val mime = context.contentResolver.getType(uri)?.lowercase().orEmpty()
+                if (mime.startsWith("video/")) {
+                    ChatVideoUploader.upload(context, uri)
+                        .onSuccess { uploaded ->
+                            when (val result = chatRepository.sendGroupVideoMessage(groupId, uploaded.fileId)) {
+                                is ApiResult.Ok -> {
+                                    reload()
+                                    listState.animateScrollToItem(0)
+                                }
+                                is ApiResult.Err -> error = result.error.userMessage
                             }
-                            is ApiResult.Err -> error = result.error.userMessage
                         }
-                    }
-                    .onFailure { error = it.message ?: "图片发送失败，请重试" }
+                        .onFailure { error = it.message ?: "视频发送失败，请重试" }
+                } else {
+                    ChatImageUploader.upload(context, uri)
+                        .onSuccess { uploaded ->
+                            when (val result = chatRepository.sendGroupImageMessage(groupId, uploaded.fileId)) {
+                                is ApiResult.Ok -> {
+                                    reload()
+                                    listState.animateScrollToItem(0)
+                                }
+                                is ApiResult.Err -> error = result.error.userMessage
+                            }
+                        }
+                        .onFailure { error = it.message ?: "图片发送失败，请重试" }
+                }
             } finally {
                 uploading = false
             }
@@ -456,14 +474,14 @@ fun GroupChatScreen(onBack: () -> Unit) {
                     .clip(CircleShape)
                     .clickable(enabled = !uploading) {
                         imagePicker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
                         )
                     },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_action_gallery),
-                    contentDescription = if (uploading) "图片发送中" else "发送图片",
+                    contentDescription = if (uploading) "媒体发送中" else "发送图片或视频",
                     modifier = Modifier.size(Dimens.iconMd),
                     tint = if (uploading) colors.textSecondary else colors.accent,
                 )
@@ -728,6 +746,13 @@ private fun GroupMessageRow(
                         imageUrl = imageUrl,
                         isMine = isMine,
                         contentDescription = "群聊图片",
+                    )
+                } else if (!message.isRecalled && message.type == "video") {
+                    ChatVideoBubble(
+                        fileName = message.media?.fileName,
+                        durationSeconds = message.media?.duration,
+                        thumbnailUrl = message.media?.thumbnailUrl,
+                        videoUrl = imageUrl,
                     )
                 } else if (!message.isRecalled && message.type == "file") {
                     ChatFileBubble(
