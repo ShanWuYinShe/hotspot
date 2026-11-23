@@ -88,7 +88,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 - `-stop` 可能 hang，清场用 `pkill -9 -f Emulator`。
 - 只读系统镜像在 `~/Library/Huawei/Sdk/system-image/...`，读不受限，无需搬运。
-- 若报 `EPERM ... Operation not permitted`（注意是 **EPERM 而非 EACCES**，属沙盒拒绝签名）：把报错路径加进 sandbox-extra-roots 的 `extraWritableRoots`（见 `sandbox-adaptation` skill），热生效后重试即可；不要申请 `danger-full-access`。
+- 若报 `EPERM ... Operation not permitted`（注意是 **EPERM 而非 EACCES**，属沙盒拒绝签名）：把报错路径加进 sandbox-extra-roots 的 `extraWritableRoots`（见 `sandbox-adaptation` skill），热生效后重试；配置不可用或仍失败时，按全局流程对单条命令申请更宽松权限（由用户审批），不要自行放宽沙盒。
 - **实例目录 EPERM 的具体形态**：`Emulator -start "Pura 90 Pro"` 报 `Error opening logfile /Users/<me>/.Huawei/Emulator/deployed/Pura 90 Pro/Log//qemu.log: Operation not permitted` 且**进程直接没起来**（`pgrep -f Emulator` 为空）——但 hdc 可能仍留 `127.0.0.1:5555 Offline` 僵尸条目，别把它当「模拟器在启动中」等下去。实测实例目录 `touch` 也是 EPERM（沙盒拒绝签名，不是文件权限问题）；解法同上（把实例目录加进 `extraWritableRoots`）。
 
 ### 2) 反向转发（rport）与热启动残留
