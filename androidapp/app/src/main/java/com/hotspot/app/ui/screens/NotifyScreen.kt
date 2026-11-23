@@ -32,6 +32,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.NotifyItem
@@ -41,13 +43,16 @@ import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
+import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -70,23 +75,76 @@ fun NotifyScreen(
     onOpenReports: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var items by remember { mutableStateOf<List<NotifyItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var marking by remember { mutableStateOf(false) }
     var retryKey by remember { mutableIntStateOf(0) }
+    var query by remember { mutableStateOf("") }
+    var cursor by remember { mutableStateOf<String?>(null) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var searchLoadingAll by remember { mutableStateOf(false) }
 
     suspend fun load() {
         loading = items.isEmpty()
         error = null
         when (val result = AppContainer.notifyRepository.fetch(null)) {
-            is ApiResult.Ok -> items = result.data.items
+            is ApiResult.Ok -> {
+                items = result.data.items
+                cursor = result.data.nextCursor
+            }
             is ApiResult.Err -> error = result.error.userMessage
         }
         loading = false
     }
 
     LaunchedEffect(retryKey) { load() }
+
+    fun loadMore() {
+        val next = cursor ?: return
+        if (loadingMore || loading) return
+        loadingMore = true
+        scope.launch {
+            when (val result = AppContainer.notifyRepository.fetch(next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.notifyId }
+                    cursor = result.data.nextCursor
+                }
+                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+            }
+            loadingMore = false
+        }
+    }
+
+    // 通知契约没有关键词参数：搜索时先加载完分页（最多 10 页），再本地筛选。
+    LaunchedEffect(query, retryKey) {
+        if (query.isBlank() || loading) return@LaunchedEffect
+        var next: String? = cursor ?: return@LaunchedEffect
+        searchLoadingAll = true
+        var pages = 0
+        while (next != null && pages < 10) {
+            when (val result = AppContainer.notifyRepository.fetch(next)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.notifyId }
+                    cursor = result.data.nextCursor
+                    next = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+        searchLoadingAll = false
+    }
+
+    val filteredItems = remember(items, query) {
+        val keyword = query.trim()
+        if (keyword.isBlank()) items else items.filter { item ->
+            item.type.contains(keyword, ignoreCase = true) ||
+                item.notifyId.contains(keyword, ignoreCase = true) ||
+                item.payload.toString().contains(keyword, ignoreCase = true)
+        }
+    }
 
     /** 点击通知：先标记已读，再按 payload 跳到对应页面（无可跳转目标时只标已读）。 */
     fun openNotification(item: NotifyItem) {
@@ -145,6 +203,14 @@ fun NotifyScreen(
                 }
             },
         )
+        Column(Modifier.padding(horizontal = Spacing.lg)) {
+            SearchInput(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = "搜索通知内容 / 用户 ID / 类型…",
+            )
+            Spacer(Modifier.height(Spacing.sm))
+        }
         when {
             loading -> LoadingState(message = "正在加载通知…")
             error != null && items.isEmpty() -> ErrorState(
@@ -155,6 +221,10 @@ fun NotifyScreen(
                 title = "暂时没有通知",
                 description = "互动、关注与系统消息都会出现在这里",
             )
+            filteredItems.isEmpty() -> EmptyState(
+                title = "没有匹配的通知",
+                description = "换个通知内容、用户 ID 或类型关键词试试",
+            )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
@@ -163,8 +233,31 @@ fun NotifyScreen(
                 ),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                items(items, key = { it.notifyId }) { item ->
+                item {
+                    Text(
+                        text = "共 " + items.size + " 条" + if (query.isNotBlank()) " · 匹配 " + filteredItems.size + " 条" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = HotSpotTheme.colors.textSecondary,
+                    )
+                }
+                items(filteredItems, key = { it.notifyId }) { item ->
                     NotificationRow(item, onClick = { openNotification(item) })
+                }
+                if (searchLoadingAll) {
+                    item { InlineLoading(text = "正在加载全部通知用于搜索…") }
+                } else if (query.isBlank() && cursor != null) {
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(vertical = Spacing.lg)) {
+                            SystemButton(
+                                text = if (loadingMore) "加载中…" else "加载更多",
+                                onClick = { loadMore() },
+                                variant = ButtonVariant.SECONDARY,
+                                size = ButtonSize.SM,
+                                enabled = !loadingMore,
+                                loading = loadingMore,
+                            )
+                        }
+                    }
                 }
             }
         }
