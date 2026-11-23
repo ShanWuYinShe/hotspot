@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ModalBottomSheet
@@ -60,6 +64,8 @@ import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonArray
@@ -99,6 +105,10 @@ fun AdminAuditScreen(
     var actionFilter by remember { mutableStateOf<String?>(null) }
     var showActionSheet by remember { mutableStateOf(false) }
     var rangeIndex by remember { mutableIntStateOf(0) }
+    var customStartMillis by remember { mutableStateOf<Long?>(null) }
+    var customEndMillis by remember { mutableStateOf<Long?>(null) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
     var detailItem by remember { mutableStateOf<AdminAuditLogItem?>(null) }
     val searching = query.isNotBlank()
     val shownItems = if (searching) searchItems else items
@@ -107,13 +117,15 @@ fun AdminAuditScreen(
     val startTime = when (rangeIndex) {
         1 -> Instant.now().minus(7, ChronoUnit.DAYS).toString()
         2 -> Instant.now().minus(30, ChronoUnit.DAYS).toString()
+        3 -> customStartMillis?.let(::localStartIso)
         else -> null
     }
+    val endTime = if (rangeIndex == 3) customEndMillis?.let(::localEndIso) else null
 
-    LaunchedEffect(targetType, actionFilter, startTime, reloadKey) {
+    LaunchedEffect(targetType, actionFilter, startTime, endTime, reloadKey) {
         loading = true
         error = null
-        when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime)) {
+        when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime, endTime = endTime)) {
             is ApiResult.Ok -> {
                 items = result.data.items
                 cursor = result.data.nextCursor
@@ -124,7 +136,7 @@ fun AdminAuditScreen(
     }
 
     // 搜索：契约无 keyword，自动加载完全部分页后本地匹配操作者/动作/对象/详情。
-    LaunchedEffect(query, targetType, actionFilter, startTime, searchReloadKey) {
+    LaunchedEffect(query, targetType, actionFilter, startTime, endTime, searchReloadKey) {
         val q = query.trim()
         if (q.isEmpty()) {
             searchItems = emptyList()
@@ -139,7 +151,7 @@ fun AdminAuditScreen(
         val all = mutableListOf<AdminAuditLogItem>()
         var next: String? = null
         for (page in 0 until 10) {
-            when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime, cursor = next)) {
+            when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime, endTime = endTime, cursor = next)) {
                 is ApiResult.Ok -> {
                     all += result.data.items
                     next = result.data.nextCursor
@@ -192,10 +204,30 @@ fun AdminAuditScreen(
                     modifier = Modifier.width(40.dp),
                 )
                 TabPills(
-                    options = listOf("全部", "近 7 天", "近 30 天"),
+                    options = listOf("全部", "近 7 天", "近 30 天", "自定义"),
                     selectedIndex = rangeIndex,
-                    onSelected = { rangeIndex = it },
+                    onSelected = {
+                        rangeIndex = it
+                        if (it == 3 && customStartMillis == null) showStartPicker = true
+                    },
                 )
+            }
+            if (rangeIndex == 3) {
+                Spacer(Modifier.height(Spacing.sm))
+                Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    SystemButton(
+                        text = customStartMillis?.let { localDateLabel(it) } ?: "开始日期",
+                        onClick = { showStartPicker = true },
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                    )
+                    SystemButton(
+                        text = customEndMillis?.let { localDateLabel(it) } ?: "结束日期",
+                        onClick = { showEndPicker = true },
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                    )
+                }
             }
             Spacer(Modifier.height(Spacing.sm))
             SystemButton(
@@ -255,6 +287,46 @@ fun AdminAuditScreen(
                     item { Box(Modifier.padding(vertical = Spacing.lg)) { ListEnd() } }
                 }
             }
+        }
+    }
+
+    if (showStartPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = customStartMillis)
+        DatePickerDialog(
+            onDismissRequest = { showStartPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    customStartMillis = pickerState.selectedDateMillis
+                    showStartPicker = false
+                    if (customStartMillis != null && customEndMillis == null) showEndPicker = true
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showStartPicker = false
+                    if (customStartMillis == null) rangeIndex = 0
+                }) { Text("取消") }
+            },
+        ) {
+            DatePicker(state = pickerState)
+        }
+    }
+
+    if (showEndPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = customEndMillis ?: customStartMillis)
+        DatePickerDialog(
+            onDismissRequest = { showEndPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    customEndMillis = pickerState.selectedDateMillis
+                    showEndPicker = false
+                }) { Text("确定") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEndPicker = false }) { Text("取消") }
+            },
+        ) {
+            DatePicker(state = pickerState)
         }
     }
 
@@ -540,6 +612,19 @@ private fun formatJsonValue(value: JsonElement): String = when (value) {
     is JsonObject -> value.entries.joinToString(", ") { (k, v) -> k + ": " + formatJsonValue(v) }
     else -> value.toString()
 }
+
+/** 日期选择器返回 UTC 零点毫秒；转换为本地时区当日起点/终点（审计 start/end 为闭区间）。 */
+private fun localStartIso(millis: Long): String =
+    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+        .atStartOfDay(ZoneId.systemDefault()).toInstant().toString()
+
+private fun localEndIso(millis: Long): String =
+    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+        .atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toString()
+
+private fun localDateLabel(millis: Long): String =
+    Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+        .format(java.time.format.DateTimeFormatter.ofPattern("MM-dd"))
 
 private val TARGET_TYPES = listOf(
     "全部" to null,
