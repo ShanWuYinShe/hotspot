@@ -242,7 +242,13 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var recordingSeconds by remember { mutableIntStateOf(0) }
     var audioSending by remember { mutableStateOf(false) }
     val recorder = remember { VoiceRecorder(context) }
-    DisposableEffect(Unit) { onDispose { recorder.cancel() } }
+    DisposableEffect(Unit) {
+        onDispose {
+            recorder.cancel()
+            // 离开聊天页停止语音，避免全局播放器在别的页面继续响。
+            AppContainer.audioPlaybackController.stop()
+        }
+    }
     fun beginVoiceRecording() {
         recorder.start()
             .onSuccess {

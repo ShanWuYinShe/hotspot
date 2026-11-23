@@ -89,6 +89,7 @@ app/src/main/java/com/hotspot/app/
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
   data/location/   # 浏览锚点本地存储（地图选点页写入；附近页 reference_point 优先用它）
   data/media/      # 聊天媒体上传（chat_image 10MB；chat_video 100MB MP4/MOV；chat_file 100MB + 黑名单）
+  data/audio/      # 应用级语音播放控制器（全局单播放器，聊天页退出停止）
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
@@ -122,8 +123,9 @@ app/src/main/java/com/hotspot/app/
   （`util/MentionRules.kt`）；消息气泡内 `@昵称` 加粗高亮。
 - **聊天语音**：输入条麦克风按钮 → `RECORD_AUDIO` 权限 → 录音栏（红点/计时/取消/发送）→
   `ChatAudioUploader`（chat_audio，20MB / audio/aac，AAC-ADTS，流式上传）→ `type=audio`；
-  语音气泡点击用 MediaPlayer 播放/停止，播放中显示进度条与「已播放 / 总时长」（每 200ms 轮询），
-  播完/停止后显示实际总时长；服务端无 duration 时以播放器实际时长为准。
+  语音气泡点击由应用级 `AudioPlaybackController` 播放/停止（全局单播放器，切换语音先停上一条），
+  播放中显示进度条与「已播放 / 总时长」（每 200ms 轮询），播完/停止后显示实际总时长；
+  服务端无 duration 时以播放器实际时长为准；离开聊天页自动停止。
 - **聊天图片/视频**：输入条相册按钮 → 系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流：
   `ChatImageUploader`（chat_image，10MB / JPG·PNG·WebP·GIF）或 `ChatVideoUploader`
   （chat_video，100MB / video/mp4·video/quicktime，流式上传）→ `private_messages/send` /
