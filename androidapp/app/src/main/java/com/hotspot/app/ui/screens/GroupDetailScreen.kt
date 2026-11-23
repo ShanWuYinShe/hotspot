@@ -76,6 +76,7 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.GroupAnnouncementItem
+import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupSettings
@@ -88,6 +89,7 @@ import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.EmptyState
+import com.hotspot.app.ui.components.GroupApplicationsDialog
 import com.hotspot.app.ui.components.GroupInfoEditorDialog
 import com.hotspot.app.ui.components.GroupSettingsDialog
 import com.hotspot.app.ui.components.ErrorState
@@ -219,6 +221,12 @@ fun GroupDetailScreen(
     var groupSettingsError by remember(groupId) { mutableStateOf<String?>(null) }
     var groupSettingsSaveError by remember(groupId) { mutableStateOf<String?>(null) }
     var groupSettingsSaving by remember(groupId) { mutableStateOf(false) }
+    // 入群申请（群收件箱）
+    var showApplications by remember(groupId) { mutableStateOf(false) }
+    var applications by remember(groupId) { mutableStateOf<List<GroupApplicationItem>?>(null) }
+    var applicationsLoading by remember(groupId) { mutableStateOf(false) }
+    var applicationsError by remember(groupId) { mutableStateOf<String?>(null) }
+    var applicationProcessingId by remember(groupId) { mutableStateOf<String?>(null) }
     // 群成员管理（owner/admin）：角色 / 禁言 / 移除
     var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
@@ -370,6 +378,19 @@ fun GroupDetailScreen(
             onEditGroupInfo = {
                 groupInfoError = null
                 showGroupInfoEditor = true
+            },
+            onOpenApplications = {
+                applications = null
+                applicationsError = null
+                showApplications = true
+                scope.launch {
+                    applicationsLoading = true
+                    when (val result = repository.applications(groupId)) {
+                        is ApiResult.Ok -> applications = result.data
+                        is ApiResult.Err -> applicationsError = result.error.userMessage
+                    }
+                    applicationsLoading = false
+                }
             },
             onOpenGroupSettings = {
                 groupSettings = null
@@ -687,6 +708,57 @@ fun GroupDetailScreen(
         )
     }
 
+    if (showApplications) {
+        GroupApplicationsDialog(
+            applications = applications,
+            loading = applicationsLoading,
+            error = applicationsError,
+            processingId = applicationProcessingId,
+            onRetry = {
+                scope.launch {
+                    applicationsLoading = true
+                    applicationsError = null
+                    when (val result = repository.applications(groupId)) {
+                        is ApiResult.Ok -> applications = result.data
+                        is ApiResult.Err -> applicationsError = result.error.userMessage
+                    }
+                    applicationsLoading = false
+                }
+            },
+            onApprove = { application ->
+                if (applicationProcessingId != null) return@GroupApplicationsDialog
+                applicationProcessingId = application.applicationId
+                scope.launch {
+                    when (val result = repository.approveApplication(groupId, application.applicationId)) {
+                        is ApiResult.Ok -> {
+                            applications = applications?.filterNot { it.applicationId == application.applicationId }
+                            membersState.initialLoad(memberLoader)
+                            loadDetail()
+                            Toast.makeText(context, "已同意入群申请", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    applicationProcessingId = null
+                }
+            },
+            onReject = { application ->
+                if (applicationProcessingId != null) return@GroupApplicationsDialog
+                applicationProcessingId = application.applicationId
+                scope.launch {
+                    when (val result = repository.rejectApplication(groupId, application.applicationId)) {
+                        is ApiResult.Ok -> {
+                            applications = applications?.filterNot { it.applicationId == application.applicationId }
+                            Toast.makeText(context, "已拒绝入群申请", Toast.LENGTH_SHORT).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    applicationProcessingId = null
+                }
+            },
+            onDismiss = { if (applicationProcessingId == null) showApplications = false },
+        )
+    }
+
     transferTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { if (!transferBusy) transferTarget = null },
@@ -790,6 +862,7 @@ private fun GroupTopNavBar(
     onReportGroup: () -> Unit,
     onEditGroupInfo: () -> Unit,
     onOpenGroupSettings: () -> Unit,
+    onOpenApplications: () -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Row(
@@ -847,6 +920,21 @@ private fun GroupTopNavBar(
                         onClick = {
                             menuExpanded = false
                             onOpenGroupSettings()
+                        },
+                    )
+                }
+                if (canManageGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "入群申请",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onOpenApplications()
                         },
                     )
                 }

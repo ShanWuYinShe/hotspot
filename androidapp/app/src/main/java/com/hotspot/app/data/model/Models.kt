@@ -305,6 +305,19 @@ data class GroupMemberItem(
     @SerialName("last_online_at") val lastOnlineAt: String? = null,
 )
 
+/** 入群申请项（spec/api_spec_group.md → GroupApplicationItem，群管理员收件箱）。 */
+@Serializable
+data class GroupApplicationItem(
+    @SerialName("application_id") val applicationId: String = "",
+    val group: GroupInfo = GroupInfo(),
+    val applicant: UserInfo = UserInfo(),
+    val message: String? = null,
+    val status: String = "pending",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("handled_at") val handledAt: String? = null,
+)
+
 /** 群设置（spec/api_spec_types.md → GroupSettings，groups/admin/settings 返回）。 */
 @Serializable
 data class GroupSettings(

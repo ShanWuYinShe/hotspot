@@ -14,6 +14,7 @@ import com.hotspot.app.data.model.DefaultLocation
 import com.hotspot.app.data.model.EnterGroupResult
 import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.GroupAnnouncementItem
+import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupAnnouncementList
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.GroupMemberItem
@@ -988,6 +989,42 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 群公告列表（单次全量返回，无 cursor；置顶优先由服务端排序）。 */
+    /** 入群申请列表（群收件箱，默认 pending；owner/admin 守卫）。 */
+    suspend fun applications(groupId: String, status: String = "pending"): ApiResult<List<GroupApplicationItem>> {
+        val result = api.post(
+            ApiEndpoint.GROUPS_ADMIN_APPLICATIONS_FETCH,
+            buildJsonObject {
+                put("group_id", groupId)
+                put("status", status)
+                put("pagination", pagination(null, 50))
+            },
+            Page.serializer(GroupApplicationItem.serializer()),
+        )
+        return when (result) {
+            is ApiResult.Ok -> ApiResult.Ok(result.data.items)
+            is ApiResult.Err -> result
+        }
+    }
+
+    /** 同意入群申请（owner/admin）。 */
+    suspend fun approveApplication(groupId: String, applicationId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_APPLICATIONS_APPROVE,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("application_id", applicationId)
+        },
+    )
+
+    /** 拒绝入群申请（reason 0-200 字符，可空）。 */
+    suspend fun rejectApplication(groupId: String, applicationId: String, reason: String? = null): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_APPLICATIONS_REJECT,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("application_id", applicationId)
+            put("reason", reason)
+        },
+    )
+
     /** 群设置（管理视角 GroupSettings，owner/admin 守卫）。 */
     suspend fun settings(groupId: String): ApiResult<GroupSettings> = api.post(
         ApiEndpoint.GROUPS_ADMIN_SETTINGS,
