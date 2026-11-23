@@ -111,6 +111,7 @@ import com.hotspot.app.ui.components.MemberAction
 import com.hotspot.app.ui.components.MemberActionSheet
 import com.hotspot.app.ui.components.MediaBadge
 import com.hotspot.app.ui.components.ReportDialog
+import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.components.TabPills
@@ -196,6 +197,20 @@ fun GroupDetailScreen(
     val membersState = rememberPagedListState<GroupMemberItem>()
     val memberLoader: suspend (String?) -> ApiResult<Page<GroupMemberItem>> = { cursor ->
         repository.members(groupId, cursor)
+    }
+    var memberQuery by remember(groupId) { mutableStateOf("") }
+    val memberSearchState = rememberPagedListState<GroupMemberItem>()
+    val memberSearchLoader: suspend (String?) -> ApiResult<Page<GroupMemberItem>> = { cursor ->
+        repository.searchMembers(groupId, memberQuery.trim(), cursor)
+    }
+
+    LaunchedEffect(memberQuery) {
+        if (memberQuery.isBlank()) {
+            memberSearchState.reset()
+            return@LaunchedEffect
+        }
+        delay(350)
+        memberSearchState.initialLoad(memberSearchLoader)
     }
 
     var announcements by remember(groupId) { mutableStateOf<List<GroupAnnouncementItem>?>(null) }
@@ -307,6 +322,7 @@ fun GroupDetailScreen(
         loadDetail()
         if (detailError != null) actionError = detailError
         membersState.initialLoad(memberLoader)
+        if (memberQuery.isNotBlank()) memberSearchState.initialLoad(memberSearchLoader)
     }
 
     LaunchedEffect(groupId) {
@@ -324,8 +340,17 @@ fun GroupDetailScreen(
             scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue - MEMBER_LOAD_MORE_THRESHOLD
         }
     }
-    LaunchedEffect(shouldLoadMore, membersState.items.size, membersState.endReached, tabIndex) {
-        if (tabIndex == 1 && shouldLoadMore) membersState.loadMore(memberLoader)
+    LaunchedEffect(
+        shouldLoadMore,
+        membersState.items.size,
+        membersState.endReached,
+        memberSearchState.items.size,
+        memberSearchState.endReached,
+        tabIndex,
+        memberQuery,
+    ) {
+        if (tabIndex != 1 || !shouldLoadMore) return@LaunchedEffect
+        if (memberQuery.isBlank()) membersState.loadMore(memberLoader) else memberSearchState.loadMore(memberSearchLoader)
     }
 
     // 切换 tab 时把分页标签行滚到视口顶部（不沿用上一 tab 的滚动位置）
@@ -524,6 +549,9 @@ fun GroupDetailScreen(
                     onTabSelected = { tabIndex = it },
                     scrollState = scrollState,
                     membersState = membersState,
+                    memberSearchState = memberSearchState,
+                    memberQuery = memberQuery,
+                    onMemberQueryChange = { memberQuery = it },
                     announcements = announcements,
                     announcementsLoading = announcementsLoading,
                     announcementsError = announcementsError,
@@ -551,6 +579,8 @@ fun GroupDetailScreen(
                     onManageMember = { member -> managedMember = member },
                     onRetryMembersFirst = { scope.launch { membersState.initialLoad(memberLoader) } },
                     onRetryMembersMore = { scope.launch { membersState.loadMore(memberLoader) } },
+                    onRetrySearchFirst = { scope.launch { memberSearchState.initialLoad(memberSearchLoader) } },
+                    onRetrySearchMore = { scope.launch { memberSearchState.loadMore(memberSearchLoader) } },
                 )
             }
         }
@@ -1382,6 +1412,9 @@ private fun GroupDetailContent(
     onTabSelected: (Int) -> Unit,
     scrollState: ScrollState,
     membersState: PagedListState<GroupMemberItem>,
+    memberSearchState: PagedListState<GroupMemberItem>,
+    memberQuery: String,
+    onMemberQueryChange: (String) -> Unit,
     announcements: List<GroupAnnouncementItem>?,
     announcementsLoading: Boolean,
     announcementsError: String?,
@@ -1397,6 +1430,8 @@ private fun GroupDetailContent(
     onManageMember: (GroupMemberItem) -> Unit,
     onRetryMembersFirst: () -> Unit,
     onRetryMembersMore: () -> Unit,
+    onRetrySearchFirst: () -> Unit,
+    onRetrySearchMore: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -1426,12 +1461,17 @@ private fun GroupDetailContent(
             )
             1 -> GroupMembersTab(
                 state = membersState,
+                searchState = memberSearchState,
+                memberQuery = memberQuery,
+                onMemberQueryChange = onMemberQueryChange,
                 totalCount = group.group.membersCount,
                 canManage = canManageMembers,
                 myUserId = myUserId,
                 onManageMember = onManageMember,
                 onRetryFirstPage = onRetryMembersFirst,
                 onRetryLoadMore = onRetryMembersMore,
+                onRetrySearchFirst = onRetrySearchFirst,
+                onRetrySearchMore = onRetrySearchMore,
             )
             else -> GroupAnnouncementsTab(
                 announcements = announcements,
@@ -1844,33 +1884,51 @@ private fun AnnouncementPreviewCard(
 @Composable
 private fun GroupMembersTab(
     state: PagedListState<GroupMemberItem>,
+    searchState: PagedListState<GroupMemberItem>,
+    memberQuery: String,
+    onMemberQueryChange: (String) -> Unit,
     totalCount: Int,
     canManage: Boolean,
     myUserId: String?,
     onManageMember: (GroupMemberItem) -> Unit,
     onRetryFirstPage: () -> Unit,
     onRetryLoadMore: () -> Unit,
+    onRetrySearchFirst: () -> Unit,
+    onRetrySearchMore: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    SearchInput(
+        value = memberQuery,
+        onValueChange = onMemberQueryChange,
+        placeholder = "搜索成员昵称…",
+    )
+    Spacer(Modifier.height(Spacing.sm))
+    val searching = memberQuery.isNotBlank()
+    val shownState = if (searching) searchState else state
+    val onRetryFirst = if (searching) onRetrySearchFirst else onRetryFirstPage
+    val onRetryMore = if (searching) onRetrySearchMore else onRetryLoadMore
     when {
-        state.loading && state.items.isEmpty() -> LoadingState(message = "正在加载成员…")
-        state.error != null && state.items.isEmpty() -> ErrorState(
-            message = state.error ?: "加载失败",
-            onRetry = onRetryFirstPage,
+        shownState.loading && shownState.items.isEmpty() -> LoadingState(
+            message = if (searching) "正在搜索成员…" else "正在加载成员…",
         )
-        state.items.isEmpty() -> EmptyState(
-            title = "还没有成员",
-            description = "这个群组暂时没有可展示的成员",
+        shownState.error != null && shownState.items.isEmpty() -> ErrorState(
+            message = shownState.error ?: "加载失败",
+            onRetry = onRetryFirst,
+        )
+        shownState.items.isEmpty() -> EmptyState(
+            title = if (searching) "没有找到匹配的成员" else "还没有成员",
+            description = if (searching) "换个昵称关键词试试" else "这个群组暂时没有可展示的成员",
         )
         else -> {
             Text(
-                text = "共 " + totalCount + " 位成员",
+                text = if (searching) "搜索「" + memberQuery.trim() + "」· " + shownState.items.size + " 位成员"
+                else "共 " + totalCount + " 位成员",
                 style = HotSpotTextStyles.caption,
                 color = colors.textSecondary,
             )
             Spacer(Modifier.height(Spacing.sm))
             ListGroup {
-                state.items.forEach { member ->
+                shownState.items.forEach { member ->
                     GroupMemberRow(
                         member = member,
                         manageable = canManage && member.role != "owner" && member.user.userId != myUserId,
@@ -1879,12 +1937,12 @@ private fun GroupMembersTab(
                 }
             }
             when {
-                state.loadingMore -> InlineLoading()
-                state.error != null -> ErrorState(
-                    message = state.error ?: "加载失败",
-                    onRetry = onRetryLoadMore,
+                shownState.loadingMore -> InlineLoading()
+                shownState.error != null -> ErrorState(
+                    message = shownState.error ?: "加载失败",
+                    onRetry = onRetryMore,
                 )
-                state.endReached -> ListEnd()
+                shownState.endReached -> ListEnd()
             }
         }
     }

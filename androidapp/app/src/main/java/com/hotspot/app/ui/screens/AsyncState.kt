@@ -43,6 +43,17 @@ class PagedListState<T> {
     var endReached by mutableStateOf(false)
         private set
 
+    /** 清空状态（切换搜索关键词/退出搜索时复用，避免旧结果串到新查询）。 */
+    fun reset() {
+        items = emptyList()
+        cursor = null
+        error = null
+        endReached = false
+        loading = false
+        refreshing = false
+        loadingMore = false
+    }
+
     suspend fun initialLoad(loader: suspend (String?) -> ApiResult<Page<T>>) {
         if (loading) return
         loading = true
