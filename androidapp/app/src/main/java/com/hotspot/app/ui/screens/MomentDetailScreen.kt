@@ -284,6 +284,9 @@ fun MomentDetailScreen(
             handledFocusCommentId = targetId
             withFrameNanos { }
             listState.animateScrollToItem(COMMENT_ITEMS_OFFSET + index)
+        } else if (!commentsEndReached && !commentsLoadingMore && !commentsLoading) {
+            // 目标评论不在首屏：自动续页继续找，直到命中或评论到底（避免用户手动下滑）。
+            loadMoreComments()
         }
     }
 
