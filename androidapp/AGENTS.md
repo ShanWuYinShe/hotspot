@@ -33,6 +33,7 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
   点击用户行打开详情（`users/open_the_door`：账号/隐私/活跃时间，IP 与注册地等 PII 仅 `admin.users.read_ip` 可见，权限不足显示占位）；
 - **群组管理**：群名搜索，展示群主/成员数/创建时间，解散群组（`groups/search`、`groups/dismiss`；
   原因仅进审计日志，成员收到 GroupDismissed 事件）；
+  点击群组行打开详情（`groups/open_the_door`：群主/成员数/标签/创建与最近活跃/简介；解散仍在列表操作）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
   区域 Top 可下钻查看用户/群组/瞬间明细（`stats/geo/drilldown`，按实体类型切换 + keyset 分页）；

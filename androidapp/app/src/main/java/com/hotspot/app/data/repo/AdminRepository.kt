@@ -279,6 +279,13 @@ class AdminRepository(private val api: ApiClient) {
         buildJsonObject { put("announcement_id", announcementId) },
     )
 
+    /** 群组详情（平台管理）：成员数/群主/标签/创建与最近活跃时间。 */
+    suspend fun fetchGroupDetail(groupId: String): ApiResult<AdminGroupItem> = api.post(
+        ApiEndpoint.ADMIN_GROUPS_OPEN_THE_DOOR,
+        buildJsonObject { put("group_id", groupId) },
+        AdminGroupItem.serializer(),
+    )
+
     /** 搜索群组（平台管理）：名称模糊匹配。 */
     suspend fun searchGroups(
         name: String?,
