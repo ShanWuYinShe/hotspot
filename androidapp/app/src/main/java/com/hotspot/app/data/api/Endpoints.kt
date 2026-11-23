@@ -116,6 +116,9 @@ object ApiEndpoint {
     const val ADMIN_ANNOUNCEMENTS_UPDATE = "/admin/api/v1/announcements/update"
     const val ADMIN_ANNOUNCEMENTS_DELETE = "/admin/api/v1/announcements/delete"
     const val ADMIN_STATS_GEO = "/admin/api/v1/stats/geo"
+    const val ADMIN_RBAC_ROLES_FETCH = "/admin/api/v1/rbac/roles/fetch"
+    const val ADMIN_RBAC_PERMISSIONS_FETCH = "/admin/api/v1/rbac/permissions/fetch"
+    const val ADMIN_RBAC_ADMINS_FETCH = "/admin/api/v1/rbac/admins/fetch"
 
     const val NOTIFY_MARK_READ = "/api/v1/notify/mark_read"
 }

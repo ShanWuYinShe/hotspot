@@ -3,7 +3,10 @@ package com.hotspot.app.data.repo
 import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiEndpoint
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.AdminOperatorItem
+import com.hotspot.app.data.model.AdminPermissionDictionary
 import com.hotspot.app.data.model.AdminPermissions
+import com.hotspot.app.data.model.AdminRoleList
 import com.hotspot.app.data.model.AdminAnnouncementItem
 import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminGroupItem
@@ -24,6 +27,27 @@ class AdminRepository(private val api: ApiClient) {
         ApiEndpoint.ADMIN_RBAC_ME,
         ApiClient.emptyBody(),
         AdminPermissions.serializer(),
+    )
+
+    /** 角色列表（RBAC 系统配置数据，有界不分页）。 */
+    suspend fun fetchRoles(): ApiResult<AdminRoleList> = api.post(
+        ApiEndpoint.ADMIN_RBAC_ROLES_FETCH,
+        ApiClient.emptyBody(),
+        AdminRoleList.serializer(),
+    )
+
+    /** 权限字典（有界数据，按 key 升序）。 */
+    suspend fun fetchPermissions(): ApiResult<AdminPermissionDictionary> = api.post(
+        ApiEndpoint.ADMIN_RBAC_PERMISSIONS_FETCH,
+        ApiClient.emptyBody(),
+        AdminPermissionDictionary.serializer(),
+    )
+
+    /** 平台管理员列表（按最近授权时间倒序）。 */
+    suspend fun fetchAdmins(cursor: String? = null): ApiResult<Page<AdminOperatorItem>> = api.post(
+        ApiEndpoint.ADMIN_RBAC_ADMINS_FETCH,
+        buildJsonObject { put("pagination", pagination(cursor)) },
+        Page.serializer(AdminOperatorItem.serializer()),
     )
 
     /** 举报列表（按状态过滤；status=null 表示全部）。 */

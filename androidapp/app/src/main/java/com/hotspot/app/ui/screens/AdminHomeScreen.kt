@@ -25,6 +25,7 @@ fun AdminHomeScreen(
     onOpenGroups: () -> Unit,
     onOpenAnnouncements: () -> Unit,
     onOpenStats: () -> Unit,
+    onOpenRbac: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Column(Modifier.fillMaxSize()) {
@@ -70,6 +71,11 @@ fun AdminHomeScreen(
                         title = "统计分析",
                         subtitle = "全站存量、新增趋势与热门地点/区域排名",
                         onClick = onOpenStats,
+                    )
+                    ListRow(
+                        title = "权限与角色",
+                        subtitle = "查看平台管理员、RBAC 角色与权限字典",
+                        onClick = onOpenRbac,
                     )
                 }
             }

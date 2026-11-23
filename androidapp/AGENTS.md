@@ -34,7 +34,9 @@ media/presign_upload → PUT → complete_upload → moments/create）已实现�
   原因仅进审计日志，成员收到 GroupDismissed 事件）；
 - **系统公告**：按级别（全部/通知/警告/错误）筛选，发布/编辑/删除公告，可选同时推送（`announcements/fetch|create|update|delete`）；
 - **统计分析**：全站存量（用户/群组/瞬间/合计）、近 7 日新增柱状图、热门地点与 S2 区域 Top（`stats/geo`）；
-RBAC/标签等其余模块仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
+- **权限与角色**：查看平台管理员列表（角色/权限摘要/授权时间）、RBAC 角色与权限字典
+  （`rbac/admins/fetch|roles/fetch|permissions/fetch`；授权/撤销待补）；
+标签等其余模块仍为**代码内登记 TODO 占位**（展示真实空态，禁止造假数据）；
 WebSocket 实时已接入（`data/realtime/`：连接/Auth/动态心跳/指数退避重连/resume 或全量订阅恢复，
 私聊、群聊与消息列表消费增量事件）。
 
@@ -218,7 +220,7 @@ app/src/main/java/com/hotspot/app/
 
 ## 已知待办（首版登记）
 
-1. 管理后台（举报审核、用户管理、群组管理、系统公告、统计分析已接入，RBAC/标签等其余模块待补）；
+1. 管理后台（举报审核、用户管理、群组管理、系统公告、统计分析、权限与角色只读已接入，授权/撤销与标签待补）；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
    通知中心点击已按 payload 跳转（含 @提及瞬间/群聊）；语音消息已接入（录制 + 播放，chat_audio）；
