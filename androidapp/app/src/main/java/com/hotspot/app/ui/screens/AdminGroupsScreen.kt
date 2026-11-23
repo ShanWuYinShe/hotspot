@@ -54,11 +54,11 @@ import kotlinx.coroutines.launch
  * 解散走 admin/groups/dismiss：reason 仅进审计日志，不推送给群成员；成员会收到 GroupDismissed 事件。
  */
 @Composable
-fun AdminGroupsScreen(onBack: () -> Unit) {
+fun AdminGroupsScreen(onBack: () -> Unit, initialQuery: String = "") {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val colors = HotSpotTheme.colors
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
     var items by remember { mutableStateOf<List<AdminGroupItem>>(emptyList()) }
     var cursor by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }

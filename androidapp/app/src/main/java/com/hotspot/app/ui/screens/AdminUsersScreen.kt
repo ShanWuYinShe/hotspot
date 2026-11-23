@@ -58,11 +58,11 @@ import kotlinx.coroutines.launch
  * 权限与「禁止封禁自身/管理员保护」由后端校验，客户端只做二次确认。
  */
 @Composable
-fun AdminUsersScreen(onBack: () -> Unit) {
+fun AdminUsersScreen(onBack: () -> Unit, initialQuery: String = "") {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val colors = HotSpotTheme.colors
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialQuery) }
     var statusIndex by remember { mutableIntStateOf(0) }
     var items by remember { mutableStateOf<List<AdminUserItem>>(emptyList()) }
     var cursor by remember { mutableStateOf<String?>(null) }

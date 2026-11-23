@@ -3,6 +3,7 @@ package com.hotspot.app.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,7 +75,11 @@ import androidx.compose.ui.platform.LocalContext
  * 搜索时先自动加载完全部分页（最多 10 页）再本地筛选。
  */
 @Composable
-fun AdminAuditScreen(onBack: () -> Unit) {
+fun AdminAuditScreen(
+    onBack: () -> Unit,
+    onOpenUser: (String) -> Unit,
+    onOpenGroup: (String) -> Unit,
+) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val colors = HotSpotTheme.colors
@@ -254,7 +259,12 @@ fun AdminAuditScreen(onBack: () -> Unit) {
     }
 
     detailItem?.let { item ->
-        AuditDetailDialog(item = item, onDismiss = { detailItem = null })
+        AuditDetailDialog(
+            item = item,
+            onDismiss = { detailItem = null },
+            onOpenUser = onOpenUser,
+            onOpenGroup = onOpenGroup,
+        )
     }
 
     if (showActionSheet) {
@@ -271,12 +281,23 @@ fun AdminAuditScreen(onBack: () -> Unit) {
 
 /** 审计详情：列表只展示摘要，点击行查看全量字段（含 details / IP / 设备 / 日志 ID）。 */
 @Composable
-private fun AuditDetailDialog(item: AdminAuditLogItem, onDismiss: () -> Unit) {
+private fun AuditDetailDialog(
+    item: AdminAuditLogItem,
+    onDismiss: () -> Unit,
+    onOpenUser: (String) -> Unit,
+    onOpenGroup: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val actionLabel = AUDIT_ACTION_LABELS[item.action] ?: item.action.ifBlank { "—" }
     val targetLabel = AUDIT_TARGET_LABELS[item.targetType] ?: item.targetType.ifBlank { "—" }
     val target = item.targetName?.takeIf { it.isNotBlank() } ?: item.targetId
     val detailLines = formatAuditDetailsLines(item.details)
+    val jumpName = item.targetName?.takeIf { it.isNotBlank() } ?: item.targetId
+    val jumpAction: (() -> Unit)? = when (item.targetType) {
+        "user" -> if (jumpName.isNotBlank()) ({ onOpenUser(jumpName) }) else null
+        "group" -> if (jumpName.isNotBlank()) ({ onOpenGroup(jumpName) }) else null
+        else -> null
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(text = actionLabel) },
@@ -313,12 +334,25 @@ private fun AuditDetailDialog(item: AdminAuditLogItem, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            SystemButton(
-                text = "关闭",
-                onClick = onDismiss,
-                variant = ButtonVariant.SECONDARY,
-                size = ButtonSize.SM,
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                jumpAction?.let { jump ->
+                    SystemButton(
+                        text = if (item.targetType == "user") "查看用户" else "查看群组",
+                        onClick = {
+                            onDismiss()
+                            jump()
+                        },
+                        variant = ButtonVariant.PRIMARY,
+                        size = ButtonSize.SM,
+                    )
+                }
+                SystemButton(
+                    text = "关闭",
+                    onClick = onDismiss,
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                )
+            }
         },
     )
 }
