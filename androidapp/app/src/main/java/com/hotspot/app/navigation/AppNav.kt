@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.hotspot.app.AppContainer
 import com.hotspot.app.ui.components.BottomNav
 import com.hotspot.app.ui.screens.AdminAnnouncementsScreen
+import com.hotspot.app.ui.screens.AdminAuditScreen
 import com.hotspot.app.ui.screens.AdminRbacScreen
 import com.hotspot.app.ui.screens.AdminTagsScreen
 import com.hotspot.app.ui.screens.AdminStatsScreen
@@ -251,6 +252,7 @@ private fun MainScaffold() {
                         onOpenStats = { navController.navigate(Routes.ADMIN_STATS) },
                         onOpenRbac = { navController.navigate(Routes.ADMIN_RBAC) },
                         onOpenTags = { navController.navigate(Routes.ADMIN_TAGS) },
+                        onOpenAudit = { navController.navigate(Routes.ADMIN_AUDIT) },
                     )
                 }
                 composable(Routes.ADMIN_REPORTS) {
@@ -273,6 +275,9 @@ private fun MainScaffold() {
                 }
                 composable(Routes.ADMIN_TAGS) {
                     AdminTagsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.ADMIN_AUDIT) {
+                    AdminAuditScreen(onBack = { navController.popBackStack() })
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,
