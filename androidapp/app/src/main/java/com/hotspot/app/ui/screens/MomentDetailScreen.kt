@@ -170,6 +170,8 @@ fun MomentDetailScreen(
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteConfirmOpen by remember { mutableStateOf(false) }
     var deleteBusy by remember { mutableStateOf(false) }
+    var showMomentReport by remember { mutableStateOf(false) }
+    var reportSubmitting by remember { mutableStateOf(false) }
     // 全屏图片查看器（点击多图 hero；携带整组图片支持查看器内左右翻页）
     var viewerImages by remember { mutableStateOf<List<String>>(emptyList()) }
     var viewerIndex by remember { mutableIntStateOf(0) }
@@ -564,13 +566,14 @@ fun MomentDetailScreen(
         MomentTopOverlay(
             onBack = onBack,
             onShare = { shareMoment() },
-            isOwner = isOwner,
+            showMore = loggedIn,
             onMore = { ownerSheetOpen = true },
         )
     }
 
     if (ownerSheetOpen) {
-        MomentOwnerActionSheet(
+        MomentActionSheet(
+            isOwner = isOwner,
             onDismiss = { ownerSheetOpen = false },
             onEdit = {
                 ownerSheetOpen = false
@@ -580,6 +583,40 @@ fun MomentDetailScreen(
             onDelete = {
                 ownerSheetOpen = false
                 deleteConfirmOpen = true
+            },
+            onReport = {
+                ownerSheetOpen = false
+                showMomentReport = true
+            },
+        )
+    }
+
+    if (showMomentReport) {
+        ReportDialog(
+            title = "举报瞬间",
+            submitting = reportSubmitting,
+            onDismiss = { if (!reportSubmitting) showMomentReport = false },
+            onSubmit = { reason ->
+                if (reportSubmitting) return@ReportDialog
+                reportSubmitting = true
+                scope.launch {
+                    when (val result = AppContainer.reportsRepository.create(
+                        targetType = "moment",
+                        targetId = momentId,
+                        reason = reason,
+                    )) {
+                        is ApiResult.Ok -> {
+                            showMomentReport = false
+                            Toast.makeText(
+                                context,
+                                if (result.data.isDuplicate) "已提交过举报，等待处理" else "举报已提交",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                        is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    reportSubmitting = false
+                }
             },
         )
     }
@@ -912,7 +949,7 @@ private fun MomentHero(data: MomentItem, onOpenImage: (List<String>, Int) -> Uni
 private fun MomentTopOverlay(
     onBack: () -> Unit,
     onShare: () -> Unit,
-    isOwner: Boolean = false,
+    showMore: Boolean = false,
     onMore: () -> Unit = {},
 ) {
     Row(
@@ -927,7 +964,7 @@ private fun MomentTopOverlay(
             onClick = onBack,
         )
         Spacer(Modifier.weight(1f))
-        if (isOwner) {
+        if (showMore) {
             GlassCircleButton(
                 iconRes = R.drawable.ic_action_more,
                 contentDescription = "更多操作",
@@ -1060,13 +1097,15 @@ private fun DetailCount(icon: ImageVector, count: Int) {
 }
 
 
-/** 作者更多操作面板：编辑文案 / 删除瞬间（M3 ModalBottomSheet，与消息操作面板同风格）。 */
+/** 瞬间更多操作面板：作者 = 编辑文案/删除瞬间；非作者 = 举报瞬间（M3 ModalBottomSheet）。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MomentOwnerActionSheet(
+private fun MomentActionSheet(
+    isOwner: Boolean,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
+    onReport: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -1082,9 +1121,13 @@ private fun MomentOwnerActionSheet(
                 .navigationBarsPadding()
                 .padding(start = Spacing.lg, end = Spacing.lg, bottom = Spacing.lg),
         ) {
-            OwnerActionRow(text = "编辑文案", color = colors.textPrimary, onClick = onEdit)
-            HorizontalDivider(color = colors.borderSubtle)
-            OwnerActionRow(text = "删除瞬间", color = colors.danger, onClick = onDelete)
+            if (isOwner) {
+                OwnerActionRow(text = "编辑文案", color = colors.textPrimary, onClick = onEdit)
+                HorizontalDivider(color = colors.borderSubtle)
+                OwnerActionRow(text = "删除瞬间", color = colors.danger, onClick = onDelete)
+            } else {
+                OwnerActionRow(text = "举报瞬间", color = colors.danger, onClick = onReport)
+            }
         }
     }
 }
