@@ -6,6 +6,7 @@
 	import { platform } from '@/stores/platform.svelte';
 	import { Map as MapIcon, MapPin, TrendingUp, Trophy } from '@lucide/svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import MetricRow from '@/components/data-display/MetricRow.svelte';
 	import SectionHead from '@/components/home/SectionHead.svelte';
 	import InlineLoading from '@/components/data-display/InlineLoading.svelte';
@@ -152,12 +153,77 @@
 	let drillLoading = $state(false);
 	let drillError = $state<string | null>(null);
 	let drillSeq = 0;
+	let drillQuery = $state('');
+	let drillSearchReloadKey = $state(0);
+	const drillSearching = $derived(drillQuery.trim().length > 0);
+	let drillSearchItems = $state<AdminGeoDrilldownItem[]>([]);
+	let drillSearchLoaded = $state(0);
+	let drillSearchLoading = $state(false);
+	let drillSearchError = $state<string | null>(null);
+	const drillShownItems = $derived(drillSearching ? drillSearchItems : drillItems);
+
+	// stats/geo/drilldown 契约无 keyword 参数：搜索时按当前区域/类型/时间窗自动加载完全部分页
+	// （最多 10 页），再按标题/对象 ID/位置本地匹配；清空后回到常规分页。
+	function drillMatches(item: AdminGeoDrilldownItem, q: string): boolean {
+		return [item.title, item.object_id, item.location_name ?? '', item.created_at]
+			.join(' ')
+			.toLowerCase()
+			.includes(q.toLowerCase());
+	}
+
+	$effect(() => {
+		const q = drillQuery.trim();
+		const token = selectedToken;
+		const lvl = selectedLevel;
+		const type = drillType;
+		const tr = range;
+		void drillSearchReloadKey;
+		if (!q || !token) {
+			drillSearchItems = [];
+			drillSearchLoaded = 0;
+			drillSearchLoading = false;
+			drillSearchError = null;
+			return;
+		}
+		let cancelled = false;
+		drillSearchLoading = true;
+		drillSearchError = null;
+		void (async () => {
+			const all: AdminGeoDrilldownItem[] = [];
+			let cursor: string | undefined;
+			for (let page = 0; page < 10; page++) {
+				const res = await adminStatsGeoDrilldown({
+					cell_token: token,
+					level: lvl,
+					entity_type: type,
+					time_range: rangeToTimeRange(tr),
+					pagination: { limit: 20, cursor }
+				}).catch(() => null);
+				if (cancelled) return;
+				if (!res || res.code !== 0 || !res.data) {
+					drillSearchError = res?.message ?? '搜索失败';
+					break;
+				}
+				all.push(...(res.data.items ?? []));
+				cursor = res.data.next_cursor ?? undefined;
+				if (!cursor) break;
+			}
+			if (cancelled) return;
+			drillSearchLoaded = all.length;
+			drillSearchItems = all.filter((item) => drillMatches(item, q));
+			drillSearchLoading = false;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	function clearDrillSelection(): void {
 		selectedToken = null;
 		drillItems = [];
 		drillCursor = null;
 		drillError = null;
+		drillQuery = '';
 	}
 
 	function selectRegion(cellToken: string, lvl: number): void {
@@ -171,6 +237,7 @@
 		drillItems = [];
 		drillCursor = null;
 		drillError = null;
+		drillQuery = '';
 	}
 
 	async function loadDrill(append: boolean): Promise<void> {
@@ -420,7 +487,48 @@
 								onChange={(id) => { drillType = id as 'user' | 'group' | 'moment'; }}
 							/>
 						</div>
-						{#if drillLoading && drillItems.length === 0}
+						<SearchInput
+							value={drillQuery}
+							onChange={(v) => (drillQuery = v)}
+							placeholder="搜索标题 / 对象 ID / 位置…"
+							ariaLabel="搜索区域明细"
+						/>
+						{#if drillSearching && drillSearchLoading}
+							<p class="text-xs text-text-secondary">搜索中…</p>
+						{:else if drillSearching && drillSearchError}
+							<p class="text-xs text-text-status-danger-on-soft">
+								搜索失败：{drillSearchError}
+								<button type="button" class="link-btn ml-1 focus-ring" onclick={() => drillSearchReloadKey++}>重试</button>
+							</p>
+						{:else if drillSearching}
+							<p class="text-xs text-text-secondary">已加载 {drillSearchLoaded} 条 · 匹配 {drillShownItems.length} 条</p>
+						{/if}
+						{#if drillSearching}
+							{#if drillSearchLoading && drillSearchItems.length === 0}
+								<InlineLoading label="搜索明细…" />
+							{:else if drillSearchError}
+								<LoadError message={drillSearchError} onRetry={() => drillSearchReloadKey++} />
+							{:else if drillSearchItems.length === 0}
+								<EmptyState title="没有匹配的明细" description="换个标题/对象 ID/位置关键词试试，或清空搜索词。" iconTone="neutral">
+									{#snippet icon()}<MapPin class="size-7" strokeWidth={1.5} />{/snippet}
+								</EmptyState>
+							{:else}
+								<div class="flex flex-col">
+									{#each drillSearchItems as item (item.object_id + item.created_at)}
+										<div class="flex items-center justify-between gap-3 border-b border-border-default py-2 last:border-b-0">
+											<div class="min-w-0">
+												<p class="truncate text-sm font-medium text-text-primary">{item.title}</p>
+												<p class="mt-0.5 truncate text-xs text-text-secondary">
+													{item.location_name ?? '未填地点'} · {formatDateTime(item.created_at)}
+												</p>
+											</div>
+											<span class="shrink-0 font-mono text-xxs text-text-secondary">{item.object_id}</span>
+										</div>
+									{/each}
+								</div>
+								<ListEnd />
+							{/if}
+						{:else if drillLoading && drillItems.length === 0}
 							<InlineLoading label="加载明细…" />
 						{:else if drillError}
 							<LoadError message={drillError} onRetry={() => void loadDrill(false)} />
