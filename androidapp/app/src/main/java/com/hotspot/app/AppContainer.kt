@@ -3,6 +3,7 @@ package com.hotspot.app
 import android.content.Context
 import com.hotspot.app.data.api.ApiClient
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.audio.AudioPlaybackController
 import com.hotspot.app.data.auth.TokenStore
 import com.hotspot.app.data.location.BrowseAnchor
 import com.hotspot.app.data.location.BrowseAnchorStore
@@ -68,6 +69,10 @@ object AppContainer {
     lateinit var mediaRepository: MediaRepository
         private set
 
+    /** 应用级语音播放控制器（全局互斥，聊天页退出时停止）。 */
+    lateinit var audioPlaybackController: AudioPlaybackController
+        private set
+
     /** 浏览锚点本地存储（地图选点页写入；附近页按它计算距离与推荐）。 */
     lateinit var browseAnchorStore: BrowseAnchorStore
         private set
@@ -108,6 +113,7 @@ object AppContainer {
             reportsRepository = ReportsRepository(apiClient)
             momentsRepository = MomentsRepository(apiClient)
             mediaRepository = MediaRepository(apiClient)
+            audioPlaybackController = AudioPlaybackController()
             realtimeClient = HotSpotRealtimeClient(tokenStore, authRepository, appScope)
             // 登录态驱动连接生命周期：登出/会话失效自动断开，登录后自动连接并恢复订阅。
             appScope.launch {

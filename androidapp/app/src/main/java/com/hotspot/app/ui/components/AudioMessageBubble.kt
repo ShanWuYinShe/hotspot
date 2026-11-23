@@ -1,6 +1,5 @@
 package com.hotspot.app.ui.components
 
-import android.media.MediaPlayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -17,29 +16,24 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
-import kotlinx.coroutines.delay
 
 /**
- * 语音消息气泡：点击播放/停止（MediaPlayer，短时签名 URL）。
- * 播放中展示进度条与「已播放 / 总时长」，每 200ms 从 MediaPlayer 读当前位置；
- * 停止/播放结束后复位。服务端 media.duration 可能为 null，此时以播放器实际时长为准。
+ * 语音消息气泡：点击交给应用级 [com.hotspot.app.data.audio.AudioPlaybackController] 播放/停止。
+ * 全局同一时间只播放一条语音；播放中展示进度条与「已播放 / 总时长」，播完/停止后显示实际总时长。
+ * 服务端 media.duration 可能为 null，此时以播放器实际时长为准。
  */
 @Composable
 fun AudioMessageBubble(
@@ -50,75 +44,27 @@ fun AudioMessageBubble(
 ) {
     val colors = HotSpotTheme.colors
     val absoluteUrl = MediaUrls.absolute(audioUrl)
-    var playing by remember(absoluteUrl) { mutableStateOf(false) }
-    var player by remember(absoluteUrl) { mutableStateOf<MediaPlayer?>(null) }
-    var elapsedMs by remember(absoluteUrl) { mutableLongStateOf(0L) }
-    var totalMs by remember(absoluteUrl) { mutableLongStateOf((durationSeconds ?: 0).toLong() * 1000L) }
-    fun stopAndRelease() {
-        runCatching { player?.release() }
-        player = null
+    val playback by AppContainer.audioPlaybackController.state.collectAsStateWithLifecycle()
+    val isCurrent = absoluteUrl != null && playback.url == absoluteUrl
+    val playing = isCurrent && playback.playing
+    val totalMs = when {
+        isCurrent && playback.totalMs > 0L -> playback.totalMs
+        durationSeconds != null && durationSeconds > 0 -> durationSeconds.toLong() * 1000L
+        else -> 0L
     }
-    fun stop() {
-        runCatching { player?.stop() }
-        stopAndRelease()
-        playing = false
-        elapsedMs = 0L
-    }
-    DisposableEffect(Unit) {
-        onDispose { stopAndRelease() }
-    }
-    // 播放期间轮询进度；状态变化会取消旧协程，无需手动清理定时器。
-    LaunchedEffect(playing) {
-        while (playing) {
-            player?.let { mediaPlayer ->
-                runCatching {
-                    elapsedMs = mediaPlayer.currentPosition.toLong()
-                    val duration = mediaPlayer.duration
-                    if (duration > 0) totalMs = duration.toLong()
-                }
-            }
-            delay(200)
-        }
-    }
+    val elapsedMs = if (playing) playback.elapsedMs else 0L
     val progress = if (totalMs > 0L) (elapsedMs.toFloat() / totalMs.toFloat()).coerceIn(0f, 1f) else 0f
     val foreground = if (isMine) colors.textOnAccent else colors.accent
     val track = if (isMine) colors.textOnAccent.copy(alpha = 0.28f) else colors.accent.copy(alpha = 0.22f)
     Row(
         modifier = modifier
             .clip(CircleShape)
-            .clickable {
-                if (playing) {
-                    stop()
-                } else if (!absoluteUrl.isNullOrBlank()) {
-                    stopAndRelease()
-                    elapsedMs = 0L
-                    val mediaPlayer = MediaPlayer()
-                    player = mediaPlayer
-                    mediaPlayer.setOnPreparedListener {
-                        it.start()
-                        playing = true
-                        if (it.duration > 0) totalMs = it.duration.toLong()
-                    }
-                    mediaPlayer.setOnCompletionListener {
-                        playing = false
-                        elapsedMs = 0L
-                        stopAndRelease()
-                    }
-                    mediaPlayer.setOnErrorListener { _, _, _ ->
-                        playing = false
-                        elapsedMs = 0L
-                        stopAndRelease()
-                        true
-                    }
-                    runCatching {
-                        mediaPlayer.setDataSource(absoluteUrl)
-                        mediaPlayer.prepareAsync()
-                    }.onFailure {
-                        playing = false
-                        elapsedMs = 0L
-                        stopAndRelease()
-                    }
-                }
+            .clickable(enabled = !absoluteUrl.isNullOrBlank()) {
+                val url = absoluteUrl ?: return@clickable
+                AppContainer.audioPlaybackController.toggle(
+                    url = url,
+                    durationHintMs = (durationSeconds ?: 0).toLong() * 1000L,
+                )
             }
             .padding(vertical = Spacing.xs, horizontal = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
