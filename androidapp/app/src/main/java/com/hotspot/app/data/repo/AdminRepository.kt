@@ -5,6 +5,8 @@ import com.hotspot.app.data.api.ApiEndpoint
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.AdminPermissions
 import com.hotspot.app.data.model.AdminReportsPage
+import com.hotspot.app.data.model.AdminUserItem
+import com.hotspot.app.data.model.Page
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
@@ -30,6 +32,40 @@ class AdminRepository(private val api: ApiClient) {
             put("pagination", pagination(cursor))
         },
         AdminReportsPage.serializer(),
+    )
+
+    /** 搜索用户（平台管理）：nickname 模糊匹配；status 可选 normal/banned。 */
+    suspend fun searchUsers(
+        nickname: String?,
+        status: String? = null,
+        cursor: String? = null,
+    ): ApiResult<Page<AdminUserItem>> = api.post(
+        ApiEndpoint.ADMIN_USERS_SEARCH,
+        buildJsonObject {
+            put("user_id", JsonNull)
+            put("nickname", nickname?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("login_id", JsonNull)
+            put("status", status?.let(::JsonPrimitive) ?: JsonNull)
+            put("user_type", JsonNull)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(AdminUserItem.serializer()),
+    )
+
+    /** 平台封禁/解封用户（两态统一）：durationDays null/0 = 永久。 */
+    suspend fun setUserBan(
+        userId: String,
+        active: Boolean,
+        reason: String?,
+        durationDays: Int?,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_USERS_SET_BAN,
+        buildJsonObject {
+            put("user_id", userId)
+            put("active", active)
+            put("reason", reason?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("duration_days", if (active) durationDays?.let(::JsonPrimitive) ?: JsonNull else JsonNull)
+        },
     )
 
     /** 裁决举报：resolve=有效 / dismiss=驳回；banDurationDays 仅 resolve 时可选（0=永久）。 */

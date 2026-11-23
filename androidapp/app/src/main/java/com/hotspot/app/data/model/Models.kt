@@ -177,6 +177,24 @@ data class AdminReportItem(
     @SerialName("handle_note") val handleNote: String? = null,
 )
 
+/**
+ * 管理端用户项（spec/api_spec_admin.md → AdminUserItem extends UserItem）：
+ * 只声明平台管理页需要的字段，其余继承字段忽略（后端返回多余键不影响解析）。
+ */
+@Serializable
+data class AdminUserItem(
+    val user: UserInfo = UserInfo(),
+    val bio: String? = null,
+    val status: String = "normal",
+    @SerialName("banned_until") val bannedUntil: String? = null,
+    @SerialName("privacy_level") val privacyLevel: String = "public",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("last_active_at") val lastActiveAt: String? = null,
+    @SerialName("login_id") val loginId: String = "",
+    val email: String? = null,
+    val phone: String? = null,
+)
+
 /** 管理端举报分页（spec → AdminReportsPage，带 status 过滤时 total 为该状态总数）。 */
 @Serializable
 data class AdminReportsPage(
