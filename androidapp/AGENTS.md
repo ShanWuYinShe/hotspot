@@ -163,8 +163,9 @@ app/src/main/java/com/hotspot/app/
   设置 →「屏蔽名单」展示 `users/fetch_blocked` 列表（昵称/屏蔽时间），支持逐条解除屏蔽；
   解除只清拉黑关系，不自动恢复关注。
 - **通知跳转**：通知行点击后先 `notify/mark_read`（scope=ids）再按类型跳转：
-  `new_follower`/`mutual_follow` → 用户主页；`moment_commented`/`comment_reply`/`mentioned`/`nearby_new_moment`
-  → 瞬间详情；`group_mentioned` → 群聊；群邀请/入群申请 → 群详情；举报处理 → 我的举报；
+  `new_follower`/`mutual_follow` → 用户主页；`moment_commented`/`comment_reply`/`mentioned`
+  → 瞬间详情并滚动定位到对应评论线程（路由 `moment/{momentId}?commentId=`，取 `comment_id`/`reply_id`）；
+  `nearby_new_moment` → 瞬间详情；`group_mentioned` → 群聊；群邀请/入群申请 → 群详情；举报处理 → 我的举报；
   无可跳转目标（系统公告等）只标记已读。
 - **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，

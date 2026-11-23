@@ -206,6 +206,9 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenUser = { userId -> openUser(userId) },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
+                        onOpenMomentComment = { momentId, commentId ->
+                            navController.navigate(Routes.moment(momentId, commentId))
+                        },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                         onOpenGroupChat = { groupId -> navController.navigate(Routes.groupChat(groupId)) },
                         onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
@@ -231,10 +234,18 @@ private fun MainScaffold() {
                 }
                 composable(
                     route = Routes.MOMENT_DETAIL,
-                    arguments = listOf(navArgument("momentId") { type = NavType.StringType }),
+                    arguments = listOf(
+                        navArgument("momentId") { type = NavType.StringType },
+                        navArgument("commentId") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                    ),
                 ) { entry ->
                     MomentDetailScreen(
                         momentId = entry.arguments?.getString("momentId").orEmpty(),
+                        focusCommentId = entry.arguments?.getString("commentId"),
                         onBack = { navController.popBackStack() },
                         onOpenUser = { userId -> openUser(userId) },
                     )

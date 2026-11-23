@@ -119,6 +119,7 @@ private data class CommentReplyTarget(
 @Composable
 fun MomentDetailScreen(
     momentId: String,
+    focusCommentId: String? = null,
     onBack: () -> Unit,
     onOpenUser: (userId: String) -> Unit,
 ) {
@@ -263,6 +264,21 @@ fun MomentDetailScreen(
     // 发送/回复成功后的滚动请求（LazyColumn 索引依赖评论数，放入 effect 内在一帧后再滚）
     var scrollToEndRequest by remember { mutableStateOf(0) }
     var scrollToThreadRequest by remember { mutableStateOf<String?>(null) }
+    // 通知/外链带入的评论 id：首屏评论加载后滚动到对应线程（只处理一次，避免新评论触发重复滚动）
+    var handledFocusCommentId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(focusCommentId, commentsLoading, comments) {
+        val targetId = focusCommentId?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        if (handledFocusCommentId == targetId || commentsLoading) return@LaunchedEffect
+        val threads = groupCommentThreads(comments)
+        val index = threads.indexOfFirst { thread ->
+            thread.comment.commentId == targetId || thread.replies.any { it.commentId == targetId }
+        }
+        if (index >= 0) {
+            handledFocusCommentId = targetId
+            withFrameNanos { }
+            listState.animateScrollToItem(COMMENT_ITEMS_OFFSET + index)
+        }
+    }
 
     fun startReply(parentCommentId: String, nickname: String, userId: String) {
         replyTarget = CommentReplyTarget(parentCommentId, nickname, userId)
