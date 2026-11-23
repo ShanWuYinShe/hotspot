@@ -65,10 +65,12 @@ object ApiEndpoint {
     const val PRIVATE_CHATS_FETCH = "/api/v1/private_chats/fetch"
     const val PRIVATE_MESSAGES_FETCH = "/api/v1/private_messages/fetch"
     const val PRIVATE_MESSAGES_SEND = "/api/v1/private_messages/send"
+    const val PRIVATE_MESSAGES_RECALL = "/api/v1/private_messages/recall"
     const val PRIVATE_MESSAGES_MARK_READ = "/api/v1/private_messages/mark_read"
     // 群聊消息（spec/api_spec_chat.md → group_messages/fetch | send；群成员可见/可发）
     const val GROUP_MESSAGES_FETCH = "/api/v1/group_messages/fetch"
     const val GROUP_MESSAGES_SEND = "/api/v1/group_messages/send"
+    const val GROUP_MESSAGES_RECALL = "/api/v1/group_messages/recall"
     const val GROUP_MESSAGES_MARK_READ = "/api/v1/group_messages/mark_read"
 
     const val COMMENTS_FETCH = "/api/v1/comments/fetch"
