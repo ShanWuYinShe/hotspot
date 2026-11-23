@@ -197,6 +197,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                         onOpenUser = { userId -> openUser(userId) },
+                        onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
                     )
                 }
                 composable(Routes.NOTIFY) {

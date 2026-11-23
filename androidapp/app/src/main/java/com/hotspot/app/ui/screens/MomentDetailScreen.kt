@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +66,7 @@ import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.UserInfo
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.CommentInputBar
+import com.hotspot.app.ui.components.FullscreenImageViewer
 import com.hotspot.app.ui.components.CommentThreadItem
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
@@ -152,6 +155,8 @@ fun MomentDetailScreen(
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
     var favoriteBusy by remember { mutableStateOf(false) }
+    // 全屏图片查看器（点击多图 hero）
+    var viewerImageUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
 
     suspend fun loadMoment() {
@@ -422,7 +427,7 @@ fun MomentDetailScreen(
                     contentPadding = PaddingValues(bottom = Spacing.xl),
                 ) {
                     item(key = "hero") {
-                        MomentHero(data = data)
+                        MomentHero(data = data, onOpenImage = { viewerImageUrl = it })
                     }
                     item(key = "moment-body") {
                         MomentBody(
@@ -568,6 +573,14 @@ fun MomentDetailScreen(
                     commentReportSubmitting = false
                 }
             },
+        )
+    }
+
+    viewerImageUrl?.let { url ->
+        FullscreenImageViewer(
+            imageUrl = url,
+            contentDescription = "瞬间图片",
+            onDismiss = { viewerImageUrl = null },
         )
     }
 
@@ -731,23 +744,58 @@ private const val MomentHeroAspect = 390f / 280f
 /** 无图瞬间的顶部留白：让出浮层按钮高度，避免作者栏被返回/分享钮压住。 */
 private val MomentHeroNoImageTop = 64.dp
 
-/** hero 头图：通栏贴边、无圆角；无图瞬间用固定留白占位（纯文字瞬间不造假图）。 */
+/**
+ * hero 头图：通栏贴边、无圆角；多图瞬间用 HorizontalPager + 底部圆点指示器，点击当前图打开全屏查看器。
+ * 无图瞬间用固定留白占位（纯文字瞬间不造假图）。
+ */
 @Composable
-private fun MomentHero(data: MomentItem) {
+private fun MomentHero(data: MomentItem, onOpenImage: (String) -> Unit) {
     val colors = HotSpotTheme.colors
-    val imageUrl = MediaUrls.absolute(data.images.firstOrNull()?.url)
-    if (imageUrl != null) {
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current).data(imageUrl).crossfade(true).build(),
-            contentDescription = data.description.ifBlank { "瞬间图片" },
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(MomentHeroAspect)
-                .background(colors.subtle),
-            contentScale = ContentScale.Crop,
-        )
-    } else {
+    val images = data.images.mapNotNull { MediaUrls.absolute(it.url) }.distinct()
+    if (images.isEmpty()) {
         Spacer(Modifier.height(MomentHeroNoImageTop))
+        return
+    }
+    val pagerState = rememberPagerState(pageCount = { images.size })
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(MomentHeroAspect)
+            .background(colors.subtle),
+    ) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current).data(images[page]).crossfade(true).build(),
+                contentDescription = data.description.ifBlank { "瞬间图片" },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { onOpenImage(images[page]) },
+                contentScale = ContentScale.Crop,
+            )
+        }
+        if (images.size > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = Spacing.md)
+                    .clip(AppShapes.pill)
+                    .background(colors.island.copy(alpha = 0.72f))
+                    .padding(horizontal = Spacing.sm2, vertical = Spacing.xs),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                repeat(images.size) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (index == pagerState.currentPage) colors.accent else colors.textSecondary.copy(alpha = 0.4f),
+                            ),
+                    )
+                }
+            }
+        }
     }
 }
 
