@@ -8,6 +8,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
 	import SkeletonList from '@/components/data-display/SkeletonList.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import { contentFade } from '@/lib/motion';
 	import LoadError from '@/components/data-display/LoadError.svelte';
 	import InfiniteSentinel from '@/components/list/InfiniteSentinel.svelte';
@@ -143,6 +144,24 @@
 	{/snippet}
 
 	<div class="flex flex-col">
+		<div class="mb-3 flex flex-col gap-2">
+			<SearchInput
+				value={data.query}
+				onChange={(v) => (data.query = v)}
+				placeholder="搜索通知内容 / 用户 ID / 类型…"
+				ariaLabel="搜索通知"
+			/>
+			{#if data.searching && data.searchLoading}
+				<p class="text-xs text-text-secondary">搜索中…</p>
+			{:else if data.searching && data.searchError}
+				<p class="text-xs text-text-status-danger-on-soft">
+					搜索失败：{data.searchError}
+					<button type="button" class="link-btn ml-1 focus-ring" onclick={() => data.retrySearch()}>重试</button>
+				</p>
+			{:else if data.searching}
+				<p class="text-xs text-text-secondary">已加载 {data.searchLoaded} 条 · 匹配 {data.filteredNotifies.length} 条</p>
+			{/if}
+		</div>
 		<InvitesPendingCard
 			invites={data.invites}
 			invitePending={data.invitePending}
@@ -182,7 +201,7 @@
 			</ListContainer>
 		{/if}
 
-		{#if !data.loading && data.nextCursor !== null}
+		{#if !data.searching && !data.loading && data.nextCursor !== null}
 			<div class={readGroup.length > 0 ? 'mt-6' : ''}>
 				<InfiniteSentinel
 					hasMore={data.nextCursor !== null}
@@ -191,7 +210,7 @@
 					onLoadMore={() => void data.loadMoreNotifs()}
 				/>
 			</div>
-		{:else if data.filteredNotifies.length > 0 && !data.loadError && data.nextCursor === null}
+		{:else if data.filteredNotifies.length > 0 && !data.loadError && (data.searching || data.nextCursor === null)}
 			<ListEnd />
 		{/if}
 
@@ -218,10 +237,12 @@
 			pageCentered
 					spotlight
 					iconTone="accent"
-					title={data.filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
-					description={data.filter === 'all'
-						? '收到的点赞、评论与关注会出现在这里。'
-						: '换个分类看看，或去附近逛逛。'}
+					title={data.searching ? '没有匹配的通知' : data.filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
+					description={data.searching
+						? '换个通知内容/用户 ID/类型关键词试试，或清空搜索词。'
+						: data.filter === 'all'
+							? '收到的点赞、评论与关注会出现在这里。'
+							: '换个分类看看，或去附近逛逛。'}
 				>
 					{#snippet icon()}
 						<Bell class="size-7" strokeWidth={1.5} aria-hidden="true" />

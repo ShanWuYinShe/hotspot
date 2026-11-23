@@ -45,6 +45,14 @@ export function useNotifyData() {
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
 
+	let query = $state('');
+	let searchReloadKey = $state(0);
+	const searching = $derived(query.trim().length > 0);
+	let searchItems = $state<NotifyViewItem[]>([]);
+	let searchLoaded = $state(0);
+	let searchLoading = $state(false);
+	let searchError = $state<string | null>(null);
+
 	let followedBack = $state<Set<string>>(new Set());
 	let invitePending = $state(new Set<string>());
 
@@ -272,11 +280,52 @@ export function useNotifyData() {
 		reloadKey++;
 	};
 
+	// 通知契约（notify/fetch）无 keyword 参数：搜索时先自动加载完全部分页（最多 10 页），
+	// 再按通知内容/用户 ID/类型/跳转目标本地匹配；清空后回到常规分页。
+	$effect(() => {
+		const q = query.trim();
+		void searchReloadKey;
+		if (!q) {
+			searchItems = [];
+			searchLoaded = 0;
+			searchLoading = false;
+			searchError = null;
+			return;
+		}
+		let cancelled = false;
+		searchLoading = true;
+		searchError = null;
+		void (async () => {
+			const all: NotifyItem[] = [];
+			let cursor: string | undefined;
+			for (let page = 0; page < 10; page++) {
+				const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor } }).catch(() => null);
+				if (cancelled) return;
+				if (!res || res.code !== 0 || !res.data) {
+					searchError = res?.message ?? '搜索失败';
+					break;
+				}
+				all.push(...(res.data.items ?? []));
+				cursor = res.data.next_cursor ?? undefined;
+				if (!cursor) break;
+			}
+			if (cancelled) return;
+			searchLoaded = all.length;
+			searchItems = stripInviteRowActions(toViewItems(all, 0)).filter((n) =>
+				[n.user.name, n.user.id, n.text, n.type, n.href ?? '', n.id].join(' ').toLowerCase().includes(q.toLowerCase())
+			);
+			searchLoading = false;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
+
 	// 派生计算
 	const unread = $derived(notifies.filter((n) => !n.read).length);
 	const meId = $derived(auth.user?.user_id ?? '');
 	const filteredNotifies = $derived(
-		filter === 'all' ? notifies : notifies.filter((n) => n.type === filter)
+		(searching ? searchItems : notifies).filter((n) => filter === 'all' || n.type === filter)
 	);
 
 	const reactionCount = $derived(notifies.filter((n) => n.type === 'reaction').length);
@@ -299,6 +348,13 @@ export function useNotifyData() {
 
 	return {
 		get notifies() { return notifies; },
+		get query() { return query; },
+		set query(v: string) { query = v; },
+		get searching() { return searching; },
+		get searchLoaded() { return searchLoaded; },
+		get searchLoading() { return searchLoading; },
+		get searchError() { return searchError; },
+		retrySearch: () => { searchReloadKey++; },
 		get filteredNotifies() { return filteredNotifies; },
 		get invites() { return invites; },
 		get filter() { return filter; },
