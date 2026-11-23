@@ -12,13 +12,14 @@
 	import Button from '@/components/ui/button.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
 	import Input from '@/components/forms/Input.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Select from '@/components/forms/Select.svelte';
 	import Textarea from '@/components/forms/Textarea.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
 	import { createAdminList } from '../shared/admin-list.svelte';
 	import {
 		TABLE_WRAP, TABLE, TH, TH_SECONDARY, TH_SECONDARY_NUM, TR, TD, TD_SECONDARY, TD_SECONDARY_NUM,
-		TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER
+		TD_ACTIONS, ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP
 	} from '../shared/table';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
@@ -37,6 +38,69 @@
 	];
 	const SEVERITY_TABS = [{ id: '', label: '全部' }, ...SEVERITIES.map((s) => ({ id: s.value, label: s.label }))];
 	let severityFilter = $state<'' | AnnounceSeverity>('');
+	let query = $state('');
+	let searchReloadKey = $state(0);
+	const searching = $derived(query.trim().length > 0);
+	let searchItems = $state<AdminAnnouncementItem[]>([]);
+	let searchLoaded = $state(0);
+	let searchLoading = $state(false);
+	let searchError = $state<string | null>(null);
+
+	// 公告契约（announcements/fetch）无 keyword 参数：搜索时先按当前级别自动加载完全部分页
+	// （最多 10 页），再本地匹配标题/正文/级别/发布人；清空后回到常规分页。
+	function announcementMatches(a: AdminAnnouncementItem, q: string): boolean {
+		const hay = [
+			a.announcement_id,
+			a.title,
+			a.content,
+			SEVERITIES.find((s) => s.value === a.severity)?.label ?? '',
+			a.created_by?.nickname ?? '',
+			a.created_by?.user_id ?? '',
+			a.action_url ?? ''
+		].join(' ').toLowerCase();
+		return hay.includes(q.toLowerCase());
+	}
+
+	$effect(() => {
+		const q = query.trim();
+		const sev = severityFilter;
+		void searchReloadKey;
+		if (!q) {
+			searchItems = [];
+			searchLoaded = 0;
+			searchLoading = false;
+			searchError = null;
+			return;
+		}
+		let cancelled = false;
+		searchLoading = true;
+		searchError = null;
+		void (async () => {
+			const all: AdminAnnouncementItem[] = [];
+			let cursor: string | undefined;
+			for (let page = 0; page < 10; page++) {
+				const res = await adminListAnnouncements({
+					severity: (sev || null) as AnnounceSeverity | null,
+					pagination: { limit: 20, cursor }
+				}).catch(() => null);
+				if (cancelled) return;
+				if (!res || res.code !== 0 || !res.data) {
+					searchError = res?.message ?? '搜索失败';
+					break;
+				}
+				all.push(...(res.data.items ?? []));
+				cursor = res.data.next_cursor ?? undefined;
+				if (!cursor) break;
+			}
+			if (cancelled) return;
+			searchLoaded = all.length;
+			searchItems = all.filter((a) => announcementMatches(a, q));
+			searchLoading = false;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	const list = createAdminList<AdminAnnouncementItem>(
 		(cursor, limit) =>
@@ -46,6 +110,7 @@
 			}),
 		() => severityFilter
 	);
+	const shownItems = $derived(searching ? searchItems : list.items);
 
 	// 级别 → Badge tone（全站徽章统一软底语言；error 由原实底红收敛到 danger 软底，
 	// 保留「严重」红色语义，不再与主操作抢视觉）
@@ -142,30 +207,50 @@
 	</EmptyState>
 {:else}
 	<div class="flex flex-col gap-4">
-		<!-- 工具栏：级别筛选（左）+ 页面级动作（右）；移动端上下堆叠 -->
-		<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+		<!-- 工具栏：级别筛选 + 搜索 + 页面级动作；移动端上下堆叠 -->
+		<div class="flex flex-col gap-3">
 			<TabBar items={SEVERITY_TABS} value={severityFilter} onChange={(id) => (severityFilter = id as '' | AnnounceSeverity)} />
-			{#if canWrite}
-				<Button type="button" variant="primary" size="sm" onclick={openCreate} class="hit-slop-44 self-end sm:self-auto">
-					<Plus class="size-3.5" strokeWidth={2} aria-hidden="true" />
-					发布公告
-				</Button>
+			<div class={TOOLBAR}>
+				<div class={SEARCH_WRAP}>
+					<SearchInput
+						value={query}
+						onChange={(v) => (query = v)}
+						placeholder="搜索标题 / 内容 / 发布人…"
+						ariaLabel="搜索公告"
+					/>
+				</div>
+				{#if canWrite}
+					<Button type="button" variant="primary" size="sm" onclick={openCreate} class="hit-slop-44 ml-auto">
+						<Plus class="size-3.5" strokeWidth={2} aria-hidden="true" />
+						发布公告
+					</Button>
+				{/if}
+			</div>
+			{#if searching && !searchLoading && !searchError}
+				<p class="text-xs text-text-secondary">已加载 {searchLoaded} 条 · 匹配 {searchItems.length} 条</p>
 			{/if}
 		</div>
 
 		<AdminListView
-			loading={list.loading}
-			error={list.error}
-			count={list.count}
-			hasMore={list.hasMore}
-			loadingMore={list.loadingMore}
-			onReload={list.reload}
-			onLoadMore={list.loadMore}
-			loadingLabel="加载公告列表…"
-			emptyTitle="还没有系统公告"
-			emptyDescription="发布一条公告，让全站用户看到平台最新安排。"
+			loading={searching ? searchLoading : list.loading}
+			error={searching ? searchError : list.error}
+			count={searching ? searchItems.length : list.count}
+			hasMore={searching ? false : list.hasMore}
+			loadingMore={searching ? false : list.loadingMore}
+			onReload={searching ? () => searchReloadKey++ : list.reload}
+			onLoadMore={searching ? () => {} : list.loadMore}
+			loadingLabel={searching ? '搜索公告…' : '加载公告列表…'}
+			emptyTitle={searching ? '没有匹配的公告' : '还没有系统公告'}
+			emptyDescription={searching
+				? '换个标题/内容/发布人关键词试试，或清空搜索词后重试。'
+				: '发布一条公告，让全站用户看到平台最新安排。'}
 			emptyIcon={Megaphone}
 		>
+			{#if searching}
+				<div class="mb-2 flex justify-end">
+					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
+				</div>
+			{/if}
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
@@ -180,7 +265,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each list.items as a (a.announcement_id)}
+						{#each shownItems as a (a.announcement_id)}
 							<tr class={TR}>
 								<td class={`${TD} max-w-64 truncate`} title={a.content}>{a.title}</td>
 								<td class={TD}><Badge tone={severityTone[a.severity]}>{SEVERITIES.find((s) => s.value === a.severity)?.label}</Badge></td>
