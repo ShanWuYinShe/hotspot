@@ -192,11 +192,20 @@ class FeedRepository(private val api: ApiClient) {
      * 编辑瞬间（仅作者，spec/api_spec_moment.md → moments/update）。
      * Patch 语义：只提交 description，其余字段不传保持不变；返回更新后的 MomentItem。
      */
-    suspend fun updateMomentDescription(momentId: String, description: String): ApiResult<MomentItem> = api.post(
+    /**
+     * 编辑瞬间（仅作者，patch 语义）：只下发非 null 字段，未传字段保持不变。
+     * description / privacyLevel 分别对应文案与可见范围（public/private）。
+     */
+    suspend fun updateMoment(
+        momentId: String,
+        description: String? = null,
+        privacyLevel: String? = null,
+    ): ApiResult<MomentItem> = api.post(
         ApiEndpoint.MOMENTS_UPDATE,
         buildJsonObject {
             put("moment_id", momentId)
-            put("description", description)
+            if (description != null) put("description", description)
+            if (privacyLevel != null) put("privacy_level", privacyLevel)
         },
         MomentItem.serializer(),
     )

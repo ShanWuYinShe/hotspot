@@ -81,6 +81,7 @@ import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.ReportDialog
+import com.hotspot.app.ui.components.SegmentedTabs
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemTextArea
 import com.hotspot.app.ui.components.ButtonSize
@@ -167,6 +168,10 @@ fun MomentDetailScreen(
     // 作者操作：更多菜单 / 编辑文案 / 删除瞬间
     var ownerSheetOpen by remember { mutableStateOf(false) }
     var editDialogOpen by remember { mutableStateOf(false) }
+    // 可见范围只能在拥有者视角接口拿到（open_the_door 不含 privacy_level），编辑前先查 fetch_created。
+    var editPrivacy by remember { mutableStateOf("public") }
+    var editPrivacyKnown by remember { mutableStateOf(false) }
+    var editPreparing by remember { mutableStateOf(false) }
     var editSaving by remember { mutableStateOf(false) }
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteConfirmOpen by remember { mutableStateOf(false) }
@@ -594,7 +599,23 @@ fun MomentDetailScreen(
             onEdit = {
                 ownerSheetOpen = false
                 editError = null
-                editDialogOpen = true
+                editPrivacyKnown = false
+                if (!editPreparing) {
+                    editPreparing = true
+                    scope.launch {
+                        when (val result = AppContainer.profileRepository.createdMoments(null)) {
+                            is ApiResult.Ok -> result.data.items
+                                .firstOrNull { it.momentId == momentId }
+                                ?.let { item ->
+                                    editPrivacy = item.privacyLevel ?: "public"
+                                    editPrivacyKnown = true
+                                }
+                            is ApiResult.Err -> editError = result.error.userMessage
+                        }
+                        editPreparing = false
+                        editDialogOpen = true
+                    }
+                }
             },
             onDelete = {
                 ownerSheetOpen = false
@@ -640,15 +661,16 @@ fun MomentDetailScreen(
     if (editDialogOpen) {
         MomentEditDialog(
             initialDescription = moment?.description.orEmpty(),
+            initialPrivacy = if (editPrivacyKnown) editPrivacy else null,
             saving = editSaving,
             error = editError,
             onDismiss = { if (!editSaving) editDialogOpen = false },
-            onSubmit = { description ->
+            onSubmit = { description, privacyLevel ->
                 if (editSaving) return@MomentEditDialog
                 editSaving = true
                 editError = null
                 scope.launch {
-                    when (val result = feedRepository.updateMomentDescription(momentId, description)) {
+                    when (val result = feedRepository.updateMoment(momentId, description, privacyLevel)) {
                         is ApiResult.Ok -> {
                             moment = result.data
                             editDialogOpen = false
@@ -1171,13 +1193,17 @@ private fun OwnerActionRow(text: String, color: Color, onClick: () -> Unit) {
 @Composable
 private fun MomentEditDialog(
     initialDescription: String,
+    initialPrivacy: String?,
     saving: Boolean,
     error: String?,
     onDismiss: () -> Unit,
-    onSubmit: (String) -> Unit,
+    onSubmit: (description: String, privacyLevel: String?) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     var description by remember(initialDescription) { mutableStateOf(initialDescription) }
+    var privacyIndex by remember(initialPrivacy) {
+        mutableIntStateOf(if (initialPrivacy == "private") 1 else 0)
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("编辑瞬间") },
@@ -1190,6 +1216,27 @@ private fun MomentEditDialog(
                     placeholder = "这一刻的想法…",
                     minHeight = Dimens.inputHeight * 3,
                 )
+                Spacer(Modifier.height(Spacing.md))
+                Text(
+                    text = "谁可以看到",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                if (initialPrivacy != null) {
+                    SegmentedTabs(
+                        options = listOf("附近可见", "仅自己"),
+                        selectedIndex = privacyIndex,
+                        onSelected = { privacyIndex = it },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    Text(
+                        text = "暂时无法读取可见范围，本次只修改文案",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary,
+                    )
+                }
                 if (error != null) {
                     Spacer(Modifier.height(Spacing.sm))
                     Text(
@@ -1203,7 +1250,14 @@ private fun MomentEditDialog(
         confirmButton = {
             SystemButton(
                 text = if (saving) "保存中…" else "保存",
-                onClick = { if (!saving) onSubmit(description.trim()) },
+                onClick = {
+                    if (!saving) {
+                        onSubmit(
+                            description.trim(),
+                            initialPrivacy?.let { if (privacyIndex == 1) "private" else "public" },
+                        )
+                    }
+                },
                 variant = ButtonVariant.PRIMARY,
                 size = ButtonSize.SM,
                 enabled = !saving,
