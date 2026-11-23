@@ -1,6 +1,9 @@
 package com.hotspot.app.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.core.content.ContextCompat
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -32,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,7 +54,9 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.media.ChatFileUploader
+import com.hotspot.app.data.media.ChatAudioUploader
 import com.hotspot.app.data.media.ChatImageUploader
+import com.hotspot.app.data.media.VoiceRecorder
 import com.hotspot.app.data.media.ChatVideoUploader
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.realtime.RealtimeEvent
@@ -58,6 +64,8 @@ import com.hotspot.app.navigation.ChatTarget
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.ChatFileBubble
+import com.hotspot.app.ui.components.AudioMessageBubble
+import com.hotspot.app.ui.components.AudioRecorderBar
 import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.ChatVideoBubble
 import com.hotspot.app.ui.components.EmptyState
@@ -187,6 +195,73 @@ fun ChatScreen(onBack: () -> Unit) {
                     .onFailure { error = it.message ?: "文件发送失败，请重试" }
             } finally {
                 fileUploading = false
+            }
+        }
+    }
+
+    // 语音消息：点麦克风开始录音（AAC/ADTS，chat_audio），录音栏可取消或发送。
+    var recording by remember { mutableStateOf(false) }
+    var recordingSeconds by remember { mutableIntStateOf(0) }
+    var audioSending by remember { mutableStateOf(false) }
+    val recorder = remember { VoiceRecorder(context) }
+    DisposableEffect(Unit) { onDispose { recorder.cancel() } }
+    fun beginVoiceRecording() {
+        recorder.start()
+            .onSuccess {
+                recordingSeconds = 0
+                recording = true
+            }
+            .onFailure { Toast.makeText(context, it.message ?: "无法开始录音", Toast.LENGTH_SHORT).show() }
+    }
+    val micPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) {
+            beginVoiceRecording()
+        } else {
+            Toast.makeText(context, "需要麦克风权限才能发送语音", Toast.LENGTH_SHORT).show()
+        }
+    }
+    fun sendVoiceRecording() {
+        if (audioSending) return
+        val audio = recorder.stop().getOrNull()
+        recording = false
+        if (audio == null || audio.durationSeconds < 1) {
+            audio?.file?.delete()
+            Toast.makeText(context, "录音太短，请至少录制 1 秒", Toast.LENGTH_SHORT).show()
+            return
+        }
+        audioSending = true
+        scope.launch {
+            try {
+                ChatAudioUploader.upload(audio.file)
+                    .onSuccess { uploaded ->
+                        when (val result = chatRepository.sendAudioMessage(targetUserId, uploaded.fileId)) {
+                            is ApiResult.Ok -> {
+                                reload()
+                                listState.animateScrollToItem(0)
+                            }
+                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    .onFailure { Toast.makeText(context, it.message ?: "语音发送失败，请重试", Toast.LENGTH_SHORT).show() }
+            } finally {
+                audio.file.delete()
+                audioSending = false
+            }
+        }
+    }
+    val startRecording = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            beginVoiceRecording()
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
+    }
+    LaunchedEffect(recording) {
+        if (recording) {
+            recordingSeconds = 0
+            while (true) {
+                delay(1000)
+                recordingSeconds += 1
             }
         }
     }
@@ -357,62 +432,97 @@ fun ChatScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = Spacing.lg),
             )
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.surface)
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = Spacing.md, vertical = Spacing.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        if (recording || audioSending) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .clickable(enabled = !uploading) {
-                        imagePicker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
-                        )
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .navigationBarsPadding()
+                    .imePadding(),
+            ) {
+                AudioRecorderBar(
+                    seconds = recordingSeconds,
+                    sending = audioSending,
+                    onCancel = {
+                        recorder.cancel()
+                        recording = false
+                        recordingSeconds = 0
                     },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_action_gallery),
-                    contentDescription = if (uploading) "媒体发送中" else "发送图片或视频",
-                    modifier = Modifier.size(Dimens.iconMd),
-                    tint = if (uploading) colors.textSecondary else colors.accent,
+                    onSend = { sendVoiceRecording() },
                 )
             }
-            Box(
+        } else {
+            Row(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .clickable(enabled = !fileUploading) { filePicker.launch(arrayOf("*/*")) },
-                contentAlignment = Alignment.Center,
+                    .fillMaxWidth()
+                    .background(colors.surface)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_action_file),
-                    contentDescription = if (fileUploading) "文件发送中" else "发送文件",
-                    modifier = Modifier.size(Dimens.iconMd),
-                    tint = if (fileUploading) colors.textSecondary else colors.accent,
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .clickable { startRecording() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_mic),
+                        contentDescription = "录制语音",
+                        modifier = Modifier.size(Dimens.iconMd),
+                        tint = colors.accent,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .clickable(enabled = !uploading) {
+                            imagePicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo),
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_action_gallery),
+                        contentDescription = if (uploading) "媒体发送中" else "发送图片或视频",
+                        modifier = Modifier.size(Dimens.iconMd),
+                        tint = if (uploading) colors.textSecondary else colors.accent,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .clickable(enabled = !fileUploading) { filePicker.launch(arrayOf("*/*")) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_action_file),
+                        contentDescription = if (fileUploading) "文件发送中" else "发送文件",
+                        modifier = Modifier.size(Dimens.iconMd),
+                        tint = if (fileUploading) colors.textSecondary else colors.accent,
+                    )
+                }
+                SystemInput(
+                    value = input,
+                    onValueChange = { onInputChange(it) },
+                    placeholder = "发消息…",
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(Spacing.sm))
+                SystemButton(
+                    text = "发送",
+                    onClick = { send() },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    enabled = input.isNotBlank(),
+                    loading = sending,
                 )
             }
-            SystemInput(
-                value = input,
-                onValueChange = { onInputChange(it) },
-                placeholder = "发消息…",
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(Spacing.sm))
-            SystemButton(
-                text = "发送",
-                onClick = { send() },
-                variant = ButtonVariant.PRIMARY,
-                size = ButtonSize.SM,
-                enabled = input.isNotBlank(),
-                loading = sending,
-            )
         }
     }
 
@@ -550,6 +660,12 @@ private fun MessageBubble(
                         isMine = isMine,
                         contentDescription = "聊天图片",
                         onClick = onImageClick?.let { click -> { click(imageUrl) } },
+                    )
+                } else if (!message.isRecalled && message.type == "audio") {
+                    AudioMessageBubble(
+                        audioUrl = imageUrl,
+                        isMine = isMine,
+                        durationSeconds = message.media?.duration,
                     )
                 } else if (!message.isRecalled && message.type == "video") {
                     ChatVideoBubble(
