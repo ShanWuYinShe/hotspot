@@ -1029,6 +1029,15 @@ class GroupRepository(private val api: ApiClient) {
         }
     }
 
+    /** 转让群主（owner 专属；成功后原 owner 失去 owner 权限，自然去重）。 */
+    suspend fun transferOwnership(groupId: String, newOwnerId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_ADMIN_TRANSFER_OWNERSHIP,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("new_owner_id", newOwnerId)
+        },
+    )
+
     /** 设置成员角色（owner/admin 守卫；role 为 admin/member；服务端保护最后一个管理员）。 */
     suspend fun setMemberRole(groupId: String, userId: String, role: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.GROUPS_ADMIN_MEMBERS_SET_ROLE,

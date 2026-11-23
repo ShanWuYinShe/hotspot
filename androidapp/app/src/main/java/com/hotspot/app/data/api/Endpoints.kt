@@ -66,6 +66,7 @@ object ApiEndpoint {
     const val GROUPS_ADMIN_MEMBERS_SET_ROLE = "/api/v1/groups/admin/members/set_role"
     const val GROUPS_ADMIN_MEMBERS_SET_MUTE = "/api/v1/groups/admin/members/set_mute"
     const val GROUPS_ADMIN_MEMBERS_REMOVE = "/api/v1/groups/admin/members/remove"
+    const val GROUPS_ADMIN_TRANSFER_OWNERSHIP = "/api/v1/groups/admin/transfer_ownership"
     const val GROUPS_ADMIN_ANNOUNCEMENTS_CREATE = "/api/v1/groups/admin/announcements/create"
     const val GROUPS_ADMIN_ANNOUNCEMENTS_UPDATE = "/api/v1/groups/admin/announcements/update"
     const val GROUPS_ADMIN_ANNOUNCEMENTS_DELETE = "/api/v1/groups/admin/announcements/delete"

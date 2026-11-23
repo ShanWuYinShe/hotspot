@@ -223,6 +223,8 @@ fun GroupDetailScreen(
     var managedMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var removingMember by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
     var memberActionBusy by remember(groupId) { mutableStateOf(false) }
+    var transferTarget by remember(groupId) { mutableStateOf<GroupMemberItem?>(null) }
+    var transferBusy by remember(groupId) { mutableStateOf(false) }
     val myUserId = AppContainer.tokenStore.session.value?.userId
     val context = LocalContext.current
 
@@ -352,6 +354,7 @@ fun GroupDetailScreen(
     val canManageGroup = currentDetail?.viewerState?.role == "owner" ||
         currentDetail?.viewerState?.role == "admin"
     val canManageAnnouncements = canManageGroup
+    val isGroupOwner = currentDetail?.viewerState?.role == "owner"
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
@@ -605,6 +608,7 @@ fun GroupDetailScreen(
             add(MemberAction.MUTE_1H)
             add(MemberAction.UNMUTE)
             add(MemberAction.REMOVE)
+            if (isGroupOwner) add(MemberAction.TRANSFER_OWNER)
         }
         MemberActionSheet(
             actions = actions,
@@ -613,6 +617,8 @@ fun GroupDetailScreen(
                 managedMember = null
                 if (action == MemberAction.REMOVE) {
                     removingMember = target
+                } else if (action == MemberAction.TRANSFER_OWNER) {
+                    transferTarget = target
                 } else {
                     if (memberActionBusy) return@MemberActionSheet
                     memberActionBusy = true
@@ -676,6 +682,50 @@ fun GroupDetailScreen(
                     variant = ButtonVariant.SECONDARY,
                     size = ButtonSize.SM,
                     enabled = !memberActionBusy,
+                )
+            },
+        )
+    }
+
+    transferTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { if (!transferBusy) transferTarget = null },
+            title = { Text("转让群主") },
+            text = {
+                Text("确定将群主转让给「${target.user.nickname.ifBlank { "该成员" }}」？转让后你将成为普通管理员，此操作不可撤销。")
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (transferBusy) "转让中…" else "确认转让",
+                    onClick = {
+                        if (transferBusy) return@SystemButton
+                        transferBusy = true
+                        scope.launch {
+                            when (val result = repository.transferOwnership(groupId, target.user.userId)) {
+                                is ApiResult.Ok -> {
+                                    transferTarget = null
+                                    membersState.initialLoad(memberLoader)
+                                    loadDetail()
+                                    Toast.makeText(context, "群主已转让", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            transferBusy = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !transferBusy,
+                    loading = transferBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!transferBusy) transferTarget = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !transferBusy,
                 )
             },
         )
