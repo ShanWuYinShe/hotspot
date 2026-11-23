@@ -242,6 +242,16 @@ data class AdminGroupItem(
     @SerialName("last_activity_at") val lastActivityAt: String? = null,
 )
 
+/** 管理端标签项（spec → AdminTagItem extends TagItem）：含内部 tag_id / 创建时间 / 屏蔽状态。 */
+@Serializable
+data class AdminTagItem(
+    @SerialName("tag_id") val tagId: String = "",
+    val name: String = "",
+    @SerialName("usage_count") val usageCount: Int = 0,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("is_blocked") val isBlocked: Boolean = false,
+)
+
 /**
  * 管理端系统公告（spec/api_spec_admin.md → AdminAnnouncementItem extends SystemAnnouncementItem）。
  * severity: info / warning / error。

@@ -7,6 +7,7 @@ import com.hotspot.app.data.model.AdminOperatorItem
 import com.hotspot.app.data.model.AdminPermissionDictionary
 import com.hotspot.app.data.model.AdminPermissions
 import com.hotspot.app.data.model.AdminRoleList
+import com.hotspot.app.data.model.AdminTagItem
 import com.hotspot.app.data.model.AdminAnnouncementItem
 import com.hotspot.app.data.model.AdminGeoStatsResponse
 import com.hotspot.app.data.model.AdminGroupItem
@@ -27,6 +28,33 @@ class AdminRepository(private val api: ApiClient) {
         ApiEndpoint.ADMIN_RBAC_ME,
         ApiClient.emptyBody(),
         AdminPermissions.serializer(),
+    )
+
+    /** 搜索标签（平台管理）：包含已屏蔽标签，供解屏蔽；按使用次数倒序。 */
+    suspend fun searchTags(
+        keyword: String?,
+        cursor: String? = null,
+    ): ApiResult<Page<AdminTagItem>> = api.post(
+        ApiEndpoint.ADMIN_TAGS_SEARCH,
+        buildJsonObject {
+            put("keyword", keyword?.takeIf { it.isNotBlank() }?.let(::JsonPrimitive) ?: JsonNull)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(AdminTagItem.serializer()),
+    )
+
+    /** 屏蔽/解屏蔽标签（软屏蔽，历史引用保留）；hardDelete 仅屏蔽时有效且不可逆。 */
+    suspend fun setTagBan(
+        name: String,
+        active: Boolean,
+        hardDelete: Boolean = false,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.ADMIN_TAGS_SET_BAN,
+        buildJsonObject {
+            put("name", name)
+            put("active", active)
+            put("hard_delete", if (active) JsonPrimitive(hardDelete) else JsonNull)
+        },
     )
 
     /** 角色列表（RBAC 系统配置数据，有界不分页）。 */
