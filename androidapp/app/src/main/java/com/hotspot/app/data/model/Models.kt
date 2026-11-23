@@ -369,7 +369,10 @@ data class PrivateMessageItem(
     @SerialName("recalled_at") val recalledAt: String? = null,
     @SerialName("is_read") val isRead: Boolean = false,
     val reactions: List<Reaction> = emptyList(),
-)
+) {
+    /** 服务端未撤回时 recalled_at 下发空字符串；空串/null 都视为未撤回。 */
+    val isRecalled: Boolean get() = !recalledAt.isNullOrBlank()
+}
 
 /**
  * 群聊消息项（spec/api_spec_chat.md → GroupMessageItem）。
@@ -392,7 +395,10 @@ data class GroupMessageItem(
     @SerialName("recalled_at") val recalledAt: String? = null,
     @SerialName("read_count") val readCount: Int? = null,
     val reactions: List<Reaction> = emptyList(),
-)
+) {
+    /** 服务端未撤回时 recalled_at 下发空字符串；空串/null 都视为未撤回。 */
+    val isRecalled: Boolean get() = !recalledAt.isNullOrBlank()
+}
 
 @Serializable
 data class PrivateChatItem(

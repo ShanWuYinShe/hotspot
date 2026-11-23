@@ -50,6 +50,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
+import java.io.InputStream
 import java.time.Duration
 import java.util.UUID
 
@@ -302,6 +303,30 @@ class MediaRepository(private val api: ApiClient) {
             }
         }
     }
+
+    /**
+     * PUT 直传对象存储（流式，不把文件整份读入内存）；供 chat_file 等大文件使用。
+     * contentLength 必须与 presign 申报的 file_size 一致，openStream 在写入时打开一次。
+     */
+    suspend fun putObjectStream(
+        uploadUrl: String,
+        headers: Map<String, String>,
+        contentLength: Long,
+        mimeType: String,
+        onProgress: ((Float) -> Unit)? = null,
+        openStream: () -> InputStream,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val mediaType = (mimeType.takeIf { it.isNotBlank() } ?: "application/octet-stream").toMediaType()
+            val requestBuilder = Request.Builder()
+                .url(uploadUrl)
+                .put(StreamRequestBody(contentLength, mediaType, onProgress, openStream))
+            headers.forEach { (name, value) -> requestBuilder.header(name, value) }
+            uploadClient.newCall(requestBuilder.build()).execute().use { response ->
+                check(response.isSuccessful) { "上传失败（HTTP " + response.code + "）" }
+            }
+        }
+    }
 }
 
 /** 带进度回调的请求体：分块写入，进度只用于 UI 提示。 */
@@ -322,6 +347,32 @@ private class ProgressRequestBody(
             sink.write(bytes, written, length)
             written += length
             onProgress?.invoke(written.toFloat() / bytes.size.toFloat())
+        }
+    }
+}
+
+/** 流式请求体：从 InputStream 分块写入，支持 100MB 级聊天文件且不占用整份内存。 */
+private class StreamRequestBody(
+    private val length: Long,
+    private val mediaType: okhttp3.MediaType,
+    private val onProgress: ((Float) -> Unit)?,
+    private val openStream: () -> InputStream,
+) : RequestBody() {
+    override fun contentType(): okhttp3.MediaType = mediaType
+
+    override fun contentLength(): Long = length
+
+    override fun writeTo(sink: BufferedSink) {
+        val buffer = ByteArray(64 * 1024)
+        var written = 0L
+        openStream().use { input ->
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                sink.write(buffer, 0, read)
+                written += read
+                if (length > 0) onProgress?.invoke((written.toFloat() / length.toFloat()).coerceIn(0f, 1f))
+            }
         }
     }
 }
@@ -520,6 +571,21 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** 发送私聊文件消息（file_id 来自 media/complete_upload，category=chat_file）。 */
+    suspend fun sendFileMessage(targetUserId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.PRIVATE_MESSAGES_SEND,
+        buildJsonObject {
+            put("target_user_id", targetUserId)
+            put("type", "file")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
     /** 私聊已读（spec/api_spec_chat.md → private_messages/mark_read：scope='session' 标记该会话全部已读，幂等）。 */
     suspend fun markPrivateRead(targetUserId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.PRIVATE_MESSAGES_MARK_READ,
@@ -578,6 +644,22 @@ class ChatRepository(private val api: ApiClient) {
         buildJsonObject {
             put("group_id", groupId)
             put("type", "image")
+            put("content", JsonNull)
+            put("file_id", fileId)
+            put("share_code", JsonNull)
+            put("reply_to_message_id", JsonNull)
+            put("mentions", buildJsonArray { })
+        },
+        MessageSentResult.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
+    /** 发送群文件消息（file_id 来自 media/complete_upload，category=chat_file）。 */
+    suspend fun sendGroupFileMessage(groupId: String, fileId: String): ApiResult<MessageSentResult> = api.post(
+        ApiEndpoint.GROUP_MESSAGES_SEND,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("type", "file")
             put("content", JsonNull)
             put("file_id", fileId)
             put("share_code", JsonNull)

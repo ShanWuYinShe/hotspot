@@ -87,7 +87,7 @@ app/src/main/java/com/hotspot/app/
   data/model/      # spec 字段 DTO
   data/repo/       # 按业务域的仓库（认证/信息流/附近/搜索/私聊/评论/资料/通知/群组详情）
   data/location/   # 浏览锚点本地存储（地图选点页写入；附近页 reference_point 优先用它）
-  data/media/      # 聊天图片上传（presign_upload(category=chat_image) → PUT → complete_upload）
+  data/media/      # 聊天图片/文件上传（chat_image 10MB 图片白名单；chat_file 100MB 流式上传 + 黑名单校验）
   data/realtime/   # WebSocket 实时通道：HotSpotRealtimeClient（OkHttp WS）+ RealtimeProtocol（纯函数解析/退避/订阅集合）
   navigation/      # Routes / AppNav（登录态门禁 + 底部 5 tab）
   ui/theme/        # Tokens（生成物）/ Theme / ThemeController / Type / Shape / Dimens / Motion
@@ -120,6 +120,9 @@ app/src/main/java/com/hotspot/app/
   （chat_image 分类，先校验 10MB / JPG·PNG·WebP·GIF 白名单再读文件）→ `private_messages/send` /
   `group_messages/send` 的 `type=image` + `file_id`；气泡用 Coil 加载 `media.url`（服务端下发短时签名 URL），
   加载失败回落「[图片]」占位。
+- **聊天文件**：输入条相册右侧文件按钮 → 系统 DocumentsUI → `data/media/ChatFileUploader`
+  （chat_file 分类，100MB 上限 + 扩展名/MIME 双黑名单，PUT 走流式 `putObjectStream` 不整份读内存）→
+  `private_messages/send` / `group_messages/send` 的 `type=file` + `file_id`；气泡展示文件名/大小，点击 `ACTION_VIEW` 打开签名 URL。
 - **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
   而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
   `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
@@ -146,7 +149,7 @@ app/src/main/java/com/hotspot/app/
 2. 管理后台；
    群聊会话页已接入 WebSocket 实时新消息/编辑/撤回/已读数刷新、输入中提示与 @提及；
    私聊/群聊已接入图片消息（相册选图 → chat_image 上传 → type=image 发送 + 图片气泡展示）；
-   语音/视频/文件富媒体与 @提及消息的独立通知跳转未做；
+   语音/视频富媒体与 @提及消息的独立通知跳转未做（文件消息已接入）；
    群管理（改群信息 / 公告与成员管理 / 转让群主）未做；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报长按他人消息）；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、

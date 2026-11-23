@@ -60,6 +60,7 @@ import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiError
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.ChatFileUploader
 import com.hotspot.app.data.media.ChatImageUploader
 import com.hotspot.app.data.model.GroupMemberItem
 import com.hotspot.app.data.model.GroupMessageItem
@@ -68,6 +69,7 @@ import com.hotspot.app.navigation.GroupChatTarget
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
+import com.hotspot.app.ui.components.ChatFileBubble
 import com.hotspot.app.ui.components.ChatImageBubble
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
@@ -119,6 +121,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
     var notMember by remember { mutableStateOf(false) }
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
+    var fileUploading by remember { mutableStateOf(false) }
     var input by remember { mutableStateOf("") }
     var readMarked by remember { mutableStateOf(false) }
     var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
@@ -150,6 +153,30 @@ fun GroupChatScreen(onBack: () -> Unit) {
 
     // 发送图片：系统 Photo Picker → chat_image 三步上传 → group_messages/send(type=image, file_id)。
     val context = LocalContext.current
+
+    // 发送文件：系统 DocumentsUI → chat_file 流式三步上传 → group_messages/send(type=file, file_id)。
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            fileUploading = true
+            error = null
+            try {
+                ChatFileUploader.upload(context, uri)
+                    .onSuccess { uploaded ->
+                        when (val result = chatRepository.sendGroupFileMessage(groupId, uploaded.fileId)) {
+                            is ApiResult.Ok -> {
+                                reload()
+                                listState.animateScrollToItem(0)
+                            }
+                            is ApiResult.Err -> error = result.error.userMessage
+                        }
+                    }
+                    .onFailure { error = it.message ?: "文件发送失败，请重试" }
+            } finally {
+                fileUploading = false
+            }
+        }
+    }
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -376,7 +403,7 @@ fun GroupChatScreen(onBack: () -> Unit) {
                         GroupMessageRow(
                             message = message,
                             isMine = message.sender.userId == myUserId,
-                            onLongPressReport = if (message.sender.userId != myUserId && message.recalledAt == null && message.type != "system") {
+                            onLongPressReport = if (message.sender.userId != myUserId && !message.isRecalled && message.type != "system") {
                                 { reportTarget = message }
                             } else {
                                 null
@@ -431,6 +458,20 @@ fun GroupChatScreen(onBack: () -> Unit) {
                     contentDescription = if (uploading) "图片发送中" else "发送图片",
                     modifier = Modifier.size(Dimens.iconMd),
                     tint = if (uploading) colors.textSecondary else colors.accent,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .clickable(enabled = !fileUploading) { filePicker.launch(arrayOf("*/*")) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_action_file),
+                    contentDescription = if (fileUploading) "文件发送中" else "发送文件",
+                    modifier = Modifier.size(Dimens.iconMd),
+                    tint = if (fileUploading) colors.textSecondary else colors.accent,
                 )
             }
             SystemInput(
@@ -575,9 +616,9 @@ private fun GroupMessageRow(
     onLongPressReport: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
-    if (message.type == "system" || message.recalledAt != null) {
+    if (message.type == "system" || message.isRecalled) {
         Text(
-            text = if (message.recalledAt != null) "该消息已撤回" else (message.content ?: ""),
+            text = if (message.isRecalled) "该消息已撤回" else (message.content ?: ""),
             style = MaterialTheme.typography.labelSmall,
             color = colors.textSecondary,
             textAlign = TextAlign.Center,
@@ -629,11 +670,18 @@ private fun GroupMessageRow(
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url
-                if (message.recalledAt == null && message.type == "image" && !imageUrl.isNullOrBlank()) {
+                if (!message.isRecalled && message.type == "image" && !imageUrl.isNullOrBlank()) {
                     ChatImageBubble(
                         imageUrl = imageUrl,
                         isMine = isMine,
                         contentDescription = "群聊图片",
+                    )
+                } else if (!message.isRecalled && message.type == "file") {
+                    ChatFileBubble(
+                        fileName = message.media?.fileName,
+                        fileSize = message.media?.fileSize,
+                        fileUrl = imageUrl,
+                        isMine = isMine,
                     )
                 } else {
                     Text(
