@@ -34,6 +34,8 @@ import { common } from '@kit.AbilityKit';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { BackToTopButton } from '../../../components/BackToTopButton';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { EmptyState } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
@@ -764,6 +766,49 @@ export struct ProfilePage {
     }
   }
 
+  // ── 长页面回顶（个人中心：身份卡 + 数据行 + 完整度 + 端侧分组，可滚动超一屏）──
+  // 注意：勿用 .overlay(空 builder)（空 overlay 节点会拦截滚动手势）；回顶按钮以 Stack
+  // 同级子节点 + HitTestMode.Transparent 渲染，空白区域手势穿透给下层 Scroll。
+  @State private showBackToTop: boolean = false;
+  private backToTopScroller: Scroller = new Scroller();
+
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    // 个人页内容高度约 1.5 屏：滚动范围有限，阈值取 240vp（约一屏的 1/4）
+    const next: boolean = y > 240;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
   build() {
     // 作为底部 Tab 根页时不能包 NavDestination：宿在 Navigation 之外会按系统页面卡片
     // 渲染成带外边距/圆角的浮层，标题与状态栏区域宽度不铺满（与 Web 全幅页头不一致）。
@@ -895,6 +940,9 @@ export struct ProfilePage {
         .width('100%')
         .height('100%')
         .constraintSize({ maxWidth: useMasterDetail(this.currentBreakpoint, this.currentWidthVp) ? 720 : '100%' })
+
+        // 回顶浮动按钮（Stack 子节点，手势穿透，见 builder 注释）
+        this.buildBackToTopOverlay()
 
         // 退出登录已按 P0-4 收敛到设置页（全端单入口），本页不再承载确认弹窗
       }
@@ -1155,7 +1203,7 @@ export struct ProfilePage {
         // 同升级表单：内容短于视口时 Scroll 默认居中，表单一律顶部对齐
         .align(Alignment.Top)
       } else {
-        Scroll() {
+        Scroll(this.backToTopScroller) {
           Column() {
             if (useMasterDetail(this.currentBreakpoint, this.currentWidthVp)) {
               // ======== 宽端（≥960）：保留垂直居中形态 ========
@@ -1290,6 +1338,7 @@ export struct ProfilePage {
         }
         .layoutWeight(1)
         .scrollBar(BarState.Off)
+        .onDidScroll(() => { this.updateBackToTop(); })
       }
     }
   }
