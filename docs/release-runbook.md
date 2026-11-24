@@ -79,10 +79,31 @@ gh run watch <run-id> --exit-status
 - **审计**：追加一行到服务器 `backups/deploy-history.log` 与本机 `.workwork/deploy-history.log`；
 - **旧镜像回收**：保留最近 `DEPLOY_KEEP_IMAGES`（默认 3）个历史版本 + 当前/上一版本。
 
+### 自动发版节奏（AI 自迭代期）
+
+自迭代期间的默认发版口径（人也可以照此执行）：
+
+- **触发条件**（满足即发布，不必累积过多）：main 上已合并 ≥1 批用户可见改动（新功能=minor / 仅修复=patch）且 **main CI 全绿**、涉及 `harmonyapp/` 时本机 `assembleApp` 通过。
+- **发布内容一次到位**：后端 + 前端（tag → Release 工作流构建镜像并 auto-deploy 生产）+ **Android APK（同一 Release 附件）**。
+- **执行顺序**（固定，不要跳步）：
+  1. 发版 PR：把 `androidapp/app/build.gradle.kts` 默认 `versionName/versionCode` 对齐新版本（versionCode 每次 +1）；
+  2. 合并后等 main CI 全绿；涉及鸿蒙改动时本机确认 hvigor 构建；
+  3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / auto-deploy）全绿；
+  4. 构建并附 APK：`scripts/release-android-apk.sh vX.Y.Z <versionCode>`（校验 tag/Release/签名/版本后上传）；
+  5. 核对 `gh release view vX.Y.Z --json assets` 含镜像包 + `.sha256` + `.ids.txt` + `hotspot-android-vX.Y.Z.apk`，并核对线上版本接口。
+- **APK 版本号规则不变**：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致。
+
 ### Android APK 分发（附到 Release）
 
 Android 端不进 CI 发版链路（CI 只跑 debug 门禁），APK 由本机签名后上传到对应 GitHub Release。
-签名材料**不入库、不打印、不配 GitHub secret**：
+Release 跑完后一条命令完成「构建 + 签名校验 + 版本校验 + 上传」：
+
+```bash
+scripts/release-android-apk.sh v1.14.0 5   # 参数：tag（vX.Y.Z）+ versionCode（递增整数）
+```
+
+脚本会拒绝：tag 不在 origin/main、Release 尚未生成、keystore/钥匙串口令缺失、APK 版本号与入参不一致等情况（避免发错包/发 debug 包）。
+以下为手动兜底细节。签名材料**不入库、不打印、不配 GitHub secret**：
 
 - keystore：`~/.android/hotspot-release.jks`（alias `hotspot`，RSA 4096 / 10000 天）；
   口令存 macOS 钥匙串（`security find-generic-password -a <用户名> -s hotspot-android-release -w`）。
