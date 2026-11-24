@@ -386,19 +386,18 @@
 28. **动效契约守护（R18）**：新增动画必须走 `lib/motion.ts` / 鸿蒙 `MotionUtil`；页面进场只能客户端导航、JS 动画必须显式 reduced；
     pop 只能在用户激活操作触发；禁止动画首屏 LCP 元素/引入 CLS/列表逐项 stagger。经验：Svelte transition 需用 `motionDuration()` 处理 reduced，
     否则 reduced 下仍播。
-29. **鸿蒙动效残留（R18）**：MomentFeedCard preview 变体动作条未单独接 pop（overlay 卡由 MediaActionButton 覆盖），待按 UI 入口补齐；SearchPage 用户行**登记 N/A**——Web 搜索用户结果同样没有关注入口（`SearchResults.svelte` 仅跳主页），非鸿蒙缺口；GroupPage joinGroup 函数级已接 pop。
+29. **鸿蒙动效残留（R18，已完成，关闭）**：MomentFeedCard 的 `preview`/默认变体当前**无调用点**——HomePage、MomentPage、SearchPage 三处全部 `variant:'overlay'`（`grep -rn 'MomentFeedCard({' -A4 harmonyapp/entry/src/main/ets` 可见）；overlay 卡动作条由 `MediaActionButton` 覆盖（`@Watch('onActiveChanged') → MotionUtil.statePop`，`MediaOverlay.ets:177/215`），点赞/收藏已有 1→1.15→1 pop。SearchPage 用户行**登记 N/A**（Web 同样无关注入口，非鸿蒙缺口）；GroupPage joinGroup 函数级已接 pop。若后续重新启用 preview/postCard 卡片，按 MediaActionButton 同口径在激活态变化时接 pop。
 30. **search 390 既有 CLS 0.0995（R18 登记，R19 已降至 0.0077）**：r8 的媒体占位/结构改动顺带消除该位移，后续回归按 0.0077 基线看。
     动效相关 QA 建议在 reduced-motion 下取基线截图，避免中间帧偶发 diff。
 31. **鸿蒙详情图片失败态（R19，已完成，关闭）**：`MomentDetailPage` 首图/缩略图已补 `onError` 失败占位（PR #235，停 SeaweedFS 造 404 端上三态实测）。
     另：`delay-images.js` 慢网模拟目前在 `.workwork` 未入库，建议后续并入 browser QA 脚本做常规回归。
-32. **图片失败降级统一审计（R19）**：本轮覆盖头像/封面/缩略图；剩余裸 `<img>`（如部分详情/编辑器预览）按「占位层+失败降级」
-    逐个接入或登记 N/A（新页面/新组件按 design-system §20.10 自查）。
+32. **图片失败降级统一审计（R19，已完成，关闭）**：复核全站 `<img>` 后确认远程图全部具备失败降级——9 个文件走 `use:fadeImage`（`img-fade` 初始 `opacity:0`、仅 `load` 后加 `img-loaded`，失败时图片保持不可见、父级 `.media-placeholder` 渐变透出，不会出现 broken icon）；MediaCard/MomentPostBody 用显式 `imageLoaded` 门控（失败保持占位层）；其余裸 `<img>` 均为**本地/静态资源**（品牌 logo：BrandLockup/HomeMobile/HomeTablet/DesktopLayout；相册本地 blob 预览：ImagePicker；地图画布：MapCanvas）或 `aria-hidden` 装饰层。复核命令：`grep -rl '<img' frontend/src --include=*.svelte` 与 `grep -rln 'use:fadeImage' frontend/src`。新页面/新组件继续按 design-system §20.10 自查。
 
 33. **鸿蒙回顶扩展（R20，已完成，关闭）**：设置页（#221）、个人中心本人页（#222）、我的分享（#230）、他人主页（#231）、我的群组（#232）共 5 处长列表已全部接入 BackToTopButton。
     接入约定：**不要用空 builder 的 `.overlay()` 挂回顶按钮**——空 overlay 节点会拦截手势（滚动与点击都会被拦，见「2026-11-24 回顶扩展」踩坑记录）；统一用 Stack 同级子节点 + 全屏 Row + `HitTestMode.Transparent`。新增长列表按此模式接入并端上验证显隐/回顶。
 34. **回顶与浮层避让（R20）**：当前基线无 changelog 浮动钮；若后续引入同角浮层，按「回顶置其上留 8–12px」规则处理并实测不遮挡。
 35. **页头玻璃可读性（R20）**：scrolled 状态在真实内容（图片/大标题）下的可读性、宽屏/真机滚动观感待真机复验；如觉过透可调 78% 系数（两端 token/常量需同步）。
-36. **SPA 焦点/播报回退（R20）**：h1 缺失页面采用「回退 h1 并跳过播报」二选一策略；新增页面若无 h1，需按 §20.11 自查（优先补 h1）。
+36. **SPA 焦点/播报（R20，已实现，关闭）**：`RoutedContentViewport` 的 `afterNavigate` 已做「聚焦 main（不可聚焦则回退 h1）→ `announceRoute` 播报」；新增页面无 h1 时仍按 §20.11 自查（优先补 h1）。复核：`grep -rn 'afterNavigate|announceRoute' frontend/src/components/layout/page/RoutedContentViewport.svelte`。
 37. **Reflow 持续回归（R20）**：320px/200% 缩放当前抽 34 页 + 8 关键页通过；新页面/新组件按 §20.11 复测，装饰层超界必须被裁剪。
 
 38. **聊天发送失败重试（已完成两端）**：Web 输入栏错误行 + 「重试」（PR #e02ff939e）；鸿蒙内联错误条 + 重试（PR #210，端到端验证：停后端失败 → 恢复后重试成功）。发送重复气泡另见 PR #211。
