@@ -11,6 +11,7 @@ import { AppRouter, LoginRouteParam, AnnouncementsRouteParam } from '../../../co
 import { PageNames, StorageKeys } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { AmbientBackdrop } from '../../../components/layout/AmbientBackdrop';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemDialog } from '../../../components/SystemDialog';
@@ -822,6 +823,13 @@ export struct SettingsPage {
   build() {
     NavDestination() {
       Stack() {
+      // 设置页内容在 Scroll 内（PageShellContainer fillHeight=false），不能随内容挂画布；
+      // 在页面 Stack 层单独铺「底色 + 氛围画布」，内容列透明承载——对齐其它页/Web 的世界层。
+      Column()
+        .width('100%')
+        .height('100%')
+        .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      AmbientBackdrop()
       Column() {
         SystemPageHeader({
           title: '设置',
@@ -837,7 +845,7 @@ export struct SettingsPage {
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
           Scroll(this.backToTopScroller) {
-            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
+            PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false, transparentBackground: true }) {
               Column() {
                 // === 账号信息（web settings：仅登录态显示，标题+说明在卡外） ===
                 if (this.isLoggedIn && this.currentUser) {
@@ -1062,8 +1070,7 @@ export struct SettingsPage {
       }
       .width('100%')
       .height('100%')
-      // 画布契约样板：页面整底 pageBackground 连续（header 默认 bar 变体同画布底）
-      .backgroundColor(this.getCurrentThemePalette().pageBackground)
+      // 底色已由 Stack 底部色层承担；本列保持透明，让氛围画布透出（SettingsPage 专用：内容在 Scroll 内）
       .bindSheet($$this.showThemeSheet, this.ThemeSheet(), {
         height: SheetSize.FIT_CONTENT,
         showClose: true,

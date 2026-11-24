@@ -363,6 +363,12 @@
 - **方案**：`AppStorage` 增加会话态 `MAIN_TAB_INDEX`（`PhoneLayout` 记录 0..4、`DesktopLayout` 置 -1），`PageShellContainer` 新增 `ambientTabIndex`（Tab 页传 0/1/3/4，其它页 -1）；仅当「页面是当前激活 Tab 或非 Tab 上下文」时挂 `AmbientBackdrop`，未激活 Tab 的 Canvas 随 `if` 销毁。
 - **结果**：探针 live 恒 1（切换任意 Tab 仍 1），详情压栈 2、返回 1；PSS（访问 4 Tab 稳定后）194,889→190,645 kB（-4.2MB）；首页/附近/消息/我的四页截图裁剪状态栏后**逐字节一致**（视觉零变化）；桌面分栏布局保持 `MAIN_TAB_INDEX=-1`，各列氛围层不变。
 
+### 2026-11-25 鸿蒙设置页氛围层（Round 148）
+
+- **问题**：`SettingsPage` 内容在 `Scroll` 内、用 `PageShellContainer(fillHeight=false)`，该容器自己铺 `pageBackground` 且不能挂随内容拉伸的画布，导致设置页没有全站统一的氛围世界层（#12 平台差异）。
+- **改动**：`PageShellContainer` 新增 `transparentBackground`（置 true 时不铺底色）；`SettingsPage` 根 `Stack` 内铺「整页底色 Column + `AmbientBackdrop`」，内容列改透明。
+- **验证**：端上深色 vibrant 改动前后同主题截图背景像素差异 15.6%（氛围层生效、卡片/文字不变）；浅色模式氛围层明显、滚动正常、内容可读；构建/类型检查通过。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -385,7 +391,7 @@
 10. **鸿蒙 FALLBACK / WATERMARK token 纳入 CI（已完成 WATERMARK；FALLBACK 登记人工）**：AMBIENT 72/72、CARD-SCRIM 6×5 已覆盖；WATERMARK 由 `check-cross-platform-watermark.mjs` 逐值校验并串入 `check:theme`（PR #224）。
     `cardFallback*`（无图 fallback 渐变）经色板反解确认**无跨端共享公式**（App 端三段渐变，亮色 accent 预混约 20%/24%/18%、暗色手调），web 为纯色 surface-primary，登记为人工视觉核对例外（见 `docs/design-system.md` §15）。
 11. **鸿蒙装饰几何常量 token 化（已完成评估，关闭）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色**已是文件内命名常量**（`SPOTLIGHT_SIZE`/`GLOW_SIZE`/`RING_*`/`DOT_*`、`WORLD_WIDTH/HEIGHT`、`TRANSPARENT`），属组件内部几何而非跨端共享 token，抽到 `DesignConstants` 无复用收益；保留现状。
-12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
+12. **鸿蒙设置页/管理后台氛围层（已解决，关闭）**：设置页在页面根 Stack 自铺「底色 + AmbientBackdrop」并让 PageShellContainer 透明（Round 148）；管理后台 `AdminOverviewPage` 本就走 `PageShellContainer(fillHeight=true)` 有氛围层。滚动容器内仍禁止挂画布。
 13. **跨端搜索结果行字号/头像档差异（已完成，关闭）**：用户行已对齐 web EntityRow（44 头像 / 14 名称 / 12 副标 / 68vp 行高，PR #225）；群组行已改紧凑 EntityRow（PR #228）；此前「web 64/36/12」口径已过期。
 14. **网格卡字号例外（R13）**：171px 网格卡正文 12 / 作者 14；放大卡宽后可统一。
 15. **BSP 卡片比例例外（R13）**：BSP 格按布局单元铺满、非固定比例；统一需重排布局。

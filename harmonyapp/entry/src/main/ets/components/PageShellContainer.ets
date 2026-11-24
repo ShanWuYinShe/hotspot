@@ -66,6 +66,8 @@ export struct PageShellContainer {
   @StorageProp('currentWidthVp') currentWidthVp: number = 0;
   /** 关闭横向留白（父级已自行处理 padding 时用） */
   @Prop noHorizontalPadding: boolean = false;
+  /** 页面已在外层自铺「底色 + 氛围画布」时置 true（本容器不再铺 pageBackground，避免盖住外层氛围层） */
+  @Prop transparentBackground: boolean = false;
   /** 是否占满父容器高度。滚动容器（Scroll/Refresh）内部必须传 false：
    *  height('100%') 会使内容高度恒等于视口，滚动范围归零、下方内容被裁剪 */
   @Prop fillHeight: boolean = true;
@@ -145,6 +147,6 @@ export struct PageShellContainer {
     }
     .width('100%')
     .height(this.fillHeight ? '100%' : 'auto')
-    .backgroundColor(this.getPalette().pageBackground)
+    .backgroundColor(this.transparentBackground ? DesignConstants.COLOR.TRANSPARENT : this.getPalette().pageBackground)
   }
 }
