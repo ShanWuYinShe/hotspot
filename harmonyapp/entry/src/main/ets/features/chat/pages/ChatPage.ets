@@ -835,18 +835,6 @@ export struct ChatPage {
     this.scrollToBottom();
   }
 
-  @Builder
-  private buildJumpToBottomOverlay() {
-    ChatJumpToBottomButton({
-      visible: this.showJumpToBottom,
-      count: this.newMessageCount,
-      onTap: () => { this.jumpToBottom(); }
-    })
-      .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
-  }
-
-
-
   /** 加载更早历史后恢复视口锚点：等 reload 布局与顶部指示项移除完成后，定位到「旧 index + 新增条数」 */
   private restoreHistoryAnchor(anchorIndex: number, addedCount: number): void {
     if (addedCount <= 0) return;
@@ -1503,7 +1491,6 @@ export struct ChatPage {
       })
       .backgroundColor(this.getChatTheme().listBackground)
       .borderRadius(this.getChatVisualStyle().listRadius)
-      .overlay(this.buildJumpToBottomOverlay(), { align: Alignment.BottomEnd })
       .onScrollIndex((start: number, end: number) => {
         this.firstVisibleIndex = start;
         this.lastVisibleIndex = end;
@@ -1780,6 +1767,23 @@ export struct ChatPage {
       backgroundColor: this.getCurrentThemePalette().sheetBackground
     })
     }
+
+    // 回到底部按钮：Stack 同级子节点 + 全屏 Transparent 容器。
+    // 不能用 List.overlay()：overlay 节点会拦截列表内的点击（R112 踩坑：空/装饰 overlay
+    // 既拦滚动也拦点击），表现为聊天消息点按无反应（操作面板/图片预览都打不开）。
+    Column() {
+      ChatJumpToBottomButton({
+        visible: this.showJumpToBottom,
+        count: this.newMessageCount,
+        onTap: () => { this.jumpToBottom(); }
+      })
+        .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.MD })
+    }
+    .width('100%')
+    .height('100%')
+    .justifyContent(FlexAlign.End)
+    .alignItems(HorizontalAlign.End)
+    .hitTestBehavior(HitTestMode.Transparent)
 
     // 举报二次确认
     SystemDialog({
