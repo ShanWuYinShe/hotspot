@@ -618,6 +618,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 | 跨端刻度 | `frontend/scripts/check-cross-platform-scale.mjs` | 字号 9 档（`--text-*` ↔ `FONT.SIZE`，含 lg+ Tailwind 默认档）+ 圆角 5 档 + 各档行高（`textLineHeight()`）逐值一致；单端加近邻档即拦截。已登记豁免：`FONT.SIZE.LG=16`（HarmonyOS 平台适配档） |
 | 类名有效性 | `frontend/scripts/check-utility-classes.mjs` | 源码消费的 token 类名必须已在 `@theme` 注册（含变体前缀与功能类白名单）；未注册的 utility 会静默失效 |
 | 跨端氛围画布 | `frontend/scripts/check-cross-platform-ambient.mjs` | web `--cst-ambient-*`（6 组合 × 12 字段）按 `color-mix` 公式预合成 ↔ 鸿蒙 `ThemeConstants.AMBIENT` 逐值一致 |
+| 跨端整卡遮罩 | `frontend/scripts/check-cross-platform-card-scrim.mjs` | web `--cst-surface-card-scrim-top/bottom` 渐变的 rgba 色标（6 组合 × 5 档）↔ 鸿蒙 `ColorConfig.cardScrim*` 预合成 `#AARRGGBB` 逐值一致（alpha × 255 四舍五入 + 主题色调 RGB） |
 
 以上脚本串入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红；
 组件原语同类型一致性另由 `check-component-consistency.mjs` 在 `bun run check` 中校验。
