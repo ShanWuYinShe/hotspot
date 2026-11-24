@@ -84,6 +84,7 @@
 			const mapped: ChatMessage[] = items.map((m) => ({
 				id: m.message_id,
 				text: m.recalled_at ? '消息已撤回' : (m.content ?? ''),
+				imageUrl: !m.recalled_at && m.type === 'image' ? (m.media?.url ?? '') : undefined,
 				recalled: Boolean(m.recalled_at),
 				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
@@ -116,6 +117,15 @@
 			}
 			return { code: res.code, error: '消息发送失败' };
 		},
+		sendImage: async (fileId) => {
+			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'image', file_id: fileId });
+			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
+			if (res.code === 10200) {
+				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
+				return { code: res.code, error: res.message || (reason && SEND_BLOCK_REASONS[reason]) || '图片发送失败' };
+			}
+			return { code: res.code, error: '图片发送失败' };
+		},
 		sendTypingSignal: (isTyping) => {
 			// 未连接静默丢弃。
 			if (!peerUserId || !wsClient.isConnected) return;
@@ -135,7 +145,15 @@
 			// 上滑读历史时收到的新消息不再被立即标记已读。
 			void sent;
 			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
-			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at), sentAt: payload.sent_at };
+			const media = payload.media as { url?: string } | undefined;
+			return {
+				id,
+				text: payload.type === 'image' ? '' : (payload.content ?? ''),
+				imageUrl: payload.type === 'image' ? media?.url : undefined,
+				sent,
+				time: formatTime(payload.sent_at),
+				sentAt: payload.sent_at
+			};
 		},
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{ type: 'edited' | 'recalled' | 'read'; payload: PrivateMessageNewPayload }>).detail;
