@@ -397,7 +397,7 @@
     接入约定：**不要用空 builder 的 `.overlay()` 挂回顶按钮**——空 overlay 节点会拦截手势（滚动与点击都会被拦，见「2026-11-24 回顶扩展」踩坑记录）；统一用 Stack 同级子节点 + 全屏 Row + `HitTestMode.Transparent`。新增长列表按此模式接入并端上验证显隐/回顶。
 34. **回顶与浮层避让（R20）**：当前基线无 changelog 浮动钮；若后续引入同角浮层，按「回顶置其上留 8–12px」规则处理并实测不遮挡。
 35. **页头玻璃可读性（R20）**：scrolled 状态在真实内容（图片/大标题）下的可读性、宽屏/真机滚动观感待真机复验；如觉过透可调 78% 系数（两端 token/常量需同步）。
-36. **SPA 焦点/播报（R20，已实现，关闭）**：`RoutedContentViewport` 的 `afterNavigate` 已做「聚焦 main（不可聚焦则回退 h1）→ `announceRoute` 播报」；新增页面无 h1 时仍按 §20.11 自查（优先补 h1）。复核：`grep -rn 'afterNavigate|announceRoute' frontend/src/components/layout/page/RoutedContentViewport.svelte`。
+36. **SPA 焦点/播报（R20，已实现，关闭）**：`RoutedContentViewport` 的 `afterNavigate` 在客户端导航后聚焦 `main#main-content`，聚焦成功后 `announceRoute` 播报当前 h1 标题；`main` 不可聚焦时回退 h1（无 h1 回退内容层），兜底路径不叠加播报。新增页面无 h1 时仍按 §20.11 自查（优先补 h1）。复核：`grep -nE 'afterNavigate|announceRoute' frontend/src/components/layout/page/RoutedContentViewport.svelte`。
 37. **Reflow 持续回归（R20）**：320px/200% 缩放当前抽 34 页 + 8 关键页通过；新页面/新组件按 §20.11 复测，装饰层超界必须被裁剪。
 
 38. **聊天发送失败重试（已完成两端）**：Web 输入栏错误行 + 「重试」（PR #e02ff939e）；鸿蒙内联错误条 + 重试（PR #210，端到端验证：停后端失败 → 恢复后重试成功）。发送重复气泡另见 PR #211。
