@@ -65,7 +65,6 @@ describe('ChatMessageList', () => {
 		expect(screen.getByText('还没有消息')).toBeTruthy();
 		expect(container.querySelectorAll('.max-w-chat-bubble')).toHaveLength(0);
 	});
-});
 
 	// 图片消息列表接线：消息列表把图片渲染成按钮，并把 onImageClick 透传到气泡（#263）
 	it('图片消息渲染「查看大图」按钮，点击回传图片 URL', async () => {
@@ -88,3 +87,4 @@ describe('ChatMessageList', () => {
 		await fireEvent.click(container.querySelector('button[aria-label="查看大图"]') as HTMLButtonElement);
 		expect(clicked).toEqual(['https://cdn.example.com/a.jpg']);
 	});
+});

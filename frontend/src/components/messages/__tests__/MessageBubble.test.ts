@@ -65,7 +65,6 @@ describe('MessageBubble', () => {
 		expect(container.querySelector('.bg-accent-default')).toBeNull();
 		expect(screen.getByText('消息已撤回')).toBeTruthy();
 	});
-});
 
 	// 图片消息：不套气泡、渲染成可键盘触达的「查看大图」按钮，点击透出 URL（#263 契约）
 	it('图片消息渲染为「查看大图」按钮且不套气泡底色', () => {
@@ -88,3 +87,4 @@ describe('MessageBubble', () => {
 		await fireEvent.click(container.querySelector('button[aria-label="查看大图"]') as HTMLButtonElement);
 		expect(clicked).toEqual(['https://cdn.example.com/a.jpg']);
 	});
+});
