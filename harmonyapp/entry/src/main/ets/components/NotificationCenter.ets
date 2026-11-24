@@ -22,6 +22,8 @@ import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
+import { Skeleton } from './states/Skeleton';
+import { SkeletonShimmer } from './states/SkeletonShimmer';
 import { SystemInput } from './SystemInput';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
@@ -658,18 +660,48 @@ export struct NotificationCenter {
         })
           .layoutWeight(1)
       } else if (this.isLoading) {
-        Column({ space: DesignConstants.SPACING.MD }) {
-          LoadingProgress()
-            .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-            .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
-            .color(this.getPalette().accentBackground)
-          Text('加载中…')
-            .fontSize(DesignConstants.FONT.SIZE.MD)
-            .fontColor(this.getPalette().textSecondary)
+        // 列表型首屏等待用骨架屏（对齐首页 feed 骨架），与通知行同几何：
+        // 圆形头像占位 + 两行文字条；避免空白 + 转圈造成的「无内容」错觉
+        Column() {
+          SkeletonShimmer({ active: true }) {
+            Column({ space: DesignConstants.SPACING.SM }) {
+            ForEach([0, 1, 2, 3, 4], (index: number) => {
+              Row({ space: DesignConstants.SPACING.MD }) {
+                Skeleton({
+                  blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+                  blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
+                  cornerRadius: '50%'
+                })
+                Column({ space: DesignConstants.SPACING.XS }) {
+                  Skeleton({
+                    blockWidth: '58%',
+                    blockHeight: DesignConstants.FONT.SIZE.MD,
+                    cornerRadius: DesignConstants.RADIUS.SM
+                  })
+                  Skeleton({
+                    blockWidth: '36%',
+                    blockHeight: DesignConstants.FONT.SIZE.SM,
+                    cornerRadius: DesignConstants.RADIUS.SM
+                  })
+                }
+                .layoutWeight(1)
+                .alignItems(HorizontalAlign.Start)
+              }
+              .width('100%')
+                .padding({
+                  left: DesignConstants.SPACING.MD,
+                  right: DesignConstants.SPACING.MD,
+                  top: DesignConstants.SPACING.MD,
+                  bottom: DesignConstants.SPACING.MD
+                })
+            }, (index: number) => 'notify-skeleton-' + index)
+            }
+            .width('100%')
+            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+          }
         }
         .width('100%')
-        .height(DesignConstants.COMPONENT.LOADING_AREA_HEIGHT)
-        .justifyContent(FlexAlign.Center)
+        .layoutWeight(1)
       } else if (this.searchLoadingAll) {
         Column({ space: DesignConstants.SPACING.MD }) {
           LoadingProgress()
