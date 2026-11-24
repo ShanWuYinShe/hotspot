@@ -41,4 +41,5 @@
 - 根因：`List.overlay(buildJumpToBottomOverlay(), { align: Alignment.BottomEnd })`。ArkUI 的 overlay 节点会拦截被覆盖区域的点击/手势；即使按钮内部隐藏时已设 `hitTestBehavior(None)`，**overlay 层本身仍吞掉 List 内的点击**（与 R112 设置页/搜索页「空 overlay 既拦滚动也拦点击」同源，见 `docs/ui-improvement-handoff.md` #33）。
 - 修复：浮动按钮改用 **Stack 同级子节点** 承载——列表/滚动容器外层包 `Stack`，按钮放进全屏 `Column`（`justifyContent(End)` / `alignItems(End)`）+ `hitTestBehavior(HitTestMode.Transparent)`，按钮自身的 `margin` 保持原定位；删除 overlay builder。实拍案例：ChatPage 回底按钮（PR #268）。
 - 判定口径（可复现）：滚动容器上出现 `.overlay(` 后，端上点按容器内行/卡片无反应，而容器外控件正常 → 先怀疑 overlay；把 `.overlay(...)` 改为 Stack 同级 Transparent 容器后同坐标复测。
-- 自查命令：`grep -rn '\.overlay(' harmonyapp/entry/src/main/ets --include=*.ets`。**新代码禁止在 List/Refresh/Scroll 上挂 `.overlay()`**；既有 overlay（SearchPage / MomentsFeedPage / NotificationCenter 的回顶按钮）如发现行点按异常，按同一模式改为 Stack 同级；若确实需要 overlay，必须以全屏 `Row/Column + hitTestBehavior(Transparent)` 包裹并端上验证行点击。
+- 自查命令：`grep -rn '\.overlay(' harmonyapp/entry/src/main/ets --include=*.ets`。**不要在 `List` 上直接挂 `.overlay()`**；浮动按钮优先用 Stack 同级子节点（第 5 条修复模式）。
+- 既有 overlay 端上抽查（本轮）：`NotificationCenter` 挂在 `Refresh` 上、回顶为小按钮，行点击与跳转正常（点已读通知 → 瞬间详情）；`SearchPage` 挂在外层 `Column`、回顶用全屏 `Transparent` 容器，搜索结果行点击正常（点用户 → 他人主页）；`MomentsFeedPage` 与搜索页同构。风险只出现在 `List.overlay` + 小按钮组合（聊天页实测），其它列表若同样挂法按第 5 条修复。
