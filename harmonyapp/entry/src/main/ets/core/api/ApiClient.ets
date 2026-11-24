@@ -113,6 +113,7 @@ import {
   DismissGroupRequest,
   UpdateGroupPreferencesRequest,
   FetchGroupMembersRequest,
+  SearchGroupMembersRequest,
   GroupMemberItem,
   CreateGroupInviteRequest,
   Invitation,
@@ -700,6 +701,10 @@ export class ApiClient {
 
   static async getGroupMembers(params: FetchGroupMembersRequest): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
     return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, FetchGroupMembersRequest>(ApiEndpoints.GROUP.MEMBERS.LIST, params);
+  }
+
+  static async searchGroupMembers(params: SearchGroupMembersRequest): Promise<ApiResponse<PaginatedData<GroupMemberItem>>> {
+    return HttpUtil.post<ApiResponse<PaginatedData<GroupMemberItem>>, SearchGroupMembersRequest>(ApiEndpoints.GROUP.MEMBERS.SEARCH, params);
   }
 
   static async inviteMember(params: CreateGroupInviteRequest): Promise<ApiResponse<Invitation>> {
