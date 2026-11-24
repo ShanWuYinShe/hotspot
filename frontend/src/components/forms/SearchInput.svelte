@@ -25,6 +25,8 @@
 		onFocus,
 		/** 读屏名称：按页面语义传入（如「搜索会话」），不要一律用「搜索」。 */
 		ariaLabel = '搜索',
+		/** 额外键盘处理（如列表页「搜索框 ↓ 进入首行」）；调用方可在事件上 preventDefault 接管。 */
+		onKeydown,
 		/** 输入框字号（text-* 刻度类，默认 text-md=14px）。禁止内联 font-size。 */
 		textClass = 'text-md',
 		trailing
@@ -37,6 +39,7 @@
 		onEnter?: (value: string) => void;
 		onFocus?: () => void;
 		ariaLabel?: string;
+		onKeydown?: (event: KeyboardEvent) => void;
 		textClass?: string;
 		trailing?: Snippet;
 	} = $props();
@@ -74,6 +77,8 @@
 		onkeydown={(e) => {
 			// IME 组合中的 Enter/Escape 是选词/取消候选，不能当提交/清空（中文输入法致命）
 			if (e.isComposing) return;
+			onKeydown?.(e);
+			if (e.defaultPrevented) return;
 			if (e.key === 'Enter') onEnter?.(value);
 			if (e.key === 'Escape' && value) {
 				e.preventDefault();
