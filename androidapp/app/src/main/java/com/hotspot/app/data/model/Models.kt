@@ -277,7 +277,7 @@ data class AdminAnnouncementItem(
 
 /**
  * 管理端审计日志（spec/api_spec_admin.md → AuditLogItem）：
- * details 为 action 对应变体（联合类型），客户端按 JSON 原样展示，避免为 17 种动作建全量 DTO。
+ * details 为 action 对应变体（联合类型），客户端按 JSON 原样展示，避免为 18 种动作建全量 DTO。
  */
 @Serializable
 data class AdminAuditLogItem(
