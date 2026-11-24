@@ -1,6 +1,6 @@
 // ChatMessageList 契约测试：R16 短会话降噪（「没有更多了」只在历史确实翻过页后出现）。
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import ChatMessageList from '../ChatMessageList.svelte';
 import type { ChatController, ChatMessage } from '@/lib/chat.svelte';
 
@@ -66,3 +66,25 @@ describe('ChatMessageList', () => {
 		expect(container.querySelectorAll('.max-w-chat-bubble')).toHaveLength(0);
 	});
 });
+
+	// 图片消息列表接线：消息列表把图片渲染成按钮，并把 onImageClick 透传到气泡（#263）
+	it('图片消息渲染「查看大图」按钮，点击回传图片 URL', async () => {
+		const clicked: string[] = [];
+		const imageMessage = {
+			id: 'img1',
+			text: '',
+			imageUrl: 'https://cdn.example.com/a.jpg',
+			sent: true,
+			time: '12:01',
+			sentAt: '2026-08-10T12:01:00Z'
+		};
+		const chat = makeChat({
+			messages: [imageMessage],
+			dateGroups: [{ label: '今天', messages: [imageMessage] }]
+		});
+		const { container } = render(ChatMessageList, {
+			props: { chat, canRecall: () => false, onImageClick: (url: string) => clicked.push(url) }
+		});
+		await fireEvent.click(container.querySelector('button[aria-label="查看大图"]') as HTMLButtonElement);
+		expect(clicked).toEqual(['https://cdn.example.com/a.jpg']);
+	});
