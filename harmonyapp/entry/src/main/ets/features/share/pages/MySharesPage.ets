@@ -27,10 +27,52 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 
+// ── 长列表回顶（分享较多时滚到底部后一键回到顶部）──
+// 注意：overlay builder 不能返回空（空 overlay 节点会拦截点击/滚动手势）；
+// 这里用 Stack 同级子节点 + HitTestMode.Transparent，空白区域手势穿透。
 @Preview
 @Component
 export struct MySharesPage {
+  @State private showBackToTop: boolean = false;
+  private backToTopScroller: Scroller = new Scroller();
+
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const next: boolean = y > 240;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
   pathStack: NavPathStack = new NavPathStack();
   @StorageLink(KEY_IS_LOGGED_IN) @Watch('onLoginStateChanged') isLoggedIn: boolean = false;
@@ -412,6 +454,9 @@ export struct MySharesPage {
     .height('100%')
     }
 
+    // 回顶浮动按钮（Stack 子节点，手势穿透）
+    this.buildBackToTopOverlay()
+
     // 撤销分享二次确认
     SystemDialog({
       visible: this.showRevokeConfirm,
@@ -439,7 +484,7 @@ export struct MySharesPage {
 
   @Builder
   private buildShareList() {
-    List() {
+    List({ scroller: this.backToTopScroller }) {
       ListItemGroup() {
         LazyForEach(this.sharesDataSource, (share: ShareListItem) => {
           ListItem() {
@@ -486,6 +531,7 @@ export struct MySharesPage {
     })
     .scrollBar(BarState.Off)
     .onReachEnd(() => { if (!this.searchKeyword.trim()) this.loadMoreShares(); })
+    .onDidScroll(() => { this.updateBackToTop(); })
   }
 
   @Builder
