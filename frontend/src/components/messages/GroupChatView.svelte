@@ -11,7 +11,10 @@
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
 	import { auth } from '@/stores/auth.svelte';
-	import { getGroupDetail, getGroupMessages, getGroupMembers, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
+	import { getGroupDetail, getGroupMessages, getGroupMembers, joinGroup, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
+	import EmptyState from '@/components/data-display/EmptyState.svelte';
+	import Button from '@/components/ui/button.svelte';
+	import { Users } from '@lucide/svelte';
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
@@ -50,21 +53,26 @@
 	// 10100（未登录/会话失效）是正常业务态：给登录引导而非死胡同重试（对齐 notify/me）。
 	let needsAuth = $state(false);
 
-	// 群信息：失败静默，标题回退"群聊"。
+	// 群信息：失败静默，标题回退"群聊"。加入成功后需重取成员数/角色，故抽成函数。
+	async function refreshGroupInfo(): Promise<void> {
+		const gid = groupId;
+		if (!gid) return;
+		const res = await getGroupDetail(gid).catch(() => null);
+		if (!res || res.code !== 0 || !res.data) return;
+		const d = res.data;
+		groupName = d.group.name;
+		groupAvatar = d.group.avatar_url ?? '';
+		membersCount = d.group.members_count ?? null;
+		myRole = d.viewer_state?.role ?? 'member';
+	}
+
 	$effect(() => {
 		const gid = groupId;
 		if (!gid) return;
 		let cancelled = false;
-		getGroupDetail(gid)
-			.then((res) => {
-				if (cancelled || res.code !== 0 || !res.data) return;
-				const d = res.data;
-				groupName = d.group.name;
-				groupAvatar = d.group.avatar_url ?? '';
-				membersCount = d.group.members_count ?? null;
-				myRole = d.viewer_state?.role ?? 'member';
-			})
-			.catch(() => {});
+		void refreshGroupInfo().then(() => {
+			if (cancelled) return;
+		});
 		return () => {
 			cancelled = true;
 		};
@@ -94,6 +102,37 @@
 	// 群聊历史加载的权限类失败文案：非群成员直链（10200 + forbidden_reason）时不能
 	// 笼统写「网络失败」，否则用户会在「已加载空会话/重试」之间反复打转。
 	let loadErrorText = $state('消息加载失败，请检查网络后重试');
+	// 非群成员直链：给出「加入群组」引导（direct 直接入群 / approval 转为待审核态），
+	// 而不是只让用户对着错误文案点「重试」；加入后自动重拉历史与群信息。
+	let notMember = $state(false);
+	let joinPending = $state(false);
+	let joining = $state(false);
+	let joinError = $state('');
+
+	async function handleJoinGroup(): Promise<void> {
+		if (joining) return;
+		joining = true;
+		joinError = '';
+		try {
+			const res = await joinGroup(groupId);
+			if (res.code !== 0 || !res.data) {
+				joinError = res.message || '加入群组失败，请稍后重试';
+				return;
+			}
+			if (res.data.status === 'pending_approval') {
+				joinPending = true;
+				return;
+			}
+			notMember = false;
+			joinPending = false;
+			await refreshGroupInfo();
+			await chat.reload();
+		} catch {
+			joinError = '加入群组失败，请检查网络后重试';
+		} finally {
+			joining = false;
+		}
+	}
 
 	const chat = useChat({
 		targetId: () => groupId,
@@ -107,14 +146,15 @@
 				return null;
 			}
 			needsAuth = false;
+			notMember = false;
 			if (res && res.code !== 0) {
 				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
-				loadErrorText =
-					res.code === 10200 && reason === 'not_group_member'
-						? '你还不是这个群组的成员，加入后才能查看群消息'
-						: res.code === 10200
-							? '你没有权限查看这个群组的消息'
-							: (res.message || '消息加载失败，请检查网络后重试');
+				notMember = res.code === 10200 && reason === 'not_group_member';
+				loadErrorText = notMember
+					? '你还不是这个群组的成员，加入后才能查看群消息'
+					: res.code === 10200
+						? '你没有权限查看这个群组的消息'
+						: (res.message || '消息加载失败，请检查网络后重试');
 				return null;
 			}
 			loadErrorText = '消息加载失败，请检查网络后重试';
@@ -307,6 +347,34 @@
 		<!-- 未登录：登录引导（替代死胡同重试；输入栏一并隐藏，匿名不可发送） -->
 		<div class="flex flex-1 items-center justify-center">
 			<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可查看和参与群聊" />
+		</div>
+	{:else if notMember}
+		<!-- 非群成员直链：给出加入引导（而非只让用户点「重试」） -->
+		<div class="flex flex-1 items-center justify-center px-6">
+			<EmptyState
+				title={joinPending ? '已提交加入申请' : '你还不是这个群组的成员'}
+				description={joinPending
+					? '管理员审核通过后即可查看和参与群聊。'
+					: '加入群组后即可查看和参与群聊。'}
+			>
+				{#snippet icon()}
+					<Users class="size-7" strokeWidth={1.75} />
+				{/snippet}
+				{#snippet action()}
+					<div class="flex flex-col items-center gap-2">
+						{#if joinPending}
+							<Button variant="soft" size="md" onclick={() => void chat.reload()}>重新检查</Button>
+						{:else}
+							<Button variant="primary" size="md" disabled={joining} onclick={() => void handleJoinGroup()}>
+								{joining ? '加入中…' : '加入群组'}
+							</Button>
+						{/if}
+						{#if joinError}
+							<p class="text-xs text-status-danger" role="alert">{joinError}</p>
+						{/if}
+					</div>
+				{/snippet}
+			</EmptyState>
 		</div>
 	{:else}
 		<!-- Messages -->

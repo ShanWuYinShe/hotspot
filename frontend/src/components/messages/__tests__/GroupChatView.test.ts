@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 	getGroupMembers: vi.fn(() => Promise.resolve({ code: 0, data: { items: [{ user: { user_id: 'user_2', nickname: '阿禾' } }, { user: { user_id: 'user_3', nickname: '野原' } }], next_cursor: null } })),
 	sendGroupMessage: vi.fn(),
 	markGroupRead: vi.fn(),
+	joinGroup: vi.fn(),
 	wsClient: {
 		isConnected: false,
 		sendGroupTyping: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@/api', () => ({
 	getGroupDetail: mocks.getGroupDetail,
 	getGroupMessages: mocks.getGroupMessages,
 	getGroupMembers: mocks.getGroupMembers,
+	joinGroup: mocks.joinGroup,
 	sendGroupMessage: mocks.sendGroupMessage,
 	markGroupRead: mocks.markGroupRead
 }));
@@ -90,6 +92,7 @@ describe('GroupChatView', () => {
 		mocks.getGroupMessages.mockReset().mockResolvedValue(HISTORY);
 		mocks.sendGroupMessage.mockReset().mockResolvedValue({ code: 0, data: { message_id: 'gm2' } });
 		mocks.markGroupRead.mockReset().mockResolvedValue({ code: 0 });
+		mocks.joinGroup.mockReset().mockResolvedValue({ code: 0, data: { status: 'joined', application_id: null } });
 	});
 
 	it('渲染群名与历史消息并标记已读', async () => {
@@ -164,7 +167,7 @@ describe('GroupChatView', () => {
 		expect(screen.queryByLabelText('消息输入框')).toBeNull();
 	});
 
-	it('10200 not_group_member 时显示未入群文案而非网络失败', async () => {
+	it('10200 not_group_member 时显示加入群组引导而非网络失败', async () => {
 		mocks.getGroupMessages.mockResolvedValue({
 			code: 10200,
 			message: 'forbidden',
@@ -172,9 +175,44 @@ describe('GroupChatView', () => {
 		});
 		renderGroup();
 		await waitFor(() => {
-			expect(screen.getByText('你还不是这个群组的成员，加入后才能查看群消息')).toBeTruthy();
+			expect(screen.getByText('你还不是这个群组的成员')).toBeTruthy();
+			expect(screen.getByRole('button', { name: '加入群组' })).toBeTruthy();
 		});
 		expect(screen.queryByText('消息加载失败，请检查网络后重试')).toBeNull();
+		// 未入群时输入栏不渲染（避免对不可发送的群聊展示输入框）
+		expect(screen.queryByLabelText('消息输入框')).toBeNull();
+	});
+
+	it('direct 群点击加入成功后重拉历史并显示消息', async () => {
+		mocks.getGroupMessages
+			.mockResolvedValueOnce({
+				code: 10200,
+				message: 'forbidden',
+				data: { forbidden_reason: 'not_group_member' }
+			})
+			.mockResolvedValue(HISTORY);
+		renderGroup();
+		await fireEvent.click(await screen.findByRole('button', { name: '加入群组' }));
+		await waitFor(() => {
+			expect(mocks.joinGroup).toHaveBeenCalledWith('group_1');
+			expect(screen.getAllByText('欢迎入群').length).toBeGreaterThan(0);
+		});
+		expect(screen.queryByText('你还不是这个群组的成员')).toBeNull();
+	});
+
+	it('approval 群点击加入后显示待审核态', async () => {
+		mocks.getGroupMessages.mockResolvedValue({
+			code: 10200,
+			message: 'forbidden',
+			data: { forbidden_reason: 'not_group_member' }
+		});
+		mocks.joinGroup.mockResolvedValue({ code: 0, data: { status: 'pending_approval', application_id: 'app_1' } });
+		renderGroup();
+		await fireEvent.click(await screen.findByRole('button', { name: '加入群组' }));
+		await waitFor(() => {
+			expect(screen.getByText('已提交加入申请')).toBeTruthy();
+			expect(screen.getByRole('button', { name: '重新检查' })).toBeTruthy();
+		});
 	});
 	// R16 内容轴契约：此前群聊头部只有 max-w-3xl（缺 lg:max-w-5xl），宽屏群名/成员数与
 	// 消息列错位 128-256px；现在统一由 ChatColumn 提供宽度。
