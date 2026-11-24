@@ -21,6 +21,7 @@ import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { ListGroup } from '../../../components/ListGroup';
 import { TabsPillGroup, TabItem } from '../../../components/TabsPillGroup';
 import { SystemButton } from '../../../components/SystemButton';
+import { SystemInput } from '../../../components/SystemInput';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
@@ -49,7 +50,74 @@ export struct MyReportsPage {
   @State errorMessage: string = '';
   /** 当前状态过滤 tab（0=全部；其余为 TAB_KEYS 下标） */
   @State activeTabIndex: number = 0;
+  // 搜索：契约 reports/fetch 无 keyword，搜索时先加载完全部分页（最多 10 页）再本地筛选。
+  @State searchKeyword: string = '';
+  @State searchItems: ReportItem[] = [];
+  @State searchLoading: boolean = false;
+  @State searchError: string = '';
+  private searchTimer: number = -1;
+  private searchSeq: number = 0;
   private isDestroyed: boolean = false;
+
+  private matchReport(item: ReportItem, keyword: string): boolean {
+    const hay = [
+      item.report_id,
+      item.target_type,
+      item.target_id,
+      this.targetLabel(item.target_type),
+      item.reason,
+      this.reasonLabel(item.reason),
+      item.description ?? '',
+      this.statusLabel(item.status),
+      item.resolution?.note ?? ''
+    ].join(' ').toLowerCase();
+    return hay.includes(keyword.toLowerCase());
+  }
+
+  private onSearchChange(value: string): void {
+    this.searchKeyword = value;
+    if (this.searchTimer >= 0) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = -1;
+    }
+    const keyword = value.trim();
+    if (!keyword) {
+      this.searchSeq++;
+      this.searchItems = [];
+      this.searchError = '';
+      this.searchLoading = false;
+      return;
+    }
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = -1;
+      void this.runSearch(keyword);
+    }, 350);
+  }
+
+  private async runSearch(keyword: string): Promise<void> {
+    const seq = ++this.searchSeq;
+    this.searchLoading = true;
+    this.searchError = '';
+    const all: ReportItem[] = [];
+    let cursor = '';
+    for (let page = 0; page < 10; page++) {
+      const response = await ApiClient.getMyReports({
+        status: this.statusParam(),
+        pagination: { limit: PAGE_SIZE, cursor: cursor }
+      });
+      if (seq !== this.searchSeq) return;
+      if (response.code !== 0) {
+        this.searchError = getErrorMessage(response, '搜索失败');
+        break;
+      }
+      all.push(...(response.data?.items ?? []));
+      cursor = response.data?.next_cursor ?? '';
+      if (!cursor) break;
+    }
+    if (this.isDestroyed || seq !== this.searchSeq) return;
+    this.searchItems = all.filter((item: ReportItem) => this.matchReport(item, keyword));
+    this.searchLoading = false;
+  }
 
   private getCurrentThemePalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -184,7 +252,7 @@ export struct MyReportsPage {
         }) {
           // trailing：条数统计（对齐前端「N 条」，加载/错误态隐藏）
           if (!this.isLoading && !this.errorMessage) {
-            Text(`${this.reports.length} 条`)
+            Text(this.searchKeyword.trim() ? `${this.searchItems.length} 条匹配` : `${this.reports.length} 条`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -205,6 +273,9 @@ export struct MyReportsPage {
               this.nextCursor = '';
               this.hasMore = false;
               this.loadReports(true);
+              if (this.searchKeyword.trim()) {
+                void this.runSearch(this.searchKeyword.trim());
+              }
             }
           }
         })
@@ -214,12 +285,65 @@ export struct MyReportsPage {
         .align(Alignment.Start)
         .width('100%')
         .padding({ top: DesignConstants.SPACING.MD, bottom: 0 })
+
+        SystemInput({
+          value: this.searchKeyword,
+          placeholder: '搜索对象 ID / 原因 / 描述…',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          showClearButton: true,
+          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+          onChange: (value: string) => { this.onSearchChange(value); }
+        })
+        .margin({ top: DesignConstants.SPACING.MD })
+
         }
         .width('100%')
         .padding({ bottom: DesignConstants.SPACING.LG })
 
         // ── 内容区（对齐前端内容列 pt-4）──
-        if (this.isLoading) {
+        if (this.searchKeyword.trim()) {
+          if (this.searchLoading) {
+            SystemLoadingView({ message: '正在搜索举报记录…' })
+              .layoutWeight(1)
+          } else if (this.searchError) {
+            EmptyState({
+              bare: true,
+              icon: AppIcon.WARNING,
+              message: this.searchError,
+              actionLabel: '重试',
+              onAction: () => { void this.runSearch(this.searchKeyword.trim()); }
+            })
+              .layoutWeight(1)
+          } else if (this.searchItems.length === 0) {
+            EmptyState({
+              spotlight: true,
+              icon: AppIcon.SHIELD,
+              title: '没有找到举报',
+              message: '换个对象 ID / 原因 / 描述关键词试试，或清空搜索词。'
+            })
+              .layoutWeight(1)
+          } else {
+            Scroll() {
+              Column() {
+                ListGroup() {
+                  ForEach(this.searchItems, (item: ReportItem, index: number) => {
+                    this.buildReportRow(item)
+                  }, (item: ReportItem) => item.report_id)
+                }
+                ListEnd()
+                  .margin({ top: DesignConstants.SPACING.LG })
+              }
+              .width('100%')
+              .constraintSize({ minHeight: '100%' })
+            }
+            .scrollable(ScrollDirection.Vertical)
+            .edgeEffect(EdgeEffect.None)
+            .scrollBar(BarState.Off)
+            .width('100%')
+            .layoutWeight(1)
+          }
+        } else if (this.isLoading) {
           SystemLoadingView({ message: '加载举报记录…' })
             .layoutWeight(1)
         } else if (this.reports.length === 0 && this.errorMessage) {
@@ -278,7 +402,13 @@ export struct MyReportsPage {
           .layoutWeight(1)
           .pullToRefresh(false)
           .refreshOffset(64)
-          .onRefreshing(() => { this.loadReports(true); })
+          .onRefreshing(() => {
+            if (this.searchKeyword.trim()) {
+              void this.runSearch(this.searchKeyword.trim());
+            } else {
+              this.loadReports(true);
+            }
+          })
         }
       }
       .width('100%')
