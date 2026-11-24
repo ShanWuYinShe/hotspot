@@ -172,6 +172,8 @@
 			showToast(editTarget ? '公告已更新' : '公告已发布', 'success');
 			editOpen = false;
 			list.reload();
+			// 搜索态展示的是本地筛选快照：数据变更后需重拉，避免标题/级别等仍是旧值。
+			if (searching) searchReloadKey += 1;
 		} catch (err) {
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
@@ -189,6 +191,8 @@
 			showToast('公告已删除', 'success');
 			deleteTarget = null;
 			list.reload();
+			// 搜索态下被删条目仍在本地快照里，需重拉否则会留下「幽灵行」。
+			if (searching) searchReloadKey += 1;
 		} catch (err) {
 			showToast(err instanceof Error && err.message ? err.message : '操作失败，请重试', 'danger');
 		} finally {
@@ -246,11 +250,12 @@
 				: '发布一条公告，让全站用户看到平台最新安排。'}
 			emptyIcon={Megaphone}
 		>
-			{#if searching}
-				<div class="mb-2 flex justify-end">
+			{#snippet emptyAction()}
+				{#if searching}
 					<Button type="button" variant="secondary" size="sm" onclick={() => (query = '')}>清空搜索</Button>
-				</div>
-			{/if}
+				{/if}
+			{/snippet}
+
 			<div class={TABLE_WRAP} use:scrollFade>
 				<table class={TABLE}>
 					<thead>
