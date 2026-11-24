@@ -123,7 +123,7 @@ ab errors 2>&1 | tee -a "$REPORT" || true
 ab close >/dev/null 2>&1
 
 if [ "$FAILED_PAGES" -gt 0 ]; then
-	echo "✗ 巡检失败：$FAILED_PAGES 个页面打开/评估失败（详见 $REPORT）" | tee -a "$REPORT"
+	echo "✗ 巡检失败：$FAILED_PAGES 个页面打开/评估失败（详见 ${REPORT}）" | tee -a "$REPORT"
 	exit 1
 fi
 

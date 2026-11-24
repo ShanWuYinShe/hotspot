@@ -69,7 +69,7 @@ READY="$(docker exec "$BACKEND_CONTAINER" curl -sf http://localhost:8081/readyz 
 case "$READY" in
   *'"status":"ok"'*) echo "$(date '+%F %T') readyz ok: $(echo "$READY" | head -c 200)" ;;
   *'"status":"degraded"'*) mark_fail "readyz DEGRADED: Redis 故障 fail-open 中（业务可用，保护能力下降）: $(echo "$READY" | head -c 200)" ;;
-  *) mark_fail "readyz FAIL: 就绪探针不可达或数据库不可用（检查 docker logs $BACKEND_CONTAINER）: $(echo "$READY" | head -c 200)" ;;
+  *) mark_fail "readyz FAIL: 就绪探针不可达或数据库不可用（检查 docker logs ${BACKEND_CONTAINER}）: $(echo "$READY" | head -c 200)" ;;
 esac
 
 # 2. 核心容器运行状态（含 nginx 网关与 frontend 静态卷容器——此前巡检不覆盖，
