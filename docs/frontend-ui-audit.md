@@ -1129,3 +1129,20 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 - 媒体压字层的可读性由设计 token 保证：新增/修改图片卡时必须使用 `text-content-inverse` + 主题 scrim token（`--cst-surface-card-scrim-top/bottom`），PR 自查按「白字 + 遮罩」人工核对（深/浅主题、明暗各一）。
 
 **验证**：修复后主题矩阵 6 组合 × 43 页（258 页次）PASS，serious/critical=0；过滤仅影响上述 3 条误报，单组合 `audit:a11y`（38 页）与 `audit:touch` 保持 PASS。
+
+## 审计 backlog 复核（Round 125）
+
+「未纳入本轮（登记 backlog）」逐项复核：4 项已可关闭，2 项保留。
+
+**关闭**
+
+- **群聊非成员直链语义错误** → 已修（PR #237）：`10200 not_group_member` 改为 `EmptyState` 加入引导；direct 群加入后重拉历史/群信息、approval 群转待审核、invite_only 内联服务端原因；未入群隐藏输入栏。实测：invite_only 群显示「该群组仅限邀请加入，请通过邀请加入」，direct 群（R48 邀请测试群）加入后成员数/历史即时更新。
+- **纯文字瞬间卡整块空白图位** → 已实现：`HomeFeedItem` 无图 fallback 分支渲染「文字优先海报」（小引号 + 放大正文居中），实测文字卡 `hasPosterText=true`（`p.text-lg`），不再读成缺图/骨架。
+- **`/users/:id` 统计与空态矛盾** → 已澄清：无带图瞬间时文案为「还没有带图瞬间 / 带图瞬间会展示在这里；文字瞬间暂不计入画廊。」，与「4 瞬间」统计口径一致（实测 `/users/user_a4a2618315605049c03247e5`）；不是缺陷。
+- **1440 首页右栏不吸顶** → 不成立：`.context-rail` 自带 `position: sticky; top: 0; align-self: flex-start`，实测 1440 首页 `main-content.scrollTop=600` 后 rail `getBoundingClientRect().top` 仍为 64（滚动前后一致）。
+
+**保留（仍待处理）**
+
+- **页头返回钮导致标题左缘偏移**：有/无返回钮的标题 x=70/16（54px 跳变），需统一 leading 槽位，属视觉决策；
+- **768 平板后台表格列裁剪**：`/admin/users` 操作列、`/admin/audit` 详情列在 768 视口落在横向滚动区外/截断，需专门列裁剪或首列吸附策略。
+
