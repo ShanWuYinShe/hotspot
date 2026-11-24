@@ -18,6 +18,7 @@ import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
@@ -48,6 +49,8 @@ export struct ChatMessageItem {
 
   /** 图片加载失败标记（加载占位显示） */
   @State imageFailed: boolean = false;
+  /** 图片加载完成标记（onComplete 后淡入；reduced-motion 直接显示） */
+  @State imageLoaded: boolean = false;
 
   /** 图片点击预览（走 PhotoPreviewPage，与动态详情图片预览同一入口） */
   private previewImage(): void {
@@ -146,6 +149,14 @@ export struct ChatMessageItem {
                     .backgroundColor(this.chatTheme.listBackground)
                     .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
                     .margin(DesignConstants.SPACING.XS)
+                    // 慢网淡入（对齐 NearbyImageCard/SystemAvatar 口径）：加载中保留气泡底色占位，
+                    // onComplete 后 200ms 淡入；失败保持占位并出「图片加载失败」；reduced 直接终态。
+                    .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+                    .animation({
+                      duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                      curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+                    })
+                    .onComplete(() => { this.imageLoaded = true; })
                     .onError(() => { this.imageFailed = true; })
                     .accessibilityText('[图片消息]')
                 }
