@@ -89,7 +89,7 @@ gh run watch <run-id> --exit-status
 - **执行顺序**（固定，不要跳步）：
   1. 发版 PR：把 `androidapp/app/build.gradle.kts` 默认 `versionName/versionCode` 对齐新版本（versionCode 每次 +1）；
   2. 合并后等 main CI 全绿；涉及鸿蒙改动时本机确认 hvigor 构建；
-  3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / auto-deploy）全绿；
+  3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / auto-deploy / **post-deploy-smoke**）全绿；
   4. 构建并附 APK：`scripts/release-android-apk.sh vX.Y.Z <versionCode>`（校验 tag/Release/签名/版本后上传）；
   5. 跑发版后冒烟：`./scripts/release-smoke.sh --version vX.Y.Z`（一次核对 version.json / healthz / tag commit 三处一致、前端入口可达、Release 含镜像包 + `.sha256` + `.ids.txt` + APK 且镜像包校验和正确）。
 - **APK 版本号规则不变**：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致。
@@ -157,7 +157,8 @@ gh release view vX.Y.Z --json assets --jq '.assets[].name'
 ### 部署后自查
 
 ```bash
-# 一键发版后冒烟（推荐：版本三处对齐 + 前端入口 + Release 资产/校验和，任一失败 exit 1）
+# 一键发版后冒烟（版本三处对齐 + 前端入口 + Release 资产/校验和，任一失败 exit 1）
+# CI 的 post-deploy-smoke job 已在 auto-deploy 后自动执行；手动/本地复核同命令：
 ./scripts/release-smoke.sh --version vX.Y.Z
 
 ssh workwork-server 'tail -5 ~/hotspot/backups/deploy-history.log'   # 审计

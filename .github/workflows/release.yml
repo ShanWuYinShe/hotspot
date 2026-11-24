@@ -3,7 +3,8 @@
 # GIT_BUILD_TIME 版本指纹）→ docker save 压缩 → 挂到同名 GitHub Release。
 #
 # 生产部署（auto-deploy job 经 SSH 自动触发）：从 Release 下载镜像包 →
-# 服务器 docker load → compose up。服务器全程不接触源码、不构建，替代早期
+# 服务器 docker load → compose up；post-deploy-smoke job 随后自动跑
+# scripts/release-smoke.sh 复核线上版本/入口/资产校验和。服务器全程不接触源码、不构建，替代早期
 # rsync 源码到服务器构建的非常规做法；手动兜底仍可本地执行
 # scripts/deploy-production.sh vX.Y.Z（同一条链路）。
 #
@@ -226,3 +227,16 @@ jobs:
           # deploy-production.sh 经 SERVER 走 ssh；脚本内 tag 形态/位置校验、
           # 并发锁、备份、指纹核对、失败回滚全部保留，与手动执行同一条链路。
           SERVER=prod-deploy ./scripts/deploy-production.sh "${GITHUB_REF_NAME}"
+
+  post-deploy-smoke:
+    name: Post-deploy Smoke (version + assets)
+    needs: auto-deploy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+      - name: Verify production after deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/release-smoke.sh --version "${GITHUB_REF_NAME}"
