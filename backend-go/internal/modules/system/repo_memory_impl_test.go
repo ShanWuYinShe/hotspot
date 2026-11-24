@@ -54,6 +54,9 @@ func (r *InMemoryRepository) SearchAnnouncements(_ context.Context, filter Annou
 	items := r.sortedAnnouncementsLocked(true)
 	filtered := make([]AnnouncementRecord, 0, len(items))
 	for _, item := range items {
+		if item.IsDeleted() {
+			continue
+		}
 		if filter.Severity != "" && item.Severity != filter.Severity {
 			continue
 		}

@@ -1140,23 +1140,8 @@ func TestListAdminAnnouncementsCreateUpdateAndDelete(t *testing.T) {
 	searchAfterDeleteRR := httptest.NewRecorder()
 	handler.ListAdminAnnouncements(searchAfterDeleteRR, searchAfterDeleteReq)
 	searchAfterDeleteResp := decodeResponse[PaginatedAdminAnnouncements](t, searchAfterDeleteRR)
-	if searchAfterDeleteResp.Code != 0 || searchAfterDeleteResp.Data == nil || len(searchAfterDeleteResp.Data.Items) < 1 {
-		t.Fatalf("unexpected search-after-delete response: %#v", searchAfterDeleteResp)
-	}
-	var deleted AdminAnnouncementItem
-	foundDeleted := false
-	for _, item := range searchAfterDeleteResp.Data.Items {
-		if item.AnnouncementID == createResp.Data.AnnouncementID {
-			deleted = item
-			foundDeleted = true
-			break
-		}
-	}
-	if !foundDeleted {
-		t.Fatalf("expected deleted announcement in search results: %#v", searchAfterDeleteResp.Data.Items)
-	}
-	if deleted.AnnouncementID != createResp.Data.AnnouncementID || deleted.Title != "维护结束" {
-		t.Fatalf("unexpected deleted announcement search result: %#v", deleted)
+	if searchAfterDeleteResp.Code != 0 || searchAfterDeleteResp.Data == nil || len(searchAfterDeleteResp.Data.Items) != 0 {
+		t.Fatalf("deleted announcement must be excluded from admin search: %#v", searchAfterDeleteResp)
 	}
 	foundCreateAudit := false
 	foundUpdateAudit := false
