@@ -21,7 +21,8 @@ import { DesignConstants, lineHeightFor } from '../constants/DesignConstants';
 import { AppThemeVisuals } from '../core/theme/AppThemeVisuals';
 import { curves } from '@kit.ArkUI';
 import { SmartNotificationService, NotificationEvent, SmartNotification } from '../core/services/SmartNotificationService';
-import { LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
+import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from './EmptyState';
+import { SystemInput } from './SystemInput';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { LucideIcon } from '../components/LucideIcon';
@@ -78,6 +79,14 @@ export struct NotificationCenter {
   @State private actionLoadingIds: string[] = [];
   // 全部已读确认弹窗（对齐全站 SystemDialog 范式，替代系统 showAlertDialog）
   @State private markAllDialogVisible: boolean = false;
+  // 搜索：通知契约无 keyword 参数，搜索时先加载完全部分页（最多 10 页）再本地筛选。
+  @State private searchKeyword: string = '';
+  @State private searchLoadingAll: boolean = false;
+  // applyFilter 结果版本：过滤后行集合变化但分组键可能不变（搜索词先于防抖筛选写入），
+  // 需在键里带版本强制重建 List 分组内容，否则复用上一批行
+  @State private listVersion: number = 0;
+  @State private searchError: string = '';
+  private searchTimer: number = -1;
   @State private pressedNotificationId: string = '';
 
   private syncService = NotificationSyncService.getInstance();
@@ -124,8 +133,9 @@ export struct NotificationCenter {
     }
     const entries: NotificationListEntry[] = [];
     const pushSection = (key: string, label: string, items: NotifyItem[], showBell: boolean): void => {
-      // key 带 selectedFilter：切分类时强制重建 ListItemGroup，否则沿用上一分类的行
-      const scoped = `${this.selectedFilter}-${key}`;
+      // key 带 selectedFilter + 搜索词：切分类/改搜索词时强制重建 ListItemGroup，
+      // 否则 ArkUI 复用旧分组内容（搜索后仍渲染上一批行）
+      const scoped = `${this.selectedFilter}-${this.searchKeyword.trim()}-${this.listVersion}-${key}`;
       entries.push({ key: `${scoped}-header`, kind: 'header', label: label, count: items.length, showBell: showBell, items: [] });
       entries.push({ key: scoped, kind: 'group', label: label, count: items.length, showBell: showBell, items: items });
     };
@@ -210,8 +220,54 @@ export struct NotificationCenter {
     }
   }
 
+  private matchNotification(notification: NotifyItem, keyword: string): boolean {
+    const hay = [
+      this.buildNotificationTitle(notification),
+      this.buildNotificationMessage(notification),
+      notification.type
+    ].join(' ').toLowerCase();
+    return hay.includes(keyword.toLowerCase());
+  }
+
+  private onSearchChange(value: string): void {
+    this.searchKeyword = value;
+    if (this.searchTimer >= 0) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = -1;
+    }
+    const keyword = value.trim();
+    if (!keyword) {
+      this.searchError = '';
+      this.searchLoadingAll = false;
+      this.applyFilter();
+      return;
+    }
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = -1;
+      void this.runSearch(keyword);
+    }, 350);
+  }
+
+  private async runSearch(keyword: string): Promise<void> {
+    this.searchLoadingAll = true;
+    this.searchError = '';
+    try {
+      // 契约无 keyword：先把分页拉完（上限 10 页），再交给 applyFilter 统一做类型 + 关键词筛选
+      let pages = 0;
+      while (this.syncService.hasMoreData() && pages < 10) {
+        await this.syncService.loadMore();
+        pages++;
+      }
+      this.applyFilter();
+    } catch (error) {
+      this.searchError = error instanceof Error ? error.message : '搜索通知失败';
+    } finally {
+      this.searchLoadingAll = false;
+    }
+  }
+
   private async loadMoreNotifications(): Promise<void> {
-    if (this.isLoadingMore || !this.hasMore) {
+    if (this.isLoadingMore || !this.hasMore || this.searchKeyword.trim()) {
       return;
     }
 
@@ -244,8 +300,13 @@ export struct NotificationCenter {
     if (this.selectedFilter !== 'all') {
       filtered = deduped.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
     }
+    const keyword = this.searchKeyword.trim();
+    if (keyword) {
+      filtered = filtered.filter(item => this.matchNotification(item, keyword));
+    }
 
     this.visibleNotifications = filtered;
+    this.listVersion++;
   }
 
   private onFilterSelected(filter: NotificationFilterKey): void {
@@ -563,6 +624,24 @@ export struct NotificationCenter {
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.SM })
       }
 
+      // 搜索框（通知数量多时快速定位；契约无 keyword：加载全部分页后本地筛选）
+      if (this.isLoggedIn && (this.visibleNotifications.length > 0 || this.searchKeyword.trim().length > 0)) {
+        SystemInput({
+          value: this.searchKeyword,
+          placeholder: '搜索通知内容 / 用户 / 类型…',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          showClearButton: true,
+          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+          onChange: (value: string) => { this.onSearchChange(value); }
+        })
+          .margin({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            bottom: DesignConstants.SPACING.MD
+          })
+      }
+
       // 内容区域
       if (!this.isLoggedIn) {
         // 游客态：对齐 web /notify 的 NeedsAuthNotice 内联引导，而不是把 10100 当普通错误
@@ -591,6 +670,64 @@ export struct NotificationCenter {
         .width('100%')
         .height(DesignConstants.COMPONENT.LOADING_AREA_HEIGHT)
         .justifyContent(FlexAlign.Center)
+      } else if (this.searchLoadingAll) {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          LoadingProgress()
+            .width(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+            .height(DesignConstants.COMPONENT.AVATAR_SIZE.XS)
+            .color(this.getPalette().accentBackground)
+          Text('正在搜索通知…')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.getPalette().textSecondary)
+        }
+        .width('100%')
+        .height(DesignConstants.COMPONENT.LOADING_AREA_HEIGHT)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.searchKeyword.trim() && this.searchError) {
+        Column({ space: DesignConstants.SPACING.LG }) {
+          SystemIcon({
+            icon: AppIcon.WARNING,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_EMPTY,
+            iconColor: this.getPalette().textSecondary
+          })
+          Text(this.searchError)
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor(this.getPalette().textSecondary)
+            .textAlign(TextAlign.Center)
+          SystemButton({
+            label: '重试',
+            variant: 'primary',
+            buttonSize: 'small',
+            onPress: () => { void this.runSearch(this.searchKeyword.trim()); }
+          })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Center)
+      } else if (this.searchKeyword.trim() && this.visibleNotifications.length === 0) {
+        Column({ space: DesignConstants.SPACING.MD }) {
+          SystemIcon({
+            icon: AppIcon.SEARCH,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_EMPTY,
+            iconColor: this.getPalette().textTertiary
+          })
+          Text('没有找到通知')
+            .fontSize(DesignConstants.FONT.SIZE.LG)
+            .fontColor(this.getPalette().textSecondary)
+          Text('换个通知内容 / 用户 / 类型关键词试试')
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .fontColor(this.getPalette().textTertiary)
+          SystemButton({
+            label: '清空搜索',
+            variant: 'surface',
+            buttonSize: 'small',
+            onPress: () => { this.onSearchChange(''); }
+          })
+        }
+        .width('100%')
+        .layoutWeight(1)
+        .justifyContent(FlexAlign.Start)
+        .padding({ top: DesignConstants.SPACING.XXL })
       } else if (this.visibleNotifications.length === 0 && this.errorMessage) {
         Column({ space: DesignConstants.SPACING.LG }) {
           SystemIcon({
@@ -685,7 +822,10 @@ export struct NotificationCenter {
           .scrollBar(BarState.Off)
           .width('100%')
           .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.LG })
-          .onReachEnd(() => this.loadMoreNotifications())
+          .onReachEnd(() => { if (!this.searchKeyword.trim()) this.loadMoreNotifications(); })
+          // 搜索/切分类时 List 内容需重建：ForEach 分组键已带维度，但 List 惰性子树
+          // 仍可能复用旧行（实测 N=1 仍渲染上一批通知），用 id 强制换实例
+          .id('notify-list-' + this.selectedFilter + '-' + this.searchKeyword.trim() + '-' + this.listVersion)
           .onDidScroll(() => { this.updateBackToTop(); })
           .onAreaChange((oldArea: Area, newArea: Area) => { this.viewportHeight = Number(newArea.height); })
         }
