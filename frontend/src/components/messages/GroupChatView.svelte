@@ -10,6 +10,7 @@
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ReportDialog from '@/components/overlays/ReportDialog.svelte';
+	import ImageViewer from '@/components/overlays/ImageViewer.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { getGroupDetail, getGroupMessages, getGroupMembers, joinGroup, sendGroupMessage, markGroupRead, recallGroupMessage, recallGroupMessageAsAdmin, updateGroupMessage } from '@/api';
 	import EmptyState from '@/components/data-display/EmptyState.svelte';
@@ -287,6 +288,13 @@
 
 	// 收到消息的举报（reports/create target_type='message'）
 	let reportMessageId = $state<string | null>(null);
+	// 图片消息查看大图（与鸿蒙 PhotoPreview / Android FullscreenImageViewer 对齐）
+	let viewerOpen = $state(false);
+	let viewerUrl = $state('');
+	const openImageViewer = (url: string) => {
+		viewerUrl = url;
+		viewerOpen = true;
+	};
 </script>
 
 <div class="flex min-h-0 flex-col h-full {compact ? 'bg-surface-island' : 'bg-surface-page'}">
@@ -398,6 +406,7 @@
 			canRecall={canRecallMessage}
 			showSenderNames
 			onReport={(id) => (reportMessageId = id)}
+			onImageClick={openImageViewer}
 			errorText={loadErrorText}
 		/>
 
@@ -405,6 +414,11 @@
 		<ChatInputBar {chat} {mentionCandidates} />
 	{/if}
 </div>
+
+<ImageViewer
+	bind:open={viewerOpen}
+	images={viewerUrl ? [{ url: viewerUrl, alt: '聊天图片' }] : []}
+/>
 
 <ReportDialog
 	open={reportMessageId !== null}

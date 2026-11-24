@@ -31,7 +31,8 @@
 		canReport = false,
 		onRecall,
 		onEdit,
-		onReport
+		onReport,
+		onImageClick
 	}: {
 		text: string;
 		/** 图片消息读 URL：存在时渲染图片（圆角、按比例），时间/已读沉到图下，不套气泡底色 */
@@ -51,6 +52,8 @@
 		onRecall?: (id: string) => void;
 		onEdit?: (id: string, content: string) => void;
 		onReport?: (id: string) => void;
+		/** 图片消息点击查看大图（聊天页接入 ImageViewer；未注入时图片不可点） */
+		onImageClick?: (url: string) => void;
 	} = $props();
 
 	let menuEl = $state<HTMLElement | null>(null);
@@ -100,14 +103,21 @@
 	{/if}
 	<div class="relative max-w-chat-bubble rounded-md {imageUrl && !recalled ? '' : 'px-4 py-2 ' + bubbleClass}">
 		{#if imageUrl && !recalled}
-			<!-- 图片消息：不套气泡（与鸿蒙端一致），圆角图 + 图下时间/已读 -->
-			<img
-				src={imageUrl}
-				alt="图片消息"
-				loading="lazy"
-				decoding="async"
-				class="max-h-[320px] w-auto max-w-full rounded-md bg-surface-subtle object-contain"
-			/>
+			<!-- 图片消息：不套气泡（与鸿蒙端一致），圆角图 + 图下时间/已读；按钮承载键盘可达的「查看大图」 -->
+			<button
+				type="button"
+				class="block max-w-full cursor-zoom-in rounded-md outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				aria-label="查看大图"
+				onclick={() => onImageClick?.(imageUrl)}
+			>
+				<img
+					src={imageUrl}
+					alt="图片消息"
+					loading="lazy"
+					decoding="async"
+					class="max-h-[320px] w-auto max-w-full rounded-md bg-surface-subtle object-contain"
+				/>
+			</button>
 			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
 				{time}
 				{#if editedAt}

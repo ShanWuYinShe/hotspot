@@ -21,6 +21,7 @@
 		canRecall,
 		showSenderNames = false,
 		onReport,
+		onImageClick,
 		errorText = '消息加载失败，请检查网络后重试'
 	}: {
 		chat: ChatController;
@@ -29,6 +30,8 @@
 		showSenderNames?: boolean;
 		/** 收到消息的举报入口（reports/create target_type='message'）；缺省不渲染 */
 		onReport?: (messageId: string) => void;
+		/** 图片消息点击（聊天页打开 ImageViewer）；缺省时图片不可点 */
+		onImageClick?: (url: string) => void;
 		/** 加载失败文案；群聊可注入「未加入该群」等权限语义（默认网络失败） */
 		errorText?: string;
 	} = $props();
@@ -159,6 +162,7 @@
 								onRecall={(id) => void chat.handleRecall(id)}
 								onEdit={(id, content) => void chat.handleEdit(id, content)}
 								onReport={(id) => onReport?.(id)}
+								onImageClick={onImageClick}
 							/>
 						{/each}
 					</div>
