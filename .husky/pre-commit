@@ -31,12 +31,17 @@ warn_skip() { echo "==> [pre-commit] 跳过 $1（$2，CI 兜底）"; }
 # $VAR 后紧跟中文/全角字符时，本机 bash 3.2 会把该字符首字节并入变量名：
 # set -u 下报 unbound variable 中断，否则静默丢字符。用用户级工具兜底，
 # 工具缺失时跳过（CI/人工兜底）。
-SHELL_FILES=$(echo "$STAGED" | grep -E '\.(sh|bash)$' || true)
-if [ -n "$SHELL_FILES" ]; then
+# 文件名可能含空格：命令替换按空白分词会把它拆成多个路径，工具找不到文件时
+# 以「检查 0 个脚本」通过，守卫被静默绕过。bash 3.2 无 mapfile，逐行读入数组。
+SHELL_FILES=()
+while IFS= read -r f; do
+  [ -n "$f" ] || continue
+  SHELL_FILES+=("$f")
+done < <(printf '%s\n' "$STAGED" | grep -E '\.(sh|bash)$' || true)
+if [ "${#SHELL_FILES[@]}" -gt 0 ]; then
   if [ -x "$HOME/.agents/bin/shell-var-brace-check" ]; then
     note "shell 变量展开检查：shell-var-brace-check"
-    # shellcheck disable=SC2086
-    "$HOME/.agents/bin/shell-var-brace-check" $SHELL_FILES || FAILED=1
+    "$HOME/.agents/bin/shell-var-brace-check" "${SHELL_FILES[@]}" || FAILED=1
   else
     warn_skip "shell 变量展开检查" "$HOME/.agents/bin/shell-var-brace-check 不可用"
   fi
