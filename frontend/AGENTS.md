@@ -172,7 +172,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
    `themes/*.css` 的 `--cst-palette-*` 是同一套色板的两端表达，改色必须两侧
    同步。校验脚本、覆盖范围与同步流程的**唯一权威描述**见根 `docs/design-system.md`
    第 14 节与 skill `hotspot-harmony-ui`「跨端同步机制」——`bun run check:theme`
-   已串联 parity 与色彩/刻度/utility 类名共四个检查脚本，CI 漂移即拦截；改字号/圆角 token
+   已串联 parity、色彩/刻度/utility、氛围画布、整卡遮罩、Android token 等检查脚本，CI 漂移即拦截；改字号/圆角 token
    必须两端同步。
 6. **徽标与标签（Badge / Pill）居中与排版契约**：
    - 必须同时声明 `inline-flex items-center justify-center leading-none`，杜绝未设行高导致继承全局行高（24px）产生“文字下沉贴底”或在近正方形上施加 `rounded-full` 产生“怪异胖椭圆”；
