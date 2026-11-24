@@ -311,7 +311,14 @@
 
 - **设置页回顶**：长页面滚动超过 600vp 显示 `BackToTopButton`，点击平滑回顶（PR #221）。
 - **个人中心本人页回顶**：滚动超过 240vp 显示回顶按钮（个人页内容约 1.5 屏，600vp 阈值够不到），点击平滑回顶（PR #222）。
-- **踩坑（ArkUI）**：`Scroll` 上挂 `.overlay(builder)` 时，若 builder 在隐藏态返回空，**空 overlay 节点会拦截滚动手势**（实测设置页完全无法滚动，按键正常可排除卡死）。修正：回顶按钮改用 Stack 同级子节点 + 全屏 Row `hitTestBehavior(HitTestMode.Transparent)`，空白区域手势穿透、按钮可点。
+- **踩坑（ArkUI）**：`.overlay(builder)` 的 builder 在隐藏态返回空时，**空 overlay 节点会拦截手势**——不仅拦滚动（设置页实测完全无法滚动），也拦点击（搜索页 Tab/结果行实测全部点不动，PR #227）。修正：回顶按钮改用 Stack 同级子节点或始终渲染的全屏 Row + `hitTestBehavior(HitTestMode.Transparent)`，空白区域手势穿透、按钮可点。
+### 2026-11-24 搜索交互与群组行对齐（Round 112-117）
+
+- **跨端水印透明度纳入 CI**：新增 `check-cross-platform-watermark.mjs` 并串入 `check:theme`；FALLBACK 渐变因两端无共享公式登记人工（PR #224）。
+- **搜索结果用户行对齐 web**：头像 40→44（`AVATAR_SIZE.SMALL_PLUS`），行高 64→68vp（PR #225）。
+- **用户搜索不再过滤本人**：去掉 `doSearch` 的 `user_id === 当前用户` 过滤，与 web/Android 及 spec 对齐（PR #226）。
+- **空 overlay 拦截点击（重要回归）**：`SearchPage` / `MomentsFeedPage` 的回顶 overlay 在隐藏态返回空，空 overlay 节点会拦截下层**点击**（搜索结果 Tab、结果行全部点不动，滚动却正常，所以此前只测滚动未发现）。修正为始终渲染全屏 Row + `HitTestMode.Transparent`（PR #227）；通知中心 builder 本就常驻渲染，未受影响。
+- **群组结果行紧凑化**：由「头像+成员数+两行简介+加入/详情双按钮+更多菜单」（约 200vp）改为 web EntityRow 同款（44 squircle 头像 + 名称 + N 位成员 + 箭头，68vp），整行点击进群详情，并清理仅旧行使用的加入/举报/复制等方法（PR #228）。
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -336,7 +343,7 @@
     `cardFallback*`（无图 fallback 渐变）经色板反解确认**无跨端共享公式**（App 端三段渐变，亮色 accent 预混约 20%/24%/18%、暗色手调），web 为纯色 surface-primary，登记为人工视觉核对例外（见 `docs/design-system.md` §15）。
 11. **鸿蒙装饰几何常量 token 化（低优先）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色可抽常量/登记。
 12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
-13. **跨端搜索结果行字号/头像档差异**：web 行高 64/头像 36/名称 12 vs 鸿蒙 68/40/14；统一时两端同轮改。
+13. **跨端搜索结果行字号/头像档差异（已完成，关闭）**：用户行已对齐 web EntityRow（44 头像 / 14 名称 / 12 副标 / 68vp 行高，PR #225）；群组行已改紧凑 EntityRow（PR #228）；此前「web 64/36/12」口径已过期。
 14. **网格卡字号例外（R13）**：171px 网格卡正文 12 / 作者 14；放大卡宽后可统一。
 15. **BSP 卡片比例例外（R13）**：BSP 格按布局单元铺满、非固定比例；统一需重排布局。
 16. **横排紧凑卡 fallback/精选横排例外（R13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
