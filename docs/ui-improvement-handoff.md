@@ -340,6 +340,16 @@
 - **UI 质量门回归（Round 128）**：`bun run audit:ui` 全绿——browser-qa（桌面 21 + 移动 5）exit 0、audit:a11y（38 页）0 serious/critical、audit:touch（38 页 988 元素）无未登记离群。
 - **鸿蒙我的瞬间三 tab 端上复核**：#26 关闭（见待做项）。
 
+### 2026-11-24 聊天图片三端对齐与动效收尾（Round 129-134）
+
+- **鸿蒙聊天图片气泡去边框 + 相册发送入口（PR #250）**：图片消息不再复用文本气泡（无背景/内边距），按 `onComplete` 真实宽高比圆角展示、时间/已读沉到图下；输入栏新增图片钮（PhotoViewPicker → chat_image 上传 → type=image 私聊/群聊发送，上传中 spinner 防重入）。
+- **鸿蒙预签名上传 URL 双前缀修复（PR #253）**：`resolveUploadUrl` 对带签名绝对 URL 仍拼 origin，实测相册选图上传 404；绝对 URL 直接返回后「选图 → PUT 200 → complete → send」端到端通过。
+- **Web 聊天图片收发（PR #254）**：渲染守卫放行纯图片消息（此前被空白文本过滤整条丢弃）；输入栏图片钮 + chat_image 上传发送；图片按原比例圆角、无气泡框；私聊/群聊共用。
+- **Android 聊天图片气泡对齐（PR #261）**：图片不再套蓝底气泡 + 固定框裁切，改 `aspectRatio` 原比例、16dp 圆角、失败占位「图片加载失败」，长按操作面板经 onLongClick 保留。
+- **鸿蒙 PhotoPreview 大图慢网淡入（PR #260）**：按 `loadedFlags` 200ms 淡入（reduced 直接终态），失败态保持；S3 25k 限速下用临时 2500ms 时长取中间帧验证后回退。
+- **Web 聊天图片点击全屏查看（PR #263）**：图片改 button（键盘可达）→ ImageViewer（缩放/拖拽/滚轮/键盘/Esc），对齐鸿蒙/Android 大图查看。
+- **自动发版**：v1.14.0（聊天图片可发送）/ v1.15.0（三端图片对齐 + Web 收发）/ v1.15.1（PhotoPreview 淡入 + Android 气泡对齐）按「tag → Release 工作流 → APK 附包」流程上线；`scripts/release-android-apk.sh` 固化该链路。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
