@@ -34,3 +34,11 @@
 - 在 `if/else` 分支里用裸块包裹布局（如把两栏 `if` 简化成 `else { { Column() {...}.layoutWeight(1) } }`）时，块内 `.layoutWeight()` **不生效**，容器高度塌陷 → 内部 `WaterFlow`/`List` 高度为 0 → **页头（标题/计数/筛选）正常但内容一条不渲染**。类型检查与编译都不会报错，必须端上或预览器确认。
 - 修法：删掉裸块，容器直接作为分支体。
 - 自查口径：任何「改完结构后内容区空白」的问题，先看分支体是不是裸块、`.layoutWeight()` 是否直接挂在**容器组件**上（Column/Row/List/WaterFlow）。判定手法：dump 节点数（本例页头 10 节点 → 正常时 52 节点）。
+
+## 5. `.overlay()` 会拦截滚动容器内子元素的点击与手势
+
+- 现象：聊天页消息点按全部无响应——点图片不开大图预览、点消息不开操作面板；但顶栏返回、Tab 切换、输入栏发送都正常。
+- 根因：`List.overlay(buildJumpToBottomOverlay(), { align: Alignment.BottomEnd })`。ArkUI 的 overlay 节点会拦截被覆盖区域的点击/手势；即使按钮内部隐藏时已设 `hitTestBehavior(None)`，**overlay 层本身仍吞掉 List 内的点击**（与 R112 设置页/搜索页「空 overlay 既拦滚动也拦点击」同源，见 `docs/ui-improvement-handoff.md` #33）。
+- 修复：浮动按钮改用 **Stack 同级子节点** 承载——列表/滚动容器外层包 `Stack`，按钮放进全屏 `Column`（`justifyContent(End)` / `alignItems(End)`）+ `hitTestBehavior(HitTestMode.Transparent)`，按钮自身的 `margin` 保持原定位；删除 overlay builder。实拍案例：ChatPage 回底按钮（PR #268）。
+- 判定口径（可复现）：滚动容器上出现 `.overlay(` 后，端上点按容器内行/卡片无反应，而容器外控件正常 → 先怀疑 overlay；把 `.overlay(...)` 改为 Stack 同级 Transparent 容器后同坐标复测。
+- 自查命令：`grep -rn '\.overlay(' harmonyapp/entry/src/main/ets --include=*.ets`。**新代码禁止在 List/Refresh/Scroll 上挂 `.overlay()`**；既有 overlay（SearchPage / MomentsFeedPage / NotificationCenter 的回顶按钮）如发现行点按异常，按同一模式改为 Stack 同级；若确实需要 overlay，必须以全屏 `Row/Column + hitTestBehavior(Transparent)` 包裹并端上验证行点击。
