@@ -357,6 +357,12 @@
 - **overlay 陷阱收敛（PR #269/#270）**：`hotspot-harmony-ui/references/layout-pitfalls.md` 新增第 5 条并端上抽查既有 overlay——`NotificationCenter`（Refresh + 常驻小回顶钮）行点击跳转正常、`SearchPage`（外层 Column + 始终渲染的全屏 Transparent）结果行点击正常；风险是 `List` 上直接挂 overlay，或 builder 在隐藏态返回空（设置页/搜索页实测），不能反推 `Refresh`/`Column` 天然安全。
 - **长按验收陷阱（本轮）**：`uitest uiInput longClick` 能触发 `onTouch` 计时器，但不保证触发 ArkUI `LongPressGesture`；长按必须可验收时用 onTouch 计时器（见 layout-pitfalls 第 6 条）。
 
+### 2026-11-25 鸿蒙氛围画布实例优化（Round 143）
+
+- **现象与基线**：`PageShellContainer` 在每个 `fillHeight` 页各挂一块全屏 Canvas；`TabContent` 常驻导致访问过的 Tab 画布全部保留。端上探针实测 live：首页 1 → 附近 2 → 消息 3 → 我的 4，打开详情 5、返回 4。
+- **方案**：`AppStorage` 增加会话态 `MAIN_TAB_INDEX`（`PhoneLayout` 记录 0..4、`DesktopLayout` 置 -1），`PageShellContainer` 新增 `ambientTabIndex`（Tab 页传 0/1/3/4，其它页 -1）；仅当「页面是当前激活 Tab 或非 Tab 上下文」时挂 `AmbientBackdrop`，未激活 Tab 的 Canvas 随 `if` 销毁。
+- **结果**：探针 live 恒 1（切换任意 Tab 仍 1），详情压栈 2、返回 1；PSS（访问 4 Tab 稳定后）194,889→190,645 kB（-4.2MB）；首页/附近/消息/我的四页截图裁剪状态栏后**逐字节一致**（视觉零变化）；桌面分栏布局保持 `MAIN_TAB_INDEX=-1`，各列氛围层不变。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -369,8 +375,7 @@
    r8 占位/慢网、r9 页头滚动/回顶、r10 聊天滚动/回底计数）。
 2. **长尾自定义卡收尾（R15 已基本完成）**：剩余 demo-only 演示卡（`/?demo=`）与地图面板按例外保留；
    新增页面按 §19/§19.5 判定；鸿蒙后台仅 AdminOverview（其余 web-only N/A）、首页长尾组件 N/A。
-3. **鸿蒙氛围画布实例数/内存优化（R12 遗留）**：当前每 `fillHeight` 页一块全屏 Canvas（Tab 页常驻，实测 live 2→5，
-   PSS 218.7→330.2MB）；可选上提到外壳内容区单实例/共享绘制缓存；改前先量首帧与滚动帧率。
+3. **鸿蒙氛围画布实例数/内存优化（R12 遗留，Tab 常驻部分已解决）**：Round 143 起仅激活 Tab 挂画布（live 4→1、PSS -4.2MB，视觉逐字节一致）；**剩余**：推送页每页仍挂一块（栈深 N → N 块）、设置页/管理后台仍无氛围层（与 #12 同源）。再往下只能做外壳单实例 + 页面透明化（改动大、收益递减），按需再评估。
 4. **氛围浓淡评审**：世界层透明度集中在 `themes/*.css` 的 `--cst-ambient-*`（12 个）；鸿蒙按同口径重算 AMBIENT ARGB。
 5. **鸿蒙骨架屏接入扩展（已补齐主要列表）**：搜索页（历史实现）、通知中心（PR #212）、关系页（PR #213）已接入；其余长列表（如我的分享/公告/举报）可按同一模式补，非阻塞。
 6. **搜索 Tab 计数格式对齐（已对齐，关闭）**：web `TabBar` 的 count 为独立小号数字（视觉「用户 7」）；鸿蒙 `SearchPage.tabLabel()` 在 `hasSearched && count > 0` 时输出 `${base} ${count}`（空格分隔，代码注释明确对齐 web），两端一致；此前「用户 (10)」描述已过期。

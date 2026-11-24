@@ -611,7 +611,7 @@ export struct MessagePage {
 
   build() {
   Stack() {
-  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
+  PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientTabIndex: 3}) {
     Column() {
       // 粘性头部 —— 对齐前端移动端 PageHeader titleSize=2xl：未读计数与「+」在标题右侧同排
       SystemPageHeader({

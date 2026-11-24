@@ -281,7 +281,7 @@ export struct HomePage {
 
   build() {
     // 横向留白由容器 gutter 统一提供（页面不再自加左右 padding）
-    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientTabIndex: 0 }) {
       Column() {
         this.buildStickyHeader()
 

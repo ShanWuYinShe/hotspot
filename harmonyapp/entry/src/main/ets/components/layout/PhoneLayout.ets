@@ -100,6 +100,11 @@ export struct PhoneLayout {
 
   private tabsController: TabsController = new TabsController();
 
+  aboutToAppear(): void {
+    // Tab 上下文标记：PageShellContainer 仅给激活 Tab 挂氛围画布（主 Tab 布局）
+    AppStorage.setOrCreate<number>(StorageKeys.MAIN_TAB_INDEX, this.currentTabIndex);
+  }
+
   /** 消费切 tab 请求：立即复位，避免同值不再触发 @Watch */
   private onSwitchTabRequest(): void {
     const target = this.switchTabRequest;
@@ -113,6 +118,7 @@ export struct PhoneLayout {
     }
     this.tabsController.changeIndex(target);
     this.currentTabIndex = target;
+    AppStorage.setOrCreate<number>(StorageKeys.MAIN_TAB_INDEX, target);
   }
 
   build() {
@@ -208,6 +214,7 @@ export struct PhoneLayout {
             return;
           }
           this.currentTabIndex = index;
+          AppStorage.setOrCreate<number>(StorageKeys.MAIN_TAB_INDEX, index);
         })
         // 系统 bar 已隐藏，玻璃/描边/投影由自定义浮动 Dock 承载；Tabs 自身不再铺底
         .layoutWeight(1)

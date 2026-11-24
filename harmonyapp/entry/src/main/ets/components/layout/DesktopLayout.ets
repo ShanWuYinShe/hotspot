@@ -35,6 +35,7 @@ import { NotificationRenderer } from '../../core/services/notification/Notificat
 import { AppRouter, LoginRouteParam } from '../../core/router/AppRouter';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../core/state/GlobalStateManager';
 import { AccountInfo } from '../../core/types/api';
+import { StorageKeys } from '../../constants/AppConstants';
 import { AppThemeManager } from '../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../core/theme/AppThemeTypes';
 import { SystemUiController } from '../../core/utils/SystemUiController';
@@ -69,6 +70,8 @@ export struct DesktopLayout {
   @State avatarPressed: boolean = false;
 
   aboutToAppear() {
+    // 桌面分栏布局不是底部 Tab 上下文：PageShellContainer 所有列都需氛围层
+    AppStorage.setOrCreate<number>(StorageKeys.MAIN_TAB_INDEX, -1);
   }
 
   private getPalette() {

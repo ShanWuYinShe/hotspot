@@ -3,6 +3,7 @@ import { BreakpointType } from '../core/responsive/Breakpoint';
 import { AppThemeManager } from '../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/AppThemeTypes';
 import { AmbientBackdrop } from './layout/AmbientBackdrop';
+import { StorageKeys } from '../constants/AppConstants';
 
 /**
  * 页面内容栏容器（对齐前端 .page-shell + .page-pad）
@@ -69,6 +70,10 @@ export struct PageShellContainer {
    *  height('100%') 会使内容高度恒等于视口，滚动范围归零、下方内容被裁剪 */
   @Prop fillHeight: boolean = true;
   @StorageProp(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  /** 该页所在底部 Tab 下标（-1 = 非 Tab 页，始终绘制氛围层） */
+  @Prop ambientTabIndex: number = -1;
+  /** 当前激活 Tab 下标（-1 = 非 Tab 布局，如桌面分栏；此时所有页都绘制） */
+  @StorageProp(StorageKeys.MAIN_TAB_INDEX) activeTabIndex: number = -1;
 
   private getPalette() {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
@@ -116,7 +121,11 @@ export struct PageShellContainer {
       // 不做整屏世界层（会随滚动拉伸）。**已登记平台差异（2026-10-26 复核 N3）**：这些页
       // 目前外层未再挂 AmbientBackdrop，即无氛围层（与 web 全站有氛围层不一致）；后续若要
       // 对齐，应由外层页面/外壳统一挂载单实例，而不是在滚动容器内挂。
-      if (this.fillHeight) {
+      // Tab 页只给「激活的 Tab」挂画布：TabContent 常驻，若每页各挂一块全屏 Canvas，
+      // 访问过的 Tab 会全部保留（实测 live 1→4），而同一时刻只有一页可见。
+      // 非 Tab 布局（activeTabIndex=-1）与推送页（ambientTabIndex=-1）保持全挂。
+      if (this.fillHeight && (this.ambientTabIndex < 0 || this.activeTabIndex < 0 ||
+        this.ambientTabIndex === this.activeTabIndex)) {
         AmbientBackdrop()
       }
 

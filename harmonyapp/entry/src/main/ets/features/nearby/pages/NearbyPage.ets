@@ -212,7 +212,7 @@ export struct NearbyPage {
     // 不用 .overlay 挂回顶钮：不可见时 overlay 仍会占满命中区并吞掉整页点击。
     // 改为 Stack 的尾部条件子节点，只在可见时才参与布局/触摸。
     Stack({ alignContent: Alignment.BottomEnd }) {
-    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint}) {
+    PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientTabIndex: 1}) {
       Column() {
         SystemPageHeader({
           title: '附近',
