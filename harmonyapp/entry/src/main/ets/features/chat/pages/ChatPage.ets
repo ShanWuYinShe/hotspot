@@ -126,6 +126,8 @@ export struct ChatPage {
   private loadHistoryInFlight: boolean = false;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
+  /** 相册图片上传中（选图 → presign → PUT → complete 期间禁用入口） */
+  @State isUploadingImage: boolean = false;
   // 发送失败：输入栏上方内联错误条 + 重试（对齐 web ChatInputBar；失败不清空输入，
   // 重试直接重发当前输入，避免用户重敲长消息）
   @State private sendErrorText: string = '';
@@ -1114,6 +1116,91 @@ export struct ChatPage {
     }
   }
 
+  /**
+   * 相册选图 → 上传 chat_image → 发送图片消息。
+   * 说明：图片消息是 app 端功能（Web 私聊/群聊输入栏无图片入口，仅能展示），
+   * 鸿蒙此前无入口导致「有图片气泡却发不出图」；这里补齐与 Android 对等的发送能力。
+   */
+  private async pickAndSendImage(): Promise<void> {
+    if (this.isSending || this.isUploadingImage) {
+      return;
+    }
+    if (!this.currentUser) {
+      SystemToast.showWarning('请先登录后再发送消息', this.getUIContext());
+      const loginParams = new LoginRouteParam();
+      loginParams.reason = 'action_required';
+      loginParams.action = '发送图片';
+      AppRouter.push(PageNames.LOGIN, loginParams);
+      return;
+    }
+    if (this.isGroupServerMuted) {
+      return;
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    if (!context) {
+      return;
+    }
+    let selected: string[] = [];
+    try {
+      selected = await MediaServiceManager.selectImages(context, 1);
+    } catch (error) {
+      // 取消选图也走 catch：静默返回，不打扰用户
+      return;
+    }
+    if (!selected || selected.length === 0) {
+      return;
+    }
+    this.isUploadingImage = true;
+    this.sendErrorText = '';
+    try {
+      const media = await ApiClient.uploadFile(context, selected[0], 'chat_image');
+      await this.sendImageMessage(media.file_id);
+    } catch (error) {
+      this.sendErrorText = '图片发送失败，请重试';
+      SystemToast.showWarning('图片发送失败，请重试', this.getUIContext());
+    } finally {
+      this.isUploadingImage = false;
+    }
+  }
+
+  /** 发送图片消息（file_id 已在 complete_upload 完成后拿到）；成功后拉取历史以拿到 media.url 渲染气泡 */
+  private async sendImageMessage(fileId: string): Promise<void> {
+    this.isSending = true;
+    this.sendErrorText = '';
+    try {
+      if (this.chatType === 'private_chat') {
+        const targetUserId = this.targetId;
+        if (!targetUserId) {
+          throw new Error('无法获取目标用户ID');
+        }
+        const request: SendPrivateMessageRequest = {
+          target_user_id: targetUserId,
+          type: 'image',
+          file_id: fileId
+        };
+        const response = await ApiClient.sendPrivateMessage(request);
+        if (response.code !== 0) {
+          throw new Error(response.message || '发送图片失败');
+        }
+      } else {
+        const request: SendGroupMessageRequest = {
+          group_id: this.chatId,
+          type: 'image',
+          file_id: fileId
+        };
+        const response = await ApiClient.sendGroupMessage(request);
+        if (response.code !== 0) {
+          throw new Error(response.message || '发送图片失败');
+        }
+      }
+      // 图片气泡渲染依赖服务端 media.url（WS 回显可能未及时到），主动刷新一次历史
+      await this.loadHistory();
+      this.scrollToBottom();
+    } finally {
+      this.isSending = false;
+    }
+  }
+
   private handleTypingInput(value: string): void {
     const isTyping = value.trim().length > 0;
     if (!isTyping) {
@@ -1522,9 +1609,42 @@ export struct ChatPage {
         this.mentionPanel()
       }
 
-      // 对齐前端 ChatInputBar：仅输入框 + 发送钮，无「添加图片」钮
-      // （web 私聊/群聊输入栏均无图片入口；图片消息为 app 单端功能，git 历史可恢复）
+      // 输入条：图片入口 + 输入框 + 发送钮。Web 输入栏无图片入口（只能展示图片消息），
+      // app 端补齐发送能力：相册选图 → chat_image 上传 → type=image（与 Android 对等）。
       Row() {
+        // 图片入口：圆形次级钮（与发送钮同档 40、热区 44）；上传中显示 LoadingProgress
+        Button() {
+          if (this.isUploadingImage) {
+            LoadingProgress()
+              .width(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+              .height(DesignConstants.COMPONENT.LOADING_ICON_SIZE)
+              .color(this.getCurrentThemePalette().textSecondary)
+          } else {
+            LucideIcon({
+              icon: AppIcon.PHOTO,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+              color: this.getCurrentThemePalette().textSecondary
+            })
+          }
+        }
+        .type(ButtonType.Circle)
+        .accessibilityText(this.isUploadingImage ? '图片上传中' : '发送图片')
+        .stateEffect(false)
+        .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .responseRegion({
+          x: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD) / 2,
+          y: -(DesignConstants.LAYOUT.MIN_HIT_TARGET - DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD) / 2,
+          width: DesignConstants.LAYOUT.MIN_HIT_TARGET,
+          height: DesignConstants.LAYOUT.MIN_HIT_TARGET
+        })
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .enabled(!this.isSending && !this.isUploadingImage)
+        .margin({ right: DesignConstants.SPACING.MD2 })
+        .onClick(() => { void this.pickAndSendImage(); })
+
         TextInput({ text: this.inputText, placeholder: '发送消息…' })
           .layoutWeight(1)
           .maxLength(MESSAGE_CONTENT_MAX)

@@ -51,6 +51,8 @@ export struct ChatMessageItem {
   @State imageFailed: boolean = false;
   /** 图片加载完成标记（onComplete 后淡入；reduced-motion 直接显示） */
   @State imageLoaded: boolean = false;
+  /** 图片宽高比（onComplete 读取真实尺寸）：图片消息按原始比例铺满气泡，避免固定框留白/裁切 */
+  @State imageAspectRatio: number = 0;
 
   /** 图片点击预览（走 PhotoPreviewPage，与动态详情图片预览同一入口） */
   private previewImage(): void {
@@ -83,6 +85,101 @@ export struct ChatMessageItem {
       return this.palette.textSecondary;
     }
     return this.msg.isSelf ? this.chatTheme.bubbleSelfText : this.palette.textSecondary;
+  }
+
+  /** 图片消息框宽度：按原始比例在 MAX_W/MAX_H 内缩放到最小可用框（loading 阶段用默认 3:4） */
+  private imageBoxWidth(): number {
+    const ratio = this.imageAspectRatio;
+    if (ratio <= 0) {
+      return DesignConstants.CHAT.IMAGE_MAX_WIDTH;
+    }
+    return Math.min(DesignConstants.CHAT.IMAGE_MAX_WIDTH, Math.round(DesignConstants.CHAT.IMAGE_MAX_HEIGHT * ratio));
+  }
+
+  private imageBoxRatio(): number {
+    return this.imageAspectRatio > 0 ? this.imageAspectRatio : 0.75;
+  }
+
+  /** 图片消息内容：无气泡外壳（不再有蓝色大边框），图片自身圆角贴齐页面背景，时间/已读在图下 */
+  @Builder
+  private buildImageMessage(): void {
+    Column() {
+      Stack({ alignContent: Alignment.Center }) {
+        if (this.imageFailed) {
+          // 加载失败占位（对齐前端图片占位：surface-subtle 底 + 图标）
+          Column({ space: DesignConstants.SPACING.SM }) {
+            LucideIcon({
+              icon: AppIcon.PHOTO,
+              iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+              paletteRole: 'textSecondary'
+            })
+            Text('图片加载失败')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .fontColor(this.palette.textSecondary)
+          }
+          .width(this.imageBoxWidth())
+          .aspectRatio(this.imageBoxRatio())
+          .justifyContent(FlexAlign.Center)
+          .backgroundColor(this.palette.surfaceSubtle)
+          .borderRadius(DesignConstants.RADIUS.MD)
+        } else {
+          Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.msg.content), 720))
+            .width('100%')
+            .height('100%')
+            .objectFit(ImageFit.Cover)
+            .borderRadius(DesignConstants.RADIUS.MD)
+            .backgroundColor(this.imageLoaded ? DesignConstants.COLOR.TRANSPARENT : this.palette.surfaceSubtle)
+            // 慢网淡入（对齐 NearbyImageCard/SystemAvatar 口径）：加载中保留占位底，
+            // onComplete 后 200ms 淡入；失败保持占位并出「图片加载失败」；reduced 直接终态。
+            .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
+            .animation({
+              duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+              curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+            })
+            .onComplete((event) => {
+              // 读取真实像素尺寸按比例布局（ImageCompleteEvent 类型由 ArkUI 全局声明推导）
+              if (event && event.contentWidth > 0 && event.contentHeight > 0) {
+                this.imageAspectRatio = event.contentWidth / event.contentHeight;
+              }
+              this.imageLoaded = true;
+            })
+            .onError(() => { this.imageFailed = true; })
+            .accessibilityText('[图片消息]')
+        }
+      }
+      .width(this.imageBoxWidth())
+      .aspectRatio(this.imageBoxRatio())
+      .borderRadius(DesignConstants.RADIUS.MD)
+      .clip(true)
+      .onClick(() => {
+        // 有可操作项（撤回）时点击唤起操作面板，否则走图片预览
+        if (this.hasActions && this.onMessageClick) {
+          this.onMessageClick(this.msg);
+          return;
+        }
+        this.previewImage();
+      })
+      .accessibilityText('点击预览图片')
+
+      // 图片不套气泡：时间/已读图下对齐（次色，深浅主题均可读）
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(this.timeText)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.palette.textSecondary)
+        if (this.msg.isSelf && this.isLastSent) {
+          LucideIcon({
+            icon: AppIcon.CHECK_ALL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.palette.textSecondary
+          })
+            .opacity(DesignConstants.OPACITY.EMPHASIZED)
+        }
+      }
+      .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+      .margin({ top: DesignConstants.SPACING.XS })
+    }
+    .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+    .margin({ top: DesignConstants.SPACING.HALF })
   }
 
   build() {
@@ -120,77 +217,10 @@ export struct ChatMessageItem {
               .margin({ bottom: DesignConstants.SPACING.XS, left: DesignConstants.SPACING.XS })
           }
 
-          Column() {
-            if (this.msg.type === 'image') {
-              // 图片消息：限高（超高图防撑爆列表）+ 加载占位 + 点击预览
-              Stack({ alignContent: Alignment.Center }) {
-                if (this.imageFailed) {
-                  // 加载失败占位（对齐前端图片占位：accent-soft 底 + 图标）
-                  Column({ space: DesignConstants.SPACING.SM }) {
-                    LucideIcon({
-                      icon: AppIcon.PHOTO,
-                      iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
-                      paletteRole: 'textSecondary'
-                    })
-                    Text('图片加载失败')
-                      .fontSize(DesignConstants.FONT.SIZE.XS)
-                      .fontColor(this.palette.textSecondary)
-                  }
-                  .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
-                  .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
-                  .justifyContent(FlexAlign.Center)
-                  .backgroundColor(this.chatTheme.listBackground)
-                  .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-                  } else {
-                  Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(this.msg.content), 720))
-                    .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
-                    .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
-                    .objectFit(ImageFit.Contain)
-                    .backgroundColor(this.chatTheme.listBackground)
-                    .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-                    .margin(DesignConstants.SPACING.XS)
-                    // 慢网淡入（对齐 NearbyImageCard/SystemAvatar 口径）：加载中保留气泡底色占位，
-                    // onComplete 后 200ms 淡入；失败保持占位并出「图片加载失败」；reduced 直接终态。
-                    .opacity(this.imageLoaded || MotionUtil.reduced() ? 1 : 0)
-                    .animation({
-                      duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
-                      curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-                    })
-                    .onComplete(() => { this.imageLoaded = true; })
-                    .onError(() => { this.imageFailed = true; })
-                    .accessibilityText('[图片消息]')
-                }
-              }
-              .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
-              .height(DesignConstants.CHAT.IMAGE_MAX_HEIGHT)
-              .onClick(() => {
-                // 有可操作项（撤回）时点击唤起操作面板，否则走图片预览
-                if (this.hasActions && this.onMessageClick) {
-                  this.onMessageClick(this.msg);
-                  return;
-                }
-                this.previewImage();
-              })
-              .accessibilityText('点击预览图片')
-              // 图片气泡也带时间/已读底行（与文本气泡一致，Telegram 规范）
-              Row({ space: DesignConstants.SPACING.XS }) {
-                Text(this.timeText)
-                  .fontSize(DesignConstants.FONT.SIZE.XS)
-                  .fontColor(this.getMetaColor())
-                if (this.msg.isSelf && this.isLastSent) {
-                  LucideIcon({
-                    icon: AppIcon.CHECK_ALL,
-                    iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
-                    color: this.getMetaColor()
-                  })
-                    .opacity(DesignConstants.OPACITY.EMPHASIZED)
-                }
-              }
-              .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-              // 不能写 width('100%')：气泡宽度由内容决定，百分比子节点会把气泡撑到 maxWidth，
-              // 短消息变成整条长条（时间/已读行只需随内容并靠齐）
-              .margin({ top: DesignConstants.SPACING.XS })
-            } else {
+          if (this.msg.type === 'image') {
+            this.buildImageMessage()
+          } else {
+            Column() {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
               Text(this.msg.recalled ? '消息已撤回' : this.msg.content)
                 .fontSize(DesignConstants.FONT.SIZE.MD)
@@ -224,29 +254,26 @@ export struct ChatMessageItem {
               // 短消息变成整条长条（时间/已读行只需随内容并靠齐）
               .margin({ top: DesignConstants.SPACING.XS })
             }
+            .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
+            .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+            // 内距对齐 web px-4 py-2（16/8）
+            .padding({
+              left: DesignConstants.CHAT.BUBBLE_PADDING_H,
+              right: DesignConstants.CHAT.BUBBLE_PADDING_H,
+              top: DesignConstants.SPACING.SM,
+              bottom: DesignConstants.SPACING.SM
+            })
+            .backgroundColor(this.getBubbleBackground())
+            .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
+            // 气泡纯色底无边框无阴影（对齐前端 MessageBubble 与主流 IM；
+            // 描边+阴影会让气泡呈现「浮肿的框」）
+            .margin({ top: DesignConstants.SPACING.HALF })
+            .onClick(() => {
+              if (this.hasActions && this.onMessageClick) {
+                this.onMessageClick(this.msg);
+              }
+            })
           }
-          .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
-          .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
-          // 内距对齐 web px-4 py-2（16/8）
-          .padding({
-            left: DesignConstants.CHAT.BUBBLE_PADDING_H,
-            right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-            top: DesignConstants.SPACING.SM,
-            bottom: DesignConstants.SPACING.SM
-          })
-          .backgroundColor(this.getBubbleBackground())
-          .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
-          // 气泡纯色底无边框无阴影（对齐前端 MessageBubble 与主流 IM；
-          // 描边+阴影会让气泡呈现「浮肿的框」）
-          .margin({ top: DesignConstants.SPACING.HALF })
-          .onClick(() => {
-            if (this.msg.type === 'image') {
-              return;
-            }
-            if (this.hasActions && this.onMessageClick) {
-              this.onMessageClick(this.msg);
-            }
-          })
         }
         .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
         .layoutWeight(1)
