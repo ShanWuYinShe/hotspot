@@ -333,6 +333,13 @@
 - **Web 群聊非成员直链加入引导（PR #237）**：`10200 not_group_member` 由「错误文案 + 重试」改为 `EmptyState` +「加入群组」CTA（direct 加入后自动重拉历史/群信息、approval 转待审核、invite_only 内联服务端原因），未入群时隐藏输入栏；补 3 个组件契约用例。
 - **审计 backlog 复核（Round 125）**：群聊非成员直链、纯文字瞬间卡、`/users/:id` 统计空态矛盾、1440 首页右栏不吸顶 4 项已关闭（证据见 `frontend-ui-audit.md`「审计 backlog 复核」）；保留页头返回钮标题偏移、768 平板后台表格列裁剪待后续。
 
+### 2026-11-24 通知键盘导航与 backlog 复核（Round 126-127）
+
+- **审计 backlog 复核（PR #241）**：768 平板后台表格实测无横向溢出（`/admin/users` wrap 720=scroll 720，操作列完整可见；`/admin/audit` 按断点隐藏详情/IP 列），「积压表格列裁剪」关闭；backlog 关闭 5/6，仅余页头返回钮 leading 槽位。
+- **通知列表键盘导航（PR #242）**：复用 `lib/search-nav` 给 `/notify` 接入 ↑↓（搜索框 ↓ 进入列表首项、候选内逐项移动、弹层打开不接管）；实测焦点序列 搜索框→接受→拒绝→通知行→↑ 拒绝，`bun run check` EXIT=0。
+- **UI 质量门回归（Round 128）**：`bun run audit:ui` 全绿——browser-qa（桌面 21 + 移动 5）exit 0、audit:a11y（38 页）0 serious/critical、audit:touch（38 页 988 元素）无未登记离群。
+- **鸿蒙我的瞬间三 tab 端上复核**：#26 关闭（见待做项）。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -364,7 +371,7 @@
 17. **图片档位/清晰度真机复核（R17）**：dev 图片为本地代理图，unsplash 压缩在预发/线上生效；真机核首屏流量、
     头像 2x vs 3x、nearby 页 +43% 取舍（非首屏可回退 thumb 档）。
 18. **鸿蒙缩略图渐显（5 处已核对，剩 2 处低优先）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；MomentDetail 首图/缩略图失败态已补（PR #235）；**Chat 图片气泡与 PhotoPreview 大图的淡入仍待弱网/慢图环境验证**，暂不阻塞。
-19. **搜索键盘导航扩展（R17）**：当前只 /search；后续评估 feed/通知列表 ↑↓ 前先做读屏/真机验证，避免冲突。
+19. **键盘导航扩展（R17）**：`/search`（R6）之外，**通知列表已接入 ↑↓**（PR #242，复用 `lib/search-nav`：搜索框 ↓ 进入列表首项、候选内逐项移动、弹层打开不接管）；feed/首页列表仍待读屏/真机验证后评估（行内控件多、与滚动冲突风险高）。
 20. **a11y/触控/主题自动化纳入门禁（R16）**：axe-core 加 devDependency + 检查脚本，触控覆盖率脚本入库，
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
 21. **触控例外清单（R16）**：地图 marker/控件（防相邻误点）、相邻 TagPill（WCAG 24 + 间距）、表单控件、skip link；
@@ -373,7 +380,7 @@
 23. **inkwash light 岛合成口径（R16）**：有效合成 #FAF8F2；不同采样点（ambient 高光）会读到 #FCF9F3，报告需标注取样口径。
 24. **交互状态契约守护（R15）**：focus-visible/reduced-motion/四态已入 design-system §20 与 skills；新页面按契约自查。
 25. **admin mock 空态不可复现（R15）**：mock 列表未实现筛选参数，空态不可达；联调环境补验证。
-26. **鸿蒙我的瞬间 tabs 缺失（R13）**：缺喜欢/收藏数据源 + MomentPage 取 fetchNearbyMoments（既有数据源问题）；数据层补齐后再对齐 UI。
+26. **鸿蒙我的瞬间 tabs（R13，已完成，关闭）**：`MomentPage` 已实现发布/喜欢/收藏三 tab，数据源分别为 `moments/fetch_created`、`users/fetch_reacted_moments`、`moments/fetch_favorites`；端上实测（Mate X7 模拟器 / QA）：发布 9、喜欢 4（他人瞬间、心形填充）、收藏 2（书签填充），切换即加载对应列表。
 27. **图片管线契约守护（R17）**：新增图片必须走 `lib/images.ts` 档位（unsplash 参数/srcset/渐显/首屏优先级），禁止裸写 `<img src>`；
     reviewer 已把「非 unsplash 原样/失败降级」纳入审计。
 28. **动效契约守护（R18）**：新增动画必须走 `lib/motion.ts` / 鸿蒙 `MotionUtil`；页面进场只能客户端导航、JS 动画必须显式 reduced；
@@ -422,6 +429,10 @@
   （ArkUI 陷阱会把圆角重置为 0）→ 已改为先 border 后 borderRadius；同类写法（如有）下轮批量扫。
 - **复核留档**：`review/verdict.md`（独立复核结论 A–H、13 Notes）、`review/checklist.md`、
   `review/baseline-web/` 与 `review/after-web/`（改前/改后 39 页同口径）、`review/metrics/compare.md`。
+- **Android 群聊非成员态不可达（Round 126 实测）**：`GroupChatScreen` 的 `notMember` 分支需要 `group_messages/fetch`
+  返回 10200，但正常 UI 流程下非成员无法进入群聊页（入口仅群详情「打开群聊」，非成员显示「加入群组」）；
+  被移出群后聊天页也不会自动重拉历史（需重进页面，而重进后群详情按钮已变成「加入群组」）。该状态仅理论可达，
+  Web 端已给加入引导（PR #237）；Android 侧移植无法端上验证，暂不实施。若后续接入群聊深链或成员移除 WS 事件，再补 CTA。
 
 ## 端上验证环境要点
 
