@@ -163,6 +163,7 @@
 			const mapped: ChatMessage[] = items.map((m) => ({
 				id: m.message_id,
 				text: m.recalled_at ? '消息已撤回' : (m.content ?? ''),
+				imageUrl: !m.recalled_at && m.type === 'image' ? (m.media?.url ?? '') : undefined,
 				recalled: Boolean(m.recalled_at),
 				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
@@ -187,6 +188,11 @@
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			// 后端 message 已是面向用户的 curated 文案（如禁言/封禁原因），优先直显。
 			return { code: res.code, error: res.message || '消息发送失败' };
+		},
+		sendImage: async (fileId) => {
+			const res = await sendGroupMessage({ group_id: groupId, type: 'image', file_id: fileId });
+			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
+			return { code: res.code, error: res.message || '图片发送失败' };
 		},
 		sendTypingSignal: (isTyping) => {
 			// 未连接静默丢弃。
@@ -213,7 +219,16 @@
 			// 上滑读历史时收到的新消息不再被立即标记已读。
 			void sent;
 			// sentAt 供 useChat 按服务端时间保持正序（resume 回放/实时交错不乱序）
-			return { id, text: payload.content ?? '', sent, time: formatTime(payload.sent_at), sentAt: payload.sent_at, senderName: payload.sender?.nickname ?? '' };
+			const media = (payload as { media?: { url?: string } }).media;
+			return {
+				id,
+				text: payload.type === 'image' ? '' : (payload.content ?? ''),
+				imageUrl: payload.type === 'image' ? media?.url : undefined,
+				sent,
+				time: formatTime(payload.sent_at),
+				sentAt: payload.sent_at,
+				senderName: payload.sender?.nickname ?? ''
+			};
 		},
 		wsMessageUpdate: (e) => {
 			const detail = (e as CustomEvent<{

@@ -44,14 +44,17 @@
 	});
 
 	// 渲染守卫（审计 P1-3）：后端/历史数据里存在 content 为空串的消息，直接渲染会得到一个
-	// 只剩时间戳的「空气泡」，看起来像渲染失败。保留撤回消息（渲染为「消息已撤回」），
+	// 只剩时间戳的「空气泡」，看起来像渲染失败。保留撤回消息（渲染为「消息已撤回」）与
+	// 文本为空但带图片 URL 的图片消息（imageUrl 存在时由 MessageBubble 渲染图片），
 	// 其余 text 为空白的不生成气泡；空出来的日期分节一并收起，避免出现只有日期标签的孤儿分节。
 	// 只影响渲染层：分页/未读/已读回执仍由 chat controller 维护。
 	const visibleGroups = $derived(
 		chat.dateGroups
 			.map((group) => ({
 				...group,
-				messages: group.messages.filter((msg) => msg.recalled || (msg.text ?? '').trim().length > 0)
+				messages: group.messages.filter(
+					(msg) => msg.recalled || (msg.text ?? '').trim().length > 0 || Boolean(msg.imageUrl)
+				)
 			}))
 			.filter((group) => group.messages.length > 0)
 	);
@@ -141,6 +144,7 @@
 						{#each group.messages as msg (msg.id)}
 							<MessageBubble
 								text={msg.text}
+								imageUrl={msg.imageUrl}
 								sent={msg.sent}
 								time={msg.time}
 								senderName={showSenderNames ? msg.senderName : ''}

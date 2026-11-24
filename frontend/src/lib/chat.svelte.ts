@@ -24,6 +24,8 @@ export interface ChatMessage {
 	time: string;
 	/** 群聊场景的发送者昵称（incoming 气泡上方展示；私聊不需要） */
 	senderName?: string;
+	/** 图片消息读 URL（type=image）：存在时气泡渲染图片而非文本，text 仅作失败/撤回兜底 */
+	imageUrl?: string;
 	/** 原始发送时间（ISO）；用于按本地日期分组。 */
 	sentAt?: string;
 	recalled?: boolean;
@@ -57,6 +59,8 @@ export interface UseChatOptions {
 	markRead: () => void;
 	/** 发送文本消息；失败返回非 0 code（可携带 error 文案），成功返回服务端 message_id 替换 temp id。 */
 	sendMessage: (text: string, mentions?: string[]) => Promise<SendResult>;
+	/** 发送图片消息（file_id 来自 chat_image 上传）；未注入时输入栏不显示图片入口。 */
+	sendImage?: (fileId: string) => Promise<SendResult>;
 	/** 发送侧 typing 信号（未连接时实现方静默丢弃）。 */
 	sendTypingSignal: (isTyping: boolean) => void;
 	/** WS 新消息事件名（window event）。 */
@@ -442,6 +446,36 @@ export function useChat(opts: UseChatOptions) {
 		await dispatchSend(text, mentions);
 	};
 
+	/**
+	 * 发图片：输入栏已完成上传（file_id + 本地 objectURL 预览），这里负责乐观气泡与发送。
+	 * 失败只记 sendError（不写 failedSend：file_id 已随请求消耗，重试文本无意义）。
+	 */
+	const handleSendImage = async (fileId: string, previewUrl: string) => {
+		if (sending || !opts.targetId() || !opts.sendImage) return;
+		sending = true;
+		sendError = '';
+		const tempId = `temp-img-${Date.now()}`;
+		const sentAt = new Date().toISOString();
+		messages = [...messages, { id: tempId, text: '', sent: true, time: formatTime(sentAt), sentAt, imageUrl: previewUrl }];
+		try {
+			const res = await opts.sendImage(fileId);
+			if (res.code !== 0) {
+				messages = messages.filter((m) => m.id !== tempId);
+				sendError = res.error ?? '图片发送失败';
+			} else if (res.message_id) {
+				messages = messages
+					.filter((m) => m.id !== res.message_id)
+					.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
+			}
+		} catch {
+			messages = messages.filter((m) => m.id !== tempId);
+			sendError = '图片发送失败,请稍后重试';
+		} finally {
+			sending = false;
+			cancelTyping();
+		}
+	};
+
 	/** 重试上一次失败的发送（保留原文与 mentions；成功/再次失败都会更新 failedSend）。 */
 	const retrySend = async () => {
 		const pending = failedSend;
@@ -590,7 +624,10 @@ export function useChat(opts: UseChatOptions) {
 		},
 		handleScroll,
 		handleInputChange,
+		/** 发送图片能力（未注入时为 undefined，输入栏据此隐藏图片入口） */
+		sendImage: opts.sendImage,
 		handleSend,
+		handleSendImage,
 		retrySend,
 		handleRecall,
 		handleEdit,

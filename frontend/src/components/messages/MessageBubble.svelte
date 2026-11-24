@@ -16,6 +16,7 @@
 
 	let {
 		text,
+		imageUrl = '',
 		sent,
 		time,
 		senderName = '',
@@ -33,6 +34,8 @@
 		onReport
 	}: {
 		text: string;
+		/** 图片消息读 URL：存在时渲染图片（圆角、按比例），时间/已读沉到图下，不套气泡底色 */
+		imageUrl?: string;
 		sent: boolean;
 		time: string;
 		senderName?: string;
@@ -95,8 +98,26 @@
 	{#if !sent && senderName}
 		<p class="mb-1 px-1 text-sm font-medium text-text-secondary">{senderName}</p>
 	{/if}
-	<div class="relative max-w-chat-bubble rounded-md px-4 py-2 {bubbleClass}">
-		{#if editing}
+	<div class="relative max-w-chat-bubble rounded-md {imageUrl && !recalled ? '' : 'px-4 py-2 ' + bubbleClass}">
+		{#if imageUrl && !recalled}
+			<!-- 图片消息：不套气泡（与鸿蒙端一致），圆角图 + 图下时间/已读 -->
+			<img
+				src={imageUrl}
+				alt="图片消息"
+				loading="lazy"
+				decoding="async"
+				class="max-h-[320px] w-auto max-w-full rounded-md bg-surface-subtle object-contain"
+			/>
+			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
+				{time}
+				{#if editedAt}
+					<span>· 已编辑</span>
+				{/if}
+				{#if sent && showCheck}
+					<CheckCheck class="size-3.5 opacity-emphasis" strokeWidth={2} />
+				{/if}
+			</p>
+		{:else if editing}
 			<div class="flex flex-col gap-1.5">
 				<textarea
 					bind:value={draft}

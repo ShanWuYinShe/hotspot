@@ -5,6 +5,11 @@
 		"reason": "聊天输入条：输入 + 发送按钮的组合输入器，由 ChatInputBar 统一承载，不套 forms/Input 字段壳"
 	},
 	{
+		"rule": "raw-file-input",
+		"file": "src/components/messages/ChatInputBar.svelte",
+		"reason": "聊天图片发送：单张选图后立即上传发送（无草稿预览网格），与 ImagePicker 的多图草稿选择语义不同；隐藏 file input 仅作触发入口，样式为圆形媒体钮"
+	},
+	{
 		"rule": "input-surface-outside",
 		"file": "src/components/messages/ChatInputBar.svelte",
 		"reason": "聊天输入条整条即输入表面（44px 消息契约），与搜索/表单字段两档不同；全站唯一实现"

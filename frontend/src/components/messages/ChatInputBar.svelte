@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { Send } from '@lucide/svelte';
+	import { Image as ImageIcon, Send } from '@lucide/svelte';
 	import ChatColumn from '@/components/messages/ChatColumn.svelte';
+	import { uploadMediaFile } from '@/lib/upload';
 	import type { ChatController } from '@/lib/chat.svelte';
 
 	// ChatInputBar —— 私聊/群聊共享的输入栏（发送错误提示 + 输入框 + 发送钮）。
@@ -22,6 +23,40 @@
 	let mentionQuery = $state<string | null>(null);
 	let mentionIndex = $state(0);
 	let inputEl = $state<HTMLInputElement | null>(null);
+	/** 图片入口：隐藏 file input + 上传态（上传中禁用发送与再次选图） */
+	let imageFileEl = $state<HTMLInputElement | null>(null);
+	let imageUploading = $state(false);
+	let imageError = $state('');
+
+	const pickImage = () => {
+		if (!chat.sendImage || imageUploading) return;
+		imageError = '';
+		imageFileEl?.click();
+	};
+
+	const handleImagePicked = async (event: Event) => {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		// 允许重复选择同一文件（否则 change 不再触发）
+		input.value = '';
+		if (!file || !chat.sendImage) return;
+		if (!file.type.startsWith('image/')) {
+			imageError = '请选择图片文件';
+			return;
+		}
+		const previewUrl = URL.createObjectURL(file);
+		imageUploading = true;
+		imageError = '';
+		try {
+			const fileId = await uploadMediaFile(file, 'chat_image');
+			await chat.handleSendImage(fileId, previewUrl);
+			imageFileEl?.blur();
+		} catch (err) {
+			imageError = err instanceof Error ? err.message : '图片发送失败，请重试';
+		} finally {
+			imageUploading = false;
+		}
+	};
 
 	const MENTION_MAX = 6; // 浮层最多展示条数（spec 上限 20 指发送的 mentions）
 	const mentionList = $derived(
@@ -98,7 +133,36 @@
 		{:else if chat.sendError}
 			<p class="pb-1.5 text-status-danger text-xs">{chat.sendError}</p>
 		{/if}
+		{#if imageError}
+			<p class="pb-1.5 text-status-danger text-xs">{imageError}</p>
+		{/if}
 		<div class="flex items-center gap-2.5">
+			{#if chat.sendImage}
+				<!-- 图片入口：与鸿蒙/Android 对齐（chat_image 上传 → type=image 消息） -->
+				<button
+					type="button"
+					class="hover-btn hit-slop scale-btn flex size-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm transition-colors duration-standard focus-ring disabled:opacity-50"
+					onclick={pickImage}
+					aria-label="发送图片"
+					aria-busy={imageUploading || undefined}
+					disabled={imageUploading || chat.sending}
+				>
+					{#if imageUploading}
+						<span class="spinner size-4" aria-hidden="true"></span>
+					{:else}
+						<ImageIcon class="size-4" strokeWidth={2} />
+					{/if}
+				</button>
+				<input
+					bind:this={imageFileEl}
+					type="file"
+					accept="image/*"
+					class="hidden"
+					aria-hidden="true"
+					tabindex="-1"
+					onchange={handleImagePicked}
+				/>
+			{/if}
 			<div class="relative flex h-11 flex-1 items-center rounded-md input-surface px-3.5">
 				{#if mentionOpen}
 					<!-- 提及选择浮层：贴在输入框上方（输入栏在底部），键盘 ↑↓ 选择、Enter 确认、Esc 关闭 -->
