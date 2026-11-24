@@ -176,7 +176,8 @@ export struct ChatMessageItem {
                 }
               }
               .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-              .width('100%')
+              // 不能写 width('100%')：气泡宽度由内容决定，百分比子节点会把气泡撑到 maxWidth，
+              // 短消息变成整条长条（时间/已读行只需随内容并靠齐）
               .margin({ top: DesignConstants.SPACING.XS })
             } else {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
@@ -208,7 +209,8 @@ export struct ChatMessageItem {
                 }
               }
               .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
-              .width('100%')
+              // 不能写 width('100%')：气泡宽度由内容决定，百分比子节点会把气泡撑到 maxWidth，
+              // 短消息变成整条长条（时间/已读行只需随内容并靠齐）
               .margin({ top: DesignConstants.SPACING.XS })
             }
           }
