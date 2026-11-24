@@ -13,6 +13,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 import { ReportItem, ReportStatus } from '../../../core/types/api';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ListSkeleton } from '../../../components/states/ListSkeleton';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -344,8 +345,8 @@ export struct MyReportsPage {
             .layoutWeight(1)
           }
         } else if (this.isLoading) {
-          SystemLoadingView({ message: '加载举报记录…' })
-            .layoutWeight(1)
+          // 列表型首屏等待用骨架屏（对齐通知中心/关系页）
+          ListSkeleton({ rowCount: 5 })
         } else if (this.reports.length === 0 && this.errorMessage) {
           EmptyState({
             bare: true,

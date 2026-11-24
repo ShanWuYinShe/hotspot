@@ -9,6 +9,7 @@ import { ListEnd } from '../../../components/ListEnd';
 import { SystemToast } from '../../../components/SystemToast';
 import { SystemInput } from '../../../components/SystemInput';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ListSkeleton } from '../../../components/states/ListSkeleton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemButton } from '../../../components/SystemButton';
@@ -373,8 +374,8 @@ export struct MySharesPage {
           .onRefreshing(() => { this.refreshShares(); })
         }
       } else if (this.isLoading) {
-        SystemLoadingView({ message: '正在加载我的分享…' })
-          .layoutWeight(1)
+        // 列表型首屏等待用骨架屏（对齐通知中心/关系页）
+        ListSkeleton({ rowCount: 5 })
       } else if (this.errorMessage && this.shares.length === 0) {
         EmptyState({
           bare: true,
