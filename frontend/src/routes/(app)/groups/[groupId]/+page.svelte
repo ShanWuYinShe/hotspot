@@ -61,10 +61,9 @@
 	{/snippet}
 
 	{#if gd.loading}
-		<h1 class="sr-only">群组主页</h1>
+		<!-- 页面 h1 由 DetailHeader 提供，loading/error 分支不再重复 sr-only h1 -->
 		<InlineLoading label="加载群组…" />
 	{:else if gd.loadError}
-		<h1 class="sr-only">群组主页</h1>
 		<LoadError message={gd.loadError} onRetry={() => void gd.loadAll(params.groupId ?? '')} />
 	{:else}
 		<GroupHero detail={gd.detail} />

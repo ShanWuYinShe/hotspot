@@ -32,7 +32,8 @@
 					{detail.category}
 				</span>
 			{/if}
-			<h1 class="mt-2.5 text-2xl md:text-3xl font-bold tracking-title text-content-inverse drop-shadow-sm">{detail.name}</h1>
+			<!-- 页面唯一 h1 由 DetailHeader 承担；群名视觉标题降为 h2，避免 h1=2 -->
+			<h2 class="mt-2.5 text-2xl md:text-3xl font-bold tracking-title text-content-inverse drop-shadow-sm">{detail.name}</h2>
 		</div>
 	</div>
 {:else}
@@ -52,7 +53,7 @@
 		</div>
 
 		<div class="relative z-10">
-			<h1 class="text-2xl md:text-3xl font-bold tracking-title text-text-primary">{detail.name}</h1>
+			<h2 class="text-2xl md:text-3xl font-bold tracking-title text-text-primary">{detail.name}</h2>
 		</div>
 	</div>
 {/if}
