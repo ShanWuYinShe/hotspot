@@ -117,6 +117,8 @@ export struct MomentDetailPage {
   @State commentAdditions: number = 0;
   /** R6：已加载图片 URL（onComplete 渐显） */
   @State loadedImageUrls: string[] = [];
+  /** 加载失败的图片 URL：失败态展示占位图标，避免灰色空块/半透明残图（#31） */
+  @State failedImageUrls: string[] = [];
   /** 评论区线程主行实测高度（导引线几何依赖；onAreaChange 回写、按变化才写避免测量回环） */
   @State private threadRowHeights: ThreadRowHeight[] = [];
   /** 评论点赞 in-flight 去重（防连点双翻转） */
@@ -170,6 +172,17 @@ export struct MomentDetailPage {
   // ==================== R6 图片加载体验 ====================
   private isImageLoaded(url: string): boolean {
     return this.loadedImageUrls.indexOf(url) >= 0;
+  }
+
+  private isImageFailed(url: string): boolean {
+    return this.failedImageUrls.indexOf(url) >= 0;
+  }
+
+  private markImageFailed(url: string): void {
+    if (!url || this.isImageFailed(url)) return;
+    const next: string[] = this.failedImageUrls.slice();
+    next.push(url);
+    this.failedImageUrls = next;
   }
 
   private markImageLoaded(url: string): void {
@@ -951,17 +964,36 @@ export struct MomentDetailPage {
       if (moment.images && moment.images.length > 0) {
         Stack({ alignContent: Alignment.BottomEnd }) {
           Pressable({ onPress: () => { this.previewImage(0); } }) {
-            Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(moment.images[0].url), 1080))
+            if (this.isImageFailed(moment.images[0].url)) {
+              Column({ space: DesignConstants.SPACING.SM2 }) {
+                LucideIcon({
+                  icon: AppIcon.IMAGES,
+                  iconSize: DesignConstants.COMPONENT.ICON_SIZE_MD,
+                  color: this.getCurrentThemePalette().textTertiary
+                })
+                Text('图片加载失败')
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontColor(this.getCurrentThemePalette().textSecondary)
+              }
               .width('100%')
               .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
-              .objectFit(ImageFit.Cover)
+              .justifyContent(FlexAlign.Center)
               .backgroundColor(this.getSurfaceSubtle())
-              .opacity(this.isImageLoaded(moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
-              .animation({
-                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
-                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-              })
-              .onComplete(() => this.markImageLoaded(moment.images[0].url))
+            } else {
+              Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(moment.images[0].url), 1080))
+                .width('100%')
+                .height(DesignConstants.COMPONENT.MOMENT_COVER_HEIGHT)
+                .objectFit(ImageFit.Cover)
+                .backgroundColor(this.getSurfaceSubtle())
+                .opacity(this.isImageLoaded(moment.images[0].url) || MotionUtil.reduced() ? 1 : 0)
+                .animation({
+                  duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                  curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+                })
+                .onComplete(() => this.markImageLoaded(moment.images[0].url))
+                .onError(() => this.markImageFailed(moment.images[0].url))
+            }
           }
           if (moment.images.length > 1) {
             Text(`1 / ${moment.images.length}`)
@@ -1010,17 +1042,32 @@ export struct MomentDetailPage {
               ForEach(rowImages, (img: MomentImage, colIndex: number) => {
                 Column() {
                   Pressable({ onPress: () => { this.previewImage(rowIndex * 3 + colIndex + 1); } }) {
-                    Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(img.url), 360))
+                    if (this.isImageFailed(img.url)) {
+                      Column() {
+                        LucideIcon({
+                          icon: AppIcon.IMAGES,
+                          iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+                          color: this.getCurrentThemePalette().textTertiary
+                        })
+                      }
                       .width('100%')
                       .aspectRatio(1)
-                      .objectFit(ImageFit.Cover)
+                      .justifyContent(FlexAlign.Center)
                       .backgroundColor(this.getSurfaceSubtle())
-                      .opacity(this.isImageLoaded(img.url) || MotionUtil.reduced() ? 1 : 0)
-                      .animation({
-                        duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
-                        curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
-                      })
-                      .onComplete(() => this.markImageLoaded(img.url))
+                    } else {
+                      Image(ImageUrlUtil.optimized(MediaUrlUtil.normalize(img.url), 360))
+                        .width('100%')
+                        .aspectRatio(1)
+                        .objectFit(ImageFit.Cover)
+                        .backgroundColor(this.getSurfaceSubtle())
+                        .opacity(this.isImageLoaded(img.url) || MotionUtil.reduced() ? 1 : 0)
+                        .animation({
+                          duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                          curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+                        })
+                        .onComplete(() => this.markImageLoaded(img.url))
+                        .onError(() => this.markImageFailed(img.url))
+                    }
                   }
                 }
                 .layoutWeight(1)
