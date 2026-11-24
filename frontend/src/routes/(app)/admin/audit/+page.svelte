@@ -14,6 +14,7 @@
 	} from '../shared/table';
 	import { AUDIT_ACTION_LABELS, AUDIT_TARGET_LABELS } from '../shared/labels';
 	import * as Dialog from '@/components/ui/dialog';
+	import { goto } from '$app/navigation';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -23,6 +24,9 @@
 
 	const canRead = $derived(hasAdminPermission('admin.audit.read'));
 	const canReadIp = $derived(hasAdminPermission('admin.audit.read_ip'));
+	// 目标对象直达：审计排查后常需回到用户/群组管理处置，权限不足则不展示跳转入口。
+	const canReadUsers = $derived(hasAdminPermission('admin.users.read'));
+	const canReadGroups = $derived(hasAdminPermission('admin.groups.read'));
 
 	// 动作筛选下拉：全部 + 按 labels 的顺序（与审计日志动作全集一致）
 	const ACTIONS: { value: '' | AuditAction; label: string }[] = [
@@ -257,7 +261,30 @@
 			</div>
 			<pre class="mt-4 max-h-96 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed whitespace-pre-wrap break-all text-text-secondary">{detailTarget ? JSON.stringify(detailTarget.details, null, 2) : ''}</pre>
 		</div>
-		<div class="flex justify-end border-t border-border-default px-5 py-3">
+		<div class="flex justify-end gap-2 border-t border-border-default px-5 py-3">
+			{#if detailTarget?.target_type === 'user' && detailTarget.target_id && canReadUsers}
+				<Button
+					type="button"
+					variant="secondary"
+					size="md"
+					onclick={() => {
+						const target = detailTarget;
+						if (target) void goto('/admin/users?q=' + encodeURIComponent(target.target_id) + '&field=user_id');
+					}}>查看用户</Button
+				>
+			{/if}
+			{#if detailTarget?.target_type === 'group' && detailTarget.target_id && canReadGroups}
+				<Button
+					type="button"
+					variant="secondary"
+					size="md"
+					onclick={() => {
+						const target = detailTarget;
+						// 群组管理仅支持按名称搜索：优先用审计目标名称，缺失时退回 ID（可能查不到，属预期）
+						if (target) void goto('/admin/groups?q=' + encodeURIComponent(target.target_name || target.target_id));
+					}}>查看群组</Button
+				>
+			{/if}
 			<Button type="button" variant="secondary" size="md" onclick={() => (detailTarget = null)}>关闭</Button>
 		</div>
 	</Dialog.Content>
