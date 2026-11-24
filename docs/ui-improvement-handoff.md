@@ -332,8 +332,8 @@
 7. **搜索发现态 spotlight（待设计确认）**：web 搜索发现态未加，鸿蒙未单端先行；需要则两端同轮加。
 8. **消息页头 trailing 差异（待确认）**：鸿蒙消息页头 trailing 与 web 移动端既有差异，需要时单独立项。
 9. **BSP 瀑布墙骨架近似（已接受）**：无 1:1 骨架，用同列数卡栅格近似，轻微重排；收益低保留。
-10. **鸿蒙 FALLBACK / WATERMARK token 纳入 CI（防漂移）**：AMBIENT 72/72 与 CARD-SCRIM 6 组合 × 5 档已分别由 `check-cross-platform-ambient.mjs`、`check-cross-platform-card-scrim.mjs` 覆盖；
-    `cardFallback*`（无图 fallback 渐变）与 WATERMARK 透明度仍为人工核对，确认公式后按同一模式扩展脚本。
+10. **鸿蒙 FALLBACK / WATERMARK token 纳入 CI（已完成 WATERMARK；FALLBACK 登记人工）**：AMBIENT 72/72、CARD-SCRIM 6×5 已覆盖；WATERMARK 由 `check-cross-platform-watermark.mjs` 逐值校验并串入 `check:theme`（PR #224）。
+    `cardFallback*`（无图 fallback 渐变）经色板反解确认**无跨端共享公式**（App 端三段渐变，亮色 accent 预混约 20%/24%/18%、暗色手调），web 为纯色 surface-primary，登记为人工视觉核对例外（见 `docs/design-system.md` §15）。
 11. **鸿蒙装饰几何常量 token 化（低优先）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色可抽常量/登记。
 12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
 13. **跨端搜索结果行字号/头像档差异**：web 行高 64/头像 36/名称 12 vs 鸿蒙 68/40/14；统一时两端同轮改。

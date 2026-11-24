@@ -619,6 +619,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 | 类名有效性 | `frontend/scripts/check-utility-classes.mjs` | 源码消费的 token 类名必须已在 `@theme` 注册（含变体前缀与功能类白名单）；未注册的 utility 会静默失效 |
 | 跨端氛围画布 | `frontend/scripts/check-cross-platform-ambient.mjs` | web `--cst-ambient-*`（6 组合 × 12 字段）按 `color-mix` 公式预合成 ↔ 鸿蒙 `ThemeConstants.AMBIENT` 逐值一致 |
 | 跨端整卡遮罩 | `frontend/scripts/check-cross-platform-card-scrim.mjs` | web `--cst-surface-card-scrim-top/bottom` 渐变的 rgba 色标（6 组合 × 5 档）↔ 鸿蒙 `ColorConfig.cardScrim*` 预合成 `#AARRGGBB` 逐值一致（alpha × 255 四舍五入 + 主题色调 RGB） |
+| 跨端水印透明度 | `frontend/scripts/check-cross-platform-watermark.mjs` | web `--cst-opacity-watermark` ↔ 鸿蒙 `DesignConstants.OPACITY.WATERMARK` 逐值一致（当前 0.08）；并校验 `theme-registry.css` 已把 `--opacity-watermark` 注册为 Tailwind opacity 名 |
 
 以上脚本串入 `bun run check:theme`（随 `bun run check` 与 CI 生效），漂移即红；
 组件原语同类型一致性另由 `check-component-consistency.mjs` 在 `bun run check` 中校验。
@@ -630,6 +631,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
 ## 15. 已登记例外与平台适配
 
 - `FONT.SIZE.LG = 16`：HarmonyOS 标准正文尺寸，平台有意差异（跨端刻度脚本豁免项；前端无 16px 档）。
+- **无图 fallback 渐变（鸿蒙 `cardFallback*`）不纳入跨端逐值校验**：web `--cst-surface-card-fallback` 是纯色（= `--cst-surface-primary`），鸿蒙 `MediaOverlay` 用 App 端专属三段渐变（`cardFallbackStart` → `cardFallbackMid` → `surfaceBackground`，135°），色标为 accent 与 page/surface 的预混且各主题比例不同（按色板反解：亮色约 20%/24%/18%，暗色档为手调值），两端无共享公式，无法机器同步；保持人工视觉核对（背景色随主题、边缘边界清晰、不压白字）。水印透明度已有 `check-cross-platform-watermark.mjs` 覆盖。
 - `BORDER_WIDTH.SUBPIXEL 0.5`：鸿蒙仅有的亚像素档（前端无对应，用于极细分割）。
 - `RADIUS.FULL`：前端 9999 / 鸿蒙 999，均为胶囊语义，数值差异不判漂移。
 - `XS_MINUS`（9px）档不存在：两端最小字号档为 10px（`XS2`）。
