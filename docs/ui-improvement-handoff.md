@@ -404,7 +404,7 @@
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
 21. **触控例外清单（R16）**：地图 marker/控件（防相邻误点）、相邻 TagPill（WCAG 24 + 间距）、表单控件、skip link；
     新增「相邻可点元素」场景先跑 390 扫描再决定扩热区方式。
-22. **性能基线口径（R16/R17）**：LCP/CLS/transferSize 均为本地 dev/mock 数据，仅相对参考；生产需真实网络另测。
+22. **性能基线口径（R16/R17，已脚本化）**：新增 `bun run perf:baseline`（agent-browser 逐页 FCP/LCP/CLS/TTFB/传输字节，输出 `.workwork/browser-check/perf-<ts>/`，`--compare` 输出差值），本地 dev 基线见 `docs/frontend-ui-audit.md`「前端体验性能基线脚本」；**数据仍为本地 dev 口径、仅作相对参考**，生产需真实网络另测（可用同一脚本指向线上公开页，登录态页面需另行方案）。
 23. **inkwash light 岛合成口径（R16）**：有效合成 #FAF8F2；不同采样点（ambient 高光）会读到 #FCF9F3，报告需标注取样口径。
 24. **交互状态契约守护（R15）**：focus-visible/reduced-motion/四态已入 design-system §20 与 skills；新页面按契约自查。
 25. **admin mock 空态不可复现（R15）**：mock 列表未实现筛选参数，空态不可达；联调环境补验证。
