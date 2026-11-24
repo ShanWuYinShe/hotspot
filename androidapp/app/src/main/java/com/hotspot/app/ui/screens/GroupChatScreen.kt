@@ -886,6 +886,16 @@ private fun GroupMessageRow(
                     modifier = Modifier.padding(bottom = 2.dp, start = Spacing.xs),
                 )
             }
+            val imageUrl = message.media?.url
+            if (!message.isRecalled && message.type == "image" && !imageUrl.isNullOrBlank()) {
+                // 图片不套气泡外壳（对齐 Web / 鸿蒙）：圆角图直接贴聊天背景，时间在图下
+                ChatImageBubble(
+                    imageUrl = imageUrl,
+                    contentDescription = "群聊图片",
+                    onClick = onImageClick?.let { click -> { click(imageUrl) } },
+                    onLongClick = onLongPress,
+                )
+            } else {
             Box(
                 modifier = Modifier
                     .widthIn(max = 264.dp)
@@ -907,14 +917,7 @@ private fun GroupMessageRow(
                     .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url
-                if (!message.isRecalled && message.type == "image" && !imageUrl.isNullOrBlank()) {
-                    ChatImageBubble(
-                        imageUrl = imageUrl,
-                        isMine = isMine,
-                        contentDescription = "群聊图片",
-                        onClick = onImageClick?.let { click -> { click(imageUrl) } },
-                    )
-                } else if (!message.isRecalled && message.type == "audio") {
+                if (!message.isRecalled && message.type == "audio") {
                     AudioMessageBubble(
                         audioUrl = imageUrl,
                         isMine = isMine,
@@ -945,6 +948,7 @@ private fun GroupMessageRow(
                         color = if (isMine) colors.textOnAccent else colors.textPrimary,
                     )
                 }
+            }
             }
             Text(
                 text = TimeFormat.relative(message.sentAt),
