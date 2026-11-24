@@ -287,6 +287,13 @@
 - **开发接口地址**：`127.0.0.1` → `10.0.2.2`（模拟器可直连宿主，端上验证链路打通）。
 - **编辑资料**：编辑期间隐藏底部 tab 栏（防丢草稿）。
 
+### 2026-11-24 跨端补齐（Web/Android/鸿蒙对齐轮次）
+
+- **Web 审计详情复制日志 ID**：`admin/audit` 详情弹层新增「复制日志 ID」；抽 `lib/clipboard.ts`（Clipboard API + execCommand 回退）并补 4 条单测（PR #203）。
+- **鸿蒙「我的分享」入口 + 搜索**：`MySharesPage` 早已实现且注册路由但无入口，设置页「隐私与安全」组补入口（PR #204）；页面补搜索（契约无 keyword → 加载全部分页后本地筛选，PR #205）。
+- **鸿蒙通知中心搜索**：对齐 Web `/notify` 与 Android `NotifyScreen`；搜索加载全部分页后按标题/文案/类型筛选（PR #207）。过程中修复两个 ArkUI 渲染问题：① 搜索词先于防抖筛选写入导致分组 key 不变、List 复用旧行 → `applyFilter` 递增 `listVersion` 并入分组 key 与 List id；② 空态垂直居中落在键盘下方 → 搜索空态改顶部对齐。
+- **跨端整卡遮罩 CI 校验**：新增 `check-cross-platform-card-scrim.mjs`（web scrim rgba 6 组合 × 5 档 ↔ 鸿蒙 `cardScrim*` 预合成 ARGB），串入 `bun run check:theme`（PR #206）；AMBIENT 已有 `check-cross-platform-ambient.mjs` 覆盖，FALLBACK/WATERMARK 仍为人工核对。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -307,8 +314,8 @@
 7. **搜索发现态 spotlight（待设计确认）**：web 搜索发现态未加，鸿蒙未单端先行；需要则两端同轮加。
 8. **消息页头 trailing 差异（待确认）**：鸿蒙消息页头 trailing 与 web 移动端既有差异，需要时单独立项。
 9. **BSP 瀑布墙骨架近似（已接受）**：无 1:1 骨架，用同列数卡栅格近似，轻微重排；收益低保留。
-10. **鸿蒙 AMBIENT / CARD-SCRIM token 纳入 CI（防漂移）**：`check-cross-platform-colors.mjs` 只覆盖 14 组 palette；
-    AMBIENT 72/72 与 CARD-SCRIM/FALLBACK/WATERMARK 6/6 目前只有人工脚本，建议并入 `bun run check:theme`。
+10. **鸿蒙 FALLBACK / WATERMARK token 纳入 CI（防漂移）**：AMBIENT 72/72 与 CARD-SCRIM 6 组合 × 5 档已分别由 `check-cross-platform-ambient.mjs`、`check-cross-platform-card-scrim.mjs` 覆盖；
+    `cardFallback*`（无图 fallback 渐变）与 WATERMARK 透明度仍为人工核对，确认公式后按同一模式扩展脚本。
 11. **鸿蒙装饰几何常量 token 化（低优先）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色可抽常量/登记。
 12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
 13. **跨端搜索结果行字号/头像档差异**：web 行高 64/头像 36/名称 12 vs 鸿蒙 68/40/14；统一时两端同轮改。
@@ -342,13 +349,15 @@
 32. **图片失败降级统一审计（R19）**：本轮覆盖头像/封面/缩略图；剩余裸 `<img>`（如部分详情/编辑器预览）按「占位层+失败降级」
     逐个接入或登记 N/A（新页面/新组件按 design-system §20.10 自查）。
 
-33. **鸿蒙回顶扩展（R20）**：GroupPage/Profile/MyShares 等长列表下轮接入 BackToTopButton；真机上搜索/通知/瞬间墙回顶未稳定触发（模拟器登录态重置），恢复后按 ha report 逐页验证出现时机/位置/遮挡。
+33. **鸿蒙回顶扩展（R20）**：GroupPage/Profile/MyShares 等长列表下轮接入 BackToTopButton。
+    已试群详情页：R21 群详情内容不足一屏、List 无法滚动（`uitest` 多次滑动坐标不变），无法验证显隐与回顶行为，改动已回退；需先用长内容群（大量公告/成员）或造数再接入。
 34. **回顶与浮层避让（R20）**：当前基线无 changelog 浮动钮；若后续引入同角浮层，按「回顶置其上留 8–12px」规则处理并实测不遮挡。
 35. **页头玻璃可读性（R20）**：scrolled 状态在真实内容（图片/大标题）下的可读性、宽屏/真机滚动观感待真机复验；如觉过透可调 78% 系数（两端 token/常量需同步）。
 36. **SPA 焦点/播报回退（R20）**：h1 缺失页面采用「回退 h1 并跳过播报」二选一策略；新增页面若无 h1，需按 §20.11 自查（优先补 h1）。
 37. **Reflow 持续回归（R20）**：320px/200% 缩放当前抽 34 页 + 8 关键页通过；新页面/新组件按 §20.11 复测，装饰层超界必须被裁剪。
 
-38. **聊天发送失败重试（R21 登记）**：当前 sendError 在输入栏可见、乐观消息回滚；失败消息「重试」入口下轮补（保留原文/一键重发）。
+38. **聊天发送失败重试（R21 登记）**：Web 已补（输入栏错误行 + 「重试」按钮，失败保留原文，PR #e02ff939e）。
+    鸿蒙端仍为 toast + 输入保留：端上实测 `uitest uiInput inputText`（剪贴板粘贴）偶发不触发 TextInput onChange，状态不同步导致发送按钮禁用、失败条不出现；需改用更可靠输入方式（键盘输入/测试桩）验证后再补内联重试条。
 39. **鸿蒙聊天页布局树受限（R21）**：模拟器重装登录态重置，游客无会话无法进入聊天页；聊天滚动/回底行为以代码级触发证据 + reduced 分支为准，真机/有会话账号补布局树与像素。
 40. **聊天滚动阈值与按钮位置回归（R21）**：近底 120px/按钮 200px、right-14/bottom-3、99+ 上限为当前基线；新增输入栏浮层/表情面板/引用条时需复测按钮不遮挡。
 41. **聊天未读语义（R21）**：markRead 延后为客户端语义（服务端不维护独立未读字段），上滑/离开不补标；后续若引入「会话内未读分隔线」需与后端游标契约对齐再实现。
