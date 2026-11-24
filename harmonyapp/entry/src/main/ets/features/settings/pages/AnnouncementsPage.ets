@@ -109,7 +109,9 @@ export struct AnnouncementsPage {
             inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
             onChange: (value: string) => { this.searchKeyword = value; }
           })
-          .margin({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+          // 横向留白由 PageShellContainer 统一提供，页面级元素不得再自加 left/right（否则双重 gutter，
+          // 搜索框比页头/公告卡窄一截）。
+          .margin({ top: DesignConstants.SPACING.MD })
         }
 
         // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
