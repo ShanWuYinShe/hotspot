@@ -46,7 +46,7 @@ trap cleanup EXIT
 # 当前焦点元素的读屏名（无 aria-label 时为空）。
 active_label() {
   local raw
-  raw="$(ab eval 'JSON.stringify({active: document.activeElement?.getAttribute("aria-label") || ""})' 2>/dev/null | tail -1)"
+  raw="$(ab eval 'JSON.stringify({active: (() => { const el = document.activeElement; return el ? (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40) : ""; })()})' 2>/dev/null | tail -1)"
   qa_json_field "${raw}" active
 }
 
@@ -59,6 +59,23 @@ rows_json() {
       first: rs[0]?.getAttribute("aria-label") || "",
       second: rs[1]?.getAttribute("aria-label") || ""
     });
+  })()' 2>/dev/null | tail -1
+}
+
+# 搜索页结果候选（与 useSearchPageData.searchNavCandidates 同口径：
+# 排除 header / tablist / input-surface，只取可见且非 aria-hidden 的 a/button/[data-cover]）。
+search_rows_json() {
+  ab eval '(() => {
+    const root = document.querySelector("[data-search-root]");
+    if (!root) return JSON.stringify({ count: "0", first: "", second: "" });
+    const els = [...root.querySelectorAll("a[href], button:not([disabled]), [data-cover]")].filter((el) =>
+      !el.closest("header") &&
+      !el.closest("[role=\"tablist\"], [data-tab-bar], .input-surface") &&
+      el.offsetParent !== null &&
+      !el.hasAttribute("aria-hidden")
+    );
+    const label = (el) => (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40);
+    return JSON.stringify({ count: String(els.length), first: els[0] ? label(els[0]) : "", second: els[1] ? label(els[1]) : "" });
   })()' 2>/dev/null | tail -1
 }
 
@@ -160,6 +177,49 @@ else
     pass "/notify ↑ 回到首行"
   else
     fail "/notify ↑ 未回到首行（after=${BACK} first=${FIRST}）"
+  fi
+fi
+
+# ---- 3) 搜索页结果列表：↓/↑ 逐项移动（search-nav 候选口径）----
+ab open "${BASE}/search" >/dev/null 2>&1
+COUNT=0
+WAIT=0
+while [ "${WAIT}" -lt 25 ]; do
+  RAW="$(search_rows_json)"
+  COUNT="$(qa_json_field "${RAW}" count)"
+  [ "${COUNT:-0}" -ge 2 ] && break
+  sleep 0.4
+  WAIT=$((WAIT + 1))
+done
+FIRST="$(qa_json_field "${RAW}" first)"
+SECOND="$(qa_json_field "${RAW}" second)"
+if [ "${COUNT:-0}" -lt 2 ]; then
+  fail "/search 结果候选不足 2（页面未加载或选择器失配），无法验证键盘导航"
+else
+  ab eval '(() => {
+    const root = document.querySelector("[data-search-root]");
+    const els = [...root.querySelectorAll("a[href], button:not([disabled]), [data-cover]")].filter((el) =>
+      !el.closest("header") &&
+      !el.closest("[role=\"tablist\"], [data-tab-bar], .input-surface") &&
+      el.offsetParent !== null &&
+      !el.hasAttribute("aria-hidden")
+    );
+    els[0]?.focus();
+    return true;
+  })()' >/dev/null 2>&1
+  ab press ArrowDown >/dev/null 2>&1
+  AFTER="$(active_label)"
+  if [ -n "${SECOND}" ] && [ "${AFTER}" = "${SECOND}" ]; then
+    pass "/search ↓ 移到第二个候选（${SECOND}）"
+  else
+    fail "/search ↓ 未移动（after=${AFTER} first=${FIRST} second=${SECOND}）"
+  fi
+  ab press ArrowUp >/dev/null 2>&1
+  BACK="$(active_label)"
+  if [ "${BACK}" = "${FIRST}" ]; then
+    pass "/search ↑ 回到第一个候选"
+  else
+    fail "/search ↑ 未回退（after=${BACK} first=${FIRST}）"
   fi
 fi
 
