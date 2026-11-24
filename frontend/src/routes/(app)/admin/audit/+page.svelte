@@ -16,6 +16,8 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { goto } from '$app/navigation';
 	import { scrollFade } from '@/lib/scroll-fade';
+	import { copyText } from '@/lib/clipboard';
+	import { showToast } from '@/stores/toast.svelte';
 	import { formatDateTime } from '@/lib/utils';
 
 	// 审计日志：动作/目标类型过滤；ip_address 仅 admin.audit.read_ip 权限可见（不足为 null）。
@@ -73,6 +75,16 @@
 			}),
 		() => `${action}|${targetType}|${operatorId}|${startDate}|${endDate}`
 	);
+
+	// 审计日志 ID 复制：排障/回传时避免手抄 36 位 audit_<uuid>（对齐 Android 审计详情）。
+	const copyLogId = async (logId: string): Promise<void> => {
+		if (!logId) {
+			showToast('日志 ID 为空，无法复制', 'danger');
+			return;
+		}
+		const copied = await copyText(logId);
+		showToast(copied ? '已复制日志 ID' : '复制失败，请手动选择复制', copied ? 'success' : 'danger');
+	};
 
 	const detailsText = (d: unknown): string => {
 		if (!d || typeof d !== 'object') return '—';
@@ -262,6 +274,7 @@
 			<pre class="mt-4 max-h-96 overflow-auto rounded-md bg-surface-subtle p-3 font-mono text-xxs leading-relaxed whitespace-pre-wrap break-all text-text-secondary">{detailTarget ? JSON.stringify(detailTarget.details, null, 2) : ''}</pre>
 		</div>
 		<div class="flex justify-end gap-2 border-t border-border-default px-5 py-3">
+			<Button type="button" variant="secondary" size="md" onclick={() => void copyLogId(detailTarget?.log_id ?? '')}>复制日志 ID</Button>
 			{#if detailTarget?.target_type === 'user' && detailTarget.target_id && canReadUsers}
 				<Button
 					type="button"
