@@ -126,6 +126,9 @@ export struct ChatPage {
   private loadHistoryInFlight: boolean = false;
   @State errorMessage: string = '';
   @State isSending: boolean = false;
+  // 发送失败：输入栏上方内联错误条 + 重试（对齐 web ChatInputBar；失败不清空输入，
+  // 重试直接重发当前输入，避免用户重敲长消息）
+  @State private sendErrorText: string = '';
   @State isSendPressed: boolean = false;
   @State isInputFocused: boolean = false;
   @State isOtherUserTyping: boolean = false;
@@ -962,6 +965,14 @@ export struct ChatPage {
     .margin({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XS })
   }
 
+  private retrySend(): void {
+    if (this.isSending) {
+      return;
+    }
+    this.sendErrorText = '';
+    void this.sendMessage();
+  }
+
   private async sendMessage() {
     if (this.isSending) {
       return;
@@ -993,6 +1004,7 @@ export struct ChatPage {
     this.lastSendAtMs = nowMs;
 
     this.isSending = true;
+    this.sendErrorText = '';
     try {
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
@@ -1053,7 +1065,7 @@ export struct ChatPage {
       } else if (reason === 'stranger_quota_exceeded') {
         failMessage = '今日陌生人消息额度已用完';
       }
-      SystemToast.showError(failMessage, this.getUIContext());
+      this.sendErrorText = failMessage;
     } finally {
       this.stopTyping();
       this.isSending = false;
@@ -1430,6 +1442,37 @@ export struct ChatPage {
         .width('100%')
         .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.XS, bottom: DesignConstants.SPACING.XS })
         .justifyContent(FlexAlign.Center)
+      }
+
+      // 发送失败：输入栏上方内联错误条 + 重试（失败不清空输入，重试重发当前文本）
+      if (this.sendErrorText.length > 0) {
+        Row({ space: DesignConstants.SPACING.XS }) {
+          LucideIcon({
+            icon: AppIcon.WARNING,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.getCurrentThemePalette().error
+          })
+          Text(this.sendErrorText)
+            .fontSize(DesignConstants.FONT.SIZE.SM)
+            .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+            .fontColor(this.getCurrentThemePalette().error)
+            .layoutWeight(1)
+          SystemButton({
+            label: '重试',
+            variant: 'ghost',
+            buttonSize: 'small',
+            disabled: this.isSending,
+            onPress: () => { this.retrySend(); }
+          })
+        }
+        .width('100%')
+        .padding({
+          left: DesignConstants.SPACING.LG,
+          right: DesignConstants.SPACING.LG,
+          top: DesignConstants.SPACING.XS,
+          bottom: DesignConstants.SPACING.XS
+        })
+        .alignItems(VerticalAlign.Center)
       }
 
       // @ 提及浮层（对齐前端 ChatInputBar：输入 `@` 触发，选中插入 `@昵称 `）
