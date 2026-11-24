@@ -46,8 +46,7 @@
 	<title>瞬间详情 · HotSpot</title>
 </svelte:head>
 
-<h1 class="sr-only">{d.moment.user ? `${d.moment.user} 的瞬间` : '瞬间详情'}</h1>
-
+<!-- 页面唯一 h1 由 DetailHeader 提供；不再重复 sr-only h1（避免 h1=2） -->
 {#snippet commentComposer()}
 	{#if d.replyTarget}
 		<div class="mb-2 flex items-center justify-between gap-3 rounded-md bg-surface-subtle/60 px-3 py-1.5">

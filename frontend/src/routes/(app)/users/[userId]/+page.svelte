@@ -85,9 +85,10 @@
 	{:else if page.loadError}
 		<LoadError message={page.loadError} onRetry={() => page.refresh()} />
 	{:else}
+		<!-- 页面唯一 h1 由 DetailHeader 的 sr-only 实体名承担；可见昵称降为 h2，避免 h1=2 -->
 		<IdentityHero
 			mode="other"
-			titleTag="h1"
+			titleTag="h2"
 			name={user.name}
 			handle={page.handleLine}
 			bio={user.bio || '这个人还没有填写简介。'}
