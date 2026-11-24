@@ -20,6 +20,7 @@
 		TABLE_WRAP, TABLE, TH, TH_TABLET_HIDDEN, TR, TD, TD_TABLET_HIDDEN, TD_ACTIONS,
 		ROW_BTN, ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META, META_MONO
 	} from '../shared/table';
+	import { page } from '$app/state';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -37,8 +38,14 @@
 	];
 	let status = $state('');
 	let userType = $state<'' | UserType>('');
-	let searchField = $state<'nickname' | 'user_id' | 'login_id'>('nickname');
-	let query = $state('');
+	// 从审计详情跳转进入时带 q / field 参数（管理员排查某 user_id 的直达入口）
+	const USER_SEARCH_FIELDS = ['nickname', 'user_id', 'login_id'] as const;
+	type UserSearchField = (typeof USER_SEARCH_FIELDS)[number];
+	const initialField = page.url.searchParams.get('field');
+	let searchField = $state<UserSearchField>(
+		USER_SEARCH_FIELDS.includes(initialField as UserSearchField) ? (initialField as UserSearchField) : 'nickname'
+	);
+	let query = $state(page.url.searchParams.get('q') ?? '');
 
 	const hasFilter = $derived(Boolean(query || status || userType));
 	const clearFilters = () => {

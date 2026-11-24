@@ -15,6 +15,7 @@
 		TABLE_WRAP, TABLE, TH, TH_NUM, TH_TABLET_HIDDEN, TR, TD, TD_NUM, TD_TABLET_HIDDEN, TD_ACTIONS,
 		ROW_BTN_DANGER, TOOLBAR, SEARCH_WRAP, META_MONO
 	} from '../shared/table';
+	import { page } from '$app/state';
 	import { scrollFade } from '@/lib/scroll-fade';
 	import { formatDateTime } from '@/lib/utils';
 
@@ -23,7 +24,8 @@
 
 	const canRead = $derived(hasAdminPermission('admin.groups.read'));
 	const canWrite = $derived(hasAdminPermission('admin.groups.write'));
-	let query = $state('');
+	// 从审计详情跳转进入时带 q 参数（按群组 ID 直达）
+	let query = $state(page.url.searchParams.get('q') ?? '');
 
 	const list = createAdminList<AdminGroupItem>(
 		(cursor, limit) => adminSearchGroups({ name: query || null, pagination: { limit, cursor } }),
