@@ -14,6 +14,7 @@ import { AnnouncementSummaryCard, SettingsSectionCard } from './SettingsSupport'
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { RefreshIndicator, EmptyState } from '../../../components/EmptyState';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ListSkeleton } from '../../../components/states/ListSkeleton';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { getErrorMessage } from '../../../core/network/ApiErrorUtil';
 
@@ -113,9 +114,8 @@ export struct AnnouncementsPage {
 
         // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
         if (this.loading && this.announcements.length === 0) {
-          SystemLoadingView({ message: '加载中…' })
-            .layoutWeight(1)
-            .width('100%')
+          // 列表型首屏等待用骨架屏（对齐通知中心/关系页）
+          ListSkeleton({ rowCount: 5 })
         } else if (!this.loading && this.announcements.length === 0) {
           EmptyState({
             bare: true,
