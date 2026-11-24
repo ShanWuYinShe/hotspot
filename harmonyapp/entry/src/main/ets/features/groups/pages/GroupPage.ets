@@ -25,6 +25,7 @@ import { SystemButton } from '../../../components/SystemButton';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { ListEnd } from '../../../components/ListEnd';
 import { curves } from '@kit.ArkUI';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -498,6 +499,46 @@ export struct GroupPage {
     AppRouter.push(PageNames.CREATE_GROUP);
   }
 
+  // ── 我的群组长列表回顶（加入/创建群组较多时滚到底部可一键回顶）──
+  @State private showBackToTop: boolean = false;
+  private backToTopScroller: Scroller = new Scroller();
+
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const next: boolean = y > 240;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
   build() {
     NavDestination() {
       PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
@@ -590,17 +631,23 @@ export struct GroupPage {
                 .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
             )
           } else {
-            Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
-              this.buildGroupList()
+            Stack({ alignContent: Alignment.BottomEnd }) {
+              Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+                this.buildGroupList()
+              }
+              .width('100%')
+              .height('100%')
+              .pullToRefresh(false)
+              .refreshOffset(64)
+              .onRefreshing(() => { this.loadMyGroups(true); })
+              .transition(
+                TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
+                  .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
+              )
+
+              this.buildBackToTopOverlay()
             }
             .layoutWeight(1)
-            .pullToRefresh(false)
-            .refreshOffset(64)
-            .onRefreshing(() => { this.loadMyGroups(true); })
-            .transition(
-              TransitionEffect.OPACITY.animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN })
-                .combine(TransitionEffect.move(TransitionEdge.BOTTOM).animation({ duration: DesignConstants.ANIMATION.DURATION_SHEET, curve: DesignConstants.ANIMATION.CURVE_FAST_OUT_SLOW_IN }))
-            )
           }
         }
         .width('100%')
@@ -983,7 +1030,7 @@ export struct GroupPage {
 
   @Builder
   private buildGroupList() {
-    List() {
+    List({ scroller: this.backToTopScroller }) {
       // 内容软岛（对齐 web ListContainer bordered）：群组列表收进一张 20 圆角软岛卡，
       // 组外框/投影归 ListItemGroup，行本身只保留内距与分隔线（LazyForEach 虚拟化保留）。
       ListItemGroup() {
@@ -1026,6 +1073,7 @@ export struct GroupPage {
     .scrollBar(BarState.Off)
     .cachedCount(5)
     .onReachEnd(() => { this.loadMoreGroups(); })
+    .onDidScroll(() => { this.updateBackToTop(); })
   }
 
   @Builder
