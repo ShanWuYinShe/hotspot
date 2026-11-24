@@ -659,49 +659,64 @@ export struct NotificationCenter {
           ]
         })
           .layoutWeight(1)
-      } else if (this.isLoading) {
+      } else if (this.isLoading && this.visibleNotifications.length === 0) {
         // 列表型首屏等待用骨架屏（对齐首页 feed 骨架），与通知行同几何：
-        // 圆形头像占位 + 两行文字条；避免空白 + 转圈造成的「无内容」错觉
+        // 软岛卡 + 44 头像 + 两行文字条（14/11），行内 16/14、行间距 2，与真实行一致。
+        // 仅在尚无内容的首屏展示；WS 新通知/下拉刷新/邀请操作后的后台刷新保留现有列表，
+        // 避免已加载内容被骨架顶掉（否则每次刷新都会闪回空白骨架）。
         Column() {
-          SkeletonShimmer({ active: true }) {
-            Column({ space: DesignConstants.SPACING.SM }) {
-            ForEach([0, 1, 2, 3, 4], (index: number) => {
-              Row({ space: DesignConstants.SPACING.MD }) {
-                Skeleton({
-                  blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-                  blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.XS,
-                  cornerRadius: '50%'
-                })
-                Column({ space: DesignConstants.SPACING.XS }) {
-                  Skeleton({
-                    blockWidth: '58%',
-                    blockHeight: DesignConstants.FONT.SIZE.MD,
-                    cornerRadius: DesignConstants.RADIUS.SM
+          Column() {
+            SkeletonShimmer({ active: true }) {
+              Column({ space: DesignConstants.SPACING.HALF }) {
+                ForEach([0, 1, 2, 3, 4], (index: number) => {
+                  Row({ space: DesignConstants.SPACING.MD3 }) {
+                    Skeleton({
+                      blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+                      blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+                      cornerRadius: '50%'
+                    })
+                    Column({ space: DesignConstants.SPACING.HALF }) {
+                      Skeleton({
+                        blockWidth: '58%',
+                        blockHeight: DesignConstants.FONT.SIZE.SM,
+                        cornerRadius: DesignConstants.RADIUS.SM
+                      })
+                      Skeleton({
+                        blockWidth: '36%',
+                        blockHeight: DesignConstants.FONT.SIZE.XS,
+                        cornerRadius: DesignConstants.RADIUS.SM
+                      })
+                    }
+                    .layoutWeight(1)
+                    .alignItems(HorizontalAlign.Start)
+                  }
+                  .width('100%')
+                  .alignItems(VerticalAlign.Center)
+                  .padding({
+                    left: DesignConstants.SPACING.LG,
+                    right: DesignConstants.SPACING.LG,
+                    top: DesignConstants.SPACING.MD3,
+                    bottom: DesignConstants.SPACING.MD3
                   })
-                  Skeleton({
-                    blockWidth: '36%',
-                    blockHeight: DesignConstants.FONT.SIZE.SM,
-                    cornerRadius: DesignConstants.RADIUS.SM
-                  })
-                }
-                .layoutWeight(1)
-                .alignItems(HorizontalAlign.Start)
+                  // 行内缩 8 离岛边，与真实通知行（buildNotifyItem）一致
+                  .margin({ left: DesignConstants.SPACING.SM, right: DesignConstants.SPACING.SM })
+                }, (index: number) => 'notify-skeleton-' + index)
               }
               .width('100%')
-                .padding({
-                  left: DesignConstants.SPACING.MD,
-                  right: DesignConstants.SPACING.MD,
-                  top: DesignConstants.SPACING.MD,
-                  bottom: DesignConstants.SPACING.MD
-                })
-            }, (index: number) => 'notify-skeleton-' + index)
             }
-            .width('100%')
-            .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
           }
+          .width('100%')
+          // 与真实列表的 ListItemGroup 软岛同构：surfaceIsland + 20 圆角 + 轻投影 + 岛内上下 8
+          .backgroundColor(this.getPalette().surfaceIsland)
+          .borderRadius(DesignConstants.SHAPE.CARD)
+          .shadow(this.getPalette().surfaceShadow)
+          .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
+          .clip(true)
         }
         .width('100%')
         .layoutWeight(1)
+        .padding({ left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG, top: DesignConstants.SPACING.SM })
+        .accessibilityText('正在加载通知')
       } else if (this.searchLoadingAll) {
         Column({ space: DesignConstants.SPACING.MD }) {
           LoadingProgress()

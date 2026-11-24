@@ -1,7 +1,7 @@
 /**
  * ListSkeleton —— 通用列表首屏骨架（列表型等待用；操作型等待仍用 SystemLoadingView）
  *
- * 5 行「圆头像 + 两行文字条」+ SkeletonShimmer，几何与关系/通知/分享等行卡一致；
+ * 5 行「圆头像 + 两行文字条」+ SkeletonShimmer，几何与分享/举报/公告等列表行卡一致；
  * 各列表页接入时只需一行 ListSkeleton({ rowCount: 5 })，避免每页重复写骨架结构。
  */
 import { DesignConstants } from '../../constants/DesignConstants';
