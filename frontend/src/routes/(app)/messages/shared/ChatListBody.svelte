@@ -9,6 +9,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import type { ChatItem } from '@/lib/chat-list';
 	import { contentFade } from '@/lib/motion';
 	import { rowLongPress } from './row-long-press';
+	import { isChatListNavKey, nextChatRowIndex } from '@/lib/chat-list-nav';
 
 	// ChatListBody —— 消息页会话列表体（错误/加载/空态/列表三态），
 	// 移动与桌面分栏共用；桌面传 compact + selectedId + onSelect（就地展开），
@@ -41,6 +42,28 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 		compact?: boolean;
 		fill?: boolean;
 	} = $props();
+
+	// 会话列表 ↑↓ 键盘导航（对齐 /notify 列表）：焦点在行内时逐项移动，两端收敛；
+	// 焦点不在行内时仅 ↓ 进入首行。行覆盖按钮由 ListItem 渲染，
+	// 这里用 DOM 查询拿到当前行位置（与列表视觉结构解耦）。
+	let listWrapEl: HTMLDivElement;
+
+	function handleListKeydown(event: KeyboardEvent) {
+		if (!isChatListNavKey(event.key)) return;
+		const wrap = listWrapEl;
+		if (!wrap) return;
+		const rows = Array.from(wrap.querySelectorAll<HTMLButtonElement>('[data-list-item] button[data-cover]'));
+		if (rows.length === 0) return;
+		const active = document.activeElement as HTMLElement | null;
+		const activeRow = active?.closest('[data-list-item]') ?? null;
+		const activeCover = activeRow?.querySelector<HTMLButtonElement>('button[data-cover]') ?? null;
+		const current = activeCover ? rows.indexOf(activeCover) : -1;
+		const next = nextChatRowIndex(current, rows.length, event.key);
+		if (next === null) return;
+		event.preventDefault();
+		rows[next].focus({ preventScroll: true });
+		rows[next].scrollIntoView({ block: 'nearest' });
+	}
 </script>
 
 <div class={fill ? 'flex min-h-0 flex-1 flex-col' : ''} use:contentFade={loading}>
@@ -94,6 +117,8 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	     因此 role=list 的直接子节点仍是 listitem（axe aria-required-children 不回归）。 -->
 	<div
 		class="contents"
+		bind:this={listWrapEl}
+		onkeydown={handleListKeydown}
 		use:rowLongPress={{ count: chats.length, onMore: (idx) => { const chat = chats[idx]; if (chat) onMore?.(chat); } }}
 	>
 		<ListContainer
