@@ -235,3 +235,29 @@ describe('ChatView', () => {
 		expect(container.querySelectorAll('[data-chat-column]').length).toBe(3);
 	});
 });
+
+	// #263 接线：图片消息点击 → ImageViewer 打开（ChatView 内维护 viewer 状态）
+	it('点击图片消息打开大图查看器', async () => {
+		mocks.getPrivateMessages.mockResolvedValue({
+			code: 0,
+			data: {
+				items: [
+					{
+						message_id: 'm-img',
+						type: 'image',
+						content: '',
+						media: { url: 'https://cdn.example.com/a.jpg' },
+						sender: { user_id: 'user_sophia', nickname: '阿禾', avatar_url: '' },
+						sent_at: '2026-08-09T10:00:00Z'
+					}
+				],
+				next_cursor: null
+			}
+		});
+		renderChat();
+		const button = await screen.findByRole('button', { name: '查看大图' });
+		await fireEvent.click(button);
+		await waitFor(() => {
+			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		});
+	});

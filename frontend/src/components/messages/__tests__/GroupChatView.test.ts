@@ -230,3 +230,29 @@ describe('GroupChatView', () => {
 		expect(container.querySelector('[data-group-chat-badge]')).toBeTruthy();
 	});
 });
+
+	// #263 接线：群聊图片消息点击 → ImageViewer 打开
+	it('点击群聊图片消息打开大图查看器', async () => {
+		mocks.getGroupMessages.mockResolvedValue({
+			code: 0,
+			data: {
+				items: [
+					{
+						message_id: 'gm-img',
+						type: 'image',
+						content: '',
+						media: { url: 'https://cdn.example.com/g.jpg' },
+						sender: { user_id: 'user_2', nickname: '阿禾', avatar_url: '' },
+						sent_at: '2026-08-09T10:00:00Z'
+					}
+				],
+				next_cursor: null
+			}
+		});
+		renderGroup();
+		const button = await screen.findByRole('button', { name: '查看大图' });
+		await fireEvent.click(button);
+		await waitFor(() => {
+			expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+		});
+	});
