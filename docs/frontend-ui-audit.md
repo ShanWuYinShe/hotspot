@@ -1174,3 +1174,23 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 ```
 
 **暂缓**：feed/首页卡片列表（行内控件多、与滚动/读屏交互冲突风险高），按交接文档 #19 的读屏/真机验证结论再评估；移动端物理键盘场景未单独覆盖（触屏主路径）。
+
+## 2026-11-25 补充（前端体验性能基线脚本）
+
+- 新增 `frontend/scripts/perf-baseline.mjs` / `bun run perf:baseline`：用 agent-browser 逐页采集 FCP / LCP / CLS / TTFB / 请求数 / 传输字节，输出 `.workwork/browser-check/perf-<ts>/{report.json,summary.md}`；`--compare <旧 report.json>` 输出 ΔLCP / ΔCLS / Δ传输，用于改动前后相对对照。
+- 取数口径：本地 dev（Docker + Nginx 网关、本机网络、QA 登录态），每页 `open` 后静置 2.5s 读取 Performance API；**仅作相对参考，生产需真实网络另测**。命令：`cd frontend && bun run perf:baseline`。
+- 最近一次全量运行（9 页，2026-11-25，本地 dev）：
+
+| 页面 | FCP(ms) | LCP(ms) | CLS | 传输(KB) |
+|---|---|---|---|---|
+| `/` | 120 | 172 | 0.0269 | 109 |
+| `/nearby/people` | 104 | 404 | 0 | 302 |
+| `/nearby/moments` | 96 | 172 | 0 | 247 |
+| `/nearby/groups` | 96 | 396 | 0 | 179 |
+| `/messages` | 124 | 168 | 0.0092 | 779 |
+| `/search` | 96 | 180 | 0 | 288 |
+| `/notify` | 92 | 136 | 0 | 238 |
+| `/me` | 104 | 156 | 0 | 372 |
+| `/settings` | 148 | 176 | 0 | 258 |
+
+- 解读：`/messages` 传输偏高来自头像/封面图（非首屏 LCP 元素）；`/` 的 CLS 0.0269 来自首屏骨架→媒体卡替换（既有基线，非新增回归）；`/nearby/people`、`/nearby/groups` LCP ~400ms 与首屏图片 eager 一致。回归时用 `--compare` 看差值，不追绝对数。
