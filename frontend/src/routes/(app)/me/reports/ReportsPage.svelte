@@ -131,8 +131,20 @@
 			for (let page = 0; page < 10; page++) {
 				const res = await listReports({ status: st, pagination: { limit: 20, cursor } }).catch(() => null);
 				if (cancelled) return;
-				if (!res || res.code !== 0 || !res.data) {
-					searchError = res?.message ?? '搜索失败';
+				if (!res) {
+					searchError = '搜索失败';
+					break;
+				}
+				if (res.code === 10100) {
+					// 与列表加载同口径：会话失效给登录引导，不在搜索框里反复重试
+					needsAuth = true;
+					searchItems = [];
+					searchLoaded = 0;
+					searchLoading = false;
+					return;
+				}
+				if (res.code !== 0 || !res.data) {
+					searchError = res.message ?? '搜索失败';
 					break;
 				}
 				all.push(...(res.data.items ?? []));
@@ -237,7 +249,7 @@
 			onBack={() => smartBack(ROUTES.me)}
 		>
 			{#snippet trailing()}
-				{#if !loading && !loadError && !authExpired}
+				{#if !loading && !loadError && !authExpired && !(searching && (searchLoading || searchError))}
 					<span class="text-text-secondary text-xs" aria-live="polite">{shownItems.length} 条</span>
 				{/if}
 			{/snippet}
@@ -264,20 +276,13 @@
 				placeholder="搜索对象 ID / 理由 / 说明…"
 				ariaLabel="搜索我的举报"
 			/>
-			{#if searching && searchLoading}
-				<p class="text-xs text-text-secondary">搜索中…</p>
-			{:else if searching && searchError}
-				<p class="text-xs text-text-status-danger-on-soft">
-					搜索失败：{searchError}
-					<button type="button" class="link-btn ml-1 focus-ring" onclick={() => searchReloadKey++}>重试</button>
-				</p>
-			{:else if searching}
+			{#if searching && !searchLoading && !searchError}
 				<p class="text-xs text-text-secondary">已加载 {searchLoaded} 条 · 匹配 {shownItems.length} 条</p>
 			{/if}
 		</div>
 	{/if}
 
-	{#if loading}
+	{#if loading && !searching}
 		<InlineLoading label="加载举报记录…" />
 	{:else if needsAuth}
 		<!-- 10100 未登录：登录引导而非接口报错（r15：与其余个人子页鉴权表现一致） -->
@@ -293,7 +298,11 @@
 				description="你的登录状态已失效，重新登录后即可继续查看举报与处理进度。"
 			/>
 		</div>
-	{:else if loadError}
+	{:else if searching && searchLoading}
+		<InlineLoading label="正在搜索举报记录…" />
+	{:else if searching && searchError}
+		<LoadError message={searchError} onRetry={() => searchReloadKey++} />
+	{:else if loadError && !searching}
 		<LoadError message={loadError} onRetry={() => reloadKey++} />
 	{:else if shownItems.length === 0}
 		<EmptyState
