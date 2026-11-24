@@ -1495,8 +1495,9 @@ export struct SearchPage {
   }
 
   /**
-   * 搜索结果用户行：对齐 web 移动端 SearchResults 的紧凑列表行——
-   * 头像 40 + 昵称(MD) + 副标(@user_id · 首个标签, SM) + 尾部导航箭头，整行点击进资料页。
+   * 搜索结果用户行：对齐 web 移动端 SearchResults 的 EntityRow 紧凑列表行——
+   * 头像 44（web Avatar size=44）+ 昵称(MD 14) + 副标(@user_id · 首个标签, SM 12) + 尾部导航箭头，
+   * 整行点击进资料页；行高 = 44 + p-3(12)×2 = 68，与 web 一致。
    * web 同样不在搜索行放「关注/私聊」次级按钮（动作在资料页完成），
    * 此前本端行内两枚整宽按钮 + 简介 + 标签把单行撑到约 180vp，结果列表密度与 web 明显不一致。
    * 平台差异：web 尾部为 ArrowUpRight 外链语义，本端系统符号库无对应项，用全站列表通用的
@@ -1509,7 +1510,8 @@ export struct SearchPage {
         decorative: true,
         avatarUrl: item.user?.avatar_url ?? '',
         name: item.user?.nickname ?? '',
-        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+        // web EntityRow / SearchResults 用 Avatar size=44（SMALL_PLUS），此前端上误用 40 档
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
         shape: 'circle'
       })
 
