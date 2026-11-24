@@ -350,6 +350,13 @@
 - **Web 聊天图片点击全屏查看（PR #263）**：图片改 button（键盘可达）→ ImageViewer（缩放/拖拽/滚轮/键盘/Esc），对齐鸿蒙/Android 大图查看。
 - **自动发版**：v1.14.0（聊天图片可发送）/ v1.15.0（三端图片对齐 + Web 收发）/ v1.15.1（PhotoPreview 淡入 + Android 气泡对齐）按「tag → Release 工作流 → APK 附包」流程上线；`scripts/release-android-apk.sh` 固化该链路。
 
+### 2026-11-25 鸿蒙聊天交互修复与经验沉淀（Round 138-141）
+
+- **聊天消息点按无响应（PR #268）**：`ChatPage` 把回底按钮挂在 `List.overlay()` 上，overlay 层拦截列表内点击（图片预览/消息操作面板全部打不开，R112 同类坑）。改为 Stack 同级子节点 + 全屏 `hitTestBehavior(Transparent)` 容器承载，保留原 margin；同坐标端上复测「点图片 → PhotoPreviewPage」通过。
+- **图片交互对齐 Web/Android（PR #271）**：图片点按一律打开 PhotoPreviewPage；消息操作（撤回/举报）改长按唤起，用 `onTouch` 500ms 计时器（移动 >10vp/抬手/组件销毁取消，`onClick` 用 `longPressFired` 防止长按后再点开预览），无障碍文案随可操作态切换。同条件端上验证：改动前点按只弹操作面板；改动后点按进大图、长按弹面板。
+- **overlay 陷阱收敛（PR #269/#270）**：`hotspot-harmony-ui/references/layout-pitfalls.md` 新增第 5 条并端上抽查既有 3 处 overlay——`NotificationCenter`（Refresh + 小回顶钮）行点击跳转正常、`SearchPage`（外层 Column + 全屏 Transparent）结果行点击正常；风险仅限直接挂 `List` 的 overlay。
+- **长按验收陷阱（本轮）**：`uitest uiInput longClick` 能触发 `onTouch` 计时器，但不保证触发 ArkUI `LongPressGesture`；长按必须可验收时用 onTouch 计时器（见 layout-pitfalls 第 6 条）。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -372,7 +379,7 @@
 9. **BSP 瀑布墙骨架近似（已接受）**：无 1:1 骨架，用同列数卡栅格近似，轻微重排；收益低保留。
 10. **鸿蒙 FALLBACK / WATERMARK token 纳入 CI（已完成 WATERMARK；FALLBACK 登记人工）**：AMBIENT 72/72、CARD-SCRIM 6×5 已覆盖；WATERMARK 由 `check-cross-platform-watermark.mjs` 逐值校验并串入 `check:theme`（PR #224）。
     `cardFallback*`（无图 fallback 渐变）经色板反解确认**无跨端共享公式**（App 端三段渐变，亮色 accent 预混约 20%/24%/18%、暗色手调），web 为纯色 surface-primary，登记为人工视觉核对例外（见 `docs/design-system.md` §15）。
-11. **鸿蒙装饰几何常量 token 化（低优先）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色可抽常量/登记。
+11. **鸿蒙装饰几何常量 token 化（已完成评估，关闭）**：EmptySpotlight/AmbientBackdrop 的 320/288/168/4/102 与透明色**已是文件内命名常量**（`SPOTLIGHT_SIZE`/`GLOW_SIZE`/`RING_*`/`DOT_*`、`WORLD_WIDTH/HEIGHT`、`TRANSPARENT`），属组件内部几何而非跨端共享 token，抽到 `DesignConstants` 无复用收益；保留现状。
 12. **鸿蒙设置页/管理后台无氛围层（平台差异）**：后续对齐应在**外壳/外层**挂单实例，禁止在滚动容器内挂。
 13. **跨端搜索结果行字号/头像档差异（已完成，关闭）**：用户行已对齐 web EntityRow（44 头像 / 14 名称 / 12 副标 / 68vp 行高，PR #225）；群组行已改紧凑 EntityRow（PR #228）；此前「web 64/36/12」口径已过期。
 14. **网格卡字号例外（R13）**：171px 网格卡正文 12 / 作者 14；放大卡宽后可统一。

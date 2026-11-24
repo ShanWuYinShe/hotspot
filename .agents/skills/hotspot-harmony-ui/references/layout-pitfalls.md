@@ -43,3 +43,10 @@
 - 判定口径（可复现）：滚动容器上出现 `.overlay(` 后，端上点按容器内行/卡片无反应，而容器外控件正常 → 先怀疑 overlay；把 `.overlay(...)` 改为 Stack 同级 Transparent 容器后同坐标复测。
 - 自查命令：`grep -rn '\.overlay(' harmonyapp/entry/src/main/ets --include=*.ets`。**不要在 `List` 上直接挂 `.overlay()`**；浮动按钮优先用 Stack 同级子节点（第 5 条修复模式）。
 - 既有 overlay 端上抽查（本轮）：`NotificationCenter` 挂在 `Refresh` 上、回顶为小按钮，行点击与跳转正常（点已读通知 → 瞬间详情）；`SearchPage` 挂在外层 `Column`、回顶用全屏 `Transparent` 容器，搜索结果行点击正常（点用户 → 他人主页）；`MomentsFeedPage` 与搜索页同构。风险只出现在 `List.overlay` + 小按钮组合（聊天页实测），其它列表若同样挂法按第 5 条修复。
+
+## 6. List 内长按手势的端上验收：`uitest longClick` 不一定触发 ArkUI `LongPressGesture`
+
+- 现象：给聊天图片气泡加 `LongPressGesture({ duration: 500 })` 后，`uitest uiInput longClick` 复测既不弹操作面板也不报错；同组件 `.onClick`（点按）与同页其它点击都正常，`hasActions` 也为 true（点自己新发的文本消息能正常弹面板）。
+- 判定：`uitest uiInput longClick` 注入的是「按压后抬起」的事件序列，能触发 `onTouch` 计时器，但不保证 ArkUI 手势识别器（LongPressGesture）判定成功；**LongPressGesture 写在 List/ListItem 内时更不稳定**（与列表滚动手势竞争、抬手即 Cancel 判定的时机差异）。
+- 需要「长按必须可端上验收」的场景，改用 `onTouch` 计时器：Down 起 500ms 计时器触发、`Move` 超过 10vp 取消、`Up/Cancel` 取消、`aboutToDisappear` 清理；`onClick` 里用 `longPressFired` 标记避免长按后再触发点按。实拍案例：ChatMessageItem 图片气泡（PR #271）。
+- 若坚持用 `LongPressGesture`：至少用 CUA/真实桌面点击或真机手动长按验收，不能只信 `uitest uiInput longClick` 的调用成功（它只表示事件已注入）。
