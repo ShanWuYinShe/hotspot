@@ -797,6 +797,13 @@ export class HttpUtil {
    */
   private static async resolveUploadUrl(url: string): Promise<string> {
     const trimmed = url.trim();
+    // 绝对 URL 直接使用（预签名 URL 的签名含 Host，重写 origin 会 403 SignatureDoesNotMatch；
+    // 模拟器下 127.0.0.1:8888 由 hdc rport 映射到宿主网关）。
+    // 之前漏了这一分支：normalize 对带签名绝对 URL 原样返回后，仍会落入 `origin + '/' + url`，
+    // 生成 http://10.0.2.2:8888/http://127.0.0.1:8888/... 的双前缀地址导致上传 404。
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
     const baseUrl = await HttpUtil.getBaseUrl();
     const origin = HttpUtil.extractOrigin(baseUrl);
     const normalized = MediaUrlUtil.normalize(trimmed, origin);
