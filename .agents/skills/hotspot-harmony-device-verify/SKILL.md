@@ -36,6 +36,8 @@ $HDC -t "$TARGET" shell aa start -b com.lsyb.social -a EntryAbility
 
 判据：重启后进入附近不再弹「允许 HotSpot 访问你的位置」，且 `atm perm` 输出 `Success`。重装 HAP 后 token 会变，需重新取 token 再授权。
 
+- **宿主侧窗口（系统图库 / 相机 / 文件选择器 / 授权弹窗）用 CUA 点**：模拟器窗口本身是宿主机上的原生应用窗口，这些面板不在设备应用窗口内，`uitest uiInput click` 会静默点空（面板还有自己的缩放偏差，坐标不能沿用设备截图）。走用户级 `cua-desktop-control` skill：`getApp` 选模拟器 → `getWindows` 找面板窗口 → 优先按 AX 元素点击，取不到语义再按该窗口**最新截图**的像素坐标点；设备内页面仍用 hdc uitest。权限弹窗能用 `atm` 免交互时优先 `atm`（上一条）。
+
 ## 测试账号与造数（本地 dev 库）
 
 | 登录名 | 密码 | 角色 | user_id |
