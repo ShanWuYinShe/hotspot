@@ -14,6 +14,7 @@ import { LucideIcon } from '../../../components/LucideIcon';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { BackToTopButton } from '../../../components/BackToTopButton';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { MomentItem } from '../../../core/types/api';
@@ -473,6 +474,46 @@ export struct ExternalProfileView {
     .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
+  // ── 他人主页长内容回顶（身份卡 + 瞬间画廊，6 个瞬间时约 1.5 屏）──
+  @State private showBackToTop: boolean = false;
+  private backToTopScroller: Scroller = new Scroller();
+
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const next: boolean = y > 240;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  @Builder
+  private buildBackToTopOverlay() {
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
   build() {
     if (this.loading) {
       SystemLoadingView({ message: '正在加载用户资料…' })
@@ -489,24 +530,31 @@ export struct ExternalProfileView {
       .width('100%')
       .height('100%')
     } else {
-      Scroll() {
-        Column() {
-          this.buildIdentityCard()
-          this.buildGallerySection()
+      Stack({ alignContent: Alignment.BottomEnd }) {
+        Scroll(this.backToTopScroller) {
+          Column() {
+            this.buildIdentityCard()
+            this.buildGallerySection()
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+          .padding({
+            top: this.topInset,
+            bottom: this.safeAreaBottom + DesignConstants.SPACING.LG
+          })
+          .opacity(this.enterOpacity)
+          .translate({ y: this.enterOffset })
         }
         .width('100%')
-        .alignItems(HorizontalAlign.Start)
-        .padding({
-          top: this.topInset,
-          bottom: this.safeAreaBottom + DesignConstants.SPACING.LG
-        })
-        .opacity(this.enterOpacity)
-        .translate({ y: this.enterOffset })
+        .height('100%')
+        .align(Alignment.TopStart)
+        .scrollBar(BarState.Off)
+        .onDidScroll(() => { this.updateBackToTop(); })
+
+        this.buildBackToTopOverlay()
       }
       .width('100%')
       .height('100%')
-      .align(Alignment.TopStart)
-      .scrollBar(BarState.Off)
     }
   }
 }
