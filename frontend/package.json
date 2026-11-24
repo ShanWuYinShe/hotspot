@@ -14,6 +14,7 @@
 		"browser:qa:mobile": "bash scripts/browser-qa.sh --mobile",
 		"audit:a11y": "bash scripts/browser-a11y.sh",
 		"audit:touch": "bash scripts/browser-touch.sh",
+		"audit:keyboard": "bash scripts/keyboard-nav.sh",
 		"audit:ui": "bash scripts/audit-all.sh",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --tsgo --watch",
 		"test": "vitest run",

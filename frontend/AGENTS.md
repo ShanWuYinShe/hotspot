@@ -123,11 +123,13 @@ bun run audit:a11y
 bun run audit:a11y -- --mobile --reduced
 # 390 触控热区：默认全量页面（QA 18 + 审计扩展 17 + 详情），对照 allowlist，未登记离群即失败
 bun run audit:touch
+# 列表键盘导航：消息会话列表 ↑↓、搜索框 ↓ 进首行、/notify 列表 ↑↓
+bun run audit:keyboard
 # 主题矩阵专项（3 主题×2 明暗×桌面全量+移动 5 页；合并前专项门禁，不进 audit:ui）
 bun run audit:a11y -- --matrix --parallel 2        # 约 15–20min（单 worker 25–30min）
 # 矩阵快查：--only 路由子串、--limit 每页组前 n 页
 bun run audit:a11y -- --matrix --only /admin/reports,/me/edit --limit 2
-# 一键：browser-qa --mobile + a11y + touch（任一失败整体 exit 1，末尾打印各报告路径）
+# 一键：browser-qa --mobile + a11y + touch + keyboard（任一失败整体 exit 1，末尾打印各报告路径）
 bun run audit:ui
 # 指定网关（worktree 独立环境）与调试抽样
 bun run audit:a11y -- --base http://localhost:8898
@@ -137,7 +139,7 @@ bun run audit:touch -- --base http://localhost:8898 --limit 5
 - 依赖：axe-core 为 devDependency（`bun install` 后从 `node_modules/axe-core` 注入），不进 build/check；
 - 限流：dev 后端默认 `RATE_LIMIT_BYPASS=1`（见 `docker-compose.dev.yml`），QA/axe/触控审计与并发浏览器会话不会被 429 打断；要验证限流行为见 `backend-go/AGENTS.md`「dev 环境限流默认关闭」；
 - 登录：QA 脚本用种子账号真实登录（`QA_LOGIN_ID` / `QA_PASSWORD`，默认 `qa@hotspot.local`，见 `.env.example`）；seed 未注入或登录失败时降级为「未登录态扫描」并提示先跑 `./scripts/seed-dev.sh`；
-- 输出：仓库根 `.workwork/browser-check/{a11y,touch,qa}-<时间戳>/`（report.json + summary.txt + raw/），可重复运行；
+- 输出：仓库根 `.workwork/browser-check/{a11y,touch,qa,keyboard}-<时间戳>/`（report.json + summary.txt + raw/），可重复运行；
 - 会话：脚本使用独立 `hotspot-audit-*` session 并在结束时关闭，不干扰其它浏览器会话；
 - allowlist 维护：`scripts/ui-quality-touch-allowlist.json`（稳定 selector + 理由，禁止 nth-child）；新增例外必须写明理由并在 `docs/frontend-ui-audit.md` 记录，详见该文「质量门禁」节；
 - `--limit <n>` 仅用于调试抽样，正式门禁不要带；`audit:touch -- --baseline` 可只跑 r5 基线 22 页做快速对照。
