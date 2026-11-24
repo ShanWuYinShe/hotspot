@@ -151,6 +151,8 @@ export function useChat(opts: UseChatOptions) {
 	let loadError = $state(false);
 	let sending = $state(false);
 	let sendError = $state('');
+	// 发送失败保留原文与 mentions，供输入栏「重试」一键重发（R21 遗留）。
+	let failedSend = $state<{ text: string; mentions?: string[]; error: string } | null>(null);
 	let scrollEl = $state<HTMLDivElement | null>(null);
 	// 滚动位置状态（Round 10）：距底 ≤120px 视为「在底部」；上滑超过 200px 才显示回底按钮；
 	// 不在底部时收到的新消息只累加计数，不打断阅读。
@@ -436,6 +438,20 @@ export function useChat(opts: UseChatOptions) {
 		if (!text || sending || !opts.targetId()) return;
 		inputVal = '';
 		sendError = '';
+		failedSend = null;
+		await dispatchSend(text, mentions);
+	};
+
+	/** 重试上一次失败的发送（保留原文与 mentions；成功/再次失败都会更新 failedSend）。 */
+	const retrySend = async () => {
+		const pending = failedSend;
+		if (!pending || sending || !opts.targetId()) return;
+		failedSend = null;
+		sendError = '';
+		await dispatchSend(pending.text, pending.mentions);
+	};
+
+	const dispatchSend = async (text: string, mentions?: string[]) => {
 		sending = true;
 		// Optimistic append so the user sees their message instantly.
 		const tempId = `temp-${Date.now()}`;
@@ -446,16 +462,21 @@ export function useChat(opts: UseChatOptions) {
 		try {
 			const res = await opts.sendMessage(text, mentions);
 			if (res.code !== 0) {
-				// Roll back the optimistic message on failure.
+				// Roll back the optimistic message on failure, keep text for retry.
 				messages = messages.filter((m) => m.id !== tempId);
 				sendError = res.error ?? '消息发送失败';
+				failedSend = { text, mentions, error: sendError };
 			} else if (res.message_id) {
 				// 成功：用服务端 message_id 替换临时 id，后续 WS 推送按 id 去重跳过。
-				messages = messages.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
+				// WS 回显可能先于 HTTP 响应到达并已按真实 id 入列，替换前先去掉同 id 回显，避免重复气泡。
+				messages = messages
+					.filter((m) => m.id !== res.message_id)
+					.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
 			}
 		} catch {
 			messages = messages.filter((m) => m.id !== tempId);
 			sendError = '消息发送失败,请稍后重试';
+			failedSend = { text, mentions, error: sendError };
 		} finally {
 			sending = false;
 			// 发送完成（无论成败）立即结束输入状态，避免对端残留"正在输入"
@@ -537,6 +558,9 @@ export function useChat(opts: UseChatOptions) {
 		get sendError() {
 			return sendError;
 		},
+		get failedSend() {
+			return failedSend;
+		},
 		get scrollEl() {
 			return scrollEl;
 		},
@@ -567,6 +591,7 @@ export function useChat(opts: UseChatOptions) {
 		handleScroll,
 		handleInputChange,
 		handleSend,
+		retrySend,
 		handleRecall,
 		handleEdit,
 		cancelTyping
