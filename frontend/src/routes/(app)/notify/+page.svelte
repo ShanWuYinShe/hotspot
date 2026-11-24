@@ -18,6 +18,7 @@
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { smartBack } from '@/lib/smart-back';
+	import { isSearchNavKey, nextSearchNavIndex } from '@/lib/search-nav';
 
 	import { useNotifyData, FILTER_TABS } from './shared/useNotifyData.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
@@ -26,6 +27,31 @@
 
 	const data = useNotifyData();
 
+	// 通知列表 ↑↓ 键盘导航（复用 /search 的 search-nav 决策逻辑，R17 #19 待办）：
+	// 候选 = 正文区（[data-notify-root]）内可见的可聚焦链接/按钮；焦点在搜索框时 ↓ 进入列表首项、
+	// ↑ 保留输入框光标行为；弹层打开时不接管。
+	function notifyNavCandidates(root: HTMLElement): HTMLElement[] {
+		return Array.from(root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [role="button"]')).filter(
+			(el) => el.tabIndex >= 0 && el.offsetParent !== null
+		);
+	}
+
+	function handleNotifyKeydown(e: KeyboardEvent) {
+		if (!isSearchNavKey(e.key)) return;
+		const active = document.activeElement as HTMLElement | null;
+		const root = document.querySelector<HTMLElement>('[data-notify-root]');
+		if (!root || !active || !root.contains(active)) return;
+		if (document.querySelector('[role="dialog"]')) return;
+		const isTextInput =
+			active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active.isContentEditable;
+		if (isTextInput && e.key !== 'ArrowDown') return;
+		const nodes = notifyNavCandidates(root);
+		const next = nextSearchNavIndex(nodes.indexOf(active), nodes.length, e.key);
+		if (next === null) return;
+		e.preventDefault();
+		nodes[next]?.focus();
+	}
+
 	const unreadGroup = $derived(data.filteredNotifies.filter((n) => !n.read));
 	const readGroup = $derived(data.filteredNotifies.filter((n) => n.read));
 </script>
@@ -33,6 +59,8 @@
 <svelte:head>
 	<title>通知 · HotSpot</title>
 </svelte:head>
+
+<svelte:window onkeydown={handleNotifyKeydown} />
 
 <SplitPageLayout contentClassName="pt-3 lg:pt-2 pb-6">
 	{#snippet header()}
@@ -143,7 +171,7 @@
 		</PageHeader>
 	{/snippet}
 
-	<div class="flex flex-col">
+	<div class="flex flex-col" data-notify-root>
 		<div class="mb-3 flex flex-col gap-2">
 			<SearchInput
 				value={data.query}
