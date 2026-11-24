@@ -843,7 +843,7 @@ export struct ProfilePage {
 
   @Builder
   private buildProfileContent() {
-      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint }) {
+      PageShellContainer({ variant: 'default', currentBreakpoint: this.currentBreakpoint, ambientTabIndex: 4 }) {
         Stack({ alignContent: Alignment.Top }) {
           Column() {
           if (!this.isLoggedIn && !this.isExternalProfileMode() && !this.isLoading) {

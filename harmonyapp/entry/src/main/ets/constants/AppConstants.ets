@@ -41,6 +41,7 @@ export interface StorageKeysType {
   DARK_MODE_PREFERENCE: string;
   DEVICE_ID: string;
   SWITCH_TAB_REQUEST: string;
+  MAIN_TAB_INDEX: string;
 }
 
 export const StorageKeys: StorageKeysType = {
@@ -60,7 +61,9 @@ export const StorageKeys: StorageKeysType = {
   DEVICE_ID: 'device_id',
   // 路由页请求切底部 tab 的一次性信号（如设置页「个人资料」→ 我的 tab）；
   // PhoneLayout 消费后立即复位为 -1
-  SWITCH_TAB_REQUEST: 'switch_tab_request'
+  SWITCH_TAB_REQUEST: 'switch_tab_request',
+  // AppStorage 会话态（不写 Preferences）：当前底部 Tab 下标，-1 = 非 Tab 布局（桌面分栏/推送页）
+  MAIN_TAB_INDEX: 'main_tab_index'
 };
 
 /**
