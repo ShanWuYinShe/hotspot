@@ -325,6 +325,14 @@
 - **他人主页回顶**：`ExternalProfileView` 改为 `Stack { Scroll; 回顶 overlay }`，4 个带图瞬间时约 1.5 屏（PR #231）。
 - **我的群组回顶**：`GroupPage` 列表区 `Refresh` 外包 `Stack` 挂回顶按钮（PR #232，23 个群组造数验证，验证后清理）。
 - **#33 完成**：设置页、个人中心本人页、我的分享、他人主页、我的群组共 5 处长列表均已接入；统一模式为「Stack 同级子节点 + 全屏 Row + `HitTestMode.Transparent`」，禁止空 overlay builder（会拦滚动与点击）。
+### 2026-11-24 质量修复收尾（Round 122-125）
+
+- **Web 详情页重复 h1（PR #234）**：用户/群组/瞬间详情页 `DetailHeader` 已提供 sr-only h1，页内 `IdentityHero`/`GroupHero`/页级 sr-only 又渲染 h1 → 巡检 h1=2；可见标题降 h2、移除重复 sr-only，三页 DOM 实测各只剩 1 个 h1（视觉零变化）。
+- **鸿蒙瞬间详情图片失败态（PR #235，关闭 #31）**：`MomentDetailPage` 首图与多图缩略图补 `onError` + 失败占位（图片图标 +「图片加载失败」/ 1:1 图标）；停 SeaweedFS + 无效 `file_id` 造 404，端上实测「失败占位 → 还原后正常加载」三态。
+- **axe 主题矩阵对比度误报治理（PR #236）**：媒体卡压字层背景为「图片 + 渐变遮罩（兄弟节点）」，axe 只能回溯到卡片 surface → 浅色主题白字误报 white-on-light（forest/inkwash light 3 条 serious）；仅对命中 `[data-card-footer]`/`[data-card-children]` 的 `color-contrast` 节点过滤并计数，真实对比度核算与口径写入 `frontend-ui-audit.md`；矩阵复跑 6 组合 × 43 页 PASS。
+- **Web 群聊非成员直链加入引导（PR #237）**：`10200 not_group_member` 由「错误文案 + 重试」改为 `EmptyState` +「加入群组」CTA（direct 加入后自动重拉历史/群信息、approval 转待审核、invite_only 内联服务端原因），未入群时隐藏输入栏；补 3 个组件契约用例。
+- **审计 backlog 复核（Round 125）**：群聊非成员直链、纯文字瞬间卡、`/users/:id` 统计空态矛盾、1440 首页右栏不吸顶 4 项已关闭（证据见 `frontend-ui-audit.md`「审计 backlog 复核」）；保留页头返回钮标题偏移、768 平板后台表格列裁剪待后续。
+
 ## 待做（按优先级）
 
 > 已解决并关闭：骨架零位移 N1/N2（R14）、forest 亮色软岛同色（R5 v2 1.17）、主题/axe/触控/焦点/减少动态基线（R5）。
@@ -355,7 +363,7 @@
 16. **横排紧凑卡 fallback/精选横排例外（R13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
 17. **图片档位/清晰度真机复核（R17）**：dev 图片为本地代理图，unsplash 压缩在预发/线上生效；真机核首屏流量、
     头像 2x vs 3x、nearby 页 +43% 取舍（非首屏可回退 thumb 档）。
-18. **鸿蒙缩略图渐显（5 处已核对，剩 2 处低优先）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；**Chat 图片气泡与 PhotoPreview 大图仍只有 onError、未接渐显/占位**，需弱网或慢图环境才能验证效果，暂不阻塞。
+18. **鸿蒙缩略图渐显（5 处已核对，剩 2 处低优先）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；MomentDetail 首图/缩略图失败态已补（PR #235）；**Chat 图片气泡与 PhotoPreview 大图的淡入仍待弱网/慢图环境验证**，暂不阻塞。
 19. **搜索键盘导航扩展（R17）**：当前只 /search；后续评估 feed/通知列表 ↑↓ 前先做读屏/真机验证，避免冲突。
 20. **a11y/触控/主题自动化纳入门禁（R16）**：axe-core 加 devDependency + 检查脚本，触控覆盖率脚本入库，
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
@@ -371,11 +379,10 @@
 28. **动效契约守护（R18）**：新增动画必须走 `lib/motion.ts` / 鸿蒙 `MotionUtil`；页面进场只能客户端导航、JS 动画必须显式 reduced；
     pop 只能在用户激活操作触发；禁止动画首屏 LCP 元素/引入 CLS/列表逐项 stagger。经验：Svelte transition 需用 `motionDuration()` 处理 reduced，
     否则 reduced 下仍播。
-29. **鸿蒙动效残留（R18）**：MomentFeedCard preview 变体动作条未单独接 pop（overlay 卡由 MediaActionButton 覆盖）、SearchPage 用户行无关注 UI（toggleFollow 已备函数级 pop）、
-    GroupPage joinGroup 函数级已接；下轮按 UI 入口补齐或登记 N/A。
+29. **鸿蒙动效残留（R18）**：MomentFeedCard preview 变体动作条未单独接 pop（overlay 卡由 MediaActionButton 覆盖），待按 UI 入口补齐；SearchPage 用户行**登记 N/A**——Web 搜索用户结果同样没有关注入口（`SearchResults.svelte` 仅跳主页），非鸿蒙缺口；GroupPage joinGroup 函数级已接 pop。
 30. **search 390 既有 CLS 0.0995（R18 登记，R19 已降至 0.0077）**：r8 的媒体占位/结构改动顺带消除该位移，后续回归按 0.0077 基线看。
     动效相关 QA 建议在 reduced-motion 下取基线截图，避免中间帧偶发 diff。
-31. **鸿蒙详情图片失败态（R19）**：MomentDetail 图片有渐显+主题底但无失败图标，登记下轮统一「失败保留占位/图标」；
+31. **鸿蒙详情图片失败态（R19，已完成，关闭）**：`MomentDetailPage` 首图/缩略图已补 `onError` 失败占位（PR #235，停 SeaweedFS 造 404 端上三态实测）。
     另：`delay-images.js` 慢网模拟目前在 `.workwork` 未入库，建议后续并入 browser QA 脚本做常规回归。
 32. **图片失败降级统一审计（R19）**：本轮覆盖头像/封面/缩略图；剩余裸 `<img>`（如部分详情/编辑器预览）按「占位层+失败降级」
     逐个接入或登记 N/A（新页面/新组件按 design-system §20.10 自查）。
