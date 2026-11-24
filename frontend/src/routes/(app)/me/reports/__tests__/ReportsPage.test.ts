@@ -3,7 +3,7 @@
 //   - 空态（EmptyState）、失败态（LoadError + 重试）
 //   - status 过滤参数与 ?tab= 深链一致（all → null；其余 tab → 对应状态）
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
 
 const api = vi.hoisted(() => ({ listReports: vi.fn() }));
 const state = vi.hoisted(() => ({ url: new URL('http://x/me/reports') }));
@@ -95,6 +95,88 @@ describe('我的举报页', () => {
 		expect(screen.getByText('服务暂时不可用')).toBeTruthy();
 		expect(screen.getByText('重试')).toBeTruthy();
 		expect(screen.queryByText('暂无举报记录')).toBeNull();
+	});
+
+	it('搜索时先进入加载态，完成后按关键词本地过滤并显示计数', async () => {
+		api.listReports.mockResolvedValueOnce(
+			ok([
+				item({ report_id: 'rep_1', description: '疑似营销刷屏' }),
+				item({
+					report_id: 'rep_2',
+					target_type: 'message',
+					reason: 'harassment',
+					description: '私聊骚扰',
+					status: 'resolved'
+				})
+			])
+		);
+		render(ReportsPage);
+		await waitFor(() => expect(screen.getByText('举报瞬间 · 垃圾信息')).toBeTruthy());
+
+		let resolveSearch!: (value: unknown) => void;
+		api.listReports.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveSearch = resolve;
+				})
+		);
+
+		const input = screen.getByLabelText('搜索我的举报');
+		await fireEvent.input(input, { target: { value: '私聊' } });
+
+		// 搜索尚未返回时不得提前渲染「没有匹配」空态
+		await waitFor(() => expect(screen.getByText('正在搜索举报记录…')).toBeTruthy());
+		expect(screen.queryByText('没有匹配的举报')).toBeNull();
+
+		resolveSearch(
+			ok([
+				item({ report_id: 'rep_1', description: '疑似营销刷屏' }),
+				item({
+					report_id: 'rep_2',
+					target_type: 'message',
+					reason: 'harassment',
+					description: '私聊骚扰',
+					status: 'resolved'
+				})
+			])
+		);
+
+		await waitFor(() => expect(screen.getByText('已加载 2 条 · 匹配 1 条')).toBeTruthy());
+		expect(screen.getByText('举报消息 · 骚扰')).toBeTruthy();
+		expect(screen.queryByText('举报瞬间 · 垃圾信息')).toBeNull();
+	});
+
+	it('搜索失败在内容区展示失败态与重试，不显示无匹配空态', async () => {
+		api.listReports.mockResolvedValueOnce(ok([item()]));
+		render(ReportsPage);
+		await waitFor(() => expect(screen.getByText('举报瞬间 · 垃圾信息')).toBeTruthy());
+
+		api.listReports.mockResolvedValueOnce({ code: 10600, message: '服务暂时不可用', data: null });
+		await fireEvent.input(screen.getByLabelText('搜索我的举报'), { target: { value: '私聊' } });
+
+		await waitFor(() => expect(screen.getByText('服务暂时不可用')).toBeTruthy());
+		expect(screen.getByText('加载失败')).toBeTruthy();
+		expect(screen.queryByText('没有匹配的举报')).toBeNull();
+
+		api.listReports.mockResolvedValueOnce(
+			ok([item({ report_id: 'rep_2', target_type: 'message', reason: 'harassment', description: '私聊骚扰' })])
+		);
+		await fireEvent.click(screen.getByText('重试'));
+
+		await waitFor(() => expect(screen.getByText('已加载 1 条 · 匹配 1 条')).toBeTruthy());
+		expect(screen.getByText('举报消息 · 骚扰')).toBeTruthy();
+	});
+
+	it('搜索遇到 10100 展示登录引导而非技术错误', async () => {
+		api.listReports.mockResolvedValueOnce(ok([item()]));
+		render(ReportsPage);
+		await waitFor(() => expect(screen.getByText('举报瞬间 · 垃圾信息')).toBeTruthy());
+
+		api.listReports.mockResolvedValueOnce({ code: 10100, message: 'Access Token 无效', data: null });
+		await fireEvent.input(screen.getByLabelText('搜索我的举报'), { target: { value: '私聊' } });
+
+		await waitFor(() => expect(screen.getByText('登录后查看')).toBeTruthy());
+		expect(screen.queryByText(/Access Token/)).toBeNull();
 	});
 
 	it('?tab= 深链决定 status 过滤参数（all → null；pending → pending）', async () => {
