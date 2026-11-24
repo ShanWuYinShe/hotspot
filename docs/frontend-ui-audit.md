@@ -677,7 +677,7 @@
 | P2 | 慢图下移动首页 7 个占位 pulse 常驻 | HomeFeedItem/NearbyImageCard 占位 animate-pulse | 占位限时转静态（生产 S3 影响小） |
 | P2 | /nearby 枢纽「在线数」同屏重复 | 页头 chip + Hero 指标 | 保留 Hero，chip 换雷达/刷新 |
 | P2 | 首屏卡片图仍 lazy（mock 外链 LCP 1.2–5.2s） | R6 管线仅前 2 张 eager；mock unsplash 外链是预览环境产物 | 真实 S3 环境复测 LCP 后决定是否加 eager |
-| P2 | ListItem hover 时间戳对比度部分 <4.5 | palette-hover 半透明叠加 text-secondary：inkwash-dark 3.2 / inkwash-light 3.75 / vibrant-dark 4.03 / forest-dark 4.16 / vibrant-light 4.43（非 hover 5.31–7.62 达标） | 需动 palette 或统一 hover 语言（跨端影响），登记 backlog |
+| P2 | ListItem hover 时间戳对比度部分 <4.5 | palette-hover 半透明叠加 text-secondary：inkwash-dark 3.2 / inkwash-light 3.75 / vibrant-dark 4.03 / forest-dark 4.16 / vibrant-light 4.43（非 hover 5.31–7.62 达标） | **已修复（R17）**：只给 `[data-list-item]` 在 hover/focus 时把行内次级文字升到 `text-primary`（`ListItem.svelte` style 段），不动 palette/全站 hover 语言；选中态 `data-active` 排除。 |
 
 ### 五、遗留风险
 
@@ -685,7 +685,7 @@
 - 气泡 ⋯ 菜单在 hover:none 真机常显位置未真机复核（headless 按 fine pointer 不显示）；
 - 空闲预取在真实网络下多 6 个后台 chunk 请求（`saveData` 已跳过）；若线上不接受，可在
   `scheduleIdlePreload` 加一行开关；
-- forest/inkwash 全页 axe 矩阵只抽了 /messages、/me 各 2 页（12 页/6 组合 0 违规），非全量矩阵。
+- 主题矩阵已补齐全量：3 主题 × 明暗 6 组合 × 43 页 = 258 页 axe 复跑 0 违规（Round 137，命令 `bun run audit:a11y -- --matrix --parallel 2`）；后续主题/组件改动按该口径复跑。
 
 ## 2026-10-29 补充（Round 17：backlog 清偿）
 
