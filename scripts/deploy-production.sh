@@ -348,7 +348,7 @@ sha256_of() {
 verify_mounted_config() {
   local container_path="$1" staged="$2" expected actual
   if [ ! -f "$CONFIG_STAGING/docker/$staged" ]; then
-    echo "    跳过 $container_path（tag 中无 docker/$staged）"
+    echo "    跳过 ${container_path}（tag 中无 docker/${staged}）"
     return 0
   fi
   expected="$(sha256_of "$CONFIG_STAGING/docker/$staged")"
