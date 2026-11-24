@@ -11,7 +11,7 @@ import { formatDateLabel } from '../../../core/utils/FormatUtil';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { ApiError } from '../../../core/network/ApiError';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, GroupMemberItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory } from '../../../core/types/api';
+import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, GroupMemberItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory, MessageSentResult } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -426,7 +426,7 @@ export struct ChatPage {
     }
 
     this.messages.push(newMessage);
-    this.messagesDataSource.addData([newMessage]);
+    this.messagesDataSource.setData(this.messages);
 
     if (!newMessage.isSelf) {
       // 仅近底时自动滚动到底；上滑阅读期间只累加计数、暂缓 markRead
@@ -973,6 +973,36 @@ export struct ChatPage {
     void this.sendMessage();
   }
 
+  /** 回滚乐观气泡（发送失败时） */
+  private removePendingMessage(pendingId: string): void {
+    const index = this.messages.findIndex((m: ChatMessage) => m.id === pendingId);
+    if (index < 0) {
+      return;
+    }
+    this.messages.splice(index, 1);
+    this.messagesDataSource.setData(this.messages);
+  }
+
+  /** 用服务端 message_id/sent_at 确认乐观气泡；无返回时保留 pending 等 WS 回显替换 */
+  private confirmPendingMessage(pendingId: string, sentResult: MessageSentResult | null): void {
+    if (!sentResult || !sentResult.message_id) {
+      return;
+    }
+    const index = this.messages.findIndex((m: ChatMessage) => m.id === pendingId);
+    if (index < 0) {
+      // WS 回显已先到并替换了 pending，无需再处理
+      return;
+    }
+    const confirmed = this.messages[index];
+    confirmed.id = sentResult.message_id;
+    if (sentResult.sent_at) {
+      confirmed.sentAt = sentResult.sent_at;
+    }
+    confirmed.pending = false;
+    this.messages[index] = confirmed;
+    this.messagesDataSource.setData(this.messages);
+  }
+
   private async sendMessage() {
     if (this.isSending) {
       return;
@@ -1003,13 +1033,38 @@ export struct ChatPage {
     this.lastSendSignature = sendSignature;
     this.lastSendAtMs = nowMs;
 
+    // 乐观气泡必须「先上屏再请求」：若等 API 成功后才 push，WS 回显可能先到
+    // （本地后端尤其常见），此时 pending 尚不存在，回显被当新消息插入，随后
+    // pending 再 push → 同一消息两条。改为先插 pending，成功用返回的
+    // message_id/sent_at 确认，失败回滚。
+    const pendingId = `pending-${Date.now()}`;
+    const pendingMessage: ChatMessage = {
+      id: pendingId,
+      content: content,
+      senderId: this.currentUser.user_id,
+      senderName: this.currentUser.nickname ?? '',
+      senderAvatar: this.currentUser.avatar_url ?? '',
+      type: 'text',
+      sentAt: new Date().toISOString(),
+      isSelf: true,
+      isSystem: false,
+      pending: true
+    };
+    this.messages.push(pendingMessage);
+    // dataSource 与 messages 可能是同一数组引用（历史加载后 setData 传入的就是 this.messages），
+    // 再 addData 会把同一条消息二次追加；统一 setData 全量刷新
+    this.messagesDataSource.setData(this.messages);
+    this.scrollToBottom();
+
     this.isSending = true;
     this.sendErrorText = '';
+    let sentResult: MessageSentResult | null = null;
     try {
       if (this.chatType === 'private_chat') {
         const targetUserId = this.targetId;
         if (!targetUserId) {
           SystemToast.showError('无法获取目标用户ID', this.getUIContext());
+          this.removePendingMessage(pendingId);
           return;
         }
         const request: SendPrivateMessageRequest = {
@@ -1017,7 +1072,8 @@ export struct ChatPage {
           type: 'text',
           content: content
         };
-        await ApiClient.sendPrivateMessage(request);
+        const response = await ApiClient.sendPrivateMessage(request);
+        sentResult = response.data ?? null;
       } else {
         // @ 提及：文本里仍存在的 @昵称 映射回 user_id（对齐前端与 spec
         // api_spec_chat.md:135 —— 仅非空时下发 mentions）
@@ -1030,27 +1086,13 @@ export struct ChatPage {
         if (mentions.length > 0) {
           request.mentions = mentions;
         }
-        await ApiClient.sendGroupMessage(request);
+        const response = await ApiClient.sendGroupMessage(request);
+        sentResult = response.data ?? null;
       }
 
-      // 乐观气泡：API 确认后本地立即上屏（pending 标记），WS 回显时由
-      // handleNewMessage 替换为服务端消息；弱网下不再「发了没影」
-      const pendingMessage: ChatMessage = {
-        id: `pending-${Date.now()}`,
-        content: content,
-        senderId: this.currentUser.user_id,
-        senderName: this.currentUser.nickname ?? '',
-        senderAvatar: this.currentUser.avatar_url ?? '',
-        type: 'text',
-        sentAt: new Date().toISOString(),
-        isSelf: true,
-        isSystem: false,
-        pending: true
-      };
-      this.messages.push(pendingMessage);
-      this.messagesDataSource.addData([pendingMessage]);
-      this.scrollToBottom();
-
+      // 用服务端 message_id/sent_at 确认 pending：WS 回显后续按 id 去重；
+      // 即使 WS 未回显也不会一直停在 pending 态。
+      this.confirmPendingMessage(pendingId, sentResult);
       this.inputText = '';
     } catch (error) {
       this.lastSendSignature = '';
