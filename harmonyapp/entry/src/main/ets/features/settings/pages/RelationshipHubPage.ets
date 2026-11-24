@@ -8,6 +8,8 @@ import { DesignConstants, textLineHeight } from '../../../constants/DesignConsta
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { Skeleton } from '../../../components/states/Skeleton';
+import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemInput } from '../../../components/SystemInput';
 import { AppIcon } from '../../../components/SystemIcon';
 import { SystemToast } from '../../../components/SystemToast';
@@ -168,8 +170,47 @@ export struct RelationshipHubPage {
           .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
         if (this.isLoading) {
-          SystemLoadingView({ message: '加载关系数据…' })
-            .layoutWeight(1)
+          // 列表型首屏等待用骨架屏（对齐通知中心/首页 feed）：5 行「圆头像 + 两行文本条」，
+          // 与关系行几何一致；避免加载时只剩文案 + 空白
+          Column() {
+            SkeletonShimmer({ active: true }) {
+              Column({ space: DesignConstants.SPACING.SM }) {
+                ForEach([0, 1, 2, 3, 4], (index: number) => {
+                  Row({ space: DesignConstants.SPACING.MD }) {
+                    Skeleton({
+                      blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                      blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                      cornerRadius: '50%'
+                    })
+                    Column({ space: DesignConstants.SPACING.XS }) {
+                      Skeleton({
+                        blockWidth: '52%',
+                        blockHeight: DesignConstants.FONT.SIZE.MD,
+                        cornerRadius: DesignConstants.RADIUS.SM
+                      })
+                      Skeleton({
+                        blockWidth: '34%',
+                        blockHeight: DesignConstants.FONT.SIZE.XS,
+                        cornerRadius: DesignConstants.RADIUS.SM
+                      })
+                    }
+                    .layoutWeight(1)
+                    .alignItems(HorizontalAlign.Start)
+                  }
+                  .width('100%')
+                  .padding({
+                    left: DesignConstants.SPACING.MD,
+                    right: DesignConstants.SPACING.MD,
+                    top: DesignConstants.SPACING.MD,
+                    bottom: DesignConstants.SPACING.MD
+                  })
+                }, (index: number) => 'relationship-skeleton-' + index)
+              }
+              .width('100%')
+            }
+          }
+          .width('100%')
+          .layoutWeight(1)
         } else {
         // 搜索框（关系四项 tab + 搜索框保留；在线/离线第二排 pill 已删除）
         SystemInput({
