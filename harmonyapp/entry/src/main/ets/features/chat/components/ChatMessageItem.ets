@@ -54,6 +54,35 @@ export struct ChatMessageItem {
   /** 图片宽高比（onComplete 读取真实尺寸）：图片消息按原始比例铺满气泡，避免固定框留白/裁切 */
   @State imageAspectRatio: number = 0;
 
+  // 图片长按：onTouch 计时器（List 内 LongPressGesture 与滚动手势竞争不稳定）
+  private longPressTimer: number = -1;
+  private longPressFired: boolean = false;
+  private longPressStartX: number = 0;
+  private longPressStartY: number = 0;
+
+  private beginMessageLongPress(): void {
+    this.cancelMessageLongPress();
+    this.longPressFired = false;
+    this.longPressTimer = setTimeout(() => {
+      this.longPressTimer = -1;
+      this.longPressFired = true;
+      if (this.hasActions && this.onMessageClick) {
+        this.onMessageClick(this.msg);
+      }
+    }, 500);
+  }
+
+  private cancelMessageLongPress(): void {
+    if (this.longPressTimer !== -1) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = -1;
+    }
+  }
+
+  aboutToDisappear(): void {
+    this.cancelMessageLongPress();
+  }
+
   /** 图片点击预览（走 PhotoPreviewPage，与动态详情图片预览同一入口） */
   private previewImage(): void {
     const previewParams = new PhotoPreviewRouteParam();
@@ -151,15 +180,35 @@ export struct ChatMessageItem {
       .aspectRatio(this.imageBoxRatio())
       .borderRadius(DesignConstants.RADIUS.MD)
       .clip(true)
+      // 对齐 Web/Android：图片点按始终预览大图；消息操作（撤回/举报）改长按唤起，
+      // 不再让「点击=操作面板」占用预览入口（自己刚发的图此前只能通过操作面板、无法看大图）。
+      // 长按用 onTouch 计时器实现：List 内嵌图片上 LongPressGesture 与列表手势竞争不稳定，
+      // 计时器在 Down 起 500ms 触发、移动超过 10vp 或抬手取消，行为与系统长按一致。
       .onClick(() => {
-        // 有可操作项（撤回）时点击唤起操作面板，否则走图片预览
-        if (this.hasActions && this.onMessageClick) {
-          this.onMessageClick(this.msg);
-          return;
+        if (!this.longPressFired) {
+          this.previewImage();
         }
-        this.previewImage();
+        this.longPressFired = false;
       })
-      .accessibilityText('点击预览图片')
+      .onTouch((event: TouchEvent) => {
+        if (event.type === TouchType.Down) {
+          const downTouch = event.touches.length > 0 ? event.touches[0] : undefined;
+          if (downTouch) {
+            this.longPressStartX = downTouch.screenX;
+            this.longPressStartY = downTouch.screenY;
+          }
+          this.beginMessageLongPress();
+        } else if (event.type === TouchType.Move) {
+          const touch = event.touches.length > 0 ? event.touches[0] : undefined;
+          if (touch && (Math.abs(touch.screenX - this.longPressStartX) > 10 ||
+            Math.abs(touch.screenY - this.longPressStartY) > 10)) {
+            this.cancelMessageLongPress();
+          }
+        } else {
+          this.cancelMessageLongPress();
+        }
+      })
+      .accessibilityText(this.hasActions ? '点击预览图片，长按查看消息操作' : '点击预览图片')
 
       // 图片不套气泡：时间/已读图下对齐（次色，深浅主题均可读）
       Row({ space: DesignConstants.SPACING.XS }) {
