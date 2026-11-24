@@ -2,6 +2,7 @@
  * 我的举报 - 独立列表页（对齐前端 /me/reports ReportsPage）
  * 消费 reports/fetch：举报人查看已提交举报的处理进度与结果（resolution）。
  * 页头（标题 + 「N 条」trailing）+ below 状态胶囊行（全部/待处理/已处理/已驳回）
+ * + 搜索框（reports/fetch 无 keyword：按当前状态加载全部分页后本地匹配，350ms 防抖）
  * + 列表（举报{目标} · {原因} + 状态胶囊 + 描述 + 处理结果 + 时间）。
  * 下拉刷新 + 「加载更多」按钮分页（对齐前端手动加载模式）。
  */
@@ -70,6 +71,7 @@ export struct MyReportsPage {
       this.reasonLabel(item.reason),
       item.description ?? '',
       this.statusLabel(item.status),
+      item.resolution ? (item.resolution.action === 'resolve' ? '已确认处理' : '未构成违规') : '',
       item.resolution?.note ?? ''
     ].join(' ').toLowerCase();
     return hay.includes(keyword.toLowerCase());
@@ -77,18 +79,22 @@ export struct MyReportsPage {
 
   private onSearchChange(value: string): void {
     this.searchKeyword = value;
+    // 输入一变化就让在途搜索失效：避免旧关键词的结果在新关键词的防抖窗口内回写
+    this.searchSeq++;
     if (this.searchTimer >= 0) {
       clearTimeout(this.searchTimer);
       this.searchTimer = -1;
     }
     const keyword = value.trim();
     if (!keyword) {
-      this.searchSeq++;
       this.searchItems = [];
       this.searchError = '';
       this.searchLoading = false;
       return;
     }
+    // 防抖等待期间也保持加载态：否则会先闪一下「没有找到举报」/旧计数再进入搜索
+    this.searchLoading = true;
+    this.searchError = '';
     this.searchTimer = setTimeout(() => {
       this.searchTimer = -1;
       void this.runSearch(keyword);
@@ -192,6 +198,12 @@ export struct MyReportsPage {
 
   aboutToDisappear() {
     this.isDestroyed = true;
+    // 让在途搜索在下一页请求前退出，避免离开页面后继续拉完 10 页
+    this.searchSeq++;
+    if (this.searchTimer >= 0) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = -1;
+    }
   }
 
   private async loadReports(refresh: boolean = false): Promise<void> {
@@ -252,8 +264,16 @@ export struct MyReportsPage {
           showDivider: false
         }) {
           // trailing：条数统计（对齐前端「N 条」，加载/错误态隐藏）
-          if (!this.isLoading && !this.errorMessage) {
-            Text(this.searchKeyword.trim() ? `${this.searchItems.length} 条匹配` : `${this.reports.length} 条`)
+          if (this.searchKeyword.trim()) {
+            // 搜索加载/失败时隐藏计数，避免播报过期或局部条数
+            if (!this.searchLoading && !this.searchError) {
+              Text(`${this.searchItems.length} 条匹配`)
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                .fontColor(this.getCurrentThemePalette().textSecondary)
+            }
+          } else if (!this.isLoading && !this.errorMessage) {
+            Text(`${this.reports.length} 条`)
               .fontSize(DesignConstants.FONT.SIZE.XS)
               .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
               .fontColor(this.getCurrentThemePalette().textSecondary)
@@ -404,11 +424,8 @@ export struct MyReportsPage {
           .pullToRefresh(false)
           .refreshOffset(64)
           .onRefreshing(() => {
-            if (this.searchKeyword.trim()) {
-              void this.runSearch(this.searchKeyword.trim());
-            } else {
-              this.loadReports(true);
-            }
+            // 搜索态内容区是独立 Scroll（未挂 Refresh），下拉刷新只作用于列表
+            this.loadReports(true);
           })
         }
       }
