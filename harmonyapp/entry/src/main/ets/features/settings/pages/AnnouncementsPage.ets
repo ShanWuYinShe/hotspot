@@ -5,6 +5,7 @@ import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { DesignConstants } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
+import { SystemInput } from '../../../components/SystemInput';
 import { SystemToast } from '../../../components/SystemToast';
 import { AppIcon } from '../../../components/SystemIcon';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -25,7 +26,18 @@ export struct AnnouncementsPage {
   @State announcements: SystemAnnouncementItem[] = [];
   @State loading: boolean = false;
   @State refreshing: boolean = false;
+  // 公告为一次性全量返回（无分页/无 keyword），搜索直接本地过滤标题+正文+级别。
+  @State searchKeyword: string = '';
   private focusAnnouncementId: string = '';
+
+  private filteredAnnouncements(): SystemAnnouncementItem[] {
+    const keyword = this.searchKeyword.trim().toLowerCase();
+    if (!keyword) return this.announcements;
+    return this.announcements.filter((item: SystemAnnouncementItem) => {
+      const hay = [item.title, item.content, item.severity].join(' ').toLowerCase();
+      return hay.includes(keyword);
+    });
+  }
 
   private isDestroyed: boolean = false;
 
@@ -86,6 +98,19 @@ export struct AnnouncementsPage {
           onBack: () => { AppRouter.pop(); }
         })
 
+        if (this.announcements.length > 0) {
+          SystemInput({
+            value: this.searchKeyword,
+            placeholder: '搜索公告标题 / 正文…',
+            prefixIcon: AppIcon.SEARCH,
+            showPrefixIcon: true,
+            showClearButton: true,
+            inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+            onChange: (value: string) => { this.searchKeyword = value; }
+          })
+          .margin({ top: DesignConstants.SPACING.MD, left: DesignConstants.SPACING.LG, right: DesignConstants.SPACING.LG })
+        }
+
         // 首次网络加载（无数据）时显示加载反馈，避免页面空白静默；下拉刷新由 Refresh 自身指示器反馈
         if (this.loading && this.announcements.length === 0) {
           SystemLoadingView({ message: '加载中…' })
@@ -101,6 +126,16 @@ export struct AnnouncementsPage {
           })
             .layoutWeight(1)
             .width('100%')
+        } else if (this.filteredAnnouncements().length === 0) {
+          EmptyState({
+            bare: true,
+            icon: AppIcon.SEARCH,
+            message: '没有找到公告',
+            actionLabel: '清空搜索',
+            onAction: () => { this.searchKeyword = ''; }
+          })
+            .layoutWeight(1)
+            .width('100%')
         } else {
         Refresh({ refreshing: $$this.refreshing, builder: RefreshIndicator }) {
           Scroll() {
@@ -108,7 +143,7 @@ export struct AnnouncementsPage {
               Column() {
               SettingsSectionCard({ title: '平台通知' }) {
                 AnnouncementSummaryCard({
-                  items: this.announcements,
+                  items: this.filteredAnnouncements(),
                   maxItems: 0,
                   showOpenAll: false
                 })
