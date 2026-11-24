@@ -1120,15 +1120,16 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 
 **根因**：媒体卡（`MediaCard` / `HomeFeedItem` / `MomentCard`）底部压字层 `[data-card-footer]`、顶部 `[data-card-children]` 的真实背景是「图片 + 主题渐变遮罩」，而遮罩是绝对定位的**兄弟节点**（`--cst-surface-card-scrim-bottom` 等渐变）。axe 判定文字对比度时只回溯 DOM 祖先背景，取到卡片容器的 `bg-surface-island`：forest/inkwash 亮色为不透明浅色（如 `rgb(246,247,243)`），白字 `text-content-inverse` 被判 white-on-light；vibrant 亮色该 token 为 `color(srgb 1 1 1 / 0.86)`，axe 无法合成反而不报。
 
-**真实对比度**：底部遮罩最弱区间为 `rgba(10,18,12,0.64)`，叠最亮图片（纯白）后合成约 `rgb(98,102,98)`，白字对比度 ≈6.2:1；30% 以下区间 α≥0.86，对比度 >12:1，满足 WCAG AA。
+**真实对比度**（按 WCAG 相对亮度计算，以最亮纯白图片为底）：三个亮色主题底部遮罩最弱区间 α=0.64，叠白后合成背景分别约 `rgb(98,103,99)` / `rgb(106,103,101)` / `rgb(97,100,106)`（forest / inkwash / vibrant），白字对比度 5.74:1 / 5.60:1 / 5.97:1；α≥0.86 的底部 30% 区间为 12.5~13.6:1，均满足 WCAG AA（正常文本 ≥4.5:1）。
 
 **口径（登记为工具误报，不降低其他检查）**：
 
-- 仅对 `color-contrast` 规则、仅对命中 `[data-card-footer]` / `[data-card-children]` 祖先的节点跳过自动判定（`scripts/lib/a11y-run.js` 内过滤，命中数记入 `contrastMediaOverlayIgnored`）；
+- 仅对 `color-contrast` 规则、仅对**图片卡**的压字层（`[data-card-footer]` 纵排底部压字层、`[data-card-children]` 压图内容层）跳过自动判定；无图/加载失败卡的 surface 实底、横排卡 `bg-surface-card-menu` 实底面板不豁免，axe 照常判定（`scripts/lib/a11y-run.js`）；
+- 命中数记入 `contrastMediaOverlayIgnored`，由 `scripts/lib/a11y-summary.mjs` 汇总进 `report.json`，并在 `summary.txt` 输出「媒体压字层豁免(color-contrast)」行；矩阵逐组合打印 `ignored=`，豁免面异常放大时据此回查；
 - axe 的其余规则（含 `color-contrast` 在普通表面上的判定）与其余页面检查照常执行，矩阵仍要求 serious/critical=0；
 - 媒体压字层的可读性由设计 token 保证：新增/修改图片卡时必须使用 `text-content-inverse` + 主题 scrim token（`--cst-surface-card-scrim-top/bottom`），PR 自查按「白字 + 遮罩」人工核对（深/浅主题、明暗各一）。
 
-**验证**：修复后主题矩阵 6 组合 × 43 页（258 页次）PASS，serious/critical=0；过滤仅影响上述 3 条误报，单组合 `audit:a11y`（38 页）与 `audit:touch` 保持 PASS。
+**验证**：修复后主题矩阵 6 组合 × 43 页（258 页次）PASS，serious/critical=0；豁免计数仅覆盖上述 3 条误报，单组合 `audit:a11y`（38 页）与 `audit:touch` 保持 PASS。后续该计数若明显增大，应按本口径回查是否新增压字层或误豁免。
 
 ## 审计 backlog 复核（Round 125）
 

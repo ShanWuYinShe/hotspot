@@ -43,6 +43,8 @@ const failures = [];
 const errors = [];
 const pages = [];
 const comboMap = new Map();
+// 媒体压字层豁免（axe 无法合成「图片 + 兄弟渐变遮罩」）：单独汇总，避免豁免面悄悄放大后无人发现。
+let mediaOverlayIgnored = 0;
 
 for (const row of a11yRows) {
   const axe = coerce(row.axe);
@@ -58,6 +60,9 @@ for (const row of a11yRows) {
     continue;
   }
   const violations = Array.isArray(axe.violations) ? axe.violations : [];
+  const overlayIgnored = Number(axe.contrastMediaOverlayIgnored) || 0;
+  mediaOverlayIgnored += overlayIgnored;
+  combo.contrastMediaOverlayIgnored = (combo.contrastMediaOverlayIgnored || 0) + overlayIgnored;
   for (const v of violations) {
     impactCount[v.impact] = (impactCount[v.impact] || 0) + 1;
     combo.impact[v.impact] = (combo.impact[v.impact] || 0) + 1;
@@ -69,7 +74,7 @@ for (const row of a11yRows) {
     combo.seriousOrCritical += serious.length;
     failures.push({ route: row.route, theme: row.theme, mode: row.mode, violations: serious });
   }
-  pages.push({ slug: row.slug, route: row.route, vw: row.vw, theme: row.theme, mode: row.mode, violations: violations.length });
+  pages.push({ slug: row.slug, route: row.route, vw: row.vw, theme: row.theme, mode: row.mode, violations: violations.length, contrastMediaOverlayIgnored: overlayIgnored });
 }
 
 const combos = Array.from(comboMap.values());
@@ -98,18 +103,19 @@ const matrix = {
 };
 const ok = seriousOrCritical === 0 && errors.length === 0 && (!reducedMode || (reducedBad.length === 0 && reducedErrors.length === 0));
 
-const report = { generatedAt: new Date().toISOString(), outDir, reducedMode, matrixMode: matrix.enabled, ok, matrix, pages, impactCount, issueMap: Object.fromEntries(issueMap), failures, errors, reduced };
+const report = { generatedAt: new Date().toISOString(), outDir, reducedMode, matrixMode: matrix.enabled, ok, matrix, pages, impactCount, contrastMediaOverlayIgnored: mediaOverlayIgnored, issueMap: Object.fromEntries(issueMap), failures, errors, reduced };
 writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 const lines = [];
 lines.push('HotSpot 可访问性审计（axe-core）');
 lines.push('页面数: ' + pages.length + ' / 组合数: ' + combos.length + ' / 错误: ' + errors.length);
 lines.push('impact: minor=' + (impactCount.minor || 0) + ' moderate=' + (impactCount.moderate || 0) + ' serious=' + (impactCount.serious || 0) + ' critical=' + (impactCount.critical || 0));
+lines.push('媒体压字层豁免(color-contrast): ' + mediaOverlayIgnored + ' 节点（axe 无法合成图片+兄弟遮罩，见 docs/frontend-ui-audit.md）');
 if (matrix.enabled) {
   lines.push('');
   lines.push('矩阵聚合（theme/mode × 页面 × impact）:');
   for (const c of combos) {
-    lines.push('  - ' + c.theme + '/' + c.mode + ': pages=' + c.pages + ' serious=' + (c.impact.serious || 0) + ' critical=' + (c.impact.critical || 0) + ' moderate=' + (c.impact.moderate || 0) + ' minor=' + (c.impact.minor || 0) + ' errors=' + c.errors);
+    lines.push('  - ' + c.theme + '/' + c.mode + ': pages=' + c.pages + ' serious=' + (c.impact.serious || 0) + ' critical=' + (c.impact.critical || 0) + ' moderate=' + (c.impact.moderate || 0) + ' minor=' + (c.impact.minor || 0) + ' ignored=' + (c.contrastMediaOverlayIgnored || 0) + ' errors=' + c.errors);
   }
 }
 if (seriousOrCritical > 0) {
