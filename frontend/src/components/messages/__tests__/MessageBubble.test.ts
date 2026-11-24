@@ -1,6 +1,6 @@
 // MessageBubble 契约测试：文本/时间渲染、方向形态与已读双勾。
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import MessageBubble from '../MessageBubble.svelte';
 
 describe('MessageBubble', () => {
@@ -66,3 +66,25 @@ describe('MessageBubble', () => {
 		expect(screen.getByText('消息已撤回')).toBeTruthy();
 	});
 });
+
+	// 图片消息：不套气泡、渲染成可键盘触达的「查看大图」按钮，点击透出 URL（#263 契约）
+	it('图片消息渲染为「查看大图」按钮且不套气泡底色', () => {
+		const { container } = render(MessageBubble, {
+			props: { text: '', imageUrl: 'https://cdn.example.com/a.jpg', sent: false, time: '10:24' }
+		});
+		expect(container.querySelector('button[aria-label="查看大图"]')).not.toBeNull();
+		expect(container.querySelector('img')?.getAttribute('src')).toBe('https://cdn.example.com/a.jpg');
+		// 图片分支不套气泡内距/底色（外层只剩布局用 max-w-chat-bubble）
+		expect(container.querySelector('.px-4')).toBeNull();
+		expect(container.querySelector('.bg-accent-default')).toBeNull();
+		expect(container.querySelector('.bg-surface-primary')).toBeNull();
+	});
+
+	it('点击图片按钮回调 onImageClick(url)', async () => {
+		const clicked: string[] = [];
+		const { container } = render(MessageBubble, {
+			props: { text: '', imageUrl: 'https://cdn.example.com/a.jpg', sent: true, time: '10:24', onImageClick: (url: string) => clicked.push(url) }
+		});
+		await fireEvent.click(container.querySelector('button[aria-label="查看大图"]') as HTMLButtonElement);
+		expect(clicked).toEqual(['https://cdn.example.com/a.jpg']);
+	});
