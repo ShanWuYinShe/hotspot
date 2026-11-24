@@ -138,7 +138,7 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 ## 审计基线与布局陷阱（指针）
 
 - 审计判据与假阳性规律（「固定高度」正确判据、交互反馈承载方式、性能审计基线：LazyForEach 键/cachedCount/@Reusable/Image 约束/事件生命周期）见 `references/audit-baselines.md`。
-- ArkUI 布局陷阱（`.border()`/`.borderRadius()` 顺序、Scroll 短内容居中、Refresh 防抖动契约、裸 `{ }` 块不是容器）见 `references/layout-pitfalls.md`。
+- ArkUI 布局陷阱（`.border()`/`.borderRadius()` 顺序、Scroll 短内容居中、Refresh 防抖动契约、裸 `{ }` 块不是容器、`List.overlay()` 拦截列表点击）见 `references/layout-pitfalls.md`。
 - web → harmony 页面路由对齐、底栏/侧栏 IA、消息列表排序与聊天记录、搜索页 Tab 等路由事实见 `references/routing-map.md`。
 - 设计 token 对照 HarmonyOS 官方规范与已登记有意偏差见 `references/theme-baselines.md`。
 
@@ -146,5 +146,5 @@ description: hotspot 鸿蒙端 UI/UX 与组件原语契约：设计 token 强制
 
 - `references/theme-baselines.md`：文字/描边对比度量化基线、6 组合主题矩阵、forest light 软岛、官方规范对照与有意偏差。
 - `references/audit-baselines.md`：固定高度/交互反馈/性能审计的正确判据与脚本假阳性规律。
-- `references/layout-pitfalls.md`：ArkUI 渲染与滚动陷阱、Refresh 防抖动契约、裸块陷阱。
+- `references/layout-pitfalls.md`：ArkUI 渲染与滚动陷阱、Refresh 防抖动契约、裸块陷阱、`List.overlay()` 拦截列表点击。
 - `references/routing-map.md`：web → harmony 路由与信息架构对齐。
