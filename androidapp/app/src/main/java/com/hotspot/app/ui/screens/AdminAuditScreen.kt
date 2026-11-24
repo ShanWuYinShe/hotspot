@@ -1,5 +1,7 @@
 package com.hotspot.app.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +40,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -360,6 +363,7 @@ private fun AuditDetailDialog(
     onOpenGroup: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     val actionLabel = AUDIT_ACTION_LABELS[item.action] ?: item.action.ifBlank { "—" }
     val targetLabel = AUDIT_TARGET_LABELS[item.targetType] ?: item.targetType.ifBlank { "—" }
     val target = item.targetName?.takeIf { it.isNotBlank() } ?: item.targetId
@@ -398,11 +402,23 @@ private fun AuditDetailDialog(
                     }
                 }
                 Spacer(Modifier.height(Spacing.sm))
-                Text(
-                    text = "日志 ID：" + item.logId,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.textSecondary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "日志 ID：" + item.logId,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            clipboard?.setPrimaryClip(ClipData.newPlainText("审计日志 ID", item.logId))
+                            Toast.makeText(context, "日志 ID 已复制", Toast.LENGTH_SHORT).show()
+                        },
+                    ) {
+                        Text(text = "复制", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
         },
         confirmButton = {
