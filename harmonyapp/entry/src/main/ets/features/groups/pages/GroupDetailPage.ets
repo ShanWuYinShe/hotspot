@@ -3103,6 +3103,7 @@ export struct GroupDetailPage {
   @Builder
   buildMemberListSheet() {
     GroupMemberListSheet({
+      groupId: this.groupId,
       members: this.members,
       isLoadingMembers: this.isLoadingMembers,
       membersErrorMessage: this.membersErrorMessage,
