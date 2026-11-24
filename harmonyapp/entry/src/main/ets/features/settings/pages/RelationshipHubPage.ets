@@ -7,7 +7,7 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { TabsPillGroup } from '../../../components/TabsPillGroup';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { ListGroup } from '../../../components/ListGroup';
 import { Skeleton } from '../../../components/states/Skeleton';
 import { SkeletonShimmer } from '../../../components/states/SkeletonShimmer';
 import { SystemInput } from '../../../components/SystemInput';
@@ -61,6 +61,12 @@ export struct RelationshipHubPage {
       return this.followers.length;
     }
     return this.blocked.length;
+  }
+
+  /** 是否已有任一关系数据：有内容时的刷新保留真实列表，不闪回首屏骨架 */
+  private hasAnyRelationData(): boolean {
+    return this.friends.length > 0 || this.following.length > 0 ||
+      this.followers.length > 0 || this.blocked.length > 0;
   }
 
   /** 昵称/备注关键词过滤（第二排在线/离线 pill 已删除，仅保留搜索框；黑名单区不过滤） */
@@ -169,48 +175,61 @@ export struct RelationshipHubPage {
         })
           .padding({ top: DesignConstants.SPACING.SM, bottom: DesignConstants.SPACING.SM })
 
-        if (this.isLoading) {
-          // 列表型首屏等待用骨架屏（对齐通知中心/首页 feed）：5 行「圆头像 + 两行文本条」，
-          // 与关系行几何一致；避免加载时只剩文案 + 空白
+        if (this.isLoading && !this.hasAnyRelationData()) {
+          // 列表型首屏等待用骨架屏（对齐通知中心/首页 feed）：搜索框 + 软岛卡 + 5 行关系行，
+          // 与加载完成后的真实结构同几何（ListGroup 软岛、行内 12、行距 2），切换列表不跳变；
+          // 已有数据时的刷新（如解除拉黑后重载）保留真实列表，避免骨架闪回。
           Column() {
-            SkeletonShimmer({ active: true }) {
-              Column({ space: DesignConstants.SPACING.SM }) {
-                ForEach([0, 1, 2, 3, 4], (index: number) => {
-                  Row({ space: DesignConstants.SPACING.MD }) {
-                    Skeleton({
-                      blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-                      blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-                      cornerRadius: '50%'
-                    })
-                    Column({ space: DesignConstants.SPACING.XS }) {
-                      Skeleton({
-                        blockWidth: '52%',
-                        blockHeight: DesignConstants.FONT.SIZE.MD,
-                        cornerRadius: DesignConstants.RADIUS.SM
-                      })
-                      Skeleton({
-                        blockWidth: '34%',
-                        blockHeight: DesignConstants.FONT.SIZE.XS,
-                        cornerRadius: DesignConstants.RADIUS.SM
-                      })
-                    }
-                    .layoutWeight(1)
-                    .alignItems(HorizontalAlign.Start)
+            // 搜索框加载完成后才出现；用等高占位补足，避免真实列表整体下移
+            // （12 = 搜索框 8 下边距 + 内容区 4 上边距）
+            Skeleton({
+              blockWidth: '100%',
+              blockHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+              cornerRadius: DesignConstants.SHAPE.INPUT
+            })
+              .margin({ bottom: DesignConstants.SPACING.MD })
+
+            Column() {
+              ListGroup({ groupPadding: DesignConstants.SPACING.XS }) {
+                SkeletonShimmer({ active: true }) {
+                  Column({ space: DesignConstants.SPACING.HALF }) {
+                    ForEach([0, 1, 2, 3, 4], (index: number) => {
+                      Row({ space: DesignConstants.SPACING.MD }) {
+                        Skeleton({
+                          blockWidth: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                          blockHeight: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
+                          cornerRadius: '50%'
+                        })
+                        Column({ space: DesignConstants.SPACING.XS }) {
+                          Skeleton({
+                            blockWidth: '52%',
+                            blockHeight: DesignConstants.FONT.SIZE.MD,
+                            cornerRadius: DesignConstants.RADIUS.SM
+                          })
+                          Skeleton({
+                            blockWidth: '34%',
+                            blockHeight: DesignConstants.FONT.SIZE.XS,
+                            cornerRadius: DesignConstants.RADIUS.SM
+                          })
+                        }
+                        .layoutWeight(1)
+                        .alignItems(HorizontalAlign.Start)
+                      }
+                      .width('100%')
+                      .padding(DesignConstants.SPACING.MD)
+                    }, (index: number) => 'relationship-skeleton-' + index)
                   }
                   .width('100%')
-                  .padding({
-                    left: DesignConstants.SPACING.MD,
-                    right: DesignConstants.SPACING.MD,
-                    top: DesignConstants.SPACING.MD,
-                    bottom: DesignConstants.SPACING.MD
-                  })
-                }, (index: number) => 'relationship-skeleton-' + index)
+                }
               }
-              .width('100%')
             }
+            .width('100%')
+            // 对齐 RelationshipListSection 的正文留白（真实列表卡距页面 gutter 16）
+            .padding(DesignConstants.SPACING.LG)
           }
           .width('100%')
           .layoutWeight(1)
+          .accessibilityText('正在加载关系数据')
         } else {
         // 搜索框（关系四项 tab + 搜索框保留；在线/离线第二排 pill 已删除）
         SystemInput({
@@ -270,6 +289,9 @@ export struct RelationshipHubPage {
         .scrollBar(BarState.Off)
         .layoutWeight(1)
         .width('100%')
+        // 短列表（4 行）内容高度小于视口时 Scroll 默认垂直居中，会在搜索框下留出
+        // 大片空白并与加载态骨架错位；显式顶对齐，保证加载完成前后列表起点一致
+        .align(Alignment.Top)
         }
       }
       .width('100%')
