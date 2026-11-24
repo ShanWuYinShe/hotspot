@@ -693,15 +693,25 @@ export struct SearchPage {
     })
   }
 
+  // 注意：overlay builder 不能返回空——空 overlay 节点会拦截下层点击/滚动手势
+  // （实测搜索结果 Tab、结果行点击全部失效）。始终渲染全屏 Row + HitTestMode.Transparent，
+  // 空白区域手势穿透，按钮区域可点。
   @Builder
   private buildBackToTopOverlay() {
-    if (this.showBackToTop) {
-      BackToTopButton({
-        visible: true,
-        onTap: () => { this.scrollToTop(); }
-      })
-        .margin({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
     }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
   }
 
   build() {
