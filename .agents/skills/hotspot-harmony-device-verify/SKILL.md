@@ -135,6 +135,44 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
    - 快速体验游客的**会话 token 持久化在 Asset Store**，冷启动由 `Index.validateSessionOnColdStart` 校验并恢复 profile；判断是否有会话必须用 `HttpUtil.getToken()`（Asset）；Preferences 的 `access_token` 不参与会话判断（恒为空，会让 UI 显示未登录而 WebSocket 仍带旧 token）。**重置登录态**：`bm clean` 不清 Asset Store 里的 token，需 `hdc uninstall com.lsyb.social` 后重装；登录页邮箱/密码为自定义安全输入，`uitest uiInput inputText` 不写入，QA/管理员登录需人工输入。锚点与 AppStorage 瞬态仍可能冷启动清空，重装(-r)保留偏好但锚点需重设；暗色等偏好（`dark_mode_preference`）在 `geotalk` 偏好文件中持久化。
 8. **密度/尺寸标定**：密度随实例/分辨率变化，先 `uitest dumpLayout` 取屏幕像素宽，再按设计 vp 宽反推（本机某实例曾为 ≈3.917，仅作示例）；dump bounds 换算 vp 用实测密度，不要想当然用 3.25（密度误算会误判骨架卡/空态过大）。
 
+## 聊天与氛围画布回归清单
+
+改动聊天交互（图片点按/长按、回底按钮、overlay 挂载）或页面容器/氛围画布后，按此清单端上过一遍（坐标以 `dumpLayout` 为准，基线见 `references/coords-baselines.md`）：
+
+1. **造一条「仍在撤回窗口内」的图片消息**（图片点按/长按回归需要 `hasActions=true`；窗口 300s）：
+
+   ```bash
+   FILE=$(docker exec hotspot-postgres-1 psql -U postgres -d hotspot -t -A -c "select file_id from private_messages where type='image' order by sent_at desc limit 1;" | tr -d '\r')
+   TOKEN=$(curl -s -X POST http://localhost:8888/public/v1/auth/signin -H 'Content-Type: application/json' \
+     -d '{"login_id":"qa@hotspot.local","password":"Qa12345678","client_type":"app","device_id":"harmony-regression"}' \
+     | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["access_token"])')
+   curl -s -X POST http://localhost:8888/api/v1/private_messages/send -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' -H "Idempotency-Key: $(uuidgen | tr A-Z a-z)" \
+     -d "{\"target_user_id\":\"user_seed_sophia\",\"type\":\"image\",\"content\":null,\"file_id\":\"$FILE\",\"share_code\":null,\"reply_to_message_id\":null}"
+   ```
+
+   `Idempotency-Key` 必须是 UUID（否则 22000 格式非法）；复用既有 `chat_image` file_id 发消息是合法契约用法。
+
+2. **图片交互**：冷启 → 消息 Tab → 点最新会话进聊天 → `dumpLayout` 取最新 `Image`（宽度 > 200 的才是气泡图）bounds：
+   - 点按中心 → 应打开 PhotoPreviewPage（`1 / 1` + 关闭钮）；Back 返回；
+   - 对同一图片 `uitest uiInput longClick <x> <y>` → 应弹「消息操作」（撤回/关闭）；
+   - 预览页刚打开 1–2s 黑屏属图片加载中，等 2s 后再截图判定。
+
+3. **回底按钮**：复用同一 API 发 15 条文本（内容带统一前缀便于清理）→ 冷启进聊天 → `uitest uiInput fling 1100 600 1100 1600 40`（手指向下滑 = 看更早消息）→ 右下出现回底圆钮（Stack bounds 约 `[2010,2229][2160,2379]`，以 dump 为准）→ 点击应回到最新消息、按钮隐藏。
+
+4. **氛围画布**：依次点四个 Tab（我的/消息/附近/首页）截图，各页首屏应正常且有氛围层；PSS 采样：
+
+   ```bash
+   PID=$(hdc shell pidof com.lsyb.social | tr -d '\r')
+   hdc shell "hidumper --mem $PID" | grep -m1 Total
+   ```
+
+   要复核实例数时，可临时在 `AmbientBackdrop` 的 `aboutToAppear/aboutToDisappear` 里 `console.info` 计数，`hdc shell 'hilog -x | grep "\[ambient\]"'` 观察后移除，见 `hotspot-harmony-ui/references/layout-pitfalls.md`。
+
+5. **清理**：删除测试消息（按统一前缀或 `sent_at` 条件），`aa force-stop`，结束模拟器与 hdc。
+
+**坑**：聊天页键盘打开时点底部 Tab 会落空（点击被输入区/键盘吃掉）——先按 Back 收起键盘或退出聊天，再切 Tab；切 Tab 后要确认页面真的切换（截图），不要只看点击命令返回成功。
+
 ## 登录/切号后的角色行刷新（与挂载顺序无关）
 
 - `ProfilePage.aboutToAppear()` 时 `interactionEventHub.on('auth_user_changed', ...)` → 后台 `refreshAdminPrivileges()`（不阻塞 UI，结果经 `@State` 自动刷新）；`aboutToDisappear()` 注销监听。登出时先同步 `hasAdminPrivileges=false` 再走异步事件，避免登出瞬间残留上一账号的管理员行。
