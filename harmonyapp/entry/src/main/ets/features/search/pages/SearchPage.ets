@@ -6,7 +6,7 @@ import { PageNames } from '../../../constants/AppConstants';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint,
-  EnterGroupRequest, CreateReportRequest, Relationship,
+  CreateReportRequest, Relationship,
   SearchSuggestItem, SearchSuggestRequest, ClientConfig,
   SearchSuggestItemTag, SearchSuggestItemUser, SearchSuggestItemGroup, SearchSuggestItemMoment,
   SearchUsersRequest, SearchGroupsRequest, SearchMomentsRequest
@@ -43,7 +43,6 @@ import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { BackToTopButton } from '../../../components/BackToTopButton';
 import { formatCount } from '../../../core/utils/FormatUtil';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
-import pasteboard from '@ohos.pasteboard';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
 import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { TimerManager } from '../../../core/utils/TimerManager';
@@ -72,7 +71,6 @@ export struct SearchPage {
   @State keyword: string = '';
   @State isSearchFocused: boolean = false;
   @State isLoading: boolean = false;
-  @State private joinPoppedGroupId: string = '';
   @State private followPoppedUserId: string = '';
   @State private enterOpacity: number = 1;
   @State private enterOffset: number = 0;
@@ -110,7 +108,6 @@ export struct SearchPage {
   @State suggestItems: SearchSuggestItem[] = [];
   private suggestTimerId: number = 0;
   @State userActionPendingIds: string[] = [];
-  @State groupActionPendingIds: string[] = [];
   private isDestroyed: boolean = false;
 
   aboutToAppear(): void {
@@ -1422,10 +1419,7 @@ export struct SearchPage {
             ListItem() {
               this.buildGroupItem(item)
             }
-          }, (item: GroupItem) => {
-            const gid = item.group?.group_id ?? '';
-            return gid + '_j' + (item.viewer_state != null) + '_p' + (this.groupActionPendingIds.indexOf(gid) >= 0);
-          })
+          }, (item: GroupItem) => item.group?.group_id ?? '')
         }
         .divider({
           strokeWidth: DesignConstants.BORDER_WIDTH.HAIRLINE,
@@ -1491,14 +1485,6 @@ export struct SearchPage {
 
   private isUserActionPending(userId: string): boolean {
     return this.userActionPendingIds.indexOf(userId) >= 0;
-  }
-
-  private isGroupActionPending(groupId: string): boolean {
-    return this.groupActionPendingIds.indexOf(groupId) >= 0;
-  }
-
-  private isGroupJoined(group: GroupItem): boolean {
-    return group.viewer_state != null;
   }
 
   /**
@@ -1567,93 +1553,55 @@ export struct SearchPage {
     return tag !== '' ? ('@' + userId + ' · ' + tag) : ('@' + userId);
   }
 
+  /**
+   * 群组结果行：对齐 web SearchResults 的 EntityRow 紧凑行——
+   * 头像 44（squircle 圆角方，web avatarShape="rounded"）+ 名称(MD 14) + 「N 位成员」(SM 12) + 尾部箭头，
+   * 整行点击进群详情；行高 = 44 + p-3(12)×2 = 68，与用户结果行同密度。
+   * web 搜索行不放「加入/详情」次级按钮（加入动作在群详情页完成），此前端上描述 + 双按钮把单行撑到约 200vp。
+   */
   @Builder
   buildGroupItem(item: GroupItem) {
-    Column({ space: DesignConstants.SPACING.SM }) {
-      Row({ space: DesignConstants.SPACING.SM }) {
-        Row({ space: DesignConstants.SPACING.SM }) {
-          SystemAvatar({
-            decorative: true,
-            avatarUrl: item.group?.avatar_url ?? '',
-            name: item.group?.name ?? '',
-            avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL,
-            shape: 'circle'
-          })
+    Row({ space: DesignConstants.SPACING.MD }) {
+      SystemAvatar({
+        decorative: true,
+        avatarUrl: item.group?.avatar_url ?? '',
+        name: item.group?.name ?? '',
+        avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+        shape: 'squircle'
+      })
 
-          Column({ space: DesignConstants.SPACING.HALF }) {
-            Text(item.group?.name ?? '')
-              .fontSize(DesignConstants.FONT.SIZE.MD)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
-              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
-              .fontColor(this.getCurrentThemePalette().textPrimary)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-            Text(`${formatCount(item.group?.members_count)} 人`)
-              .fontSize(DesignConstants.FONT.SIZE.SM)
-              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
-              .fontColor(this.getCurrentThemePalette().textSecondary)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
-        }
-        .layoutWeight(1)
-
-        Row() {
-          // 系统符号 more 在端上渲染成四宫格，改文本省略号
-          Text('…')
-            .fontSize(DesignConstants.FONT.SIZE.XL)
-            .fontWeight(DesignConstants.FONT.WEIGHT.BOLD)
-            .fontColor(this.getCurrentThemePalette().textSecondary)
-        }
-        .width(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .height(DesignConstants.COMPONENT.ICON_SIZE_MD)
-        .borderRadius(DesignConstants.RADIUS.LG)
-        .backgroundColor(this.getSurfaceSubtle())
-        .justifyContent(FlexAlign.Center)
-        .alignItems(VerticalAlign.Center)
-        .bindMenu([
-          { value: '查看详情', action: () => this.openGroupDetail(item) },
-          { value: this.isGroupJoined(item) ? '进入群聊' : '加入群组', action: () => this.joinGroup(item) },
-          { value: '举报群组', action: () => this.reportGroup(item) },
-          { value: '复制群组ID', action: () => this.copyText(item.group?.group_id ?? '', '群组ID已复制') }
-        ])
+      Column({ space: DesignConstants.SPACING.HALF }) {
+        Text(item.group?.name ?? '')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+          .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+          .fontColor(this.getCurrentThemePalette().textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(`${formatCount(item.group?.members_count)} 位成员`)
+          .fontSize(DesignConstants.FONT.SIZE.SM)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+          .fontColor(this.getCurrentThemePalette().textSecondary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
       }
-      .width('100%')
+      .layoutWeight(1)
+      .alignItems(HorizontalAlign.Start)
 
-      Text(item.description ? item.description : '这个群还没有群介绍')
-        .fontSize(DesignConstants.FONT.SIZE.SM)
-        .lineHeight(DesignConstants.FONT.LINE_HEIGHT.XS)
-        .fontColor(this.getCurrentThemePalette().textSecondary)
-        .maxLines(2)
-        .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .width('100%')
-
-      Row({ space: DesignConstants.SPACING.SM }) {
-        SystemButton({
-          label: this.isGroupJoined(item) ? '进入群聊' : '加入群组',
-          variant: this.isGroupJoined(item) ? 'outline' : 'primary',
-          buttonSize: 'small',
-          loading: this.isGroupActionPending(item.group?.group_id ?? ''),
-          onPress: () => { this.joinGroup(item); }
-        })
-          .layoutWeight(1)
-          .scale({ x: MotionUtil.popScale(this.joinPoppedGroupId === (item.group?.group_id ?? '')), y: MotionUtil.popScale(this.joinPoppedGroupId === (item.group?.group_id ?? '')) })
-
-        SystemButton({
-          label: '详情',
-          variant: 'surface',
-          buttonSize: 'small',
-          shadowed: true,
-          onPress: () => { this.openGroupDetail(item); }
-        })
-          .layoutWeight(1)
-          .opacity(this.isGroupActionPending(item.group?.group_id ?? '') ? DesignConstants.OPACITY.PRESSED : 1)
-      }
-      .width('100%')
+      LucideIcon({
+        icon: AppIcon.ARROW_RIGHT,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getCurrentThemePalette().textSecondary
+      })
     }
     .width('100%')
-    .padding(DesignConstants.SPACING.MD)
-    // 同 buildUserItem：行级卡片样式移除
+    .padding({
+      left: DesignConstants.SPACING.LG,
+      right: DesignConstants.SPACING.LG,
+      top: DesignConstants.SPACING.MD3,
+      bottom: DesignConstants.SPACING.MD3
+    })
+    .onClick(() => { this.openGroupDetail(item); })
   }
 
   @Builder
@@ -1760,20 +1708,6 @@ export struct SearchPage {
     this.userActionPendingIds = next;
   }
 
-  private setGroupActionPending(groupId: string, pending: boolean): void {
-    const next: string[] = [];
-    for (let i = 0; i < this.groupActionPendingIds.length; i++) {
-      const id = this.groupActionPendingIds[i];
-      if (id !== groupId) {
-        next.push(id);
-      }
-    }
-    if (pending) {
-      next.push(groupId);
-    }
-    this.groupActionPendingIds = next;
-  }
-
   private patchUserRelation(userId: string, isFollowing: boolean): void {
     const users = this.userResults;
     for (let i = 0; i < users.length; i++) {
@@ -1829,44 +1763,6 @@ export struct SearchPage {
     return false;
   }
 
-  private async joinGroup(group: GroupItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再加入群组', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '加入群组';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-    const groupId = group.group?.group_id;
-    if (!groupId) return;
-    if (group.viewer_state != null) {
-      this.enterGroupChat(group);
-      return;
-    }
-    if (this.isGroupActionPending(groupId)) return;
-    this.setGroupActionPending(groupId, true);
-    try {
-      const response = await ApiClient.joinGroup({ group_id: groupId } as EnterGroupRequest);
-      if (response.code === 0 && response.data) {
-        if (response.data.status === 'joined') {
-          SystemToast.showSuccess('加入成功', this.getUIContext());
-          await this.doSearch();
-        } else {
-          SystemToast.show('已提交申请，等待审批', this.getUIContext());
-        }
-      } else if (response.code === 10400) {
-        SystemToast.show(getErrorMessage(response, '加入失败'), this.getUIContext());
-      } else {
-        SystemToast.showError(getErrorMessage(response, '加入失败'), this.getUIContext());
-      }
-    } catch {
-      SystemToast.showError('加入失败', this.getUIContext());
-    } finally {
-      this.setGroupActionPending(groupId, false);
-    }
-  }
-
   private openGroupDetail(group: GroupItem): void {
     const p = new GroupDetailRouteParam();
     p.groupId = group.group?.group_id ?? '';
@@ -1911,24 +1807,6 @@ export struct SearchPage {
     AppRouter.push(PageNames.CHAT, params);
   }
 
-  private enterGroupChat(group: GroupItem): void {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再进入群聊', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '进入群聊';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-    const groupId = group.group?.group_id;
-    if (!groupId) return;
-    const params = new ChatRouteParam();
-    params.chatId = groupId;
-    params.chatType = 'group_chat';
-    params.title = group.group?.name ?? '群聊';
-    AppRouter.push(PageNames.CHAT, params);
-  }
-
   private async reportUser(user: UserItem): Promise<void> {
     if (!this.isLoggedIn) {
       SystemToast.showWarning('请先登录后再举报', this.getUIContext());
@@ -1957,45 +1835,6 @@ export struct SearchPage {
     }
   }
 
-  private async reportGroup(group: GroupItem): Promise<void> {
-    if (!this.isLoggedIn) {
-      SystemToast.showWarning('请先登录后再举报', this.getUIContext());
-      const loginParams = new LoginRouteParam();
-      loginParams.reason = 'action_required';
-      loginParams.action = '举报群组';
-      AppRouter.push(PageNames.LOGIN, loginParams);
-      return;
-    }
-    const groupId = group.group?.group_id;
-    if (!groupId) return;
-    try {
-      const req: CreateReportRequest = {
-        target_type: 'group',
-        target_id: groupId,
-        reason: 'other'
-      };
-      const response = await ApiClient.createReport(req);
-      if (response.code === 0) {
-        SystemToast.showSuccess('举报已提交', this.getUIContext());
-      } else {
-        SystemToast.showError(getErrorMessage(response, '举报失败'), this.getUIContext());
-      }
-    } catch {
-      SystemToast.showError('举报失败', this.getUIContext());
-    }
-  }
-
-  private async copyText(text: string, successText: string): Promise<void> {
-    if (!text) return;
-    try {
-      const systemPasteboard = pasteboard.getSystemPasteboard();
-      const pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
-      await systemPasteboard.setData(pasteData);
-      SystemToast.show(successText, this.getUIContext());
-    } catch {
-      SystemToast.showError('复制失败', this.getUIContext());
-    }
-  }
 }
 
 @Builder export function SearchPageBuilder() {
