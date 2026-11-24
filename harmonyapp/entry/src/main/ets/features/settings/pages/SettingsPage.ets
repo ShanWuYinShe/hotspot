@@ -430,6 +430,16 @@ export struct SettingsPage {
             AppRouter.push(PageNames.MY_REPORTS);
           }
         }
+      },
+      {
+        icon: AppIcon.SHARE,
+        title: '我的分享',
+        subtitle: '管理已生成的分享链接、有效期与访问状态',
+        action: () => {
+          if (this.requireLogin('查看我的分享', PageNames.MY_SHARES)) {
+            AppRouter.push(PageNames.MY_SHARES);
+          }
+        }
       }
     ];
   }
