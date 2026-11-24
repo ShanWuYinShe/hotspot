@@ -1113,3 +1113,19 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 - **/users/:id 统计与空态矛盾**：「6 瞬间」与「最近瞬间 · 还没有照片」同页并存（两种视口一致），需查最近瞬间的过滤口径；
 - **1440 首页右栏不吸顶**：滚动后右侧 rail 留大片空白（可选优化，非缺陷）；
 - **页头返回钮导致标题左缘偏移**：有返回钮的页面标题 x=70、无返回钮 x=16（54px 跳变），可考虑所有页头预留统一 leading 槽位。
+
+## 媒体卡压字层对比度审计口径（axe 误报治理）
+
+**现象**：主题矩阵 `bun run audit:a11y -- --matrix --parallel 2` 在 forest/light 与 inkwash/light 报 `color-contrast` serious（首页卡片「查看评论」计数、附近瞬间页徽章/计数，共 3 条）；vibrant/light 与三个深色组合全绿。
+
+**根因**：媒体卡（`MediaCard` / `HomeFeedItem` / `MomentCard`）底部压字层 `[data-card-footer]`、顶部 `[data-card-children]` 的真实背景是「图片 + 主题渐变遮罩」，而遮罩是绝对定位的**兄弟节点**（`--cst-surface-card-scrim-bottom` 等渐变）。axe 判定文字对比度时只回溯 DOM 祖先背景，取到卡片容器的 `bg-surface-island`：forest/inkwash 亮色为不透明浅色（如 `rgb(246,247,243)`），白字 `text-content-inverse` 被判 white-on-light；vibrant 亮色该 token 为 `color(srgb 1 1 1 / 0.86)`，axe 无法合成反而不报。
+
+**真实对比度**：底部遮罩最弱区间为 `rgba(10,18,12,0.64)`，叠最亮图片（纯白）后合成约 `rgb(98,102,98)`，白字对比度 ≈6.2:1；30% 以下区间 α≥0.86，对比度 >12:1，满足 WCAG AA。
+
+**口径（登记为工具误报，不降低其他检查）**：
+
+- 仅对 `color-contrast` 规则、仅对命中 `[data-card-footer]` / `[data-card-children]` 祖先的节点跳过自动判定（`scripts/lib/a11y-run.js` 内过滤，命中数记入 `contrastMediaOverlayIgnored`）；
+- axe 的其余规则（含 `color-contrast` 在普通表面上的判定）与其余页面检查照常执行，矩阵仍要求 serious/critical=0；
+- 媒体压字层的可读性由设计 token 保证：新增/修改图片卡时必须使用 `text-content-inverse` + 主题 scrim token（`--cst-surface-card-scrim-top/bottom`），PR 自查按「白字 + 遮罩」人工核对（深/浅主题、明暗各一）。
+
+**验证**：修复后主题矩阵 6 组合 × 43 页（258 页次）PASS，serious/critical=0；过滤仅影响上述 3 条误报，单组合 `audit:a11y`（38 页）与 `audit:touch` 保持 PASS。
