@@ -85,7 +85,17 @@
 	style="padding-bottom:max(0.75rem, env(safe-area-inset-bottom));"
 >
 	<ChatColumn class="px-4 pt-2.5">
-		{#if chat.sendError}
+		{#if chat.failedSend}
+			<div class="flex items-center justify-between gap-2 pb-1.5">
+				<p class="text-status-danger text-xs">{chat.failedSend.error}</p>
+				<button
+					type="button"
+					class="shrink-0 text-xs text-status-danger underline underline-offset-2 focus-ring disabled:opacity-50"
+					disabled={chat.sending}
+					onclick={() => void chat.retrySend()}>重试</button
+				>
+			</div>
+		{:else if chat.sendError}
 			<p class="pb-1.5 text-status-danger text-xs">{chat.sendError}</p>
 		{/if}
 		<div class="flex items-center gap-2.5">

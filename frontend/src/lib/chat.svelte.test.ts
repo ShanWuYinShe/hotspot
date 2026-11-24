@@ -84,6 +84,47 @@ describe('useChat', () => {
 		});
 	});
 
+	it('发送失败后可一键重试：重试成功替换为真实 id', async () => {
+		const h = setup();
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		const { sendMessage } = h;
+		sendMessage.mockResolvedValueOnce({ code: 1, error: '网络错误' });
+		h.chat!.handleInputChange({ target: { value: '重试消息' } } as unknown as Event);
+		await h.chat!.handleSend();
+		await vi.waitFor(() => {
+			expect(h.chat!.failedSend).toEqual({ text: '重试消息', mentions: undefined, error: '网络错误' });
+			expect(h.chat!.sendError).toBe('网络错误');
+		});
+		sendMessage.mockResolvedValueOnce({ code: 0, message_id: 'm-retry' });
+		await h.chat!.retrySend();
+		await vi.waitFor(() => {
+			expect(sendMessage).toHaveBeenLastCalledWith('重试消息', undefined);
+			expect(h.chat!.failedSend).toBeNull();
+			expect(h.chat!.sendError).toBe('');
+			expect(h.chat!.messages.some((m) => m.id === 'm-retry' && m.text === '重试消息')).toBe(true);
+		});
+	});
+
+	it('发送成功替换临时 id 时去除 WS 回显重复（同 id 只保留一条）', async () => {
+		let resolveSend: (v: { code: number; message_id: string }) => void = () => {};
+		const wsMessage: ChatMessage = { id: 'm-dup', text: '回显', sent: true, time: '12:00' };
+		const h = setup({ wsNewMessage: vi.fn(() => wsMessage) });
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		h.sendMessage.mockReturnValue(
+			new Promise<{ code: number; message_id: string }>((resolve) => {
+				resolveSend = resolve;
+			})
+		);
+		h.chat!.handleInputChange({ target: { value: '回显' } } as unknown as Event);
+		const pending = h.chat!.handleSend();
+		window.dispatchEvent(new CustomEvent('test:new'));
+		resolveSend({ code: 0, message_id: 'm-dup' });
+		await pending;
+		await vi.waitFor(() => {
+			expect(h.chat!.messages.filter((m) => m.id === 'm-dup')).toHaveLength(1);
+		});
+	});
+
 	it('历史按服务端倒序返回时翻转为正序（越新的消息在下方）', async () => {
 		const loadHistory = vi.fn().mockResolvedValue({
 			messages: [
