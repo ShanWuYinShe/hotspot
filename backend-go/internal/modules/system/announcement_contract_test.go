@@ -193,7 +193,7 @@ func TestSystemAnnouncementContract(t *testing.T) {
 			},
 		},
 		{
-			Name: "admin search includes deleted records",
+			Name: "admin search excludes deleted records",
 			Run: func(t *testing.T, repo Repository, state systemAnnouncementContractState) {
 				item := create(t, repo, state, "Gone", AnnounceLevelError)
 				if err := repo.DeleteAnnouncement(state.ctx, item.AnnouncementID); err != nil {
@@ -203,11 +203,8 @@ func TestSystemAnnouncementContract(t *testing.T) {
 				if err != nil {
 					t.Fatalf("search: %v", err)
 				}
-				if len(page.Items) != 1 {
-					t.Fatalf("search items = %d, want 1", len(page.Items))
-				}
-				if !page.Items[0].IsDeleted() || page.Items[0].DeletedAt == nil {
-					t.Fatalf("deleted_at = %#v", page.Items[0])
+				if len(page.Items) != 0 {
+					t.Fatalf("deleted announcement must be excluded from admin search, got %#v", page.Items)
 				}
 			},
 		},

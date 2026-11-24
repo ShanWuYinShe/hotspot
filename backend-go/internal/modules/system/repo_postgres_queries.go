@@ -44,6 +44,7 @@ SELECT sa.announcement_id,
 FROM system_announcements sa
 LEFT JOIN users u ON u.user_id = sa.created_by_user_id
 WHERE ($1 = '' OR sa.severity = $1)
+  AND sa.deleted_at IS NULL
   AND ($2::timestamptz IS NULL OR sa.created_at < $2 OR (sa.created_at = $2 AND sa.announcement_id < $3))
 ORDER BY sa.created_at DESC, sa.announcement_id DESC
 LIMIT $4`

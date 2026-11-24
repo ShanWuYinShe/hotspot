@@ -106,6 +106,9 @@ func (s *InMemoryModerationStore) SearchAnnouncements(_ context.Context, filter 
 	defer s.mu.RUnlock()
 	items := make([]systemmodule.AnnouncementRecord, 0, len(s.announcements))
 	for _, item := range s.announcements {
+		if item.IsDeleted() {
+			continue
+		}
 		if filter.Severity != "" && item.Severity != filter.Severity {
 			continue
 		}
