@@ -403,6 +403,7 @@
     另：`delay-images.js` 慢网模拟目前在 `.workwork` 未入库，建议后续并入 browser QA 脚本做常规回归。
 32. **图片失败降级统一审计（R19，已完成，关闭）**：复核全站 `<img>` 后确认远程图全部具备失败降级——9 个文件走 `use:fadeImage`（`img-fade` 初始 `opacity:0`、仅 `load` 后加 `img-loaded`，失败时图片保持不可见、父级 `.media-placeholder` 渐变透出，不会出现 broken icon）；MediaCard/MomentPostBody 用显式 `imageLoaded` 门控（失败保持占位层）；其余裸 `<img>` 均为**本地/静态资源**（品牌 logo：BrandLockup/HomeMobile/HomeTablet/DesktopLayout；相册本地 blob 预览：ImagePicker；地图画布：MapCanvas）或 `aria-hidden` 装饰层。复核命令：`grep -rl '<img' frontend/src --include=*.svelte` 与 `grep -rln 'use:fadeImage' frontend/src`。新页面/新组件继续按 design-system §20.10 自查。
 
+33.5 **鸿蒙聊天消息点按无响应（PR #268，已修复）**：聊天页把回底按钮挂在 `List.overlay()` 上，overlay 层拦截列表内点击（图片预览/消息操作面板全部打不开，R112 同类坑）。改为 Stack 同级子节点 + 全屏 `hitTestBehavior(Transparent)` 容器承载回底按钮，保留原 margin 定位；同坐标端上复测「点图片 → PhotoPreviewPage」通过。陷阱明细已补进 skill `hotspot-harmony-ui/references/layout-pitfalls.md` 第 5 条。
 33. **鸿蒙回顶扩展（R20，已完成，关闭）**：设置页（#221）、个人中心本人页（#222）、我的分享（#230）、他人主页（#231）、我的群组（#232）共 5 处长列表已全部接入 BackToTopButton。
     接入约定：**不要用空 builder 的 `.overlay()` 挂回顶按钮**——空 overlay 节点会拦截手势（滚动与点击都会被拦，见「2026-11-24 回顶扩展」踩坑记录）；统一用 Stack 同级子节点 + 全屏 Row + `HitTestMode.Transparent`。新增长列表按此模式接入并端上验证显隐/回顶。
 34. **回顶与浮层避让（R20）**：当前基线无 changelog 浮动钮；若后续引入同角浮层，按「回顶置其上留 8–12px」规则处理并实测不遮挡。
