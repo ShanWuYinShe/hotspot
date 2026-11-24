@@ -384,13 +384,10 @@ export struct SearchPage {
 
         if (this.isDestroyed) return;
 
-        const myId = await AuthAccountManager.getCurrentUserId();
-
         if (usersResp.code === 0 && usersResp.data) {
-          const validUsers = usersResp.data.items.filter((u: UserItem) => u.user?.user_id);
-          this.userResults = (myId !== null && typeof myId === 'string')
-            ? validUsers.filter((u: UserItem) => u.user.user_id !== myId)
-            : validUsers;
+          // 不排除本人：web SearchResults / Android SearchScreen 均直接渲染后端结果，
+          // spec users/search 也未约定排除当前用户；端上过滤会导致搜自己昵称显示「没有找到」。
+          this.userResults = usersResp.data.items.filter((u: UserItem) => u.user?.user_id);
           this.userResultsDataSource.setData(this.userResults);
         }
 
