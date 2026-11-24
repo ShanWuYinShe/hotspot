@@ -492,7 +492,8 @@
 | `bun run audit:a11y -- --reduced` | reduced-motion：关键类残留 + 非允许 CSS 动画 >20ms | 有残留/长动画 | `raw/reduced.jsonl` |
 | `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 18 + 审计扩展 17 + 详情页，最多 38 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
 | `bun run audit:touch -- --baseline` | 仅 r5 基线 22 页（快速/对照） | 同上 | 同上 |
-| `bun run audit:ui` | browser-qa --mobile + a11y + touch | 任一子检查失败整体 exit 1 | 三个报告路径 + 摘要 |
+| `bun run audit:keyboard` | 列表键盘导航：消息会话列表 ↑↓ + 搜索框 ↓ 进首行、/notify ↑↓、/search 结果候选 ↑↓（7 条断言） | 任一断言失败、未登录、候选不足 | `.workwork/browser-check/keyboard-<ts>/` |
+| `bun run audit:ui` | browser-qa --mobile + a11y + touch + keyboard | 任一子检查失败整体 exit 1 | 四个报告路径 + 摘要 |
 
 参数：`--base`、`--session`、`--theme vibrant|forest|inkwash`、`--mode light|dark`、`--reduced`、`--mobile`、`--limit <n>`（调试）、`--allowlist <path>`（touch，负向验证用）、`--help`。
 
@@ -1148,3 +1149,28 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 - **页头返回钮导致标题左缘偏移**：有/无返回钮的标题 x=70/16（54px 跳变），需统一 leading 槽位，属视觉决策。
 
 
+
+## 2026-11-25 补充（列表键盘导航覆盖与门禁）
+
+**覆盖范围（web，均真实浏览器实测）**：
+
+| 页面 | 交互 | 实现 | 门禁断言 |
+|---|---|---|---|
+| `/notify` | 列表行 ↑↓；搜索框 ↓ 进首行 | `lib/search-nav` + 页面接线（PR #242） | ↓ 到第二行、↑ 回第一行 |
+| `/messages` | 会话列表 ↑↓；搜索框 ↓ 进首行 | `lib/chat-list-nav` + `ChatListBody` / `SearchInput.onKeydown`（PR #281/#283） | 搜索框 ↓ 进首行、↓ 到第二行、↑ 回第一行 |
+| `/search` | 输入框/相关话题/结果行/最近条目间 ↑↓、Esc 清空回输入框、Enter 打开 | `useSearchPageData.handleSearchNavKeydown` + `searchNavCandidates`（PR #242） | 首候选 ↓ 到第二、↑ 回第一 |
+
+**自动门禁**：`bun run audit:keyboard`（`scripts/keyboard-nav.sh`）——复用 `qa-common.sh` 的健康检查/QA 登录/session 清理，行数据异步轮询，未登录或候选不足 2 直接失败；已作为第四步纳入 `bun run audit:ui`。最近一次：
+
+```text
+✓ 搜索框 ↓ 进入首行（打开与 阿禾 的会话）
+✓ 会话列表 ↓ 移到第二行（打开与 巡检员 的会话）
+✓ 会话列表 ↑ 回到首行
+✓ /notify ↓ 移到第二行
+✓ /notify ↑ 回到首行
+✓ /search ↓ 移到第二个候选（#云龙湖）
+✓ /search ↑ 回到第一个候选
+结果: PASS（通过 7，跳过 0）
+```
+
+**暂缓**：feed/首页卡片列表（行内控件多、与滚动/读屏交互冲突风险高），按交接文档 #19 的读屏/真机验证结论再评估；移动端物理键盘场景未单独覆盖（触屏主路径）。
