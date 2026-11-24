@@ -76,7 +76,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 
 /**
  * 管理后台 · 审计日志（仅平台管理员，admin.audit.read）：
@@ -117,17 +116,27 @@ fun AdminAuditScreen(
     val shownItems = if (searching) searchItems else items
     val targetType = TARGET_TYPES[targetIndex].second
     // 时间范围预设：审计契约用 UTC ISO 的 start_time/end_time，这里只传下界。
-    val startTime = when (rangeIndex) {
-        1 -> Instant.now().minus(7, ChronoUnit.DAYS).toString()
-        2 -> Instant.now().minus(30, ChronoUnit.DAYS).toString()
-        3 -> customStartMillis?.let(::localStartIso)
-        else -> null
+    // 必须 remember：Instant.now() 每次组合都会变，直接作为 LaunchedEffect key 会导致请求完成后
+    // 触发重组 → key 变化 → 再次请求的无限重拉；按选择项缓存，只在用户切换范围时重算。
+    val startTime = remember(rangeIndex, customStartMillis) {
+        when (rangeIndex) {
+            1 -> Instant.now().minus(7, ChronoUnit.DAYS).toString()
+            2 -> Instant.now().minus(30, ChronoUnit.DAYS).toString()
+            3 -> customStartMillis?.let(::localStartIso)
+            else -> null
+        }
     }
-    val endTime = if (rangeIndex == 3) customEndMillis?.let(::localEndIso) else null
+    val endTime = remember(rangeIndex, customEndMillis) {
+        if (rangeIndex == 3) customEndMillis?.let(::localEndIso) else null
+    }
 
     LaunchedEffect(targetType, actionFilter, startTime, endTime, reloadKey) {
         loading = true
         error = null
+        // 条件变化即清空旧结果：避免筛选期间短暂展示上一条件的行，也避免新请求失败时
+        // 因 items 非空而吞掉错误态。
+        items = emptyList()
+        cursor = null
         when (val result = AppContainer.adminRepository.fetchAuditLogs(action = actionFilter, targetType = targetType, startTime = startTime, endTime = endTime)) {
             is ApiResult.Ok -> {
                 items = result.data.items
@@ -148,9 +157,13 @@ fun AdminAuditScreen(
             searchError = null
             return@LaunchedEffect
         }
-        delay(350)
+        // 防抖前就进入加载态并清空上次结果：否则首个关键词的 350ms 内会先闪出
+        // 「没有匹配的审计日志」空态，或继续展示旧关键词的匹配结果。
         searchLoading = true
         searchError = null
+        searchItems = emptyList()
+        searchLoaded = 0
+        delay(350)
         val all = mutableListOf<AdminAuditLogItem>()
         var next: String? = null
         for (page in 0 until 10) {
@@ -177,7 +190,16 @@ fun AdminAuditScreen(
         if (loadingMore || loading || searching) return
         loadingMore = true
         scope.launch {
-            when (val result = AppContainer.adminRepository.fetchAuditLogs(targetType = targetType, cursor = next)) {
+            // 翻页必须复用当前筛选条件（动作/时间窗）：cursor 只记录排序位置，不含过滤条件，
+            // 否则第 2 页起会混入其它动作或时间段的日志。
+            val result = AppContainer.adminRepository.fetchAuditLogs(
+                action = actionFilter,
+                targetType = targetType,
+                startTime = startTime,
+                endTime = endTime,
+                cursor = next,
+            )
+            when (result) {
                 is ApiResult.Ok -> {
                     items = (items + result.data.items).distinctBy { it.logId }
                     cursor = result.data.nextCursor
@@ -610,7 +632,9 @@ private fun auditMatches(item: AdminAuditLogItem, q: String): Boolean {
 private fun formatAuditDetails(details: JsonElement?): String {
     if (details == null || details is kotlinx.serialization.json.JsonNull) return ""
     return when (details) {
-        is JsonObject -> details.entries.joinToString(" · ") { (k, v) -> k + ": " + formatJsonValue(v) }
+        is JsonObject -> details.entries
+            .filter { it.key != "type" } // type 恒等于 action，列表行已有动作中文名，不重复展示
+            .joinToString(" · ") { (k, v) -> k + ": " + formatJsonValue(v) }
         else -> formatJsonValue(details)
     }
 }
@@ -636,7 +660,8 @@ private fun localStartIso(millis: Long): String =
 
 private fun localEndIso(millis: Long): String =
     Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
-        .atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toString()
+        // end_time 是闭区间，取当日最后一微秒（Postgres 时间精度），避免漏掉当天最后 1 秒内的日志。
+        .atTime(23, 59, 59, 999_999_000).atZone(ZoneId.systemDefault()).toInstant().toString()
 
 private fun localDateLabel(millis: Long): String =
     Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
