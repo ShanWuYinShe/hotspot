@@ -370,7 +370,7 @@
 16. **横排紧凑卡 fallback/精选横排例外（R13）**：horizontal 卡仍两段式与旧占位；群详情精选桌面横排保留。
 17. **图片档位/清晰度真机复核（R17）**：dev 图片为本地代理图，unsplash 压缩在预发/线上生效；真机核首屏流量、
     头像 2x vs 3x、nearby 页 +43% 取舍（非首屏可回退 thumb 档）。
-18. **鸿蒙缩略图渐显（5 处已核对，剩 2 处低优先）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；MomentDetail 首图/缩略图失败态已补（PR #235）；**Chat 图片气泡与 PhotoPreview 大图的淡入仍待弱网/慢图环境验证**，暂不阻塞。
+18. **鸿蒙缩略图渐显（已全部接入，关闭）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；MomentDetail 首图/缩略图失败态已补（PR #235）；**Chat 图片气泡（PR #248）与 PhotoPreview 大图淡入已实现并端上弱网验证**：慢图下黑底占位 → `DURATION_SHORT`(200ms) 淡入，reduced-motion 直接终态，失败保持黑底 + 既有失败文案；中间帧以临时 2500ms 时长在 S3 限速 25k 下取证后回退。
 19. **键盘导航扩展（R17）**：`/search`（R6）之外，**通知列表已接入 ↑↓**（PR #242，复用 `lib/search-nav`：搜索框 ↓ 进入列表首项、候选内逐项移动、弹层打开不接管）；feed/首页列表仍待读屏/真机验证后评估（行内控件多、与滚动冲突风险高）。
 20. **a11y/触控/主题自动化纳入门禁（R16）**：axe-core 加 devDependency + 检查脚本，触控覆盖率脚本入库，
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。

@@ -10,6 +10,7 @@ import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { AppRouter } from '../../../core/router/AppRouter';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 
 @Preview
 @Component
@@ -30,11 +31,19 @@ export struct PhotoPreviewPage {
   @State compHeight: number = 0;
   // 加载失败标记（按下标）：弱网/失效链接时给明确反馈，避免纯黑屏无法区分加载中/失败
   @State failedFlags: boolean[] = [];
+  // 加载完成标记（按下标）：慢网淡入（占位黑底 → 200ms 淡入），reduced 直接终态
+  @State loadedFlags: boolean[] = [];
 
   private markFailed(index: number): void {
     const next = [...this.failedFlags];
     next[index] = true;
     this.failedFlags = next;
+  }
+
+  private markLoaded(index: number): void {
+    const next = [...this.loadedFlags];
+    next[index] = true;
+    this.loadedFlags = next;
   }
 
   private getSurfaceBorder(): string {
@@ -71,6 +80,14 @@ export struct PhotoPreviewPage {
               .width('100%')
               .height('100%')
               .objectFit(ImageFit.Contain)
+              // 慢网淡入（对齐聊天气泡/SystemAvatar 口径）：加载中只露黑底，onComplete 后 200ms 淡入；
+              // reduced-motion 直接终态。失败保持黑底并显示既有失败文案。
+              .opacity(this.loadedFlags[index] || MotionUtil.reduced() ? 1 : 0)
+              .animation({
+                duration: MotionUtil.reduced() ? 0 : DesignConstants.ANIMATION.DURATION_SHORT,
+                curve: DesignConstants.ANIMATION.CURVE_EASE_OUT
+              })
+              .onComplete(() => this.markLoaded(index))
               .onError(() => this.markFailed(index))
             if (this.failedFlags[index]) {
               Column() {
