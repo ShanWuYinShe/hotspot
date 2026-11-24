@@ -140,7 +140,7 @@ private fun semanticOf(themeId: ThemeId, isDark: Boolean): SemanticPalette = whe
     ThemeId.INKWASH -> if (isDark) Tokens.Semantic.InkwashDark else Tokens.Semantic.InkwashLight
 }
 
-private fun buildHotSpotColors(themeId: ThemeId, isDark: Boolean): HotSpotColors {
+internal fun buildHotSpotColors(themeId: ThemeId, isDark: Boolean): HotSpotColors {
     val s = semanticOf(themeId, isDark)
     val p = paletteOf(themeId, isDark)
     return HotSpotColors(
@@ -206,7 +206,7 @@ private fun buildHotSpotColors(themeId: ThemeId, isDark: Boolean): HotSpotColors
     )
 }
 
-private fun buildColorScheme(colors: HotSpotColors): ColorScheme {
+internal fun buildColorScheme(colors: HotSpotColors): ColorScheme {
     val base = if (colors.isDark) darkColorScheme() else lightColorScheme()
     return base.copy(
         primary = colors.accent,
@@ -229,6 +229,8 @@ private fun buildColorScheme(colors: HotSpotColors): ColorScheme {
         onBackground = colors.textPrimary,
         surface = colors.surface,
         onSurface = colors.textPrimary,
+        // Material3 容器组件（AlertDialog / BottomSheet / DropdownMenu 等）默认取 surfaceContainer*；
+        // 不映射会回落到 lightColorScheme()/darkColorScheme() 的基线紫色，必须统一走 HotSpot 语义表面。
         surfaceDim = colors.page,
         surfaceBright = colors.surface,
         surfaceContainerLowest = colors.page,

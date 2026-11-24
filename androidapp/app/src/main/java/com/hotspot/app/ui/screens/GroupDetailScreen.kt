@@ -1225,9 +1225,7 @@ private fun GroupTopNavBar(
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false },
-                // 弹层表面与圆角走主题 token（M3 默认容器色/4dp 圆角不在本项目 token 体系内）
-                containerColor = HotSpotTheme.colors.surface,
-                tonalElevation = 0.dp,
+                // 圆角走项目 token（M3 默认 4dp 不在 token 体系内）；容器色与抬升由 ColorScheme 映射统一提供
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(Tokens.Radius.sm.dp),
             ) {
                 if (canManageGroup) {
@@ -2284,9 +2282,6 @@ private fun GroupPasswordDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        // 弹层表面走主题 surface（M3 默认 surfaceContainerHigh 未在本项目 ColorScheme 覆盖，会带紫色调）
-        containerColor = HotSpotTheme.colors.surface,
-        tonalElevation = 0.dp,
         titleContentColor = HotSpotTheme.colors.textPrimary,
         textContentColor = HotSpotTheme.colors.textSecondary,
         title = { Text("输入群口令") },
@@ -2344,8 +2339,6 @@ private fun GroupExitDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = HotSpotTheme.colors.surface,
-        tonalElevation = 0.dp,
         titleContentColor = HotSpotTheme.colors.textPrimary,
         textContentColor = HotSpotTheme.colors.textSecondary,
         title = { Text("退出群组「" + groupName.ifBlank { "该群组" } + "」？") },
