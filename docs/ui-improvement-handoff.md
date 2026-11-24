@@ -399,7 +399,7 @@
 17. **图片档位/清晰度真机复核（R17）**：dev 图片为本地代理图，unsplash 压缩在预发/线上生效；真机核首屏流量、
     头像 2x vs 3x、nearby 页 +43% 取舍（非首屏可回退 thumb 档）。
 18. **鸿蒙缩略图渐显（已全部接入，关闭）**：ProfileGallery（`ProfileMomentGallery` onComplete + opacity 渐显）、MyShares 封面、通知头像（`SystemAvatar` 内置渐显）、搜索/详情等已接；MomentDetail 首图/缩略图失败态已补（PR #235）；**Chat 图片气泡（PR #248）与 PhotoPreview 大图淡入已实现并端上弱网验证**：慢图下黑底占位 → `DURATION_SHORT`(200ms) 淡入，reduced-motion 直接终态，失败保持黑底 + 既有失败文案；中间帧以临时 2500ms 时长在 S3 限速 25k 下取证后回退。
-19. **键盘导航扩展（R17）**：`/search`（R6）之外，**通知列表已接入 ↑↓**（PR #242，复用 `lib/search-nav`：搜索框 ↓ 进入列表首项、候选内逐项移动、弹层打开不接管）；feed/首页列表仍待读屏/真机验证后评估（行内控件多、与滚动冲突风险高）。
+19. **键盘导航扩展（R17，web 已覆盖三处并有门禁）**：`/search`（R6）、**通知列表**（PR #242）、**消息会话列表 + 搜索框 ↓ 进首行**（PR #281/#283，`lib/chat-list-nav`）；上述 7 条断言已纳入 `bun run audit:keyboard` 并作为第四步进 `audit:ui`（覆盖清单见 `docs/frontend-ui-audit.md`「列表键盘导航覆盖与门禁」）。**feed/首页列表仍暂缓**：行内控件多、与滚动/读屏交互冲突风险高，待读屏/真机验证后评估。
 20. **a11y/触控/主题自动化纳入门禁（R16）**：axe-core 加 devDependency + 检查脚本，触控覆盖率脚本入库，
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
 21. **触控例外清单（R16）**：地图 marker/控件（防相邻误点）、相邻 TagPill（WCAG 24 + 间距）、表单控件、skip link；
