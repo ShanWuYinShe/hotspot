@@ -16,6 +16,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { ROUTES } from '@/lib/routes';
 	import type { ChatListData } from '../shared/useChatListData.svelte';
+	import { handleChatSearchArrowDown } from '@/lib/chat-list-nav';
 
 	let { data }: { data: ChatListData } = $props();
 
@@ -143,6 +144,7 @@
 								onChange={(v) => (data.searchQuery = v)}
 								placeholder="搜索会话…"
 								ariaLabel="搜索会话"
+								onKeydown={handleChatSearchArrowDown}
 							/>
 						</div>
 						<ActionIconButton

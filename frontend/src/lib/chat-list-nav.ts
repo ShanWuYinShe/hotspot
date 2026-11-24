@@ -18,3 +18,18 @@ export function nextChatRowIndex(currentIndex: number, count: number, key: ChatL
 	if (next < 0 || next >= count) return null;
 	return next;
 }
+
+/**
+ * 搜索框 ↓ 进入会话列表首行（对齐 /notify 的「搜索框 ↓ 进列表首项」口径）。
+ * 输入框自身不是行内元素，因此由页面把本函数接到 SearchInput 的 onKeydown 上。
+ */
+export function handleChatSearchArrowDown(event: KeyboardEvent): void {
+	if (!isChatListNavKey(event.key) || event.key !== 'ArrowDown' || event.defaultPrevented) return;
+	if (!(event.target instanceof HTMLInputElement)) return;
+	const firstRow = document.querySelector<HTMLButtonElement>('[data-list-item] button[data-cover]');
+	if (!firstRow) return;
+	event.preventDefault();
+	firstRow.focus({ preventScroll: true });
+	// jsdom 等环境没有 scrollIntoView：可选用，避免单测环境炸掉
+	firstRow.scrollIntoView?.({ block: 'nearest' });
+}
