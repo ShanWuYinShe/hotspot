@@ -44,6 +44,8 @@ import { ConfigurationConstant } from '@kit.AbilityKit';
 import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { LucideIcon } from '../../../components/LucideIcon';
+import { BackToTopButton } from '../../../components/BackToTopButton';
+import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 
 const DOMAIN_NUMBER: number = 0xFF27;
 const TAG: string = 'SettingsPage';
@@ -73,6 +75,9 @@ export struct SettingsPage {
   /** 主题卡按压态（sheet 主交互元素；原零按压反馈） */
   @State private themeCardPressed: string = '';
   @State showLogoutConfirm: boolean = false;
+  // 长页面回顶（设置页分组多、可滚动远超一屏）：滚动超过阈值显示浮动按钮
+  @State private showBackToTop: boolean = false;
+  private backToTopScroller: Scroller = new Scroller();
   // 用户偏好开关（对齐前端 settings：私密账号 / 位置共享 / 推送通知 / 深色）
   @State privacyPrivate: boolean = false;
   @State locationVisible: boolean = true;
@@ -775,6 +780,45 @@ export struct SettingsPage {
     })
   }
 
+  /** 滚动超过一屏后显示回顶按钮（阈值固定 600vp，设置页每组卡片高度稳定） */
+  private updateBackToTop(): void {
+    const offset: OffsetResult | undefined = this.backToTopScroller.currentOffset();
+    const y: number = offset ? offset.yOffset : 0;
+    const next: boolean = y > 600;
+    if (next !== this.showBackToTop) {
+      this.showBackToTop = next;
+    }
+  }
+
+  private scrollToTop(): void {
+    this.showBackToTop = false;
+    this.backToTopScroller.scrollTo({
+      xOffset: 0,
+      yOffset: 0,
+      animation: { duration: MotionUtil.reduced() ? 0 : 300, curve: Curve.EaseInOut }
+    });
+  }
+
+  // 注意：不能用 .overlay(空 builder) —— 空 overlay 节点会拦截滚动手势（实测设置页无法滚动）。
+  // 改为 Stack 同级子节点 + HitTestMode.Transparent：按钮可点、空白区手势穿透给下层 Scroll。
+  @Builder
+  private buildBackToTopOverlay() {
+    Row() {
+      if (this.showBackToTop) {
+        BackToTopButton({
+          visible: true,
+          onTap: () => { this.scrollToTop(); }
+        })
+      }
+    }
+    .width('100%')
+    .height('100%')
+    .padding({ right: DesignConstants.SPACING.LG, bottom: DesignConstants.SPACING.XXL })
+    .justifyContent(FlexAlign.End)
+    .alignItems(VerticalAlign.Bottom)
+    .hitTestBehavior(HitTestMode.Transparent)
+  }
+
   build() {
     NavDestination() {
       Stack() {
@@ -792,7 +836,7 @@ export struct SettingsPage {
         })
 
         Refresh({ refreshing: $$this.metaRefreshing, builder: RefreshIndicator }) {
-          Scroll() {
+          Scroll(this.backToTopScroller) {
             PageShellContainer({ variant: 'form', currentBreakpoint: this.currentBreakpoint, fillHeight: false }) {
               Column() {
                 // === 账号信息（web settings：仅登录态显示，标题+说明在卡外） ===
@@ -1003,6 +1047,7 @@ export struct SettingsPage {
           .edgeEffect(EdgeEffect.None)
           .scrollBar(BarState.Off)
           .padding({ bottom: SafeAreaUtils.resolveBottomPadding(0, DesignConstants.SPACING.XXL, DesignConstants.SPACING.LG) })
+          .onDidScroll(() => { this.updateBackToTop(); })
         }
         .pullToRefresh(false)
         .refreshOffset(64)
@@ -1025,6 +1070,9 @@ export struct SettingsPage {
         dragBar: true,
         backgroundColor: this.getCurrentThemePalette().sheetBackground
       })
+
+      // 回顶浮动按钮（Stack 子节点，手势穿透，见 builder 注释）
+      this.buildBackToTopOverlay()
 
       // 退出登录二次确认
       SystemDialog({
