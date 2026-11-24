@@ -7,6 +7,7 @@ import { DefaultConfig, PageNames } from '../../../constants/AppConstants';
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { SystemToast } from '../../../components/SystemToast';
+import { SystemInput } from '../../../components/SystemInput';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { EmptyState, LoadingMoreIndicator, RefreshIndicator } from '../../../components/EmptyState';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
@@ -47,6 +48,13 @@ export struct MySharesPage {
   @State private hasMore: boolean = false;
   @State private nextCursor: string = '';
   @State private revokingShareId: string = '';
+  // 搜索：契约 share/fetch_created 无 keyword，搜索时先加载完全部分页（最多 10 页）再本地筛选。
+  @State private searchKeyword: string = '';
+  @State private searchResults: ShareListItem[] = [];
+  @State private searchLoading: boolean = false;
+  @State private searchError: string = '';
+  private searchTimer: number = -1;
+  private searchSeq: number = 0;
   @State private showRevokeConfirm: boolean = false;
   @State private pendingRevokeShare: ShareListItem | null = null;
   private readonly pageLimit: number = DefaultConfig.PAGE_SIZE;
@@ -161,7 +169,7 @@ export struct MySharesPage {
 
   private async loadMoreShares(): Promise<void> {
     if (this.isDestroyed) return;
-    if (!this.isLoggedIn || !this.hasMore || this.isLoadingMore) {
+    if (!this.isLoggedIn || !this.hasMore || this.isLoadingMore || this.searchKeyword.trim()) {
       return;
     }
 
@@ -194,6 +202,67 @@ export struct MySharesPage {
     }
   }
 
+  private matchShare(share: ShareListItem, keyword: string): boolean {
+    const hay = [
+      share.share_code,
+      share.preview?.title ?? '',
+      share.preview?.subtitle ?? '',
+      this.formatShareType(share.share_type),
+      this.shareStatusText(share)
+    ].join(' ').toLowerCase();
+    return hay.includes(keyword.toLowerCase());
+  }
+
+  private onSearchChange(value: string): void {
+    this.searchKeyword = value;
+    if (this.searchTimer >= 0) {
+      clearTimeout(this.searchTimer);
+      this.searchTimer = -1;
+    }
+    const keyword = value.trim();
+    if (!keyword) {
+      this.searchSeq++;
+      this.searchResults = [];
+      this.searchError = '';
+      this.searchLoading = false;
+      this.sharesDataSource.setData(this.shares);
+      return;
+    }
+    this.searchTimer = setTimeout(() => {
+      this.searchTimer = -1;
+      void this.runSearch(keyword);
+    }, 350);
+  }
+
+  private async runSearch(keyword: string): Promise<void> {
+    const seq = ++this.searchSeq;
+    this.searchLoading = true;
+    this.searchError = '';
+    const all: ShareListItem[] = [];
+    let cursor = '';
+    for (let page = 0; page < 10; page++) {
+      const request: FetchCreatedSharesRequest = {
+        pagination: { limit: this.pageLimit }
+      };
+      if (cursor) {
+        request.pagination = { limit: this.pageLimit, cursor: cursor };
+      }
+      const response = await ApiClient.listMyShares(request);
+      if (seq !== this.searchSeq) return;
+      if (response.code !== 0) {
+        this.searchError = getErrorMessage(response, '搜索分享失败');
+        break;
+      }
+      all.push(...(response.data?.items ?? []));
+      cursor = response.data?.next_cursor ?? '';
+      if (!cursor) break;
+    }
+    if (this.isDestroyed || seq !== this.searchSeq) return;
+    this.searchResults = all.filter((item: ShareListItem) => this.matchShare(item, keyword));
+    this.sharesDataSource.setData(this.searchResults);
+    this.searchLoading = false;
+  }
+
   private async revokeShare(share: ShareListItem): Promise<void> {
     if (this.isDestroyed) return;
     if (!this.isLoggedIn || this.revokingShareId === share.share_id) {
@@ -206,7 +275,12 @@ export struct MySharesPage {
       if (this.isDestroyed) return;
       if (response.code === 0) {
         this.shares = this.shares.filter(item => item.share_id !== share.share_id);
-        this.sharesDataSource.setData(this.shares);
+        if (this.searchKeyword.trim()) {
+          this.searchResults = this.searchResults.filter(item => item.share_id !== share.share_id);
+          this.sharesDataSource.setData(this.searchResults);
+        } else {
+          this.sharesDataSource.setData(this.shares);
+        }
         SystemToast.showSuccess('分享已撤销', this.getUIContext());
       } else {
         SystemToast.showError(getErrorMessage(response, '撤销分享失败'), this.getUIContext());
@@ -234,6 +308,24 @@ export struct MySharesPage {
         onBack: () => { AppRouter.pop(); },
       })
 
+      // 搜索框（分享数量较多时快速定位；契约无 keyword：加载全部分页后本地筛选）
+      if (this.isLoggedIn && this.shares.length > 0) {
+        SystemInput({
+          value: this.searchKeyword,
+          placeholder: '搜索分享代码 / 标题 / 类型…',
+          prefixIcon: AppIcon.SEARCH,
+          showPrefixIcon: true,
+          showClearButton: true,
+          inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
+          onChange: (value: string) => { this.onSearchChange(value); }
+        })
+          .margin({
+            left: DesignConstants.SPACING.LG,
+            right: DesignConstants.SPACING.LG,
+            bottom: DesignConstants.SPACING.MD
+          })
+      }
+
       if (!this.isLoggedIn) {
         LoginPromptView({
           title: '登录后查看我的分享',
@@ -248,6 +340,38 @@ export struct MySharesPage {
           ]
         })
           .layoutWeight(1)
+      } else if (this.searchKeyword.trim()) {
+        if (this.searchLoading) {
+          SystemLoadingView({ message: '正在搜索分享…' })
+            .layoutWeight(1)
+        } else if (this.searchError) {
+          EmptyState({
+            bare: true,
+            icon: AppIcon.WARNING,
+            message: this.searchError,
+            actionLabel: '重试',
+            onAction: () => { void this.runSearch(this.searchKeyword.trim()); }
+          })
+            .layoutWeight(1)
+        } else if (this.searchResults.length === 0) {
+          EmptyState({
+            bare: true,
+            icon: AppIcon.SHARE,
+            title: '没有找到分享',
+            message: '换个分享代码 / 标题 / 类型关键词试试，或清空搜索词。',
+            actionLabel: '清空搜索',
+            onAction: () => { this.onSearchChange(''); }
+          })
+            .layoutWeight(1)
+        } else {
+          Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
+            this.buildShareList()
+          }
+          .layoutWeight(1)
+          .pullToRefresh(false)
+          .refreshOffset(64)
+          .onRefreshing(() => { this.refreshShares(); })
+        }
       } else if (this.isLoading) {
         SystemLoadingView({ message: '正在加载我的分享…' })
           .layoutWeight(1)
@@ -334,7 +458,13 @@ export struct MySharesPage {
         endMargin: DesignConstants.SPACING.MD
       })
 
-      if (this.isLoadingMore) {
+      if (this.searchKeyword.trim()) {
+        if (this.searchResults.length > 0) {
+          ListItem() {
+            ListEnd()
+          }
+        }
+      } else if (this.isLoadingMore) {
         ListItem() {
           LoadingMoreIndicator()
         }
@@ -354,7 +484,7 @@ export struct MySharesPage {
       bottom: SafeAreaUtils.resolveBottomPadding(this.safeAreaBottom, DesignConstants.SPACING.SM, DesignConstants.SPACING.SM)
     })
     .scrollBar(BarState.Off)
-    .onReachEnd(() => { this.loadMoreShares(); })
+    .onReachEnd(() => { if (!this.searchKeyword.trim()) this.loadMoreShares(); })
   }
 
   @Builder
