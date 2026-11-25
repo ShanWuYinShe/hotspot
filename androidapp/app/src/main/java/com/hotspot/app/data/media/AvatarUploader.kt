@@ -71,7 +71,7 @@ object AvatarUploader {
         val declaredSize = meta.size ?: openAssetLength(resolver, uri)
         require(declaredSize == null || declaredSize <= MAX_AVATAR_BYTES) { "头像不能超过 5MB" }
 
-        val bytes = resolver.openInputStream(uri)?.use { readAtMost(it, MAX_AVATAR_BYTES) }
+        val bytes = MediaReadErrors.open(resolver, uri, "照片")?.use { readAtMost(it, MAX_AVATAR_BYTES) }
             ?: error("无法读取图片")
         val extension = when (mime) {
             "image/png" -> "png"

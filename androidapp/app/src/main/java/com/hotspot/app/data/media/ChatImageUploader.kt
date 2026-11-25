@@ -69,7 +69,7 @@ object ChatImageUploader {
         val declaredSize = meta.size ?: openAssetLength(resolver, uri)
         require(declaredSize == null || declaredSize <= MAX_CHAT_IMAGE_BYTES) { "图片不能超过 10MB" }
 
-        val bytes = resolver.openInputStream(uri)?.use { readAtMost(it, MAX_CHAT_IMAGE_BYTES) }
+        val bytes = MediaReadErrors.open(resolver, uri, "照片")?.use { readAtMost(it, MAX_CHAT_IMAGE_BYTES) }
             ?: error("无法读取图片")
         val extension = when (mime) {
             "image/png" -> "png"
