@@ -1,5 +1,6 @@
 package com.hotspot.app.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -40,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,6 +62,7 @@ import com.hotspot.app.ui.components.ListRow
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemCard
+import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.DarkModePref
 import com.hotspot.app.ui.theme.Dimens
@@ -84,6 +88,7 @@ fun SettingsScreen(
     onOpenMap: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     val themeController = AppContainer.themeController
     val uiTheme by themeController.state.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
@@ -94,6 +99,16 @@ fun SettingsScreen(
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
     var isAdmin by remember { mutableStateOf(false) }
+    var showChangePassword by remember { mutableStateOf(false) }
+    var oldPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var changingPassword by remember { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var showDeleteAccount by remember { mutableStateOf(false) }
+    var deleteConfirmation by remember { mutableStateOf("") }
+    var deletingAccount by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         isAdmin = AppContainer.adminRepository.me() is ApiResult.Ok
@@ -181,6 +196,31 @@ fun SettingsScreen(
                         )
                     }
                 }
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            SettingsSectionTitle(title = "账号安全", subtitle = "修改密码或注销账号，操作立即生效")
+            Spacer(Modifier.height(Spacing.sm))
+            SystemCard(contentPadding = PaddingValues(vertical = Spacing.xs)) {
+                ListRow(
+                    title = "修改密码",
+                    subtitle = "验证当前密码后设置新密码，其他设备会自动退出",
+                    onClick = {
+                        oldPassword = ""
+                        newPassword = ""
+                        confirmPassword = ""
+                        passwordError = null
+                        showChangePassword = true
+                    },
+                )
+                ListRow(
+                    title = "删除账号",
+                    subtitle = "永久注销账号，公开内容将匿名化保留",
+                    onClick = {
+                        deleteConfirmation = ""
+                        deleteError = null
+                        showDeleteAccount = true
+                    },
+                )
             }
             Spacer(Modifier.height(Spacing.xl))
             SettingsSectionTitle(title = "外观与显示", subtitle = "自定义界面的视觉色彩与深浅模式，全局即时生效")
@@ -340,6 +380,153 @@ fun SettingsScreen(
             }
             Spacer(Modifier.height(Spacing.xxl))
         }
+    }
+
+    if (showChangePassword) {
+        val ready = oldPassword.isNotBlank() && newPassword.length >= 8 &&
+            newPassword == confirmPassword && !changingPassword
+        AlertDialog(
+            onDismissRequest = { if (!changingPassword) showChangePassword = false },
+            title = { Text("修改密码") },
+            text = {
+                Column {
+                    Text(
+                        text = "修改成功后，当前设备保持登录，其他设备会自动退出。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    SystemInput(
+                        value = oldPassword,
+                        onValueChange = { oldPassword = it; passwordError = null },
+                        label = "当前密码",
+                        visualTransformation = PasswordVisualTransformation(),
+                        enabled = !changingPassword,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    SystemInput(
+                        value = newPassword,
+                        onValueChange = { newPassword = it; passwordError = null },
+                        label = "新密码（至少 8 位）",
+                        visualTransformation = PasswordVisualTransformation(),
+                        enabled = !changingPassword,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    SystemInput(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it; passwordError = null },
+                        label = "确认新密码",
+                        visualTransformation = PasswordVisualTransformation(),
+                        enabled = !changingPassword,
+                        errorText = if (confirmPassword.isNotEmpty() && confirmPassword != newPassword) "两次输入不一致" else null,
+                    )
+                    if (passwordError != null) {
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            text = passwordError.orEmpty(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.danger,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (changingPassword) "保存中…" else "保存",
+                    onClick = {
+                        if (!ready) return@SystemButton
+                        scope.launch {
+                            changingPassword = true
+                            when (val result = AppContainer.authRepository.changePassword(oldPassword, newPassword)) {
+                                is ApiResult.Ok -> {
+                                    showChangePassword = false
+                                    Toast.makeText(context, "密码已修改，其他设备已退出登录", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> passwordError = result.error.userMessage
+                            }
+                            changingPassword = false
+                        }
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    enabled = ready,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!changingPassword) showChangePassword = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !changingPassword,
+                )
+            },
+        )
+    }
+
+    if (showDeleteAccount) {
+        val ready = deleteConfirmation == "DELETE_MY_ACCOUNT" && !deletingAccount
+        AlertDialog(
+            onDismissRequest = { if (!deletingAccount) showDeleteAccount = false },
+            title = { Text("删除账号？") },
+            text = {
+                Column {
+                    Text(
+                        text = "删除后不可恢复：登录凭证、私聊记录、收藏与关注关系会被清除；你发布的公开内容会匿名化保留。",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    SystemInput(
+                        value = deleteConfirmation,
+                        onValueChange = { deleteConfirmation = it; deleteError = null },
+                        label = "输入 DELETE_MY_ACCOUNT 确认",
+                        placeholder = "DELETE_MY_ACCOUNT",
+                        enabled = !deletingAccount,
+                    )
+                    if (deleteError != null) {
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            text = deleteError.orEmpty(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.danger,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (deletingAccount) "注销中…" else "永久删除",
+                    onClick = {
+                        if (!ready) return@SystemButton
+                        scope.launch {
+                            deletingAccount = true
+                            when (val result = AppContainer.authRepository.deleteAccount(deleteConfirmation)) {
+                                is ApiResult.Ok -> {
+                                    showDeleteAccount = false
+                                    AppContainer.tokenStore.clear()
+                                    Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> deleteError = result.error.userMessage
+                            }
+                            deletingAccount = false
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = ready,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!deletingAccount) showDeleteAccount = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !deletingAccount,
+                )
+            },
+        )
     }
 
     if (showLogoutConfirm) {
