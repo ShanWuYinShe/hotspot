@@ -148,6 +148,23 @@ class AuthRepository(
         return result
     }
 
+    /** spec/auth change_password：旧密码校验通过后修改；服务端自动吊销其它会话。 */
+    suspend fun changePassword(oldPassword: String, newPassword: String): ApiResult<Unit> =
+        api.postVoid(
+            ApiEndpoint.AUTH_CHANGE_PASSWORD,
+            buildJsonObject {
+                put("old_password", oldPassword)
+                put("new_password", newPassword)
+            },
+        )
+
+    /** spec/user delete_account：confirmation 必须精确为 DELETE_MY_ACCOUNT；成功后调用方清会话。 */
+    suspend fun deleteAccount(confirmation: String): ApiResult<Unit> =
+        api.postVoid(
+            ApiEndpoint.USERS_DELETE_ACCOUNT,
+            buildJsonObject { put("confirmation", confirmation) },
+        )
+
     private fun toSession(result: ApiResult<AuthTokenPair>): ApiResult<AuthSession> = when (result) {
         is ApiResult.Ok -> {
             val pair = result.data
