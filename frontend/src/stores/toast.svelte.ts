@@ -4,10 +4,17 @@
 
 export type ToastKind = 'info' | 'success' | 'danger';
 
+export interface ToastAction {
+	label: string;
+	onAction: () => void;
+}
+
 export interface ToastItem {
 	id: number;
 	message: string;
 	kind: ToastKind;
+	/** 可选行动入口（如「分享链接已复制」→「管理分享」）；一条 toast 最多一个，保持反馈轻量。 */
+	action?: ToastAction;
 }
 
 let items = $state<ToastItem[]>([]);
@@ -15,9 +22,9 @@ let nextId = 1;
 const DURATION_MS = 3500;
 const MAX_VISIBLE = 3;
 
-export function showToast(message: string, kind: ToastKind = 'info'): void {
+export function showToast(message: string, kind: ToastKind = 'info', action?: ToastAction): void {
 	const id = nextId++;
-	items = [...items.slice(-(MAX_VISIBLE - 1)), { id, message, kind }];
+	items = [...items.slice(-(MAX_VISIBLE - 1)), { id, message, kind, action }];
 	setTimeout(() => dismissToast(id), DURATION_MS);
 }
 

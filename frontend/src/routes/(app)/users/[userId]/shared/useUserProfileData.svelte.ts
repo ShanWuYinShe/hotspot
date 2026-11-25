@@ -1,3 +1,4 @@
+import { goto } from '$app/navigation';
 import { openTheDoor, follow, block, setRemark, netError } from '@/api';
 import type { UserPresenceStatus } from '@/api/types';
 import { auth, requireAuth } from '@/stores/auth.svelte';
@@ -6,6 +7,7 @@ import { platform } from '@/stores/platform.svelte';
 import { formatCardTime, formatCount, formatDistance } from '@/lib/utils';
 import { computeBspLayoutSequence } from '@/lib/semantic-bsp';
 import { copyShareLink } from '@/lib/share';
+import { ROUTES } from '@/lib/routes';
 
 export interface GalleryMomentItem {
 	id: string;
@@ -230,7 +232,11 @@ export function useUserProfileData(userId: () => string) {
 			return;
 		}
 		shareCopied = true;
-		showToast(result === 'shared' ? '分享链接已复制' : '链接已复制', 'success');
+		showToast(
+			result === 'shared' ? '分享链接已复制' : '链接已复制',
+			'success',
+			result === 'shared' ? { label: '管理分享', onAction: () => void goto(ROUTES.meShares) } : undefined
+		);
 		window.setTimeout(() => (shareCopied = false), 1600);
 	};
 
