@@ -80,6 +80,7 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.MediaUrls
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 private const val SITE_BASE_URL = "https://chaoset.com"
@@ -299,7 +300,7 @@ fun UserProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 GlassIconButton(iconRes = R.drawable.ic_action_share, contentDescription = "分享资料") {
-                    shareProfile(context, user?.user?.nickname.orEmpty(), userId)
+                    shareProfile(context, scope, user?.user?.nickname.orEmpty(), userId)
                 }
                 Box {
                     GlassIconButton(iconRes = R.drawable.ic_action_more, contentDescription = "更多操作") {
@@ -746,12 +747,21 @@ private fun handleOf(userId: String): String {
     return handle.ifBlank { "user" }
 }
 
-private fun shareProfile(context: Context, nickname: String, userId: String) {
-    val url = SITE_BASE_URL + "/users/" + userId
-    val intent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, nickname.ifBlank { "HotSpot 用户" } + "的主页")
-        putExtra(Intent.EXTRA_TEXT, "「" + nickname.ifBlank { "HotSpot 用户" } + "」的主页：" + url)
+/** 分享资料：优先 share/create 生成可撤销分享码，失败/匿名场景降级为原始主页链接。 */
+private fun shareProfile(context: Context, scope: CoroutineScope, nickname: String, userId: String) {
+    scope.launch {
+        val fallbackUrl = SITE_BASE_URL + "/users/" + userId
+        val url = when (val result = AppContainer.profileRepository.createUserShare(userId)) {
+            is ApiResult.Ok -> result.data.shareCode.takeIf { it.isNotBlank() }
+                ?.let { SITE_BASE_URL + "/share/" + it }
+                ?: fallbackUrl
+            is ApiResult.Err -> fallbackUrl
+        }
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, nickname.ifBlank { "HotSpot 用户" } + "的主页")
+            putExtra(Intent.EXTRA_TEXT, "「" + nickname.ifBlank { "HotSpot 用户" } + "」的主页：" + url)
+        }
+        context.startActivity(Intent.createChooser(intent, "分享资料"))
     }
-    context.startActivity(Intent.createChooser(intent, "分享资料"))
 }

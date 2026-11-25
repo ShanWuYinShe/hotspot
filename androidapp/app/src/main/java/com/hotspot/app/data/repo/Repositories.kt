@@ -34,6 +34,7 @@ import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PresignFileInput
 import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.SessionListData
+import com.hotspot.app.data.model.ShareCreated
 import com.hotspot.app.data.model.ShareListItem
 import com.hotspot.app.data.model.UserSettings
 import com.hotspot.app.data.model.PrivateChatItem
@@ -932,6 +933,18 @@ class ProfileRepository(private val api: ApiClient) {
     /** spec/users settings：隐私级别与位置共享。 */
     suspend fun settings(): ApiResult<UserSettings> =
         api.post(ApiEndpoint.USERS_SETTINGS, emptyObject(), UserSettings.serializer())
+
+    /** spec/share create：创建用户主页分享链接（幂等键每次新生成）。 */
+    suspend fun createUserShare(userId: String): ApiResult<ShareCreated> = api.post(
+        ApiEndpoint.SHARE_CREATE,
+        buildJsonObject {
+            put("share_type", "user")
+            put("payload", buildJsonObject { put("shared_user_id", userId) })
+            put("expires_in_seconds", JsonNull)
+        },
+        ShareCreated.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
 
     /** spec/share fetch_created：我创建的分享，按类型筛选 + keyset 分页。 */
     suspend fun createdShares(shareType: String?, cursor: String?): ApiResult<Page<ShareListItem>> =
