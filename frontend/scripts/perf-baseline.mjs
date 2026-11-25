@@ -6,6 +6,7 @@
 //   cd frontend && bun run perf:baseline
 //   bun run perf:baseline -- --base http://localhost:8889 --pages /,/messages
 //   bun run perf:baseline -- --compare .workwork/browser-check/perf-<旧时间戳>/report.json
+//   bun run perf:baseline -- --base https://chaoset.com --no-login --pages /login,/register   # 生产公开页（不尝试登录）
 // 前置：dev 环境已启动且已 seed；agent-browser 已安装（~/.local/bin/agent-browser 或 AB 环境变量）。
 //
 // 输出：<仓库根>/.workwork/browser-check/perf-<时间戳>/{report.json,summary.md}
@@ -26,6 +27,7 @@ function argValue(name, fallback) {
 const BASE = argValue('--base', process.env.PERF_BASE || 'http://localhost:8888');
 const SESSION = argValue('--session', 'hotspot-perf-' + process.pid);
 const COMPARE = argValue('--compare', '');
+const NO_LOGIN = process.argv.includes('--no-login');
 const PAGES = argValue(
 	'--pages',
 	'/,/nearby/people,/nearby/moments,/nearby/groups,/messages,/search,/notify,/me,/settings'
@@ -105,24 +107,29 @@ function main() {
 	console.log('PAGES=' + PAGES.join(','));
 
 	try {
-		ab(['open', BASE + '/']);
-		sleep(1200);
-		const pathNow = jsonFromEval('JSON.stringify({ path: location.pathname })');
-		if (pathNow.path.includes('login')) {
-			ab(['open', BASE + '/login']);
-			sleep(1200);
-			const login = jsonFromEval(
-				'(() => { const ins = document.querySelectorAll("input"); if (ins.length < 2) return JSON.stringify({ ok: false }); const set = (el, v) => { const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; s.call(el, v); el.dispatchEvent(new Event("input", { bubbles: true })); }; set(ins[0], "' +
-					LOGIN_ID +
-					'"); set(ins[1], "' +
-					PASSWORD +
-					'"); document.querySelector("button[type=submit]").click(); return JSON.stringify({ ok: true }); })()'
-			);
-			if (!login.ok) throw new Error('登录页找不到账号/密码输入框');
-			sleep(2500);
-			console.log('登录：QA 账号已尝试登录');
+		if (NO_LOGIN) {
+			// 生产公开页模式：只测公开路由，禁止对线上发起种子账号登录尝试
+			console.log('登录：--no-login（只测公开页面，不尝试登录）');
 		} else {
-			console.log('登录：会话已存在（跳过登录）');
+			ab(['open', BASE + '/']);
+			sleep(1200);
+			const pathNow = jsonFromEval('JSON.stringify({ path: location.pathname })');
+			if (pathNow.path.includes('login')) {
+				ab(['open', BASE + '/login']);
+				sleep(1200);
+				const login = jsonFromEval(
+					'(() => { const ins = document.querySelectorAll("input"); if (ins.length < 2) return JSON.stringify({ ok: false }); const set = (el, v) => { const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; s.call(el, v); el.dispatchEvent(new Event("input", { bubbles: true })); }; set(ins[0], "' +
+						LOGIN_ID +
+						'"); set(ins[1], "' +
+						PASSWORD +
+						'"); document.querySelector("button[type=submit]").click(); return JSON.stringify({ ok: true }); })()'
+				);
+				if (!login.ok) throw new Error('登录页找不到账号/密码输入框');
+				sleep(2500);
+				console.log('登录：QA 账号已尝试登录');
+			} else {
+				console.log('登录：会话已存在（跳过登录）');
+			}
 		}
 
 		const results = [];
