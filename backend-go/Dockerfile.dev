@@ -17,8 +17,10 @@ ARG GOPROXY
 # 默认走 goproxy.cn（proxy.golang.org 在国内不可达），compose 亦可显式传参覆盖
 ENV GOPROXY=${GOPROXY:-https://goproxy.cn,direct}
 
+# 默认官方源；国内本地构建可传 --build-arg APK_MIRROR=mirrors.aliyun.com。
+ARG APK_MIRROR=""
 RUN --mount=type=cache,target=/go/pkg/mod \
-    sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories \
+    if [ -n "${APK_MIRROR}" ]; then sed -i "s#dl-cdn.alpinelinux.org#${APK_MIRROR}#g" /etc/apk/repositories; fi \
     && apk add --no-cache git ca-certificates tzdata curl postgresql-client \
     && go install github.com/air-verse/air@v${AIR_VERSION}
 
