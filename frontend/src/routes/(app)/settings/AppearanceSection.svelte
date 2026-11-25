@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Check, MapPin, Monitor, Moon, Palette, Sun } from '@lucide/svelte';
 	import { cn } from '@/lib/utils';
+	import { resolveRovingRadioIndex } from '@/lib/roving-radio';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import SettingsSection from './SettingsSection.svelte';
@@ -32,6 +33,21 @@
 				? '当前使用深色外观'
 				: '当前使用浅色外观'
 	);
+	// 分段控件方向键（WAI-ARIA radio group）：焦点随选中项移动，Home/End 跳首末项。
+	// 只处理组内 radio 的键盘事件；Tab 仍是唯一「跳出组」的入口（roving tabindex）。
+	function handleRadioGroupKeydown(event: KeyboardEvent, select: (index: number) => void) {
+		const group = event.currentTarget as HTMLElement | null;
+		if (!group) return;
+		const radios = Array.from(group.querySelectorAll<HTMLButtonElement>('[role="radio"]'));
+		const current = radios.indexOf(document.activeElement as HTMLButtonElement);
+		if (current < 0) return;
+		const next = resolveRovingRadioIndex(current, radios.length, event.key);
+		if (next === null) return;
+		event.preventDefault();
+		radios[next]?.focus();
+		select(next);
+	}
+
 	const mapSourceDesc = $derived(
 		mapSourceStore.source === 'amap' ? '高德地图 · 国内地点更贴合' : 'OpenStreetMap · 全球开源数据'
 	);
@@ -48,7 +64,8 @@
 				<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
 			{/snippet}
 			{#snippet control()}
-				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="选择全局视觉色彩风格">
+				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="选择全局视觉色彩风格"
+				onkeydown={(e) => handleRadioGroupKeydown(e, (i) => setTheme(THEME_OPTIONS[i].id as AppTheme))}>
 					{#each THEME_OPTIONS as opt}
 						{@const isSelected = theme.theme === opt.id}
 						{@const details = opt.id === 'vibrant'
@@ -60,6 +77,7 @@
 							type="button"
 							role="radio"
 							aria-checked={isSelected}
+							tabindex={isSelected ? 0 : -1}
 							onclick={() => setTheme(opt.id as AppTheme)}
 							class={cn(
 								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-rapid focus-ring hit-slop-44',
@@ -105,7 +123,8 @@
 				{/if}
 			{/snippet}
 			{#snippet control()}
-				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="外观模式">
+				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="外观模式"
+					onkeydown={(e) => handleRadioGroupKeydown(e, (i) => setColorScheme(COLOR_SCHEME_OPTIONS[i].id as ColorSchemeMode))}>
 					{#each COLOR_SCHEME_OPTIONS as opt}
 						{@const isSelected = theme.colorScheme === opt.id}
 						{@const Icon = opt.id === 'dark' ? Moon : opt.id === 'light' ? Sun : Monitor}
@@ -114,6 +133,7 @@
 							type="button"
 							role="radio"
 							aria-checked={isSelected}
+							tabindex={isSelected ? 0 : -1}
 							onclick={() => setColorScheme(opt.id as ColorSchemeMode)}
 							class={cn(
 								'group relative flex flex-col justify-between rounded-xl p-2.5 sm:p-3 text-left transition-all duration-rapid focus-ring hit-slop-44',
