@@ -265,16 +265,24 @@ fun MomentDetailScreen(
         }
     }
 
-    /** 分享瞬间：系统分享面板（与 Web shareMoment 同口径：标题 + 线上链接）。 */
+    /** 分享瞬间：优先 share/create 生成可撤销链接，失败/匿名场景降级为原始详情链接。 */
     fun shareMoment() {
         val authorName = moment?.user?.nickname?.ifBlank { "HotSpot 用户" } ?: "HotSpot 用户"
-        val url = "https://chaoset.com/moments/" + momentId
-        val send = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, authorName + "的瞬间")
-            putExtra(Intent.EXTRA_TEXT, "「" + authorName + "」的瞬间：" + url)
+        scope.launch {
+            val fallbackUrl = "https://chaoset.com/moments/" + momentId
+            val url = when (val result = AppContainer.profileRepository.createMomentShare(momentId)) {
+                is ApiResult.Ok -> result.data.shareCode.takeIf { it.isNotBlank() }
+                    ?.let { "https://chaoset.com/share/" + it }
+                    ?: fallbackUrl
+                is ApiResult.Err -> fallbackUrl
+            }
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_SUBJECT, authorName + "的瞬间")
+                putExtra(Intent.EXTRA_TEXT, "「" + authorName + "」的瞬间：" + url)
+            }
+            context.startActivity(Intent.createChooser(send, "分享瞬间"))
         }
-        context.startActivity(Intent.createChooser(send, "分享瞬间"))
     }
 
     suspend fun loadComments() {
