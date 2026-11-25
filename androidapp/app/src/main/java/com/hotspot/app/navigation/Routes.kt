@@ -43,6 +43,8 @@ object Routes {
     const val MOMENT_DETAIL = "moment/{momentId}?commentId={commentId}"
     // 群详情（推入页；设计稿 87:1696，入口：我的群组 / 附近群组 / 搜索群组结果）
     const val GROUP = "group/{groupId}"
+    // 创建群组（无独立设计画板；入口：我的群组 / 附近群组页头）
+    const val GROUP_CREATE = "create_group"
     // 群聊会话（设计稿 87:3529；入口：群详情「打开群聊」，群成员可见）
     const val GROUP_CHAT = "group_chat/{groupId}"
     // 他人主页（设计稿 87:5163，users/open_the_door 聚合资料 + 最近瞬间）
@@ -71,6 +73,8 @@ object Routes {
         if (commentId.isNullOrBlank()) "moment/" + momentId else "moment/" + momentId + "?commentId=" + commentId
 
     fun group(groupId: String): String = "group/" + groupId
+
+    const val CREATE_GROUP = GROUP_CREATE
 
     /** 关系页（0 = 好友 / 1 = 关注 / 2 = 粉丝）。 */
     fun relationships(tab: Int): String = "me/relationships?tab=" + tab

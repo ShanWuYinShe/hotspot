@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import com.hotspot.app.ui.components.Badge
 import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.EmptyStateIconTone
+import com.hotspot.app.ui.components.HeaderIconButton
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
@@ -63,6 +65,7 @@ private val LoadMoreThreshold = 240
 @Composable
 fun MeGroupsScreen(
     onBack: () -> Unit,
+    onCreateGroup: () -> Unit,
     onOpenGroup: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -102,7 +105,17 @@ fun MeGroupsScreen(
     val onlineTotal = loaded.sumOf { it.onlineMembersCount ?: 0 }
 
     Column(Modifier.fillMaxSize()) {
-        PageHeader(title = "我的群组", onBack = onBack)
+        PageHeader(
+            title = "我的群组",
+            onBack = onBack,
+            actions = {
+                HeaderIconButton(
+                    icon = Icons.Filled.Add,
+                    contentDescription = "创建群组",
+                    onClick = onCreateGroup,
+                )
+            },
+        )
 
         Column(
             modifier = Modifier
