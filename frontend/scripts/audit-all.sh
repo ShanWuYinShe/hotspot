@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UI 质量门禁一键入口：browser-qa --mobile + a11y + touch + keyboard。
+# UI 质量门禁一键入口：browser-qa --mobile + a11y + touch + keyboard + permission。
 # 任一子检查失败 → 整体退出 1；末尾打印各子报告路径与摘要。
 #
 # 用法：bun run audit:ui
@@ -22,12 +22,13 @@ done
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-declare -a NAMES=("browser-qa" "audit:a11y" "audit:touch" "audit:keyboard")
+declare -a NAMES=("browser-qa" "audit:a11y" "audit:touch" "audit:keyboard" "audit:permission")
 declare -a CMDS=(
   "bash $SCRIPT_DIR/browser-qa.sh --base $BASE --mobile"
   "bash $SCRIPT_DIR/browser-a11y.sh --base $BASE"
   "bash $SCRIPT_DIR/browser-touch.sh --base $BASE"
   "bash $SCRIPT_DIR/keyboard-nav.sh --base $BASE"
+  "bash $SCRIPT_DIR/permission-ui.sh --base $BASE"
 )
 declare -a RCS=()
 declare -a OUTS=()
