@@ -38,9 +38,9 @@ android {
         minSdk = 26
         targetSdk = 37
         // 版本号：默认与仓库发布 tag 对齐；发新版时通过环境变量覆盖即可，无需改代码
-        // （HOTSPOT_VERSION_NAME=v1.15.9 HOTSPOT_VERSION_CODE=12 ./gradlew assembleRelease）。
-        versionCode = providers.environmentVariable("HOTSPOT_VERSION_CODE").orNull?.toIntOrNull() ?: 12
-        versionName = providers.environmentVariable("HOTSPOT_VERSION_NAME").orNull?.removePrefix("v") ?: "1.15.9"
+        // （HOTSPOT_VERSION_NAME=v1.15.10 HOTSPOT_VERSION_CODE=13 ./gradlew assembleRelease）。
+        versionCode = providers.environmentVariable("HOTSPOT_VERSION_CODE").orNull?.toIntOrNull() ?: 13
+        versionName = providers.environmentVariable("HOTSPOT_VERSION_NAME").orNull?.removePrefix("v") ?: "1.15.10"
 
         buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
     }
