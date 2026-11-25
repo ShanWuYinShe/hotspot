@@ -48,7 +48,7 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.HeaderIconButton
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
-import com.hotspot.app.ui.components.LoadingState
+import com.hotspot.app.ui.components.CardGridSkeleton
 import com.hotspot.app.ui.components.NearbyFilterChips
 import com.hotspot.app.ui.components.NearbyGroupCard
 import com.hotspot.app.ui.components.NearbyLocationChip
@@ -213,7 +213,7 @@ private fun NearbyGroupsContent(
         }
         Spacer(Modifier.height(Spacing.xs))
         when {
-            state.loading && state.items.isEmpty() -> LoadingState(message = "正在寻找附近群组…")
+            state.loading && state.items.isEmpty() -> CardGridSkeleton(columns = 2, rows = 3)
             state.error != null && state.items.isEmpty() -> ErrorState(
                 message = state.error ?: "加载失败",
                 onRetry = { scope.launch { state.initialLoad(loader) } },
