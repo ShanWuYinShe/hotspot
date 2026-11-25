@@ -14,7 +14,7 @@ import { AppRouter } from '../../../core/router/AppRouter';
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { UserItem, GeoPoint, SearchUsersRequest } from '../../../core/types/api';
 import { UserCard } from '../components/UserCard';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { CardGridSkeleton } from '../../../components/states/CardGridSkeleton';
 import { SystemInput } from '../../../components/SystemInput';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
@@ -372,8 +372,8 @@ export struct NearbyUsersListPage {
         // ── 正文（对齐前端内容列 pt-4 pb-6）──
         // 内容区
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载附近的人…' })
-            .layoutWeight(1)
+          // 卡墙首屏用同构卡片骨架（加载前/后网格几何一致，避免 spinner 空窗）
+          CardGridSkeleton({ columns: this.getGridColumnCount(), rows: 3 })
         } else if (!this.hasAnyData() && this.errorMessage) {
           EmptyState({
             bare: true,
