@@ -82,6 +82,7 @@ fun CreateGroupScreen(
     var description by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(GROUP_CATEGORIES.first()) }
     var visibilityIndex by remember { mutableIntStateOf(0) }
+    var requiresApproval by remember { mutableStateOf(false) }
     var location by remember { mutableStateOf<DefaultLocation?>(null) }
     var coverUri by remember { mutableStateOf<Uri?>(null) }
     var avatarFileId by remember { mutableStateOf<String?>(null) }
@@ -107,7 +108,7 @@ fun CreateGroupScreen(
 
     LaunchedEffect(Unit) { location = AppContainer.defaultLocation() }
 
-    val canCreate = name.trim().length >= 2 && location != null && !creating
+    val canCreate = name.trim().length >= 2 && location != null && !creating && !uploadingCover
 
     fun submit() {
         if (!canCreate) return
@@ -121,7 +122,8 @@ fun CreateGroupScreen(
                     description = description.trim().ifBlank { null },
                     tags = listOf(category),
                     joinMethod = if (visibilityIndex == 0) "direct" else "invite_only",
-                    requiresApproval = false,
+                    // 仅邀请群组不需要新人审核；公开群组才允许开启。
+                    requiresApproval = requiresApproval && visibilityIndex == 0,
                     location = loc,
                     avatarFileId = avatarFileId,
                     idempotencyKey = idempotencyKey,
@@ -176,6 +178,23 @@ fun CreateGroupScreen(
                         text = "可选 · JPG/PNG/WebP ≤5MB",
                         style = MaterialTheme.typography.labelSmall,
                         color = colors.textSecondary,
+                    )
+                }
+                if (avatarFileId != null) {
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text(
+                        text = "移除封面",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.accent,
+                        modifier = Modifier
+                            .clip(AppShapes.pill)
+                            .clickable {
+                                if (!uploadingCover) {
+                                    coverUri = null
+                                    avatarFileId = null
+                                }
+                            }
+                            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
                     )
                 }
             }
@@ -244,6 +263,22 @@ fun CreateGroupScreen(
                 onSelected = { visibilityIndex = it },
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (visibilityIndex == 0) {
+                Spacer(Modifier.height(Spacing.md))
+                Text(
+                    text = "新人加入",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("直接加入", "申请需审核"),
+                    selectedIndex = if (requiresApproval) 1 else 0,
+                    onSelected = { requiresApproval = it == 1 },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Spacer(Modifier.height(Spacing.lg))
             Row(
                 modifier = Modifier
