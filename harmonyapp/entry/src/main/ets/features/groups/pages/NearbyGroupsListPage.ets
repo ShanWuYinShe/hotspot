@@ -15,7 +15,7 @@ import { AppRouter, GroupDetailRouteParam } from '../../../core/router/AppRouter
 import { PageNames, DefaultConfig } from '../../../constants/AppConstants';
 import { GroupItem, GeoPoint, SearchGroupsRequest } from '../../../core/types/api';
 import { GroupCard } from '../components/GroupCard';
-import { SystemLoadingView } from '../../../components/SystemLoadingView';
+import { CardGridSkeleton } from '../../../components/states/CardGridSkeleton';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
 import { ListEnd } from '../../../components/ListEnd';
 import { AppIcon } from '../../../components/SystemIcon';
@@ -289,8 +289,8 @@ export struct NearbyGroupsListPage {
         // ── 正文（对齐前端内容列 pt-4 pb-6）──
         // 内容区
         if (this.isLoading) {
-          SystemLoadingView({ message: '正在加载附近的群组…' })
-            .layoutWeight(1)
+          // 卡墙首屏用同构卡片骨架（与附近的人同一原语）
+          CardGridSkeleton({ columns: this.getColumnCount(), rows: 3 })
         } else if (!this.hasAnyData() && this.errorMessage) {
           // 错误分流动作：位置不可用属「重试不可解」死路（同 r70/r15 模式），
           // 引导直达位置设置页；其余错误维持重试
