@@ -5,6 +5,7 @@ import { useGroupDetail } from '@/lib/group-data.svelte';
 import { onlineUsers, presence, watchPresence } from '@/stores/presence.svelte';
 import { auth, requireAuth } from '@/stores/auth.svelte';
 import { setGroupMemberRole, setGroupMemberMute, banGroupMember, removeGroupMember } from '@/api';
+import { copyShareLink } from '@/lib/share';
 import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 import type { UpdateGroupRequest } from '@/api/types';
 
@@ -231,6 +232,24 @@ export function useGroupPageData(options: UseGroupPageDataOptions) {
 
 	// 更多操作菜单
 	let moreOpen = $state(false);
+	// 群组分享：与用户主页/瞬间详情同口径（share/create → 复制 /share/[code]；
+	// 失败降级复制群组页地址），成功时 toast 带「管理分享」入口。
+	let shareCopied = $state(false);
+
+	const copyGroupLink = async () => {
+		const result = await copyShareLink({ type: 'group', id: options.groupId() });
+		if (result === 'failed') {
+			showToast('分享链接复制失败，请重试', 'danger');
+			return;
+		}
+		shareCopied = true;
+		showToast(
+			result === 'shared' ? '分享链接已复制' : '链接已复制',
+			'success',
+			result === 'shared' ? { label: '管理分享', onAction: () => void goto(ROUTES.meShares) } : undefined
+		);
+		window.setTimeout(() => (shareCopied = false), 1600);
+	};
 	let reportOpen = $state(false);
 	const canReportGroup = $derived(gd.myRole !== 'owner');
 
@@ -283,6 +302,8 @@ export function useGroupPageData(options: UseGroupPageDataOptions) {
 		// 菜单与举报
 		get moreOpen() { return moreOpen; },
 		set moreOpen(v: boolean) { moreOpen = v; },
+		get shareCopied() { return shareCopied; },
+		copyGroupLink,
 		get reportOpen() { return reportOpen; },
 		set reportOpen(v: boolean) { reportOpen = v; },
 		get canReportGroup() { return canReportGroup; }
