@@ -45,18 +45,11 @@
 			{detail.description || '这个群还没有填写简介。'}
 		</p>
 
-		{#snippet onlineValue()}
-			<span class="inline-flex items-center gap-1.5 tabular-nums">
-				{detail.online ?? 0}
-				<span class="size-1.5 rounded-full bg-status-online" aria-hidden="true"></span>
-			</span>
-		{/snippet}
-
 		<MetricRow
 			variant="strip"
 			items={[
 				{ label: '群成员', value: formatCount(detail.members ?? 0) },
-				{ label: '在线', value: onlineValue, tone: 'positive' },
+				{ label: '在线', value: formatCount(detail.online ?? 0), tone: 'positive' },
 				{ label: '距你', value: detail.distance || '—' },
 				{ label: '公告', value: announcements.length }
 			]}
