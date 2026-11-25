@@ -344,6 +344,14 @@ REL_SECOND="$(qa_json_field "${REL_RAW}" second)"
 if [ "${REL_COUNT:-0}" -lt 2 ]; then
   fail "/me/relationships 行不足 2（好友种子缺失或选择器失配），无法验证键盘导航"
 else
+  # 回归保护：关系页搜索框必须在 1440 桌面直接可见（曾因放在 integrated 页头 below 里
+  # 只能从岛展开面板操作，页面本体看不到搜索入口）。
+  SEARCH_VIS="$(ab eval '(() => { const i = document.querySelector("input[aria-label=\"搜索关系\"]"); return JSON.stringify({ visible: i && i.offsetParent !== null ? "true" : "false" }); })()' 2>/dev/null | tail -1)"
+  if [ "$(qa_json_field "$SEARCH_VIS" visible)" = "true" ]; then
+    pass "/me/relationships 搜索框在桌面直接可见（无需展开岛）"
+  else
+    fail "/me/relationships 搜索框在桌面不可见（offsetParent=null）"
+  fi
   ab eval '(() => { document.querySelector("input[aria-label=\"搜索关系\"]")?.focus(); return true; })()' >/dev/null 2>&1
   ab press ArrowDown >/dev/null 2>&1
   AFTER="$(active_label)"
