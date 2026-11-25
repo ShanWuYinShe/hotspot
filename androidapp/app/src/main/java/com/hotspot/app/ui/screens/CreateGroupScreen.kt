@@ -1,5 +1,9 @@
 package com.hotspot.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,11 +39,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.AvatarUploader
 import com.hotspot.app.data.model.DefaultLocation
+import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.PageHeader
@@ -57,7 +65,7 @@ private val GROUP_CATEGORIES = listOf("摄影", "音乐", "户外", "阅读", "�
 
 /**
  * 创建群组（groups/create，owner = 当前用户）：
- * 名称/简介/分类/可见性 + ClientConfig 默认位置；成功回调 group_id 进入群详情。
+ * 封面（可选）/名称/简介/分类/可见性 + ClientConfig 默认位置；成功回调 group_id 进入群详情。
  * 设计稿无独立建群画板，按 design-system 原语组合（对齐 Web CreateGroupSheet 语义）。
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -67,6 +75,7 @@ fun CreateGroupScreen(
     onCreated: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val repository = AppContainer.groupRepository
     var name by remember { mutableStateOf("") }
@@ -74,9 +83,27 @@ fun CreateGroupScreen(
     var category by remember { mutableStateOf(GROUP_CATEGORIES.first()) }
     var visibilityIndex by remember { mutableIntStateOf(0) }
     var location by remember { mutableStateOf<DefaultLocation?>(null) }
+    var coverUri by remember { mutableStateOf<Uri?>(null) }
+    var avatarFileId by remember { mutableStateOf<String?>(null) }
+    var uploadingCover by remember { mutableStateOf(false) }
     var creating by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val idempotencyKey = remember { UUID.randomUUID().toString() }
+    val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null && !uploadingCover) {
+            uploadingCover = true
+            error = null
+            scope.launch {
+                AvatarUploader.upload(context, uri, category = "group_avatar")
+                    .onSuccess {
+                        coverUri = uri
+                        avatarFileId = it.fileId
+                    }
+                    .onFailure { error = "群头像读取或上传失败，请重新选择图片" }
+                uploadingCover = false
+            }
+        }
+    }
 
     LaunchedEffect(Unit) { location = AppContainer.defaultLocation() }
 
@@ -96,6 +123,7 @@ fun CreateGroupScreen(
                     joinMethod = if (visibilityIndex == 0) "direct" else "invite_only",
                     requiresApproval = false,
                     location = loc,
+                    avatarFileId = avatarFileId,
                     idempotencyKey = idempotencyKey,
                 )
             ) {
@@ -114,6 +142,43 @@ fun CreateGroupScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Spacing.lg),
         ) {
+            Spacer(Modifier.height(Spacing.md))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(contentAlignment = Alignment.Center) {
+                    Avatar(
+                        name = name.ifBlank { "群" },
+                        imageUrl = coverUri?.toString(),
+                        size = 64.dp,
+                    )
+                    if (uploadingCover) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = colors.accent,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(Spacing.md))
+                Column {
+                    SystemButton(
+                        text = if (uploadingCover) "上传中…" else "选择群头像",
+                        onClick = {
+                            coverPicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                            )
+                        },
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                        enabled = !uploadingCover,
+                    )
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        text = "可选 · JPG/PNG/WebP ≤5MB",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                }
+            }
             Spacer(Modifier.height(Spacing.md))
             SystemInput(
                 value = name,
