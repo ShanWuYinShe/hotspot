@@ -1293,13 +1293,18 @@ class GroupRepository(private val api: ApiClient) {
     )
 
     /** 更新群名称/简介（spec/api_spec_group.md → groups/admin/update，owner/admin 守卫；其余字段传 null 不改）。 */
-    suspend fun updateGroupInfo(groupId: String, name: String, description: String?): ApiResult<GroupItem> = api.post(
+    suspend fun updateGroupInfo(
+        groupId: String,
+        name: String,
+        description: String?,
+        avatarFileId: String? = null,
+    ): ApiResult<GroupItem> = api.post(
         ApiEndpoint.GROUPS_ADMIN_UPDATE,
         buildJsonObject {
             put("group_id", groupId)
             put("name", name)
             put("description", description)
-            put("avatar_file_id", JsonNull)
+            if (avatarFileId != null) put("avatar_file_id", avatarFileId) else put("avatar_file_id", JsonNull)
             put("tags", JsonNull)
             put("password", JsonNull)
             put("clear_password", JsonNull)

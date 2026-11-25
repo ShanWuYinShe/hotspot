@@ -14,7 +14,7 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStream
 
 /**
- * 用户头像上传（spec/api_spec_media.md）：presign_upload(category=avatar) → PUT 直传 → complete_upload。
+ * 头像上传（spec/api_spec_media.md）：presign_upload(category=avatar/group_avatar) → PUT 直传 → complete_upload。
  * 契约：5MB、JPEG/PNG/WebP；客户端先拦一次，服务端仍会二次校验。
  * 与 ChatImageUploader 同类的「先读尺寸/边读边限流」策略，避免 Photo Picker 大图整份进内存。
  */
@@ -23,8 +23,12 @@ object AvatarUploader {
     private const val READ_BUFFER_BYTES = 16 * 1024
     private val ALLOWED_MIME = setOf("image/jpeg", "image/png", "image/webp")
 
-    suspend fun upload(context: Context, uri: Uri): Result<UploadedMedia> = runCatching {
-        val payload = withContext(Dispatchers.IO) { readLocalImage(context, uri) }
+    suspend fun upload(
+        context: Context,
+        uri: Uri,
+        category: String = "avatar",
+    ): Result<UploadedMedia> = runCatching {
+        val payload = withContext(Dispatchers.IO) { readLocalImage(context, uri, category) }
         require(payload.bytes.size.toLong() <= MAX_AVATAR_BYTES) { "头像不能超过 5MB" }
 
         val presigned = when (
@@ -34,7 +38,7 @@ object AvatarUploader {
                         fileName = payload.name,
                         fileSize = payload.bytes.size.toLong(),
                         mimeType = payload.mime,
-                        category = "avatar",
+                        category = category,
                     ),
                 ),
             )
@@ -58,7 +62,7 @@ object AvatarUploader {
 
     private data class OpenableMeta(val displayName: String?, val size: Long?)
 
-    private fun readLocalImage(context: Context, uri: Uri): LocalImage {
+    private fun readLocalImage(context: Context, uri: Uri, category: String): LocalImage {
         val resolver = context.contentResolver
         val meta = queryOpenable(resolver, uri)
         val mime = resolveMime(resolver.getType(uri), meta.displayName)
@@ -77,7 +81,8 @@ object AvatarUploader {
         return LocalImage(
             bytes = bytes,
             name = meta.displayName?.takeIf { it.isNotBlank() }
-                ?: ("avatar_" + System.currentTimeMillis() + "." + extension),
+                ?: (if (category == "group_avatar") "group_avatar_" else "avatar_") +
+                    System.currentTimeMillis() + "." + extension,
             mime = mime,
         )
     }
