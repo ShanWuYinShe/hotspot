@@ -22,6 +22,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hotspot.app.navigation.HotSpotApp
 import com.hotspot.app.ui.components.AmbientCanvas
@@ -39,6 +40,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // API 29 及以下 enableEdgeToEdge 依赖 systemUiVisibility 的 layout flags；
+        // 后续设置状态栏图标明暗时若整体覆盖这些 flags，窗口会重新为状态栏让位，
+        // 根布局再叠一次 safeDrawing Top，表现为顶部多出一整个状态栏高度。
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val themeController: ThemeController = AppContainer.themeController
         setContent {
             val uiTheme by themeController.state.collectAsStateWithLifecycle()
@@ -95,11 +100,15 @@ private fun SystemBarsAppearance(dark: Boolean) {
             window.insetsController?.setSystemBarsAppearance(if (dark) 0 else mask, mask)
         } else {
             @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = if (dark) {
-                0
-            } else {
-                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
-            }
+            val lightFlags = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            // 保留 enableEdgeToEdge 设置的 layout flags：整体覆盖会让窗口重新内缩状态栏，
+            // 根布局的 safeDrawing Top 就会变成第二份状态栏留白。
+            var flags = window.decorView.systemUiVisibility or
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            flags = if (dark) flags and lightFlags.inv() else flags or lightFlags
+            window.decorView.systemUiVisibility = flags
         }
     }
 }

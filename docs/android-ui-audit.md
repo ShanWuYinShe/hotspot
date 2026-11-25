@@ -4,9 +4,11 @@
 
 ## 走查环境
 
-- 设备：`HotSpotPhone` AVD（1080×2400，API 36），`adb reverse tcp:8888 tcp:8888` 联调 dev 后端。
+- 真机：`WQCDU20414003234`（YAL-AL50，Android 10，1080×2340/480dpi，状态栏+挖孔 inset 108px）；真机优先。
+- 模拟器兜底：`HotSpotPhone` AVD（1080×2400，API 36），`adb reverse tcp:8888 tcp:8888` 联调 dev 后端。
 - 构建：`./gradlew --no-daemon assembleDebug -PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`。
 - 账号：`admin@hotspot.local`（平台管理员，可进入管理后台）。
+- 顶部安全区判据：`dumpsys window` 的 statusBars/cutout 为 108px 时，ComposeView 顶应为 0，页面首个内容容器只加一次 108px；登录页 `HotSpot` 文案顶约 297px。
 - 主题入口：我的 → 设置 → 应用主题（星际/清野/水墨）+ 外观模式（浅色/深色）。
 - 判定以**截图**为准；`uiautomator dump` 只用于定位，不单独作为页面正常的证据。
 

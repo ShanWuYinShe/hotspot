@@ -231,6 +231,9 @@ app/src/main/java/com/hotspot/app/
 - **安全区一律取系统 `WindowInsets`**：根 `MainActivity` 统一注入 `safeDrawing` 的 Top/Horizontal；底部贴底组件
   （BottomNav / CommentInputBar / GroupActionDock）自行使用 `navigationBars`/`ime`。**禁止在页面写死顶/底部安全区 dp 值**——
   状态栏高度、挖孔、手势条因设备而异，写死会顶出多余留白或压到系统栏。
+- **API 29 及以下的状态栏图标切换必须保留 edge-to-edge layout flags**：用 `systemUiVisibility` 设置
+  `LIGHT_STATUS_BAR`/`LIGHT_NAVIGATION_BAR` 时不能整体覆盖，需保留 `LAYOUT_STABLE | LAYOUT_FULLSCREEN |
+  LAYOUT_HIDE_NAVIGATION`；否则窗口会重新为状态栏让位，根布局的 `safeDrawing` 再叠一次，顶部多出整整一个状态栏高度。
 - **通栏头图页（瞬间详情）的沉浸式规则**：根布局默认给所有页面加 Top 安全区，纯色页面状态栏与背景同色、视觉连续；
   头图页若也内缩，状态栏会露出一条背景色，与图片割裂。此类页面进入时置 `ChromeInsets.edgeToEdgeTop`
   （根不再加 Top 内边距，内容从屏幕顶开始），页面内用 `WindowInsets.statusBars` 给顶部浮层/无图占位留白；
