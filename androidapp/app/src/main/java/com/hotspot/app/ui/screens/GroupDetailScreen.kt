@@ -71,6 +71,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
 import android.widget.Toast
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -434,6 +435,7 @@ fun GroupDetailScreen(
         currentDetail?.viewerState?.role == "admin"
     val canManageAnnouncements = canManageGroupAnnouncements(currentDetail?.viewerState?.role)
     val isGroupOwner = currentDetail?.viewerState?.role == "owner"
+    val canShareGroup = currentDetail != null
 
     LaunchedEffect(showInvite, inviteQuery) {
         if (!showInvite) return@LaunchedEffect
@@ -458,7 +460,26 @@ fun GroupDetailScreen(
     Column(Modifier.fillMaxSize()) {
         GroupTopNavBar(
             onBack = onBack,
-            moreEnabled = canManageGroup || canLeaveGroup || canReportGroup,
+            moreEnabled = canShareGroup || canManageGroup || canLeaveGroup || canReportGroup,
+            canShareGroup = canShareGroup,
+            onShareGroup = {
+                val name = currentDetail?.group?.name.orEmpty().ifBlank { "HotSpot 群组" }
+                scope.launch {
+                    val fallback = "https://chaoset.com/groups/" + groupId
+                    val url = when (val result = AppContainer.profileRepository.createGroupShare(groupId)) {
+                        is ApiResult.Ok -> result.data.shareCode.takeIf { it.isNotBlank() }
+                            ?.let { "https://chaoset.com/share/" + it }
+                            ?: fallback
+                        is ApiResult.Err -> fallback
+                    }
+                    val send = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_SUBJECT, name + "的群组")
+                        putExtra(Intent.EXTRA_TEXT, "「" + name + "」的群组：" + url)
+                    }
+                    context.startActivity(Intent.createChooser(send, "分享群组"))
+                }
+            },
             canLeaveGroup = canLeaveGroup,
             canReportGroup = canReportGroup,
             onLeaveGroup = {
@@ -1183,13 +1204,15 @@ fun GroupDetailScreen(
 
 /**
  * 顶部导航：左 42 圆钮返回；右 42 圆钮「更多」。
- * 更多菜单：成员且非群主展示「退出群组」；非群主（含未加入）展示「举报群组」；
- * 群主/详情未加载时无可用动作，更多钮禁用。返回钮始终可用。
+ * 更多菜单：详情加载后可分享群组；成员且非群主展示「退出群组」；非群主（含未加入）展示「举报群组」；
+ * 详情未加载时无可用动作，更多钮禁用。返回钮始终可用。
  */
 @Composable
 private fun GroupTopNavBar(
     onBack: () -> Unit,
     moreEnabled: Boolean,
+    canShareGroup: Boolean,
+    onShareGroup: () -> Unit,
     canLeaveGroup: Boolean,
     canReportGroup: Boolean,
     canManageGroup: Boolean,
@@ -1229,6 +1252,21 @@ private fun GroupTopNavBar(
                 // 圆角走项目 token（M3 默认 4dp 不在 token 体系内）；容器色与抬升由 ColorScheme 映射统一提供
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(Tokens.Radius.sm.dp),
             ) {
+                if (canShareGroup) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = "分享群组",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = HotSpotTheme.colors.textPrimary,
+                            )
+                        },
+                        onClick = {
+                            menuExpanded = false
+                            onShareGroup()
+                        },
+                    )
+                }
                 if (canManageGroup) {
                     DropdownMenuItem(
                         text = {
