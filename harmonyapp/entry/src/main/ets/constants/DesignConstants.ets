@@ -71,7 +71,8 @@ export interface FontLineHeights {
  */
 export interface FontLineRatio {
   DEFAULT: number; // 1.5 — 基线（对齐前端 base.css 的 h1-h4/p/button 元素级 1.5）
-  CARD: number; // 1.7 — 卡片/聊天气泡正文（对齐前端 --leading-card）
+  CHAT: number; // 1.43 — 聊天气泡正文（对齐前端 --leading-chat）
+  CARD: number; // 1.7 — 卡片正文（对齐前端 --leading-card）
   COPY: number; // 1.75 — 长文正文（对齐前端 --leading-copy）
 }
 
@@ -606,6 +607,8 @@ const FONT: FontSystem = {
   // 比例制行高（对齐前端 --leading-*）：多行正文用它，绝对档只用于单行紧凑场景
   LINE_RATIO: {
     DEFAULT: 1.5,
+    /** 聊天气泡正文（对齐前端 --leading-chat 1.43）：14→20，比卡片 1.7 更紧凑 */
+    CHAT: 1.43,
     CARD: 1.7,
     COPY: 1.75,
   },
@@ -812,8 +815,9 @@ const COMPONENT: ComponentConstants = {
 const CHAT: ChatLayoutConstants = {
   // 气泡主体圆角对齐前端 shape-md（16）；原 18 为已删除近邻档（RADIUS 刻度 12/16/20/24）
   BUBBLE_RADIUS: 16,
-  BUBBLE_PADDING_H: 16,
-  BUBBLE_PADDING_V: 10,
+  // 对齐 Web 气泡 px-3 py-1.5 / Figma 内距 12×6：短消息不再出现大面积空高
+  BUBBLE_PADDING_H: 12,
+  BUBBLE_PADDING_V: 6,
   IMAGE_BUBBLE_PADDING_H: 14,
   IMAGE_BUBBLE_PADDING_V: 6,
   BUBBLE_MAX_WIDTH: '75%',

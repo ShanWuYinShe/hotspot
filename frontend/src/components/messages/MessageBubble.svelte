@@ -8,8 +8,8 @@
 	// 可挂载 ⋮ 菜单（撤回/编辑，按 canRecall/canEdit 动态显示）；编辑为内联 textarea 态。
 	// 收到的消息（!sent）可挂载 ⋮ 菜单「举报」（canReport，reports/create target_type='message'）。
 	//
-	// R16 排版重做：正文 14px（text-md）+ leading-card（1.7，design-system「卡片/聊天气泡正文」档）；
-	// 时间戳 11px（xs）、群聊发送者名 12px（sm）；圆角统一 rounded-md（16）——
+	// R16 排版重做：正文 14px（text-md）+ leading-chat（1.43，design-system 聊天气泡专档）；
+	// 气泡内距 12/6（px-3 py-1.5），避免短消息出现大面积空高；时间戳 11px（xs）、群聊发送者名 12px（sm）；圆角统一 rounded-md（16）——
 	// 旧实现 [md sm md md] 把 12px 缺口放在上方靠发送者一侧，观感碎且方向反直觉。
 	// 对比度：自己气泡上的正文/时间戳一律 full on-accent（旧 opacity-soft 0.7 实测 3.97:1 不达标）；
 	// 撤回消息改用中性气泡底色，避免 accent 底色上的低对比斜体。
@@ -101,7 +101,7 @@
 	{#if !sent && senderName}
 		<p class="mb-1 px-1 text-sm font-medium text-text-secondary">{senderName}</p>
 	{/if}
-	<div class="relative max-w-chat-bubble rounded-md {imageUrl && !recalled ? '' : 'px-4 py-2 ' + bubbleClass}">
+	<div class="relative max-w-chat-bubble rounded-md {imageUrl && !recalled ? '' : 'px-3 py-1.5 ' + bubbleClass}">
 		{#if imageUrl && !recalled}
 			<!-- 图片消息：不套气泡（与鸿蒙端一致），圆角图 + 图下时间/已读；按钮承载键盘可达的「查看大图」 -->
 			<button
@@ -160,7 +160,7 @@
 			</div>
 		{:else}
 			<p
-				class="text-md leading-card {recalled
+				class="text-md leading-chat {recalled
 					? 'italic text-text-secondary'
 					: sent
 						? 'text-text-on-accent'

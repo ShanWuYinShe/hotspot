@@ -50,6 +50,8 @@ val HotSpotTypography = Typography(
 object HotSpotTextStyles {
     /** 极小 uppercase 分组标（--text-xxs 10 / 字距 eyebrow）。 */
     val eyebrow = style(fs.xxs, 15f, FontWeight.Medium, letterSpacing = 1.4.sp)
+    /** 聊天气泡正文（对齐 Web --leading-chat：14→20）。 */
+    val chat = style(fs.md, 20f)
     /** 计数 / 时间戳 / 辅助文字（--text-xs 11）。 */
     val caption = style(fs.xs, 15f)
     /** 版权/极微说明（--text-xxs 10）。 */
