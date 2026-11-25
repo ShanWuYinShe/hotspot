@@ -21,7 +21,7 @@
   --cst-palette-page-bg: #EFF3F9;
   --cst-palette-chat-bg: #EDF3FC;
   --cst-palette-text: #16233A;
-  --cst-palette-text-muted: #52647F;
+  --cst-palette-text-muted: #47586F;
   /* accent 两次加深：#3578D4→#2E66C0 解决白字压实底（4.39→5.56）；
      #2E66C0→#2B5EB2 解决 accent 文本压 accent 淡底（4.35→最差 4.72 ≥4.5，全站复审 C2）。
      透明度派生（border/accent-soft/hover）必须随主色同步改十进制 RGB，否则色相漂移 */
@@ -205,7 +205,7 @@
   --cst-palette-page-bg: #0B0E14;
   --cst-palette-chat-bg: #0E121B;
   --cst-palette-text: #F1F5F9;
-  --cst-palette-text-muted: #94A3B8;
+  --cst-palette-text-muted: #A3B1C4;
   --cst-palette-accent-primary: #5B9CF6;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(148, 163, 184, 0.05);

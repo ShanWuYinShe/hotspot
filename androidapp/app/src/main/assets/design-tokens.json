@@ -33,7 +33,7 @@
           "shadow-dark": "#00000014",
           "shadow-light": "#ffffff00",
           "text": "#16233aff",
-          "text-muted": "#52647fff",
+          "text-muted": "#47586fff",
           "warning": "#9c4708ff"
         },
         "semantic": {
@@ -75,7 +75,7 @@
           "marker-user-border": "#2b5eb23d",
           "marker-user-glow": "#2b5eb273",
           "navigation-active-indicator": "#2b5eb2ff",
-          "navigation-content": "#52647fff",
+          "navigation-content": "#47586fff",
           "navigation-content-active": "#2b5eb2ff",
           "status-danger": "#c81e4eff",
           "status-danger-bg": "#c81e4e21",
@@ -109,7 +109,7 @@
           "text-on-accent": "#ffffffff",
           "text-on-status": "#0b1424ff",
           "text-primary": "#16233aff",
-          "text-secondary": "#52647fff",
+          "text-secondary": "#47586fff",
           "text-status-danger-on-soft": "#a41f4aff",
           "text-status-online-on-soft": "#0f5c5aff",
           "text-status-warning-on-soft": "#814012ff"
@@ -157,7 +157,7 @@
           "shadow-dark": "#000000bf",
           "shadow-light": "#94a3b80d",
           "text": "#f1f5f9ff",
-          "text-muted": "#94a3b8ff",
+          "text-muted": "#a3b1c4ff",
           "warning": "#fbbf24ff"
         },
         "semantic": {
@@ -199,7 +199,7 @@
           "marker-user-border": "#5b9cf64d",
           "marker-user-glow": "#5b9cf680",
           "navigation-active-indicator": "#5b9cf6ff",
-          "navigation-content": "#94a3b8ff",
+          "navigation-content": "#a3b1c4ff",
           "navigation-content-active": "#5b9cf6ff",
           "status-danger": "#f87171ff",
           "status-danger-bg": "#f8717124",
@@ -233,7 +233,7 @@
           "text-on-accent": "#0b0e14ff",
           "text-on-status": "#071426ff",
           "text-primary": "#f1f5f9ff",
-          "text-secondary": "#94a3b8ff",
+          "text-secondary": "#a3b1c4ff",
           "text-status-danger-on-soft": "#f78b8cff",
           "text-status-online-on-soft": "#5adaacff",
           "text-status-warning-on-soft": "#f9ca4fff"
@@ -283,7 +283,7 @@
           "shadow-dark": "#00000000",
           "shadow-light": "#ffffff00",
           "text": "#152219ff",
-          "text-muted": "#3f5547ff",
+          "text-muted": "#354b3dff",
           "warning": "#7e602bff"
         },
         "semantic": {
@@ -325,7 +325,7 @@
           "marker-user-border": "#39714f38",
           "marker-user-glow": "#39714f6b",
           "navigation-active-indicator": "#39714fff",
-          "navigation-content": "#3f5547ff",
+          "navigation-content": "#354b3dff",
           "navigation-content-active": "#39714fff",
           "status-danger": "#a04b37ff",
           "status-danger-bg": "#a04b371f",
@@ -359,7 +359,7 @@
           "text-on-accent": "#ffffffff",
           "text-on-status": "#ffffffff",
           "text-primary": "#152219ff",
-          "text-secondary": "#3f5547ff",
+          "text-secondary": "#354b3dff",
           "text-status-danger-on-soft": "#844331ff",
           "text-status-online-on-soft": "#326144ff",
           "text-status-warning-on-soft": "#695427ff"
@@ -407,7 +407,7 @@
           "shadow-dark": "#00000000",
           "shadow-light": "#ffffff00",
           "text": "#e8f1e9ff",
-          "text-muted": "#a8bdaeff",
+          "text-muted": "#b7cdbdff",
           "warning": "#c4a75aff"
         },
         "semantic": {
@@ -449,7 +449,7 @@
           "marker-user-border": "#52b8784d",
           "marker-user-glow": "#52b87880",
           "navigation-active-indicator": "#52b878ff",
-          "navigation-content": "#a8bdaeff",
+          "navigation-content": "#b7cdbdff",
           "navigation-content-active": "#52b878ff",
           "status-danger": "#d97c5aff",
           "status-danger-bg": "#d97c5a24",
@@ -483,7 +483,7 @@
           "text-on-accent": "#0c1911ff",
           "text-on-status": "#0c1911ff",
           "text-primary": "#e8f1e9ff",
-          "text-secondary": "#a8bdaeff",
+          "text-secondary": "#b7cdbdff",
           "text-status-danger-on-soft": "#dc9377ff",
           "text-status-online-on-soft": "#70c38fff",
           "text-status-warning-on-soft": "#cbb677ff"
@@ -533,7 +533,7 @@
           "shadow-dark": "#00000000",
           "shadow-light": "#ffffff00",
           "text": "#2b2a26ff",
-          "text-muted": "#6b675dff",
+          "text-muted": "#5d594fff",
           "warning": "#7f6422ff"
         },
         "semantic": {
@@ -575,7 +575,7 @@
           "marker-user-border": "#a63a2e38",
           "marker-user-glow": "#a63a2e6b",
           "navigation-active-indicator": "#a63a2eff",
-          "navigation-content": "#6b675dff",
+          "navigation-content": "#5d594fff",
           "navigation-content-active": "#a63a2eff",
           "status-danger": "#9e2140ff",
           "status-danger-bg": "#9e21401f",
@@ -609,7 +609,7 @@
           "text-on-accent": "#ffffffff",
           "text-on-status": "#ffffffff",
           "text-primary": "#2b2a26ff",
-          "text-secondary": "#6b675dff",
+          "text-secondary": "#5d594fff",
           "text-status-danger-on-soft": "#87233bff",
           "text-status-online-on-soft": "#3b644cff",
           "text-status-warning-on-soft": "#6e5823ff"
@@ -657,7 +657,7 @@
           "shadow-dark": "#00000099",
           "shadow-light": "#ffffff00",
           "text": "#eae6daff",
-          "text-muted": "#a8a49aff",
+          "text-muted": "#b7b3a8ff",
           "warning": "#d6a54eff"
         },
         "semantic": {
@@ -699,7 +699,7 @@
           "marker-user-border": "#df7f6a4d",
           "marker-user-glow": "#df7f6a80",
           "navigation-active-indicator": "#df7f6aff",
-          "navigation-content": "#a8a49aff",
+          "navigation-content": "#b7b3a8ff",
           "navigation-content-active": "#df7f6aff",
           "status-danger": "#de8496ff",
           "status-danger-bg": "#de849624",
@@ -733,7 +733,7 @@
           "text-on-accent": "#1f1512ff",
           "text-on-status": "#1f1512ff",
           "text-primary": "#eae6daff",
-          "text-secondary": "#a8a49aff",
+          "text-secondary": "#b7b3a8ff",
           "text-status-danger-on-soft": "#e098a4ff",
           "text-status-online-on-soft": "#97bca4ff",
           "text-status-warning-on-soft": "#dab26aff"

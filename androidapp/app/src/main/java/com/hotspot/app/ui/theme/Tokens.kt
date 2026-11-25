@@ -33,7 +33,7 @@ object Tokens {
             override val shadowDark: Color = Color(0x14000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x00FFFFFF) // --cst-palette-shadow-light
             override val text: Color = Color(0xFF16233A) // --cst-palette-text
-            override val textMuted: Color = Color(0xFF52647F) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFF47586F) // --cst-palette-text-muted
             override val warning: Color = Color(0xFF9C4708) // --cst-palette-warning
         }
         /** Vibrant · dark */
@@ -59,7 +59,7 @@ object Tokens {
             override val shadowDark: Color = Color(0xBF000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x0D94A3B8) // --cst-palette-shadow-light
             override val text: Color = Color(0xFFF1F5F9) // --cst-palette-text
-            override val textMuted: Color = Color(0xFF94A3B8) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFFA3B1C4) // --cst-palette-text-muted
             override val warning: Color = Color(0xFFFBBF24) // --cst-palette-warning
         }
         /** Forest · light */
@@ -85,7 +85,7 @@ object Tokens {
             override val shadowDark: Color = Color(0x00000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x00FFFFFF) // --cst-palette-shadow-light
             override val text: Color = Color(0xFF152219) // --cst-palette-text
-            override val textMuted: Color = Color(0xFF3F5547) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFF354B3D) // --cst-palette-text-muted
             override val warning: Color = Color(0xFF7E602B) // --cst-palette-warning
         }
         /** Forest · dark */
@@ -111,7 +111,7 @@ object Tokens {
             override val shadowDark: Color = Color(0x00000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x00FFFFFF) // --cst-palette-shadow-light
             override val text: Color = Color(0xFFE8F1E9) // --cst-palette-text
-            override val textMuted: Color = Color(0xFFA8BDAE) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFFB7CDBD) // --cst-palette-text-muted
             override val warning: Color = Color(0xFFC4A75A) // --cst-palette-warning
         }
         /** Inkwash · light */
@@ -137,7 +137,7 @@ object Tokens {
             override val shadowDark: Color = Color(0x00000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x00FFFFFF) // --cst-palette-shadow-light
             override val text: Color = Color(0xFF2B2A26) // --cst-palette-text
-            override val textMuted: Color = Color(0xFF6B675D) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFF5D594F) // --cst-palette-text-muted
             override val warning: Color = Color(0xFF7F6422) // --cst-palette-warning
         }
         /** Inkwash · dark */
@@ -163,7 +163,7 @@ object Tokens {
             override val shadowDark: Color = Color(0x99000000) // --cst-palette-shadow-dark
             override val shadowLight: Color = Color(0x00FFFFFF) // --cst-palette-shadow-light
             override val text: Color = Color(0xFFEAE6DA) // --cst-palette-text
-            override val textMuted: Color = Color(0xFFA8A49A) // --cst-palette-text-muted
+            override val textMuted: Color = Color(0xFFB7B3A8) // --cst-palette-text-muted
             override val warning: Color = Color(0xFFD6A54E) // --cst-palette-warning
         }
     }
@@ -209,7 +209,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x3D2B5EB2) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x732B5EB2) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFF2B5EB2) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFF52647F) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFF47586F) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFF2B5EB2) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFFC81E4E) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x21C81E4E) // --cst-status-danger-bg
@@ -243,7 +243,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFFFFFFFF) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFF0B1424) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFF16233A) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFF52647F) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFF47586F) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFFA41F4A) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF0F5C5A) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFF814012) // --cst-text-status-warning-on-soft
@@ -288,7 +288,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x4D5B9CF6) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x805B9CF6) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFF5B9CF6) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFF94A3B8) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFFA3B1C4) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFF5B9CF6) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFFF87171) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x24F87171) // --cst-status-danger-bg
@@ -322,7 +322,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFF0B0E14) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFF071426) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFFF1F5F9) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFF94A3B8) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFFA3B1C4) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFFF78B8C) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF5ADAAC) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFFF9CA4F) // --cst-text-status-warning-on-soft
@@ -367,7 +367,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x3839714F) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x6B39714F) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFF39714F) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFF3F5547) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFF354B3D) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFF39714F) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFFA04B37) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x1FA04B37) // --cst-status-danger-bg
@@ -401,7 +401,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFFFFFFFF) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFFFFFFFF) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFF152219) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFF3F5547) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFF354B3D) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFF844331) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF326144) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFF695427) // --cst-text-status-warning-on-soft
@@ -446,7 +446,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x4D52B878) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x8052B878) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFF52B878) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFFA8BDAE) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFFB7CDBD) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFF52B878) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFFD97C5A) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x24D97C5A) // --cst-status-danger-bg
@@ -480,7 +480,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFF0C1911) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFF0C1911) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFFE8F1E9) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFFA8BDAE) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFFB7CDBD) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFFDC9377) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF70C38F) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFFCBB677) // --cst-text-status-warning-on-soft
@@ -525,7 +525,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x38A63A2E) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x6BA63A2E) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFFA63A2E) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFF6B675D) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFF5D594F) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFFA63A2E) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFF9E2140) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x1F9E2140) // --cst-status-danger-bg
@@ -559,7 +559,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFFFFFFFF) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFFFFFFFF) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFF2B2A26) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFF6B675D) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFF5D594F) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFF87233B) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF3B644C) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFF6E5823) // --cst-text-status-warning-on-soft
@@ -604,7 +604,7 @@ object Tokens {
             override val markerUserBorder: Color = Color(0x4DDF7F6A) // --cst-marker-user-border
             override val markerUserGlow: Color = Color(0x80DF7F6A) // --cst-marker-user-glow
             override val navigationActiveIndicator: Color = Color(0xFFDF7F6A) // --cst-navigation-active-indicator
-            override val navigationContent: Color = Color(0xFFA8A49A) // --cst-navigation-content
+            override val navigationContent: Color = Color(0xFFB7B3A8) // --cst-navigation-content
             override val navigationContentActive: Color = Color(0xFFDF7F6A) // --cst-navigation-content-active
             override val statusDanger: Color = Color(0xFFDE8496) // --cst-status-danger
             override val statusDangerBg: Color = Color(0x24DE8496) // --cst-status-danger-bg
@@ -638,7 +638,7 @@ object Tokens {
             override val textOnAccent: Color = Color(0xFF1F1512) // --cst-text-on-accent
             override val textOnStatus: Color = Color(0xFF1F1512) // --cst-text-on-status
             override val textPrimary: Color = Color(0xFFEAE6DA) // --cst-text-primary
-            override val textSecondary: Color = Color(0xFFA8A49A) // --cst-text-secondary
+            override val textSecondary: Color = Color(0xFFB7B3A8) // --cst-text-secondary
             override val textStatusDangerOnSoft: Color = Color(0xFFE098A4) // --cst-text-status-danger-on-soft
             override val textStatusOnlineOnSoft: Color = Color(0xFF97BCA4) // --cst-text-status-online-on-soft
             override val textStatusWarningOnSoft: Color = Color(0xFFDAB26A) // --cst-text-status-warning-on-soft

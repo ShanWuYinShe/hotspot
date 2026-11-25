@@ -20,7 +20,7 @@
       },
       "text-muted": {
         "$type": "color",
-        "$value": "#6B675D"
+        "$value": "#5D594F"
       },
       "accent-primary": {
         "$type": "color",
@@ -158,7 +158,7 @@
       },
       "text-secondary": {
         "$type": "color",
-        "$value": "#6B675D"
+        "$value": "#5D594F"
       },
       "text-on-accent": {
         "$type": "color",
@@ -258,11 +258,11 @@
       },
       "content-secondary": {
         "$type": "color",
-        "$value": "#6B675D"
+        "$value": "#5D594F"
       },
       "navigation-content": {
         "$type": "color",
-        "$value": "#6B675D"
+        "$value": "#5D594F"
       },
       "navigation-content-active": {
         "$type": "color",
