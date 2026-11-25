@@ -19,14 +19,16 @@ ADB="$HOME/Library/Android/sdk/platform-tools/adb"
 $ADB devices -l     # 真机候选：状态 device 且 serial 不以 emulator- 开头；多设备时所有命令固定 -s <serial>
 SERIAL=<serial>
 $ADB -s "$SERIAL" shell getprop ro.build.version.sdk     # 需 ≥ minSdk（现查 androidapp/app/build.gradle.kts）
-$ADB -s "$SERIAL" shell getprop ro.product.cpu.abilist   # ABI 清单（当前 App 无 native 库，记录即可）
+$ADB -s "$SERIAL" shell getprop ro.product.cpu.abilist   # ABI 清单（与 APK 的 native-code 比对）
 $ADB -s "$SERIAL" shell getprop ro.product.model         # 型号（走查记录/PR 证据必须写）
 $ADB -s "$SERIAL" shell getprop ro.build.version.release # 系统版本（与型号一起记录）
 ```
 
 - 形态/能力按本次目标判断：普通页面 UI 走查手机真机即可；相机/相册/系统分享/定位/传感器等需真实硬件的项优先真机。
-- APK 无 native 库（`androidapp/` 无 `abiFilters`/NDK 声明、`app/src` 无 `.so`），ABI 不构成门槛；
-  引入 native 依赖后再按 APK 内含 ABI 与 `ro.product.cpu.abilist` 比对。
+- APK **含** native 库：`libandroidx.graphics.path.so`（AndroidX `androidx.graphics:graphics-path` 依赖带入），
+  覆盖 `arm64-v8a`/`armeabi-v7a`/`x86`/`x86_64`（`aapt2 dump badging <apk> | grep native-code` 现查）；
+  **源码无 `abiFilters`/NDK 声明、`app/src` 无 `.so` 不代表 APK 无 native 库**。常见真机 ABI 不构成门槛，
+  新增 native 依赖后按 APK 的 `native-code` 与设备 `ro.product.cpu.abilist` 比对。
 - 数据安全：不擅自卸载/清数据/改系统设置；用户日常机涉及这些操作前先征得同意。
 - 无合格真机 → 用下文 `HotSpotPhone` AVD 兜底，并在走查记录/PR 写明原因（未连接 / 未授权 / API 不符 / 形态不符 / 需隔离数据）。
 - **本文件的 1080×2400 布局坐标、`10.0.2.2` 超时结论、AVD 设备档经验均为模拟器基线**；真机分辨率/密度/系统版本不同，
@@ -41,7 +43,7 @@ $ADB -s "$SERIAL" shell getprop ro.build.version.release # 系统版本（与型
 | 调试后端 | 宿主 dev compose 网关 `http://127.0.0.1:8888`（nginx） |
 | 端内基址 | 默认 `http://10.0.2.2:8888`（模拟器语义）；联调固定用 `adb reverse` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建（真机/模拟器同一套） |
 | 走查账号 | `qa@hotspot.local` / `Qa12345678`（seed 普通用户；`moment_seed_01` 自带评论供评论区走查） |
-| 造数 | 主库；用 `client_type=web` 身份 curl 造评论，避免影响模拟器内的 App 会话 |
+| 造数 | 主库；用 `client_type=web` 身份 curl 造评论，避免影响设备内的 App 会话 |
 | 截图 / dump 落盘 | `.workwork/android-verify/`（任务收尾删除） |
 | AVD（无合格真机时的兜底） | `HotSpotPhone`（`system-images;android-36;google_apis;arm64-v8a` + **`pixel_2` 设备档**，面板覆写为 1080×2400/420dpi；无挖孔） |
 
@@ -87,7 +89,7 @@ grep 'POST /public/v1/auth/signin'`（无输出即未到达）。
 联调固定走反向转发：
 
 ```bash
-adb reverse tcp:8888 tcp:8888          # 模拟器重启 / adb server 重启后需重设
+adb reverse tcp:8888 tcp:8888          # 设备重启/重连、adb server 重启后需重设
 cd androidapp
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
 ANDROID_HOME="$HOME/Library/Android/sdk" \
