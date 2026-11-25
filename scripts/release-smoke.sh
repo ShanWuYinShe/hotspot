@@ -195,6 +195,37 @@ else
     else
       fail "镜像包下载失败（Release 资产不可读，已重试 3 次）"
     fi
+    # APK 下载也可能出现 unexpected EOF；下载后至少做 ZIP 完整性校验，
+    # 避免「资产存在但文件截断」的 APK 通过发版冒烟。
+    if [ "${SKIP_APK}" = "0" ]; then
+      APK_DIR="${TMP_DIR}/apk"
+      APK_FILE="${APK_DIR}/hotspot-android-${VERSION}.apk"
+      APK_DOWNLOAD_OK=0
+      APK_ATTEMPT=1
+      while [ "${APK_ATTEMPT}" -le 3 ]; do
+        rm -rf "${APK_DIR}"
+        mkdir -p "${APK_DIR}"
+        if gh release download "${VERSION}" ${GH_REPO_ARG} --pattern "hotspot-android-${VERSION}.apk" -D "${APK_DIR}" >/dev/null 2>&1; then
+          APK_DOWNLOAD_OK=1
+          break
+        fi
+        APK_ATTEMPT=$((APK_ATTEMPT + 1))
+        sleep 2
+      done
+      if [ "${APK_DOWNLOAD_OK}" = "1" ] && [ -f "${APK_FILE}" ]; then
+        if command -v unzip >/dev/null 2>&1; then
+          if unzip -t "${APK_FILE}" >/dev/null 2>&1; then
+            pass "APK ZIP 完整性校验通过"
+          else
+            fail "APK ZIP 完整性校验失败（文件可能被截断）"
+          fi
+        else
+          fail "找不到 unzip，无法校验 APK 完整性"
+        fi
+      else
+        fail "APK 下载失败（Release 资产不可读，已重试 3 次）"
+      fi
+    fi
   fi
 fi
 
