@@ -81,6 +81,7 @@ import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.components.HoldToTalkMicButton
 import com.hotspot.app.ui.theme.Dimens
+import com.hotspot.app.ui.theme.HotSpotTextStyles
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
@@ -704,7 +705,7 @@ private fun MessageBubble(
                             Modifier
                         },
                     )
-                    .padding(horizontal = Spacing.md3, vertical = Spacing.sm2),
+                    .padding(horizontal = Spacing.md, vertical = Spacing.sm2),
             ) {
                 val imageUrl = message.media?.url
                 if (!message.isRecalled && message.type == "audio") {
@@ -742,7 +743,7 @@ private fun MessageBubble(
                     }
                     Text(
                         text = text,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = HotSpotTextStyles.chat,
                         fontWeight = FontWeight.Normal,
                         color = if (isMine) colors.textOnAccent else colors.textPrimary,
                     )

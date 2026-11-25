@@ -273,8 +273,8 @@ export struct ChatMessageItem {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
               Text(this.msg.recalled ? '消息已撤回' : this.msg.content)
                 .fontSize(DesignConstants.FONT.SIZE.MD)
-                // 气泡正文行高对齐前端 MessageBubble 的 leading-card(1.7)
-                .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CARD))
+                // 气泡正文行高对齐前端 MessageBubble 的 leading-chat(1.43)
+                .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.MD, DesignConstants.FONT.LINE_RATIO.CHAT))
                 .fontColor(this.getBubbleTextColor())
                 .fontStyle(this.msg.recalled === true ? FontStyle.Italic : FontStyle.Normal)
                 .maxLines(200)
@@ -305,12 +305,12 @@ export struct ChatMessageItem {
             }
             .constraintSize({ maxWidth: DesignConstants.CHAT.BUBBLE_MAX_WIDTH })
             .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
-            // 内距对齐 web px-4 py-2（16/8）
+            // 内距对齐 web px-3 py-1.5（12/6）
             .padding({
               left: DesignConstants.CHAT.BUBBLE_PADDING_H,
               right: DesignConstants.CHAT.BUBBLE_PADDING_H,
-              top: DesignConstants.SPACING.SM,
-              bottom: DesignConstants.SPACING.SM
+              top: DesignConstants.CHAT.BUBBLE_PADDING_V,
+              bottom: DesignConstants.CHAT.BUBBLE_PADDING_V
             })
             .backgroundColor(this.getBubbleBackground())
             .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)

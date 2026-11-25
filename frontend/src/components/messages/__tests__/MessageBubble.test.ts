@@ -31,10 +31,10 @@ describe('MessageBubble', () => {
 		expect(container.querySelector('svg')).not.toBeNull();
 	});
 	// R16 排版/对比契约
-	it('正文 14px（text-md）+ 卡片/气泡行高档 leading-card；时间戳 11px（xs）', () => {
+	it('正文 14px（text-md）+ 聊天气泡行高档 leading-chat；时间戳 11px（xs）', () => {
 		render(MessageBubble, { props: { text: '周末见', sent: false, time: '10:24' } });
 		expect(screen.getByText('周末见').className).toContain('text-md');
-		expect(screen.getByText('周末见').className).toContain('leading-card');
+		expect(screen.getByText('周末见').className).toContain('leading-chat');
 		expect(screen.getByText('10:24').className).toContain('text-xs');
 	});
 

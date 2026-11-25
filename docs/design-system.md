@@ -246,14 +246,15 @@
 
     该映射由 `check-cross-platform-scale.mjs` 逐档断言，CI 漂移即拦截。
 
-  - 比例制 `FONT.LINE_RATIO.{DEFAULT 1.5, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，
-    对齐前端 `theme-registry.css` 的 `--leading-*` 标尺（`card=1.7`）。
+  - 比例制 `FONT.LINE_RATIO.{DEFAULT 1.5, CHAT 1.43, CARD 1.7, COPY 1.75}` + `lineHeightFor(fontSize, ratio)`，
+    对齐前端 `theme-registry.css` 的 `--leading-*` 标尺（`chat=1.43 / card=1.7`）。
     **多行长文正文用它**（覆盖默认行高）：
 
     | 语义 | 比例 | 适用 |
     |---|---|---|
     | `DEFAULT` | 1.5 | 基线（对齐前端 base.css 元素级 1.5） |
-    | `CARD` | 1.7 | 卡片/聊天气泡正文（前端 `--leading-card`） |
+    | `CHAT` | 1.43 | 聊天气泡正文（前端 `--leading-chat`，14→20） |
+    | `CARD` | 1.7 | 卡片正文（前端 `--leading-card`） |
     | `COPY` | 1.75 | 长文正文、简介、公告、动态正文（前端 `--leading-copy`） |
 
   - 绝对档 `FONT.LINE_HEIGHT.{XS 18, SM 20, MD 22, LG 24, XL 26}` 只用于**单行紧凑**场景。
@@ -1138,7 +1139,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
   228px 死空白是「消息页很怪」的主因之一。
 - 「没有更多了」（ListEnd）只在历史确实分页并耗尽后出现；首屏一次返回全部
   （`next_cursor=null`）不得显示。
-- 字号：消息正文 `text-md`(14) + `leading-card`；时间戳 `text-xs`(11)；群聊发送者名
+- 字号：消息正文 `text-md`(14) + `leading-chat`(1.43→20)；气泡内距 12×6（`px-3 py-1.5`，三端一致）；时间戳 `text-xs`(11)；群聊发送者名
   `text-sm`(12)；输入框 `text-md`(14)。accent 实底气泡内文字用 `text-text-on-accent`
   全量、**不得叠 opacity**（叠 0.7 只有 3.97:1，不达标）。
 - 日期分节 = 中性 11px 文本标签（无底色/无投影），禁止白底胶囊（像按钮）。
