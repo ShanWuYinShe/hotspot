@@ -61,6 +61,7 @@ import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.ListRow
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.SegmentedTabs
 import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.theme.AppShapes
@@ -99,6 +100,10 @@ fun SettingsScreen(
     var account by remember { mutableStateOf<AccountData?>(null) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
+    var privacyLevel by remember { mutableStateOf("public") }
+    var locationVisible by remember { mutableStateOf(true) }
+    var privacyLoaded by remember { mutableStateOf(false) }
+    var privacyUpdating by remember { mutableStateOf(false) }
     var isAdmin by remember { mutableStateOf(false) }
     var showChangePassword by remember { mutableStateOf(false) }
     var oldPassword by remember { mutableStateOf("") }
@@ -131,6 +136,33 @@ fun SettingsScreen(
         when (val result = AppContainer.profileRepository.account()) {
             is ApiResult.Ok -> account = result.data
             is ApiResult.Err -> Unit
+        }
+        when (val settings = AppContainer.profileRepository.settings()) {
+            is ApiResult.Ok -> {
+                privacyLevel = settings.data.privacyLevel
+                locationVisible = settings.data.locationVisible
+            }
+            is ApiResult.Err -> Toast.makeText(context, settings.error.userMessage, Toast.LENGTH_SHORT).show()
+        }
+        privacyLoaded = true
+    }
+
+    fun updatePrivacy(privacy: String? = null, location: Boolean? = null) {
+        if (!privacyLoaded || privacyUpdating) return
+        privacyUpdating = true
+        scope.launch {
+            when (val result = AppContainer.profileRepository.updateSettings(
+                privacyLevel = privacy,
+                locationVisible = location,
+            )) {
+                is ApiResult.Ok -> {
+                    if (privacy != null) privacyLevel = privacy
+                    if (location != null) locationVisible = location
+                    Toast.makeText(context, "隐私设置已更新", Toast.LENGTH_SHORT).show()
+                }
+                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+            }
+            privacyUpdating = false
         }
     }
 
@@ -226,6 +258,58 @@ fun SettingsScreen(
                         deleteError = null
                         showDeleteAccount = true
                     },
+                )
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            SettingsSectionTitle(title = "隐私与安全", subtitle = "控制个人主页可见性、位置共享与账号保护")
+            Spacer(Modifier.height(Spacing.sm))
+            SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                Text(
+                    text = "账号可见性",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (privacyLevel == "private") "仅关注者可查看你的主页与瞬间" else "所有用户可查看你的公开主页与瞬间",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("公开", "私密"),
+                    selectedIndex = if (privacyLevel == "private") 1 else 0,
+                    onSelected = { index -> updatePrivacy(privacy = if (index == 1) "private" else "public") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (!privacyLoaded || privacyUpdating) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Text(
+                        text = if (!privacyLoaded) "加载隐私设置…" else "保存中…",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                    )
+                }
+                Spacer(Modifier.height(Spacing.lg))
+                Text(
+                    text = "位置共享",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (locationVisible) "附近用户可在发现与地图中看到你" else "你的位置不会出现在附近与地图中",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("共享", "隐藏"),
+                    selectedIndex = if (locationVisible) 0 else 1,
+                    onSelected = { index -> updatePrivacy(location = index == 0) },
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
             Spacer(Modifier.height(Spacing.xl))

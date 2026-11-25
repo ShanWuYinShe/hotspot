@@ -715,6 +715,13 @@ data class UnreadSummary(
     val total: Int = 0,
 )
 
+/** spec/types → UserSettings 的客户端子集（隐私与位置）。 */
+@Serializable
+data class UserSettings(
+    @SerialName("privacy_level") val privacyLevel: String = "public",
+    @SerialName("location_visible") val locationVisible: Boolean = true,
+)
+
 /** spec/auth fetch_sessions → SessionList。 */
 @Serializable
 data class SessionListData(

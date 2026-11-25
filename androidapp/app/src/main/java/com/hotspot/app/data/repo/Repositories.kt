@@ -34,6 +34,7 @@ import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PresignFileInput
 import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.SessionListData
+import com.hotspot.app.data.model.UserSettings
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.RelatedUserItem
@@ -926,6 +927,27 @@ class CommentRepository(private val api: ApiClient) {
 class ProfileRepository(private val api: ApiClient) {
     suspend fun account(): ApiResult<AccountData> =
         api.post(ApiEndpoint.USERS_ACCOUNT, emptyObject(), AccountData.serializer())
+
+    /** spec/users settings：隐私级别与位置共享。 */
+    suspend fun settings(): ApiResult<UserSettings> =
+        api.post(ApiEndpoint.USERS_SETTINGS, emptyObject(), UserSettings.serializer())
+
+    /** spec/users update_settings：只提交需要修改的字段（settings 为 Partial<UserSettings>）。 */
+    suspend fun updateSettings(
+        privacyLevel: String? = null,
+        locationVisible: Boolean? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_UPDATE_SETTINGS,
+        buildJsonObject {
+            put(
+                "settings",
+                buildJsonObject {
+                    if (privacyLevel != null) put("privacy_level", privacyLevel)
+                    if (locationVisible != null) put("location_visible", locationVisible)
+                },
+            )
+        },
+    )
 
     /** 我创建的瞬间（拥有者视角，spec/api_spec_moment.md → moments/fetch_created）。 */
     suspend fun createdMoments(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
