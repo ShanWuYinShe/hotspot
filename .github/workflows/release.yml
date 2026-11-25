@@ -229,6 +229,15 @@ jobs:
           printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/hotspot-release.jks"
           chmod 600 "${RUNNER_TEMP}/hotspot-release.jks"
 
+      - name: Derive release version code
+        run: |
+          set -eo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          CODE="$(echo "${VERSION}" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')"
+          test -n "${CODE}" || { echo "::error::无法从 ${GITHUB_REF_NAME} 推导 versionCode"; exit 1; }
+          echo "HOTSPOT_VERSION_NAME=${GITHUB_REF_NAME}" >> "${GITHUB_ENV}"
+          echo "HOTSPOT_VERSION_CODE=${CODE}" >> "${GITHUB_ENV}"
+
       - name: Build signed release APK
         working-directory: androidapp
         env:
@@ -249,8 +258,11 @@ jobs:
           AAPT2="$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name aapt2 -type f 2>/dev/null | sort -V | tail -1)"
           "${APKSIGNER}" verify --print-certs "${APK}" | sed -n "1,2p"
           BADGING="$("${AAPT2}" dump badging "${APK}" | sed -n "1p")"
+          EXPECTED_VERSION="${GITHUB_REF_NAME#v}"
+          EXPECTED_CODE="$(echo "${EXPECTED_VERSION}" | awk -F. '{printf "%d%02d%02d", $1, $2, $3}')"
           echo "${BADGING}"
-          echo "${BADGING}" | grep -q "versionName='${GITHUB_REF_NAME#v}'" || { echo "::error::APK versionName 与 ${GITHUB_REF_NAME} 不一致"; exit 1; }
+          echo "${BADGING}" | grep -q "versionName='${EXPECTED_VERSION}'" || { echo "::error::APK versionName 与 ${GITHUB_REF_NAME} 不一致"; exit 1; }
+          echo "${BADGING}" | grep -q "versionCode='${EXPECTED_CODE}'" || { echo "::error::APK versionCode 期望 ${EXPECTED_CODE}，与 tag 推导不一致"; exit 1; }
 
       - name: Attach APK to Release
         env:

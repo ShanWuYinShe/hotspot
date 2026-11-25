@@ -37,10 +37,18 @@ android {
         applicationId = "com.hotspot.app"
         minSdk = 26
         targetSdk = 37
-        // 版本号：默认与仓库发布 tag 对齐；发新版时通过环境变量覆盖即可，无需改代码
-        // （HOTSPOT_VERSION_NAME=v1.15.13 HOTSPOT_VERSION_CODE=16 ./gradlew assembleRelease）。
-        versionCode = providers.environmentVariable("HOTSPOT_VERSION_CODE").orNull?.toIntOrNull() ?: 16
-        versionName = providers.environmentVariable("HOTSPOT_VERSION_NAME").orNull?.removePrefix("v") ?: "1.15.13"
+        // 版本号：版本名以 Release tag 注入的 HOTSPOT_VERSION_NAME 为准；未注入时用仓库当前版本。
+        // versionCode 必须随版本递增，默认从 versionName 推导（1.15.21 -> 11521），
+        // HOTSPOT_VERSION_CODE 显式注入时以注入值为准（应急/特殊构建）。
+        val resolvedVersionName = providers.environmentVariable("HOTSPOT_VERSION_NAME")
+            .orNull?.removePrefix("v") ?: "1.15.21"
+        val versionParts = resolvedVersionName.split(".")
+        val derivedVersionCode = (versionParts.getOrNull(0)?.toIntOrNull() ?: 1) * 10000 +
+            (versionParts.getOrNull(1)?.toIntOrNull() ?: 0) * 100 +
+            (versionParts.getOrNull(2)?.toIntOrNull() ?: 0)
+        versionCode = providers.environmentVariable("HOTSPOT_VERSION_CODE").orNull?.toIntOrNull()
+            ?: derivedVersionCode.coerceAtLeast(1)
+        versionName = resolvedVersionName
 
         buildConfigField("String", "API_BASE_URL", "\"$debugUrl\"")
     }
