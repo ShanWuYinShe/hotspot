@@ -7,7 +7,7 @@
 按 Figma 设计稿（多端 UI Design Kit 移动端 390 屏）实现的 Android 客户端，与 `frontend` / `harmonyapp`
 同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
 登录/注册/访客模式（390 设计稿 87:1818 版式）、首页信息流 / 附近 / 消息（私聊 + 群聊会话混合列表）/ 我的 / 搜索 / 通知 / 设置 /
-我的瞬间（发布 + 收藏，含 private 徽章与软删占位）/ 我的群组（成员视角 + 本地过滤 + 页头创建群组）/ 创建群组（groups/create：可选封面/名称/简介/分类/公开或仅邀请/默认位置）/
+我的瞬间（发布 + 收藏，含 private 徽章与软删占位）/ 我的群组（成员视角 + 本地过滤 + 页头创建群组）/ 创建群组（groups/create：可选封面/名称/简介/分类/公开或仅邀请/新人审核/默认位置）/
 瞬间详情（含评论楼中楼列表、常驻贴底评论输入条、收藏与系统分享；hero 支持多图横滑与点击全屏查看；作者可编辑文案/删除瞬间，非作者可举报）/ 群详情（设计稿 87:1696：封面卡 + 简介/成员/公告
 三 tab（公告 tab 对 owner/admin 提供发布/编辑/删除，其余角色只读）+ 加入/退出群组，
 入口接我的群组行、附近群组卡、搜索群组结果；成员 tab 支持按昵称搜索 `groups/members/search`，350ms 防抖）/ 群聊会话（设计稿 87:3529：
@@ -184,7 +184,7 @@ app/src/main/java/com/hotspot/app/
 - **群成员管理**：成员 tab 中 owner/admin 对非群主、非自己的成员显示「管理」→ 操作面板
   （设为/取消管理员、禁言 1 小时/解除禁言、移除成员）；分别走 `groups/admin/members/set_role`、
   `set_mute`、`remove`，群主/自己不可被操作，服务端 10400 兜底；成功后刷新成员列表与群详情。
-- **创建群组**：我的群组/附近群组页头「+」→ 可选封面（`group_avatar` 上传）/名称（≥2 字）/简介/分类/公开或仅邀请 + ClientConfig 默认位置 → `groups/create`（幂等键、owner=当前用户，提交 `avatar_file_id`），成功直达群详情。
+- **创建群组**：我的群组/附近群组页头「+」→ 可选封面（`group_avatar` 上传）/名称（≥2 字）/简介/分类/公开或仅邀请（公开时可选「直接加入 / 申请需审核」）+ ClientConfig 默认位置 → `groups/create`（幂等键、owner=当前用户，提交 `avatar_file_id` 与 `requires_approval`），成功直达群详情。
 - **群信息编辑**：群详情更多菜单（owner/admin）→ 群头像/名称/简介弹窗（群头像 Photo Picker → `AvatarUploader(category=group_avatar)` → 保存时提交 `avatar_file_id`），走 `groups/admin/update`；
   其余字段传 null 不改，成功用返回的 GroupItem 直接刷新头部。
 - **瞬间操作**：详情右上角「更多操作」按角色分流——自己的瞬间：编辑文案、氛围标签与可见范围
