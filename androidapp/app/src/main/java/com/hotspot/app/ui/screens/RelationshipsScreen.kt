@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.BlockedUserItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.RelatedUserItem
 import com.hotspot.app.ui.components.Avatar
@@ -60,16 +61,18 @@ import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.launch
 
-private val RELATION_TABS = listOf("好友", "关注", "粉丝")
+private val RELATION_TABS = listOf("好友", "关注", "粉丝", "黑名单")
 
 /**
- * 关系页（设计稿 87:3300）：好友 / 关注 / 粉丝三个 tab（带计数与下划线选中态）+ 搜索 + 关系列表。
+ * 关系页（设计稿 87:3300）：好友 / 关注 / 粉丝 / 黑名单四个 tab（三个关系 tab 带计数与下划线选中态）
+ * + 搜索 + 列表。
  * - 好友：右侧「发消息」进私聊；
  * - 关注：右侧关注两态，取关后该行从列表移除；
- * - 粉丝：右侧关注两态（回关）。
- * 黑名单 tab 依赖拉黑功能（set_block），Android 首版未实现，暂不放入口（代码内 TODO）。
+ * - 粉丝：右侧关注两态（回关）；
+ * - 黑名单：users/fetch_blocked 列表 + 解除屏蔽（users/set_block active=false），解除后不恢复关注。
  */
 @Composable
 fun RelationshipsScreen(
@@ -186,6 +189,15 @@ private fun RelationshipListContent(
     onError: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    if (tabIndex == 3) {
+        BlockedRelationshipsContent(
+            query = query,
+            onOpenUser = onOpenUser,
+            onError = onError,
+            scope = scope,
+        )
+        return
+    }
     val colors = HotSpotTheme.colors
     val state = rememberPagedListState<RelatedUserItem>()
     val listState = rememberLazyListState()
@@ -299,6 +311,207 @@ private fun RelationshipListContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BlockedRelationshipsContent(
+    query: String,
+    onOpenUser: (String) -> Unit,
+    onError: (String) -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
+    val colors = HotSpotTheme.colors
+    var items by remember { mutableStateOf<List<BlockedUserItem>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var retryKey by remember { mutableIntStateOf(0) }
+    var nextCursor by remember { mutableStateOf<String?>(null) }
+    var loadingMore by remember { mutableStateOf(false) }
+    var endReached by remember { mutableStateOf(false) }
+    var closingIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(retryKey) {
+        loading = true
+        error = null
+        when (val result = AppContainer.profileRepository.fetchBlocked(cursor = null)) {
+            is ApiResult.Ok -> {
+                items = result.data.items
+                nextCursor = result.data.nextCursor
+                endReached = result.data.nextCursor == null
+            }
+            is ApiResult.Err -> error = result.error.userMessage
+        }
+        loading = false
+    }
+
+    fun loadMore() {
+        val cursor = nextCursor ?: return
+        if (loading || loadingMore) return
+        loadingMore = true
+        scope.launch {
+            when (val result = AppContainer.profileRepository.fetchBlocked(cursor)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.user.userId }
+                    nextCursor = result.data.nextCursor
+                    endReached = result.data.nextCursor == null
+                }
+                is ApiResult.Err -> onError(result.error.userMessage)
+            }
+            loadingMore = false
+        }
+    }
+
+    // 契约无关键词参数：搜索时把剩余分页拉完再本地筛选（最多 10 页，避免无界请求）。
+    LaunchedEffect(query) {
+        if (query.isBlank() || loading) return@LaunchedEffect
+        var cursor: String? = nextCursor ?: return@LaunchedEffect
+        var pages = 0
+        while (cursor != null && pages < 10) {
+            when (val result = AppContainer.profileRepository.fetchBlocked(cursor)) {
+                is ApiResult.Ok -> {
+                    items = (items + result.data.items).distinctBy { it.user.userId }
+                    nextCursor = result.data.nextCursor
+                    endReached = result.data.nextCursor == null
+                    cursor = result.data.nextCursor
+                }
+                is ApiResult.Err -> break
+            }
+            pages += 1
+        }
+    }
+
+    val keyword = query.trim()
+    val visible = items.filter { item ->
+        keyword.isBlank() ||
+            item.user.nickname.contains(keyword, ignoreCase = true) ||
+            item.user.userId.contains(keyword, ignoreCase = true) ||
+            item.reason.orEmpty().contains(keyword, ignoreCase = true)
+    }
+
+    fun unblock(userId: String) {
+        if (userId in closingIds) return
+        closingIds = closingIds + userId
+        scope.launch {
+            when (val result = AppContainer.profileRepository.setBlock(userId, blocked = false)) {
+                is ApiResult.Ok -> items = items.filterNot { it.user.userId == userId }
+                is ApiResult.Err -> onError(result.error.userMessage)
+            }
+            closingIds = closingIds - userId
+        }
+    }
+
+    when {
+        loading -> LoadingState(message = "正在加载黑名单…")
+        error != null && items.isEmpty() -> ErrorState(
+            message = error ?: "加载失败",
+            onRetry = { retryKey += 1 },
+        )
+        items.isEmpty() -> EmptyState(
+            title = "黑名单为空",
+            description = "在他人主页选择「屏蔽」后，会出现在这里；解除后可以重新互动。",
+        )
+        visible.isEmpty() -> EmptyState(title = "没有匹配的屏蔽用户", description = "换个昵称、用户 ID 或屏蔽原因关键词试试。")
+        else -> LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = Spacing.lg,
+                end = Spacing.lg,
+                bottom = Spacing.xxl,
+            ),
+        ) {
+            item {
+                Text(
+                    text = "解除屏蔽不会自动恢复关注关系，需要重新关注。",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(vertical = Spacing.sm, horizontal = Spacing.xs),
+                )
+            }
+            item {
+                SystemCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = Spacing.xs)) {
+                    visible.forEachIndexed { index, item ->
+                        BlockedRelationshipRow(
+                            item = item,
+                            unblocking = item.user.userId in closingIds,
+                            onOpenUser = { onOpenUser(item.user.userId) },
+                            onUnblock = { unblock(item.user.userId) },
+                        )
+                        if (index != visible.lastIndex) {
+                            Box(
+                                Modifier
+                                    .padding(horizontal = Spacing.md)
+                                    .height(1.dp)
+                                    .fillMaxWidth()
+                                    .background(colors.borderSubtle),
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                when {
+                    loadingMore -> InlineLoading()
+                    !endReached && query.isBlank() -> Box(Modifier.padding(vertical = Spacing.lg)) {
+                        SystemButton(
+                            text = "加载更多",
+                            onClick = { loadMore() },
+                            variant = ButtonVariant.SECONDARY,
+                            size = ButtonSize.SM,
+                            enabled = !loadingMore,
+                        )
+                    }
+                    else -> Box(Modifier.padding(vertical = Spacing.lg)) { ListEnd() }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BlockedRelationshipRow(
+    item: BlockedUserItem,
+    unblocking: Boolean,
+    onOpenUser: () -> Unit,
+    onUnblock: () -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onOpenUser)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(name = item.user.nickname, imageUrl = item.user.avatarUrl, size = Dimens.avatarSm)
+        Spacer(Modifier.width(Spacing.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = item.user.nickname.ifBlank { "用户" },
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildString {
+                    append(if (item.blockedAt.isNotBlank()) "屏蔽于 " + TimeFormat.relative(item.blockedAt) else "已屏蔽")
+                    if (!item.reason.isNullOrBlank()) append(" · 原因：" + item.reason)
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = colors.textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        SystemButton(
+            text = if (unblocking) "解除中…" else "解除屏蔽",
+            onClick = onUnblock,
+            variant = ButtonVariant.SECONDARY,
+            size = ButtonSize.SM,
+            enabled = !unblocking,
+        )
     }
 }
 
