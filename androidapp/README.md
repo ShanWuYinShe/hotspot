@@ -75,7 +75,7 @@ app/src/test/                  # token 结构不变量 + 业务错误码文案�
 均带兴趣筛选与排序，显式传 client_config 默认位置作浏览锚点）、消息列表（私聊 + 群聊混合会话：置顶 → 未读 → 最新时间排序，群行圆角头像 + 群角标，点击进群聊）、私聊（只读历史 + 简单文本发送；打开会话即 `private_messages/mark_read` 已读）、个人中心（设计稿 87:3393：资料卡 + 瞬间/粉丝/群组
 三指标 + 编辑资料/设置 + 我的内容 5 行计数入口）、关系页（设计稿 87:3300：好友/关注/粉丝三 tab +
 计数下划线 + 搜索 + 好友「发消息」/关注与粉丝「关注两态」）、编辑资料（设计稿 87:3128：昵称 / 简介 150 字 /
-性别 / 兴趣标签 ≤5，保存走 users/update_account patch，头像上传待接入）、我的瞬间（`moments/fetch_created` 发布 / `moments/fetch_favorites` 收藏
+性别 / 兴趣标签 ≤5，保存走 users/update_account patch；头像支持 Photo Picker → avatar 上传 → avatar_file_id 即时更新）、我的瞬间（`moments/fetch_created` 发布 / `moments/fetch_favorites` 收藏
 两个 tab，2 列网格、private 徽章与软删占位、网格分页）、我的群组（`groups/fetch_joined`：
 置顶/最近消息预览/在线数，按群名与标签本地过滤，行点击进群详情）、群详情（设计稿 87:1696：
 封面卡 + 简介/成员/公告三 tab；简介页指标 4 列 / 活跃成员头像堆叠 / 公告预告；成员与公告真实分页与

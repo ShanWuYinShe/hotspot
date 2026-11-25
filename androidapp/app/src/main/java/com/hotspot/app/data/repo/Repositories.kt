@@ -910,10 +910,11 @@ class ProfileRepository(private val api: ApiClient) {
 
     /**
      * 更新账户资料（spec → users/update_account，patch 语义：只下发要改的字段）。
-     * avatar_file_id 依赖媒体上传链路（首版 TODO），本方法不涉及头像。
+     * avatar_file_id 来自 AvatarUploader（media/complete_upload 的 file_id）。
      */
     suspend fun updateAccount(
         nickname: String? = null,
+        avatarFileId: String? = null,
         bio: String? = null,
         tags: List<String>? = null,
         gender: String? = null,
@@ -921,6 +922,7 @@ class ProfileRepository(private val api: ApiClient) {
         ApiEndpoint.USERS_UPDATE_ACCOUNT,
         buildJsonObject {
             if (nickname != null) put("nickname", nickname)
+            if (avatarFileId != null) put("avatar_file_id", avatarFileId)
             if (bio != null) put("bio", bio)
             if (tags != null) {
                 put(
