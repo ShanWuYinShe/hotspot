@@ -492,7 +492,7 @@
 | `bun run audit:a11y -- --reduced` | reduced-motion：关键类残留 + 非允许 CSS 动画 >20ms | 有残留/长动画 | `raw/reduced.jsonl` |
 | `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 18 + 审计扩展 17 + 详情页，最多 38 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
 | `bun run audit:touch -- --baseline` | 仅 r5 基线 22 页（快速/对照） | 同上 | 同上 |
-| `bun run audit:keyboard` | 列表键盘导航：消息会话列表 ↑↓ + 搜索框 ↓ 进首行、/notify ↑↓、/search 结果候选 ↑↓、/settings 分段控件（主题/明暗）←→↑↓ + Home/End（11 条断言） | 任一断言失败、未登录、候选不足 | `.workwork/browser-check/keyboard-<ts>/` |
+| `bun run audit:keyboard` | 列表键盘导航：消息会话列表 ↑↓ + 搜索框 ↓ 进首行、/notify ↑↓、/search 结果候选 ↑↓、/settings 分段控件（主题/明暗）←→↑↓ + Home/End、/me/relationships 搜索框 ↓ 进首行 + 行 ↑↓（14 条断言） | 任一断言失败、未登录、候选不足 | `.workwork/browser-check/keyboard-<ts>/` |
 | `bun run audit:permission` | 权限态：QA 普通账号打开 /admin/users（正文无访问权限、岛「管理后台 / 需要管理员权限」、无平台管理语境/返回概览/模块导航）；切换 admin 后恢复模块语境与后台工具（11 条断言） | 任一断言失败、登录失败、后端不可达 | `.workwork/browser-check/permission-<ts>/` |
 | `bun run audit:ui` | browser-qa --mobile + a11y + touch + keyboard + permission | 任一子检查失败整体 exit 1 | 五个报告路径 + 摘要 |
 
@@ -1161,6 +1161,7 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 | `/messages` | 会话列表 ↑↓；搜索框 ↓ 进首行 | `lib/chat-list-nav` + `ChatListBody` / `SearchInput.onKeydown`（PR #281/#283） | 搜索框 ↓ 进首行、↓ 到第二行、↑ 回第一行 |
 | `/search` | 输入框/相关话题/结果行/最近条目间 ↑↓、Esc 清空回输入框、Enter 打开 | `useSearchPageData.handleSearchNavKeydown` + `searchNavCandidates`（PR #242） | 首候选 ↓ 到第二、↑ 回第一 |
 | `/settings` | 分段控件（应用主题 / 外观模式，`role=radiogroup`）←→↑↓ 移动并选中、Home/End 跳首末项；roving tabindex（组内仅选中项可 Tab 进入） | `lib/roving-radio.ts` + `AppearanceSection` 组内接线 | 主题 → 移动到 forest 且 html class 同步、End→inkwash、Home→vibrant、外观模式 → 移动并选中 |
+| `/me/relationships` | 搜索框 ↓ 进入好友列表首行、行间 ↑↓；候选 = 行覆盖按钮（`[data-list-item] [data-cover]`），行内动作按钮用 Tab 到达 | `RelationshipsPage` 页级 window 监听 + `lib/search-nav` | 搜索框 ↓ 到首行、↓ 到第二行、↑ 回首行 |
 
 **自动门禁**：`bun run audit:keyboard`（`scripts/keyboard-nav.sh`）——复用 `qa-common.sh` 的健康检查/QA 登录/session 清理，行数据异步轮询，未登录或候选不足 2 直接失败；已作为第四步纳入 `bun run audit:ui`。最近一次：
 
