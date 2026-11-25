@@ -54,6 +54,14 @@ func (s *closingSink) reset() {
 	s.events = nil
 }
 
+// deliveredAndClosed 一次加锁读取投递数与关闭状态，避免测试分别在两次加锁间
+// 观察到「已 Send、尚未 Close」的中间态（跨实例 session 撤销的合法时序）。
+func (s *closingSink) deliveredAndClosed() (int, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.events), s.closed
+}
+
 type bridgePair struct {
 	rdbA, rdbB       *redis.Client
 	bridgeA, bridgeB *RedisBridge
@@ -157,12 +165,12 @@ func TestRedisBridgeDeliversAllChannelsCrossInstance(t *testing.T) {
 	if err := pair.bridgeA.Publish(context.Background(), redisChannelSession+"sess2", Event{Type: EventTypeSessionRevoked}); err != nil {
 		t.Fatalf("publish session: %v", err)
 	}
-	waitFor(t, 2*time.Second, "session close delivery", func() bool { return sessionSink.count() == 1 })
-	sessionSink.mu.Lock()
-	closed := sessionSink.closed
-	sessionSink.mu.Unlock()
-	if !closed {
-		t.Fatal("session channel must close the sink")
+	waitFor(t, 2*time.Second, "session close delivery", func() bool {
+		count, closed := sessionSink.deliveredAndClosed()
+		return count == 1 && closed
+	})
+	if count, closed := sessionSink.deliveredAndClosed(); count != 1 || !closed {
+		t.Fatalf("session channel delivery: count=%d closed=%v, want count=1 closed=true", count, closed)
 	}
 
 	// origin 跳过：本实例 sink 不应收到 bridgeA 自己发布的事件。
