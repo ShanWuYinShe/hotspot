@@ -1,7 +1,9 @@
+import { goto } from '$app/navigation';
 import { page } from '$app/state';
 import { auth, requireAuth } from '@/stores/auth.svelte';
 import { showToast } from '@/stores/toast.svelte';
 import { smartBack } from '@/lib/smart-back';
+import { ROUTES } from '@/lib/routes';
 import { copyShareLink } from '@/lib/share';
 import { clearMomentsProgress } from '@/lib/moments-feed-progress.svelte';
 import { formatMomentTime } from '@/lib/utils';
@@ -455,7 +457,8 @@ export function useMomentDetailData(getMomentId: () => string) {
 		// 剪贴板操作没有系统反馈：必须给用户明确结果（成功/失败），否则会误以为没点上。
 		showToast(
 			result === 'failed' ? '分享链接复制失败，请重试' : result === 'shared' ? '分享链接已复制' : '链接已复制',
-			result === 'failed' ? 'danger' : 'success'
+			result === 'failed' ? 'danger' : 'success',
+			result === 'shared' ? { label: '管理分享', onAction: () => void goto(ROUTES.meShares) } : undefined
 		);
 		window.setTimeout(() => (shareStatus = 'idle'), 1800);
 	};

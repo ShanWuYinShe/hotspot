@@ -70,6 +70,18 @@
 					<svelte:component this={cfg.icon} class="size-4 {cfg.iconClass}" strokeWidth={2.2} />
 				</div>
 				<p class="min-w-0 flex-1 text-sm font-medium text-text-primary leading-snug">{item.message}</p>
+				{#if item.action}
+					<button
+						type="button"
+						class="hit-slop shrink-0 focus-ring rounded-lg px-2 py-1 text-xs font-medium text-text-accent-on-soft transition-colors hover:bg-accent-soft"
+						onclick={() => {
+							item.action?.onAction();
+							dismissToast(item.id);
+						}}
+					>
+						{item.action.label}
+					</button>
+				{/if}
 				<button
 					type="button"
 					class="hit-slop shrink-0 focus-ring rounded-lg p-1 text-text-secondary transition-colors hover:bg-interactive-hover hover:text-text-primary"
