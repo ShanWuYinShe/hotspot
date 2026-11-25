@@ -19,6 +19,9 @@ object ApiEndpoint {
     // /api/v1（必须 Bearer Token）
     const val SIGNOUT = "/api/v1/auth/signout"
     const val AUTH_CHANGE_PASSWORD = "/api/v1/auth/change_password"
+    const val AUTH_FETCH_SESSIONS = "/api/v1/auth/fetch_sessions"
+    const val AUTH_REVOKE_SESSION = "/api/v1/auth/revoke_session"
+    const val AUTH_REVOKE_OTHER_SESSIONS = "/api/v1/auth/revoke_other_sessions"
     const val USERS_DELETE_ACCOUNT = "/api/v1/users/delete_account"
 
     const val MOMENTS_SEARCH = "/api/v1/moments/search"

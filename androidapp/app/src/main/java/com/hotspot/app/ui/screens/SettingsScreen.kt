@@ -84,6 +84,7 @@ fun SettingsScreen(
     onOpenEditProfile: () -> Unit,
     onOpenReports: () -> Unit,
     onOpenBlocked: () -> Unit,
+    onOpenSessions: () -> Unit,
     onOpenAdmin: () -> Unit,
     onOpenMap: () -> Unit,
 ) {
@@ -211,6 +212,11 @@ fun SettingsScreen(
                         passwordError = null
                         showChangePassword = true
                     },
+                )
+                ListRow(
+                    title = "登录设备",
+                    subtitle = "查看活跃设备，退出其他设备",
+                    onClick = onOpenSessions,
                 )
                 ListRow(
                     title = "删除账号",
