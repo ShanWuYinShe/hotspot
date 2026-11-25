@@ -493,7 +493,8 @@
 | `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 18 + 审计扩展 17 + 详情页，最多 38 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
 | `bun run audit:touch -- --baseline` | 仅 r5 基线 22 页（快速/对照） | 同上 | 同上 |
 | `bun run audit:keyboard` | 列表键盘导航：消息会话列表 ↑↓ + 搜索框 ↓ 进首行、/notify ↑↓、/search 结果候选 ↑↓、/settings 分段控件（主题/明暗）←→↑↓ + Home/End（11 条断言） | 任一断言失败、未登录、候选不足 | `.workwork/browser-check/keyboard-<ts>/` |
-| `bun run audit:ui` | browser-qa --mobile + a11y + touch + keyboard | 任一子检查失败整体 exit 1 | 四个报告路径 + 摘要 |
+| `bun run audit:permission` | 权限态：QA 普通账号打开 /admin/users（正文无访问权限、岛「管理后台 / 需要管理员权限」、无平台管理语境/返回概览/模块导航）；切换 admin 后恢复模块语境与后台工具（11 条断言） | 任一断言失败、登录失败、后端不可达 | `.workwork/browser-check/permission-<ts>/` |
+| `bun run audit:ui` | browser-qa --mobile + a11y + touch + keyboard + permission | 任一子检查失败整体 exit 1 | 五个报告路径 + 摘要 |
 
 参数：`--base`、`--session`、`--theme vibrant|forest|inkwash`、`--mode light|dark`、`--reduced`、`--mobile`、`--limit <n>`（调试）、`--allowlist <path>`（touch，负向验证用）、`--help`。
 
@@ -1212,3 +1213,16 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 - `/register` 传输仅 3KB（页面本身轻量/跳转态），LCP 1.3–2.6s 波动同样来自网络与调度。
 - 登录态页面（`/`、`/messages`、`/search` 等）生产测量需要真实账号与专业工具，未纳入本轮；本轮脚本的 `--no-login` 避免向线上发送种子账号登录尝试。
 - 已验证：本机 `curl` 直连（`--noproxy "*"`）可访问；但 Chrome 侧本轮尝试用 `--args --no-proxy-server` 未确认生效（脚本仍输出偏慢的 FCP/LCP），真实网络基线不在本机代理环境下采集。
+
+## 权限态 UI 门禁（/admin 头部与后台工具随权限收敛）
+
+**背景**：`/admin` 布局头部曾无条件渲染「平台管理」语境——QA 普通账号打开 `/admin/users` 时正文是「无访问权限」、岛标题却是「用户管理 / 平台管理」并带「返回概览」，自相矛盾（PR #299 修复）。为避免回归，新增 `bun run audit:permission`（第五步进 `audit:ui`）。
+
+**断言**（`scripts/permission-ui.sh`，1440×900）：
+
+1. 非管理员：正文「无访问权限」；岛为「管理后台 / 需要管理员权限」；岛不含「平台管理」；无「返回概览」、无「管理模块导航」、正文不出现模块名「用户管理」；
+2. 管理员（同一 session 内切 admin 账号）：正文无「无访问权限」；岛恢复「用户管理 / 平台管理 / 返回概览」；「管理模块导航」存在。
+
+**取数口径**：岛文本取 `[data-desktop-dynamic-island]` 的 innerText（归一空白）；正文取 `document.body.innerText`；布尔字段在 eval 内转字符串（`qa_json_field` 只解析字符串字段）。
+
+**最近一次**：11 条断言 PASS（`permission-20261125-101325`）。
