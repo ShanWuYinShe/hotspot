@@ -3,9 +3,11 @@ ARG ALPINE_VERSION=3.24.4
 
 FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS builder
 
-# dl-cdn.alpinelinux.org（Fastly CDN）在国内网络劣化严重（~30KB/s），
-# 换 aliyun 镜像源，避免 apk 下载索引/包超时
-RUN sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories && apk add --no-cache git
+# 默认使用 Alpine 官方 CDN（GitHub Actions 等海外构建网络更稳）。
+# 国内本地构建可选：--build-arg APK_MIRROR=mirrors.aliyun.com。
+ARG APK_MIRROR=""
+RUN if [ -n "${APK_MIRROR}" ]; then sed -i "s#dl-cdn.alpinelinux.org#${APK_MIRROR}#g" /etc/apk/repositories; fi \
+    && apk add --no-cache git
 
 WORKDIR /src
 
@@ -54,7 +56,8 @@ LABEL org.opencontainers.image.version=${GIT_VERSION} \
       org.opencontainers.image.revision=${GIT_COMMIT} \
       org.opencontainers.image.created=${GIT_BUILD_TIME}
 
-RUN sed -i 's#dl-cdn.alpinelinux.org#mirrors.aliyun.com#g' /etc/apk/repositories \
+ARG APK_MIRROR=""
+RUN if [ -n "${APK_MIRROR}" ]; then sed -i "s#dl-cdn.alpinelinux.org#${APK_MIRROR}#g" /etc/apk/repositories; fi \
     && apk add --no-cache ca-certificates tzdata curl
 
 RUN addgroup -S app && adduser -S app -G app
