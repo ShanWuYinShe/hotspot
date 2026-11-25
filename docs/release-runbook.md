@@ -87,11 +87,11 @@ gh run watch <run-id> --exit-status
 - **触发条件**（满足即发布，不必累积过多）：main 上已合并 ≥1 批用户可见改动（新功能=minor / 仅修复=patch）且 **main CI 全绿**、涉及 `harmonyapp/` 时本机 `assembleApp` 通过。
 - **发布内容一次到位**：后端 + 前端（tag → Release 工作流构建镜像并 auto-deploy 生产）+ **Android APK（同一 Release 附件）**。
 - **执行顺序**（固定，不要跳步）：
-  1. 发版 PR：把 `androidapp/app/build.gradle.kts` 默认 `versionName/versionCode` 对齐新版本（versionCode 每次 +1）；
+  1. 发版 PR：按需更新 `androidapp/app/build.gradle.kts` 的默认 `versionName`（未注入环境变量时使用）；`versionCode` 由 versionName 自动推导，无需手工 +1；
   2. 合并后等 main CI 全绿；涉及鸿蒙改动时本机确认 hvigor 构建；
   3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / **android-apk** / auto-deploy / **post-release-smoke**）全绿。**不需要本机再构建/上传 APK，也不需要本机跑冒烟**。
 - **APK 与冒烟的时序**：`android-apk` job 在 GitHub 内用仓库 Secrets 的签名材料构建 APK 并附到 Release；`post-release-smoke` `needs: [auto-deploy, android-apk]`，等两者完成后跑完整 `release-smoke.sh`（含 APK 资产、镜像包校验和、线上版本三处对齐），发版校验全部在 CI 闭环。
-- **APK 版本号规则不变**：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致。
+- **APK 版本号规则**：`versionName` 与 tag 一致；`versionCode` 由 tag 的 `vX.Y.Z` 推导为 `X*10000 + Y*100 + Z`（如 `v1.15.21 → 11521`），Release workflow 会校验 APK 的版本名和版本码都与 tag 一致。
 
 ### Android APK 分发（CI 构建并附到 Release）
 
@@ -105,7 +105,7 @@ APK 由 Release 工作流的 `android-apk` job 在 GitHub 上构建签名并附�
 | `ANDROID_KEY_PASSWORD` | key 口令（当前与 keystore 口令相同） |
 
 - 本机 keystore 仅作为密钥原始备份，**禁止提交仓库**；keystore 丢失后无法覆盖升级安装，需离线备份。
-- `versionCode` 在发版 PR 中递增；job 使用 Gradle 默认值构建，并校验 APK `versionName` 与 tag 一致。
+- Release job 从 tag 推导 `HOTSPOT_VERSION_CODE`（`X*10000+Y*100+Z`）并显式注入构建，构建后校验 APK 的 `versionName` 与 `versionCode` 均与 tag 一致；发版 PR 无需手工维护 versionCode。
 - 正常发版**不需要**本机执行任何 APK 构建/上传命令。
 
 `scripts/release-android-apk.sh` 仅保留为 GitHub Actions 故障时的应急兜底；如使用，附包后手动触发完整冒烟：
