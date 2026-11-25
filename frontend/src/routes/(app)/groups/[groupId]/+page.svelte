@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { MoreHorizontal } from '@lucide/svelte';
+	import { MoreHorizontal, Share2 } from '@lucide/svelte';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
 	import DetailHeader from '@/components/layout/page/DetailHeader.svelte';
 	import StandardPageLayout from '@/components/layout/page/StandardPageLayout.svelte';
@@ -37,9 +37,18 @@
 </svelte:head>
 
 {#snippet groupHeaderActions()}
-	{#if page.canReportGroup}
-		<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (page.moreOpen = true)} variant="ghost" size={36} />
-	{/if}
+	<div class="flex items-center gap-3">
+		<ActionIconButton
+			icon={Share2}
+			label={page.shareCopied ? '链接已复制' : '分享群组'}
+			variant="ghost"
+			size={36}
+			onClick={page.copyGroupLink}
+		/>
+		{#if page.canReportGroup}
+			<ActionIconButton icon={MoreHorizontal} label="更多操作" onClick={() => (page.moreOpen = true)} variant="ghost" size={36} />
+		{/if}
+	</div>
 {/snippet}
 
 <StandardPageLayout contentClassName={platform.platform === 'mobile' ? 'pb-8' : 'pb-6'}>
