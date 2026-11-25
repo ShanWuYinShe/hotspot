@@ -53,6 +53,15 @@
 	const isHorizontal = $derived(horizontal || tier === '2x1');
 	const isHero = $derived(tier === '2x2');
 
+	// 封面加载失败时与「无图」同口径降级：图片 404/网络失败也要切到文字优先海报，
+	// 不能因为 item.image 仍为真而把整卡留成渐变底 + 底部文字（会读成缺图骨架）。
+	let imageFailed = $state(false);
+	$effect(() => {
+		void item.image;
+		imageFailed = false;
+	});
+	const hasCover = $derived(Boolean(item.image) && !imageFailed);
+
 	// 卡片可访问名（role=button 的 aria-label 来源）：tag 可为空，回退正文/作者并截断。
 	const cardLabel = $derived((item.tag || item.content || item.user).slice(0, 30));
 
@@ -104,26 +113,27 @@
 	imageAlt={cardLabel}
 	{onClick}
 	{priority}
+	onImageError={() => (imageFailed = true)}
 	horizontal={isHorizontal}
 	class={className}
 >
 	<!-- Tag chip：左上角类别/标签 -->
 	{#if item.tag}
-		<span class="pointer-events-none {item.image ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 left-2.5 z-[2]">
+		<span class="pointer-events-none {hasCover ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 left-2.5 z-[2]">
 			{item.tag}
 		</span>
 	{/if}
 
 	<!-- 时间徽章：右上角轻量显示，与左上角标签平衡且不占用底部操作行空间 -->
 	{#if item.time}
-		<span class="pointer-events-none {item.image ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs tabular-nums font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 right-2.5 z-[2]">
+		<span class="pointer-events-none {hasCover ? 'media-badge' : 'rounded-full px-2 py-0.5 text-xxs tabular-nums font-medium bg-surface-subtle text-text-secondary border border-border-default/60'} absolute top-2.5 right-2.5 z-[2]">
 			{item.time}
 		</span>
 	{/if}
 
 	<!-- 纯文字动态主体（仅在无图时渲染）：文字优先海报式排版（大引号 + 放大正文），
 	     让无图卡读作「文字卡」而不是「缺图卡」；仍保持 4:5 / 3:4 卡位不变。 -->
-	{#if !item.image && item.content}
+	{#if !hasCover && item.content}
 		<div class="pointer-events-none absolute inset-x-0 top-9 bottom-14 z-[1] flex flex-col justify-center gap-1.5 px-3.5 sm:top-10 sm:gap-2 sm:px-4">
 			<Quote class="size-4 shrink-0 text-accent-default/70 sm:size-5" strokeWidth={1.75} aria-hidden="true" />
 			<p class="pointer-events-none line-clamp-3 text-sm font-semibold leading-relaxed text-text-primary text-balance sm:line-clamp-5 sm:text-base">
@@ -137,7 +147,7 @@
 		{@const onCover = onImage && !horizontal}
 		<div class="pointer-events-none flex flex-col gap-1 p-2 sm:p-2.5 {isHorizontal ? 'gap-3 p-3 sm:p-4 justify-center' : ''}" data-card-footer>
 			<!-- 正文：普通卡 2 行，横排/巨幕卡 3 行（仅在有图片时在底部托盘渲染，无图时已由中央内容区承载） -->
-			{#if item.content && item.image}
+			{#if item.content && hasCover}
 				<p class="pointer-events-none line-clamp-2 {isHorizontal || isHero ? 'line-clamp-3 sm:text-base' : ''} text-xs sm:text-sm font-semibold leading-snug {onCover ? 'text-content-inverse drop-shadow-xs' : 'text-text-primary'}">
 					{item.content}
 				</p>
