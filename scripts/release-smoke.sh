@@ -147,8 +147,8 @@ else
   if [ -z "$ASSET_NAMES" ]; then
     fail "Release $VERSION 不存在或不可读"
   else
-    # APK 由本机在 Release 工作流之后附包，CI 的 post-deploy-smoke 用
-    # --skip-apk 跳过；镜像三类资产任何时候都必须齐全。
+    # APK 由 Release 工作流的 android-apk job 在 CI 内构建附包，完整冒烟
+    # 由 post-release-smoke 执行（不再 --skip-apk）；镜像三类资产任何时候都必须齐全。
     REQUIRED_ASSETS=(
       "hotspot-images-$VERSION.tar.gz"
       "hotspot-images-$VERSION.tar.gz.sha256"
