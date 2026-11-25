@@ -19,7 +19,7 @@
   --cst-palette-page-bg: #F6F7F3;
   --cst-palette-chat-bg: #F2F3F2;
   --cst-palette-text: #152219;
-  --cst-palette-text-muted: #3F5547;
+  --cst-palette-text-muted: #354B3D;
   /* accent 加深（#3D7A55→#39714F）：原值压 accent 淡底仅 4.13（<4.5，全站复审 C2 同族，
      补审 forest 时发现）；加深后压淡底 4.65、白字压实底 5.11→5.76。透明度派生同步改 RGB */
   --cst-palette-accent-primary: #39714F;
@@ -230,7 +230,7 @@
   --cst-palette-page-bg: #161A16;
   --cst-palette-chat-bg: #0E100E;
   --cst-palette-text: #E8F1E9;
-  --cst-palette-text-muted: #A8BDAE;
+  --cst-palette-text-muted: #B7CDBD;
   --cst-palette-accent-primary: #52B878;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);

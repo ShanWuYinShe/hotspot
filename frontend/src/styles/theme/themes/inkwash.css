@@ -19,8 +19,8 @@
   --cst-palette-page-bg: #F5F2EA;
   --cst-palette-chat-bg: #F1EDE3;
   --cst-palette-text: #2B2A26;
-  /* text-muted 加深（#6E6A60→#6B675D）：原值压 surface-subtle 合成底 4.41（<4.5） */
-  --cst-palette-text-muted: #6B675D;
+  /* text-muted 两轮加深（#6E6A60→#6B675D→#5D594F）：首轮修 surface-subtle 合成底 4.41（<4.5）；二轮提升卡片次要文字区分度（画布 6.24） */
+  --cst-palette-text-muted: #5D594F;
   --cst-palette-accent-primary: #A63A2E;
   --cst-palette-glow: rgba(0, 0, 0, 0);
   --cst-palette-shadow-light: rgba(255, 255, 255, 0.0);
@@ -223,7 +223,7 @@
   --cst-palette-page-bg: #181A1C;
   --cst-palette-chat-bg: #1D2022;
   --cst-palette-text: #EAE6DA;
-  --cst-palette-text-muted: #A8A49A;
+  --cst-palette-text-muted: #B7B3A8;
   /* accent 提亮（#D07763→#DF7F6A）：深色下原值压 accent 淡底仅 4.10（<4.5）；
      提亮后压淡底 4.66，且深字压实底 5.54→6.29（双向都变好）。透明度派生同步改 RGB */
   --cst-palette-accent-primary: #DF7F6A;

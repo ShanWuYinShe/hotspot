@@ -278,20 +278,20 @@ export class ThemeConstants {
     systemSurfaceBaseColor: '#EDEDED',
     overlayStrong: '#6B141C14',
     textPrimary: '#152219',
-    textSecondary: '#3F5547',
+    textSecondary: '#354B3D',
     // 审计 P3-4：原 #7A837E on 纸面 #F6F7F3 对比度仅 3.77(<4.5)，加深至 #5F6C64（5.12），
-    // 色相同族微加深、仍保持比 textSecondary(#3F5547) 弱一档的层次
+    // 色相同族微加深、仍保持比 textSecondary(#354B3D) 弱一档的层次
     // R5/forest light v2：岛底 #E4E6E2 上原 #5F6C64 仅 4.38(<4.5)，加深到 #58645C（岛 4.93 / 画布 5.75）；
     // textTertiary 为 harmony-only palette（web 只有 primary/secondary），无跨端同步负担
     textTertiary: '#58645C',
-    iconMuted: '#3F5547',
+    iconMuted: '#354B3D',
     buttonSecondaryBackground: '#F0F1F0',
     buttonSecondaryText: '#152219',
     primaryButtonBorderColor: '#39714F',
     inputBackgroundColor: '#F0F1F0',
     quickActionBackgroundColor: '#FFFFFF',
     tabBarBackground: '#F9F9F5',
-    tabBarInactive: '#3F5547',
+    tabBarInactive: '#354B3D',
     tabBarActiveBackground: '#DEE7DF',
     isDarkTheme: false,
     online: '#39714F',
@@ -337,18 +337,18 @@ export class ThemeConstants {
     systemSurfaceBaseColor: '#111311',
     overlayStrong: '#8A000000',
     textPrimary: '#E8F1E9',
-    textSecondary: '#A8BDAE',
+    textSecondary: '#B7CDBD',
     // 审计 P3-4：原 #5A6B60 on #161A16 对比度仅 3.10(<4.5)，提亮至 #7E8D82（5.04），
-    // 仍保持比 textSecondary(#A8BDAE) 弱一档的层次
+    // 仍保持比 textSecondary(#B7CDBD) 弱一档的层次
     textTertiary: '#7E8D82',
-    iconMuted: '#A8BDAE',
+    iconMuted: '#B7CDBD',
     buttonSecondaryBackground: '#242624',
     buttonSecondaryText: '#E8F1E9',
     primaryButtonBorderColor: '#52B878',
     inputBackgroundColor: '#242624',
     quickActionBackgroundColor: '#111311',
     tabBarBackground: '#161A16',
-    tabBarInactive: '#A8BDAE',
+    tabBarInactive: '#B7CDBD',
     tabBarActiveBackground: '#1E2E23',
     isDarkTheme: true,
     online: '#52B878',
@@ -400,18 +400,18 @@ export class ThemeConstants {
     systemSurfaceBaseColor: '#EDF3FC',
     overlayStrong: '#850C1930',
     textPrimary: '#16233A',
-    textSecondary: '#52647F',
+    textSecondary: '#47586F',
     // 审计 P3-4：原 #767F92 on 卡片白底 4.02 / on 画布 #EFF3F9 3.61（均 <4.5），
-    // 加深至 #626C80（5.28 / 4.74），同族微加深、仍比 textSecondary(#52647F) 弱一档
+    // 加深至 #626C80（5.28 / 4.74），同族微加深、仍比 textSecondary(#47586F) 弱一档
     textTertiary: '#626C80',
-    iconMuted: '#52647F',
+    iconMuted: '#47586F',
     buttonSecondaryBackground: '#EDF3FC',
     buttonSecondaryText: '#16233A',
     primaryButtonBorderColor: '#2B5EB2',
     inputBackgroundColor: '#EAF1FA',
     quickActionBackgroundColor: '#FFFFFF',
     tabBarBackground: '#F7FAFF',
-    tabBarInactive: '#52647F',
+    tabBarInactive: '#47586F',
     tabBarActiveBackground: '#D6E0F0',
     isDarkTheme: false,
     online: '#0D6A62',
@@ -460,16 +460,16 @@ export class ThemeConstants {
     systemSurfaceBaseColor: '#0B0E14',
     overlayStrong: '#A600040C',
     textPrimary: '#F1F5F9',
-    textSecondary: '#94A3B8',
+    textSecondary: '#A3B1C4',
     textTertiary: '#64748B',
-    iconMuted: '#94A3B8',
+    iconMuted: '#A3B1C4',
     buttonSecondaryBackground: '#181E2B',
     buttonSecondaryText: '#F1F5F9',
     primaryButtonBorderColor: '#5B9CF6',
     inputBackgroundColor: '#181E2B',
     quickActionBackgroundColor: '#0B0E14',
     tabBarBackground: '#0B0E14',
-    tabBarInactive: '#94A3B8',
+    tabBarInactive: '#A3B1C4',
     tabBarActiveBackground: '#152031',
     isDarkTheme: true,
     online: '#34D399',
@@ -517,8 +517,8 @@ export class ThemeConstants {
     // overlayStrong = CSS rgba(26,24,20,0.42)，ArkTS #AARRGGBB alpha 前置
     overlayStrong: '#6B1A1814',
     textPrimary: '#2B2A26',
-    textSecondary: '#6B675D',
-    // 宣纸灰 tertiary：on 画布 #F5F2EA 对比 4.68（≥4.5），比 textSecondary(#6E6A60, 4.82) 弱一档
+    textSecondary: '#5D594F',
+    // 宣纸灰 tertiary：on 画布 #F5F2EA 对比 4.82（≥4.5），比 textSecondary(#5D594F, 6.24) 弱一档
     textTertiary: '#706C62',
     iconMuted: '#6E6A60',
     buttonSecondaryBackground: '#F0EBE0',
@@ -576,17 +576,17 @@ export class ThemeConstants {
     // overlayStrong = CSS rgba(0,0,0,0.58)，ArkTS #AARRGGBB alpha 前置
     overlayStrong: '#94000000',
     textPrimary: '#EAE6DA',
-    textSecondary: '#A8A49A',
-    // 宣纸灰 tertiary：on 画布 #181A1C 对比 5.20（≥4.5），比 textSecondary(#A8A49A, 7.01) 弱一档
+    textSecondary: '#B7B3A8',
+    // 宣纸灰 tertiary：on 画布 #181A1C 对比 7.02（≥4.5），比 textSecondary(#B7B3A8, 8.33) 弱一档
     textTertiary: '#908C82',
-    iconMuted: '#A8A49A',
+    iconMuted: '#B7B3A8',
     buttonSecondaryBackground: '#26292B',
     buttonSecondaryText: '#EAE6DA',
     primaryButtonBorderColor: '#DF7F6A',
     inputBackgroundColor: '#26292B',
     quickActionBackgroundColor: '#141617',
     tabBarBackground: '#181A1C',
-    tabBarInactive: '#A8A49A',
+    tabBarInactive: '#B7B3A8',
     // tabBarActiveBackground = accent @ 0.13 预合成到 #181A1C（跨端校验直比）
     tabBarActiveBackground: '#322726',
     isDarkTheme: true,

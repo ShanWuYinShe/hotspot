@@ -5,6 +5,26 @@
 > 便于追溯与对齐 Figma 版本历史。推荐通过 Figma Local Bridge 一键程序化打点：
 > `node scripts/design-kit/figma-bridge.mjs save-version -t "标题" -d "描述"`，也可在桌面端手动录入。
 
+## 2026-11-25 · 次要文字色阶校准（text-secondary 提对比，三端 + 设计稿同步）
+
+### 变更内容
+
+1. **text-secondary 全主题提对比**（Web CSS / HarmonyOS ThemeConstants / Android Tokens.kt 三端同源）：
+   vibrant 亮 `#52647F→#47586F`、暗 `#94A3B8→#A3B1C4`；forest 亮 `#3F5547→#354B3D`、暗 `#A8BDAE→#B7CDBD`；
+   inkwash 亮 `#6B675D→#5D594F`、暗 `#A8A49A→#B7B3A8`。目的：卡片次要文字（说明/计数/位置）对比度提升约 0.9–1.4
+   （示例：vibrant 亮 5.56→6.71、forest 暗 7.62→9.01、inkwash 暗 5.35→6.35），保持各主题色相不变。
+2. **Figma 变量同步**：HotSpot Tokens 集合 `text-secondary`（VariableID:5:9）6 个模式值改为上述色值；
+   右侧辅助边栏（活跃邻居/社区热议/附近活动）等绑定该变量的文字全部随模式更新，设计稿保持最新。
+3. 设计包产物重生成：`docs/design-kit/tokens*.json`、`docs/design-kit/ui-kit.html`。
+
+### 验证
+
+- `bun run check:theme`：palette / 语义色 / 跨端颜色 / 氛围画布 / 整卡遮罩 / 水印 / Android token 全过（palette 23 项 × 6 组合）。
+- Figma 右栏浅色/深色截图：模板表面与文字颜色同步翻转，无固定灰色残留（文中对比图）。
+- Web 右栏同条件（forest 浅/深）对比截图：说明/计数文字对比提升、层次更清晰。
+
+---
+
 ## 记录格式
 
 - **日期时间** · 轮次 · 主题
