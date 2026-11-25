@@ -140,6 +140,8 @@ app/src/main/java/com/hotspot/app/
 - Base URL：默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）；模拟器/真机一律
   `adb reverse tcp:8888 tcp:8888` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建；
   release 默认线上站点且强制 HTTPS；debug 明文仅放行本机地址（network_security_config）。
+- 端上走查设备真机优先（`adb devices -l` 中状态 `device` 且 serial 非 `emulator-*`），无合格真机才用模拟器；
+  选中后所有 `adb` 命令固定 `-s <serial>`，判据与流程见 skill `hotspot-android-device-verify`「设备选择」。
 - **WebSocket**：端点 `/ws/v1`（spec/api_spec_websocket.md），App 端连接后 5 秒内发 `Auth`
   （access_token + device_id + resume_token）；心跳参数由 `ConnectionEstablished.config` 下发，禁止硬编码；
   断线指数退避重连（4002 按 `Error.retry_after` 等待），4001 先 refresh token（仅 10100/会话失效才清会话回登录，
@@ -213,9 +215,9 @@ app/src/main/java/com/hotspot/app/
   `private_messages/send` / `group_messages/send` 的 `type=file` + `file_id`；气泡展示文件名/大小，点击 `ACTION_VIEW` 打开签名 URL。
 - **设置·地图与位置**：展示当前浏览锚点（自定义地点 + 坐标；未设置时回退默认位置）；
   「去地图选点」跳转 `/map`，选点保存后回到设置并刷新；「恢复默认」清除本地锚点。
-- **模拟器网络判据**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888` 会连接超时（nginx 无访问日志），
-  而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。验证端内可达看
-  `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
+- **模拟器网络判据（模拟器基线；真机同样走 adb reverse）**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888`
+  会连接超时（nginx 无访问日志），而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。
+  验证端内可达看 `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。
 
 ## UI 契约
 
@@ -252,7 +254,7 @@ app/src/main/java/com/hotspot/app/
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
    查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）、
    举报评论（reports/create target_type=comment，复用 ReportDialog）与楼中楼回复点赞。
-2. 真机走查（模拟器走查流程见 skill `hotspot-android-device-verify`；`assembleRelease` 已在本地
-   验证通过，CI 仍只跑 debug）。
+2. 端上走查：真机优先，无合格真机才用模拟器兜底（设备判定与走查流程见 skill
+   `hotspot-android-device-verify`；`assembleRelease` 已在本地验证通过，CI 仍只跑 debug）。
 3. 地图真实底图（高德/OSM 瓦片）、地理编码搜索与设备定位未接：底图暂为示意底色，搜索候选来自
    `map/canvas` hotspots + 「纬度,经度」坐标，版权标为「示意底图」而非地图服务商。

@@ -33,10 +33,13 @@ cd frontend && bun run check:theme                  # CSS ↔ JSON ↔ Tokens.kt
 ## 调试地址
 
 - 默认 `http://10.0.2.2:8888`（指向宿主 nginx 网关）
+- 设备：真机优先——`adb devices -l` 中状态 `device` 且 serial 非 `emulator-*` 的设备即真机候选，
+  无合格真机才用模拟器；选中后所有命令固定 `-s <serial>`（判定与走查流程见
+  `.agents/skills/hotspot-android-device-verify/SKILL.md`「设备选择」）
 - 模拟器/真机联调：`adb reverse tcp:8888 tcp:8888`，并通过 Gradle 属性覆盖
   `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888`
-  （本机 API 36 AVD 上直接访问 `10.0.2.2` 会连接超时，且 `adb shell nc` 可连通不代表端内可达，
-  判据与走查流程见 `.agents/skills/hotspot-android-device-verify/SKILL.md`）
+  （模拟器基线：本机 API 36 AVD 上直接访问 `10.0.2.2` 会连接超时，且 `adb shell nc` 可连通不代表端内可达；
+  判据见同一 skill）
 - release：`-PHOTSPOT_BASE_URL=https://chaoset.com`（默认线上站点）
 - debug 允许明文 HTTP（network security config，仅本机地址）；release 禁止明文
 
