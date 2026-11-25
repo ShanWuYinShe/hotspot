@@ -89,79 +89,41 @@ gh run watch <run-id> --exit-status
 - **执行顺序**（固定，不要跳步）：
   1. 发版 PR：把 `androidapp/app/build.gradle.kts` 默认 `versionName/versionCode` 对齐新版本（versionCode 每次 +1）；
   2. 合并后等 main CI 全绿；涉及鸿蒙改动时本机确认 hvigor 构建；
-  3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / auto-deploy / **post-deploy-smoke**）全绿；
-  4. 构建并附 APK：`scripts/release-android-apk.sh vX.Y.Z <versionCode>`（校验 tag/Release/签名/版本后上传）；
-  5. 跑发版后冒烟：`./scripts/release-smoke.sh --version vX.Y.Z`（一次核对 version.json / healthz / tag commit 三处一致、前端入口可达、Release 含镜像包 + `.sha256` + `.ids.txt` + APK 且镜像包校验和正确）。脚本对 version.json / healthz / 前端入口各做 3 次重试、镜像包下载 3 次重试——本机网络经系统代理/跨境链路偶发超时不会误判为发版失败；连续失败才是真异常。
-- **APK 与 CI 冒烟的时序**：`post-deploy-smoke` 在 Release 工作流内执行，此时 APK 尚未附包（第 4 步才上传），故该 job 用 `--skip-apk`，只校验线上版本/入口与镜像资产；第 5 步在 APK 附包后跑完整命令（不带 `--skip-apk`），补上 APK 资产检查。
+  3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / **android-apk** / auto-deploy / **post-release-smoke**）全绿。**不需要本机再构建/上传 APK，也不需要本机跑冒烟**。
+- **APK 与冒烟的时序**：`android-apk` job 在 GitHub 内用仓库 Secrets 的签名材料构建 APK 并附到 Release；`post-release-smoke` `needs: [auto-deploy, android-apk]`，等两者完成后跑完整 `release-smoke.sh`（含 APK 资产、镜像包校验和、线上版本三处对齐），发版校验全部在 CI 闭环。
 - **APK 版本号规则不变**：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致。
 
-### Android APK 分发（附到 Release）
+### Android APK 分发（CI 构建并附到 Release）
 
-Android 端不进 CI 发版链路（CI 只跑 debug 门禁），APK 由本机签名后上传到对应 GitHub Release。
-Release 跑完后一条命令完成「构建 + 签名校验 + 版本校验 + 上传」：
+APK 由 Release 工作流的 `android-apk` job 在 GitHub 上构建签名并附到同一 Release；签名材料不入库，存放于仓库 **Actions Secrets**：
 
-```bash
-scripts/release-android-apk.sh v1.14.0 5   # 参数：tag（vX.Y.Z）+ versionCode（递增整数）
-```
+| Secret | 内容 |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | release keystore 的 base64（本机 `~/.android/hotspot-release.jks`） |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore 口令 |
+| `ANDROID_KEY_ALIAS` | `hotspot` |
+| `ANDROID_KEY_PASSWORD` | key 口令（当前与 keystore 口令相同） |
 
-脚本会拒绝：tag 不在 origin/main、Release 尚未生成、keystore/钥匙串口令缺失、APK 版本号与入参不一致等情况（避免发错包/发 debug 包）。
-以下为手动兜底细节。签名材料**不入库、不打印、不配 GitHub secret**：
+- 本机 keystore 仅作为密钥原始备份，**禁止提交仓库**；keystore 丢失后无法覆盖升级安装，需离线备份。
+- `versionCode` 在发版 PR 中递增；job 使用 Gradle 默认值构建，并校验 APK `versionName` 与 tag 一致。
+- 正常发版**不需要**本机执行任何 APK 构建/上传命令。
 
-- keystore：`~/.android/hotspot-release.jks`（alias `hotspot`，RSA 4096 / 10000 天）；
-  口令存 macOS 钥匙串（`security find-generic-password -a <用户名> -s hotspot-android-release -w`）。
-  **keystore 丢失后无法覆盖升级安装**，需另行离线备份，禁止提交到仓库或 CI。
-- 构建（版本号通过环境变量注入，默认已与当前 tag 对齐）：
-
-```bash
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-export ANDROID_HOME="$HOME/Library/Android/sdk"
-PASS=$(security find-generic-password -a "$USER" -s hotspot-android-release -w)
-HOTSPOT_KEYSTORE_FILE="$HOME/.android/hotspot-release.jks" \
-HOTSPOT_KEYSTORE_PASSWORD="$PASS" HOTSPOT_KEY_ALIAS=hotspot HOTSPOT_KEY_PASSWORD="$PASS" \
-HOTSPOT_VERSION_NAME=vX.Y.Z HOTSPOT_VERSION_CODE=N \
-cd androidapp && ./gradlew --no-daemon assembleRelease
-# N = 上一次 versionCode + 1（递增，勿重复）
-```
-
-- 校验签名与版本：
+`scripts/release-android-apk.sh` 仅保留为 GitHub Actions 故障时的应急兜底；如使用，附包后手动触发完整冒烟：
 
 ```bash
-"$ANDROID_HOME/build-tools/37.0.0/apksigner" verify --print-certs \
-  androidapp/app/build/outputs/apk/release/app-release.apk
-"$ANDROID_HOME/build-tools/37.0.0/aapt2" dump badging \
-  androidapp/app/build/outputs/apk/release/app-release.apk | head -2
+gh workflow run release-verify.yml -f version=vX.Y.Z
 ```
-
-- 本地安装冒烟（可选，不进入发版硬门禁）：
-
-```bash
-# debug 与 release 签名不同，覆盖安装前先卸载旧包，否则会 INSTALL_FAILED_UPDATE_INCOMPATIBLE
-adb uninstall com.hotspot.app || true
-adb install androidapp/app/build/outputs/apk/release/app-release.apk
-adb shell am start -W -n com.hotspot.app/.MainActivity
-adb shell dumpsys package com.hotspot.app | grep -E 'versionCode|versionName'
-# release 不可调试：应输出 package not debuggable
-adb shell run-as com.hotspot.app pwd
-```
-
-- 附到 Release（tag 的 Release 工作流跑完后）：
-
-```bash
-gh release upload vX.Y.Z \
-  androidapp/app/build/outputs/apk/release/app-release.apk#hotspot-android-vX.Y.Z.apk --clobber
-gh release view vX.Y.Z --json assets --jq '.assets[].name'
-```
-
-- 版本规则：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致；
-  两者默认值写在 `androidapp/app/build.gradle.kts`（随每次发版更新），发新版用 `HOTSPOT_VERSION_NAME`/`HOTSPOT_VERSION_CODE` 覆盖即可。
 
 ### 部署后自查
 
+发版完整性由 Release 工作流的 `post-release-smoke` job 覆盖（版本三处对齐 / 前端入口 / 镜像包与 APK 资产 / 校验和），正常发版**本地无需再跑**。
+
+需要人工复核或补跑时：
+
 ```bash
-# 一键发版后冒烟（版本三处对齐 + 前端入口 + Release 资产/校验和，任一失败 exit 1）
-# CI 的 post-deploy-smoke job 已在 auto-deploy 后自动执行（APK 尚未附包，用 --skip-apk）；
-# 这里在 APK 附包后跑完整版（不跳过 APK）：
-./scripts/release-smoke.sh --version vX.Y.Z
+gh run list --workflow Release --limit 1          # 确认最新 Release 工作流全绿
+gh workflow run release-verify.yml -f version=vX.Y.Z   # 手动重跑完整冒烟（含 APK）
+gh run watch --workflow release-verify.yml         # 跟踪结果
 
 ssh workwork-server 'tail -5 ~/hotspot/backups/deploy-history.log'   # 审计
 curl -s https://<线上域名>/version.json                              # 边缘实际版本
