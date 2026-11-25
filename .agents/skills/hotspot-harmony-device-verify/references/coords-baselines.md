@@ -1,6 +1,6 @@
 # 端上走查坐标与可达页面基线（hotspot 鸿蒙模拟器）
 
-本文件是 skill `hotspot-harmony-device-verify` 的实测基线：坐标**随每次构建会变**，一律先用 `uitest dumpLayout` 取 bounds 再点；此处数值用于快速比对与回归。分辨率 1256×2760、Pura 90 Pro 实例、密度 ≈3.917。
+本文件是 skill `hotspot-harmony-device-verify` 的**模拟器基线**：坐标**随每次构建会变**，一律先用 `uitest dumpLayout` 取 bounds 再点；此处数值用于快速比对与回归。分辨率 1256×2760、Pura 90 Pro 实例、密度 ≈3.917；真机分辨率/密度不同，坐标必须重新 dumpLayout 标定，不能直接套用。
 
 ## 登录流程实测坐标
 

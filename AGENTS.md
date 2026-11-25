@@ -24,8 +24,8 @@
 | `hotspot-frontend-map` | 前端自研地图契约：marker 全量投影、GCJ-02 同口径、滚轮缩放与漂移实测 |
 | `hotspot-frontend-prod-console` | 线上控制台报错分诊：CF beacon、Firefox preload/CSS 告警、弱网 chunk 失败 |
 | `hotspot-harmony-ui` | 鸿蒙端设计 token、原语与跨端同步机制 |
-| `hotspot-harmony-device-verify` | 鸿蒙端端上实测：hdc + uitest 走查流程、本机坐标、走查账号与陷阱 |
-| `hotspot-android-device-verify` | Android 端端上实测：AVD/adb reverse 联调、10.0.2.2 超时判据、登录与截图走查、造数与清理 |
+| `hotspot-harmony-device-verify` | 鸿蒙端端上实测（真机优先、模拟器兜底）：设备选择、hdc + uitest 走查流程、模拟器坐标基线、走查账号与陷阱 |
+| `hotspot-android-device-verify` | Android 端端上实测（真机优先、模拟器兜底）：设备选择、AVD/adb reverse 联调、10.0.2.2 超时判据、登录与截图走查、造数与清理 |
 | `hotspot-worktree-debug` | worktree 内 compose 隔离调试、端口重映射与清理 |
 | `hotspot-reception-bot` | 接待机器人运行、人格与线上接入（运行时位置见该 skill 内说明） |
 | `hotspot-figma-automation` | Figma 设计稿云端自动化修改、清洗、去系统化与闭环截图同步规程 |
@@ -52,7 +52,7 @@
   - `Docker Build + Runtime Smoke (Prod Images)`：生产后端/前端镜像构建 + 生产后端镜像运行时冒烟。
 - Android 端 `androidapp/` 的构建与 token 校验由 CI `Android (Compose Build)` 覆盖；本地改 UI/token 后可选跑（需本机 SDK）：`cd androidapp && JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew --no-daemon assembleDebug`。
 
-CI 覆盖不到、必须本地/真机验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上真机/模拟器走查（见 skill `hotspot-harmony-device-verify`）；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
+CI 覆盖不到、必须本地/端上验证的：鸿蒙端 `harmonyapp/` 的构建与类型检查（hvigor `assembleApp`，依赖本机 DevEco 工具链与签名材料，CI 无对应 job，见 `harmonyapp/AGENTS.md`）；端上走查（见 skill `hotspot-android-device-verify`、`hotspot-harmony-device-verify`）——**先枚举已连接设备，优先用符合条件的真机，无合格真机才用模拟器**，选中设备后在 PR 证据与走查记录里写明型号 + 系统版本 + serial/target；前端浏览器巡检与质量门禁（`bun run browser:qa` / `audit:ui` 等依赖 dev 环境与 agent-browser，CI 无浏览器，见 `frontend/AGENTS.md`）。
 - 发版/发布门禁：日常验证以 CI 为准；打 tag 前只需确认 `origin/main` 最近一次 CI 全绿（含 `Docker Build + Runtime Smoke`），镜像构建与容器内集成由 CI 在 PR/main 上覆盖，本地不再构建生产镜像、不再核对本地镜像指纹。详见下节「版本号与发布」。
 
 ### PR 描述：排查记录与证据（固定结构）

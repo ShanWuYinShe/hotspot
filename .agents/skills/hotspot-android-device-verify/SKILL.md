@@ -1,12 +1,37 @@
 ---
 name: hotspot-android-device-verify
-description: hotspot Android 端模拟器实测流程：AVD 创建与启动、adb reverse 联调（含端内 10.0.2.2 超时判据）、登录与页面走查（uiautomator dump + input + screencap）、造数与清理。触发：需要在 Android 模拟器/真机上安装运行 hotspot Android 客户端并截图走查；验证 androidapp 某页面 UI（首页/详情/评论/我的/设置）；排查模拟器网络不通、请求超时、登录失败；需要端上复现设计稿契约。
+description: hotspot Android 端实测流程（真机优先、模拟器兜底）：设备选择判据、AVD 创建与启动、adb reverse 联调（含端内 10.0.2.2 超时判据）、登录与页面走查（uiautomator dump + input + screencap）、造数与清理。触发：需要在 Android 真机/模拟器上安装运行 hotspot Android 客户端并截图走查；验证 androidapp 某页面 UI（首页/详情/评论/我的/设置）；排查模拟器网络不通、请求超时、登录失败；需要端上复现设计稿契约。
 ---
 
-# hotspot Android 端模拟器实测（emulator + adb + uiautomator）
+# hotspot Android 端实测（真机优先 + 模拟器兜底；emulator + adb + uiautomator）
 
 > 通用 adb/emulator/JDWP 行为见用户级 skill `android-emulator-debug`；本文件只记 hotspot 项目专属事实与实测流程。
 > **环境类结论必须附验证方式（命令/取数口径）+ 复现步骤，沿用前先证伪一次**（项目 AGENTS.md「环境类结论必须可复现」）。
+
+## 设备选择（真机优先，模拟器兜底）
+
+先枚举已连接设备，优先用「符合条件的真机」；没有合格真机才用模拟器。通用枚举与授权流程见用户级 skill
+`android-emulator-debug`（`unauthorized`/`offline` 不算设备，真机授权要在设备屏幕上点「允许 USB 调试」），
+本节只写 hotspot 的判据与命令。
+
+```bash
+ADB="$HOME/Library/Android/sdk/platform-tools/adb"
+$ADB devices -l     # 真机候选：状态 device 且 serial 不以 emulator- 开头；多设备时所有命令固定 -s <serial>
+SERIAL=<serial>
+$ADB -s "$SERIAL" shell getprop ro.build.version.sdk     # 需 ≥ minSdk（现查 androidapp/app/build.gradle.kts）
+$ADB -s "$SERIAL" shell getprop ro.product.cpu.abilist   # ABI 清单（当前 App 无 native 库，记录即可）
+$ADB -s "$SERIAL" shell getprop ro.product.model         # 型号（走查记录/PR 证据必须写）
+$ADB -s "$SERIAL" shell getprop ro.build.version.release # 系统版本（与型号一起记录）
+```
+
+- 形态/能力按本次目标判断：普通页面 UI 走查手机真机即可；相机/相册/系统分享/定位/传感器等需真实硬件的项优先真机。
+- APK 无 native 库（`androidapp/` 无 `abiFilters`/NDK 声明、`app/src` 无 `.so`），ABI 不构成门槛；
+  引入 native 依赖后再按 APK 内含 ABI 与 `ro.product.cpu.abilist` 比对。
+- 数据安全：不擅自卸载/清数据/改系统设置；用户日常机涉及这些操作前先征得同意。
+- 无合格真机 → 用下文 `HotSpotPhone` AVD 兜底，并在走查记录/PR 写明原因（未连接 / 未授权 / API 不符 / 形态不符 / 需隔离数据）。
+- **本文件的 1080×2400 布局坐标、`10.0.2.2` 超时结论、AVD 设备档经验均为模拟器基线**；真机分辨率/密度/系统版本不同，
+  坐标必须重新 `uiautomator dump` 标定，模拟器结论不得当作真机结论（反之亦然）。
+- 下文命令里的 `adb` 在真机/多设备场景一律写成 `$ADB -s "$SERIAL"`（只跑一个模拟器时可省略）。
 
 ## 项目事实（唯一维护处）
 
@@ -14,13 +39,13 @@ description: hotspot Android 端模拟器实测流程：AVD 创建与启动、ad
 |---|---|
 | applicationId / 入口 Activity | `com.hotspot.app` / `.MainActivity` |
 | 调试后端 | 宿主 dev compose 网关 `http://127.0.0.1:8888`（nginx） |
-| 端内基址 | 默认 `http://10.0.2.2:8888`；联调固定用 `adb reverse` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建 |
+| 端内基址 | 默认 `http://10.0.2.2:8888`（模拟器语义）；联调固定用 `adb reverse` + `-PHOTSPOT_DEBUG_BASE_URL=http://127.0.0.1:8888` 覆盖构建（真机/模拟器同一套） |
 | 走查账号 | `qa@hotspot.local` / `Qa12345678`（seed 普通用户；`moment_seed_01` 自带评论供评论区走查） |
 | 造数 | 主库；用 `client_type=web` 身份 curl 造评论，避免影响模拟器内的 App 会话 |
 | 截图 / dump 落盘 | `.workwork/android-verify/`（任务收尾删除） |
-| AVD | `HotSpotPhone`（`system-images;android-36;google_apis;arm64-v8a` + **`pixel_2` 设备档**，面板覆写为 1080×2400/420dpi；无挖孔） |
+| AVD（无合格真机时的兜底） | `HotSpotPhone`（`system-images;android-36;google_apis;arm64-v8a` + **`pixel_2` 设备档**，面板覆写为 1080×2400/420dpi；无挖孔） |
 
-## 环境准备
+## 环境准备（模拟器兜底路径）
 
 ### 系统镜像与 AVD（一次性）
 
@@ -43,7 +68,7 @@ sed -i '' -E 's/^hw\.lcd\.density *=.*/hw.lcd.density = 420/' "$CFG"
 可见挖孔——截图会表现为「顶部安全区过大」的假象（App 本身是按系统 inset 布局的）。判据：
 `adb shell dumpsys window | grep "type=statusBars frame"` 应为 `[0,0][1080,63]`（24dp）；若为 136 则 AVD 档位不对。
 
-### 启动与等待 boot
+### 启动与等待 boot（仅在无合格真机时）
 
 ```bash
 "$ANDROID_HOME/emulator/emulator" -avd HotSpotPhone \
@@ -52,7 +77,7 @@ sed -i '' -E 's/^hw\.lcd\.density *=.*/hw.lcd.density = 420/' "$CFG"
 # 就绪判据：轮询 adb shell getprop sys.boot_completed 输出 1（带超时上限；冷启动耗时不固定）
 ```
 
-## 网络联调（关键事实）
+## 网络联调（模拟器基线；真机同样走 adb reverse）
 
 **本机 API 36 AVD 实测**：端内直接请求 `http://10.0.2.2:8888` 会在 connectTimeout 后报「网络超时」，
 且宿主 nginx **没有**对应访问日志；同期 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能作为
@@ -90,7 +115,7 @@ adb shell uiautomator dump /sdcard/ui.xml && adb pull /sdcard/ui.xml /tmp/ui.xml
 1. **登录**：`uiautomator dump` 取 `EditText` bounds → `input tap` 聚焦 → `input text`；
    逐框「点 → 输 → `input keyevent 4` 收键盘」再点下一个框（键盘弹起会移动控件，沿用旧坐标会点到上一个框）。
    提交按钮取 dump 中 `text="登录"` 且 y 最大者的中心点；点击后等 10s 再截图（成功进首页，失败在按钮下方出红字错误）。
-2. **底部导航**：坐标一律从 dump 取——当前 1080×2400 布局里底部 tab 行在 `y≈2285`，拍脑袋用内容区坐标会点进卡片。
+2. **底部导航**：坐标一律从 dump 取——模拟器基线里底部 tab 行在 `y≈2285`（1080×2400），拍脑袋用内容区坐标会点进卡片；真机按自己的 dump 坐标。
 3. **页面入口**：首页卡片按文本定位（如「云龙湖的落日把水面染成金色」）取节点 bounds 中心点击；
    详情页滚到评论区：`adb shell input swipe 540 2000 540 800 300`。
 4. **断言以截图为准**：方案 B 评论区的导引线、作者微徽章、回复头「回复 @昵称」、docked 输入条与键盘避让
@@ -111,8 +136,10 @@ curl -s -b /tmp/c.txt -X POST "$BASE/api/v1/comments/create" -H 'Content-Type: a
 ## 清理（收尾必做）
 
 ```bash
-adb emu kill                                   # 实测可用：输出 OK: killing emulator, bye bye
-adb reverse --remove-all
+$ADB -s <emulator-serial> emu kill             # 仅模拟器；真机跳过（输出 OK: killing emulator, bye bye）
+$ADB -s "$SERIAL" reverse --remove-all         # 真机/模拟器都清反向转发
 pgrep -fl 'GradleDaemon|KotlinCompileDaemon'   # 应为空（构建一律 --no-daemon）
 rm -rf .workwork/android-verify                # 截图 / 布局 dump 属中间产物
 ```
+
+真机走查的截图/布局 dump 与模拟器不同尺寸，断言以该设备截图为准；不执行 `adb emu kill`。

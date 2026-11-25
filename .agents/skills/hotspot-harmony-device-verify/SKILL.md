@@ -1,11 +1,41 @@
 ---
 name: hotspot-harmony-device-verify
-description: hotspot 鸿蒙端模拟器实测流程：项目事实与测试账号造数、模拟器/反向转发环境准备、hdc + uitest 走查流程（登录/断言/截图/锚点/密度标定）、安全键盘与 stale 坐标坑、报错排障。触发：需要验证鸿蒙端某页面在不同角色下的 UI；在模拟器上跑 harmonyapp 走查或截图；hdc 连模拟器、uitest dumpLayout/click/fling；排查「个人中心/管理入口为何不显示」；本地 dev 环境造测试账号或附近群组数据。
+description: hotspot 鸿蒙端实测流程（真机优先、模拟器兜底）：设备选择判据（hdc 目标/签名 profile/AGC Map Kit）、项目事实与测试账号造数、反向转发环境准备、hdc + uitest 走查流程（登录/断言/截图/锚点/密度标定）、安全键盘与 stale 坐标坑、报错排障。触发：需要验证鸿蒙端某页面在不同角色下的 UI；在鸿蒙真机或模拟器上跑 harmonyapp 走查或截图；hdc 连设备、uitest dumpLayout/click/fling；排查「个人中心/管理入口为何不显示」；本地 dev 环境造测试账号或附近群组数据。
 ---
 
-# hotspot 鸿蒙端模拟器实测流程（hdc + uitest）
+# hotspot 鸿蒙端实测流程（真机优先 + 模拟器兜底；hdc + uitest）
 
 > 通用 hdc 行为见用户级 skill `harmony-device-debug`；本文件只记 hotspot 项目专属事实与实测流程。**环境类结论必须附验证方式（命令/取数口径）+ 复现步骤，沿用前先证伪一次**（项目 AGENTS.md「环境类结论必须可复现」）。
+
+## 设备选择（真机优先，模拟器兜底）
+
+先枚举已连接设备，优先用「符合条件的真机」；没有合格真机才用模拟器。通用发现流程（无线调试 `tconn`、状态文件、
+僵尸条目清场）见用户级 skill `harmony-device-debug`，本节只写 hotspot 的判据。
+
+```bash
+HDC=/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc
+$HDC list targets -v
+# 真机候选：状态 Connected，且地址不是 127.0.0.1:5555（本机 DevEco 模拟器实例地址）
+# 模拟器还可按型号判定：param get const.product.model 返回 emulator 即模拟器（真机返回具体型号）
+$HDC -t <target> shell param get const.product.model
+# 真机无线调试地址形如 <手机IP>:<端口>：hdc tconn <IP>:<端口> 后用 list targets -v 复核 Connected
+```
+
+- **签名**：真机必须装 signed HAP，且调试签名 profile 覆盖该设备 UDID；profile 未覆盖/签名不一致会安装失败
+  （`install sign info inconsistent` / `no signature file`），需在 DevEco 重新生成含该 UDID 的调试 profile。
+  签名材料在 `~/.ohos/config/`、单机有效，见 `harmonyapp/AGENTS.md`「调试签名（本机绑定）」；**模拟器能装未签名包的经验不能套到真机**。
+- **系统版本**：设备 API/系统版本/ABI 按用户级 skill `harmony-device-debug` 第一节现查，与
+  `harmonyapp/build-profile.json5` 的 `compatibleSdkVersion` 比对（值现查：`grep -n '"compatibleSdkVersion"' harmonyapp/build-profile.json5`）；
+  走查记录与 PR 证据写设备型号（`param get const.product.model`）+ 系统版本 + target。
+- **形态/能力**：普通页面走查手机真机即可；**地图验收的前提是装 signed HAP 且 AGC Map Kit 已开通**（证书/Profile 须在开通后生成，见本文件「Map Kit 地图验收」）——模拟器装 signed HAP 实测可让 Map Kit `permission is granted: true` 并正常渲染（未签名包才失败），有真机时优先真机，但不把模拟器判死；相机/图库/系统分享/定位/输入法等真实硬件项优先真机。
+- **真机优势（对照本文件已有的模拟器限制）**：输入法可注入中文（`uitest uiInput text`；模拟器会先弹小艺输入法首次配置 Sheet）；
+  系统地理编码与地点搜索可用（模拟器恒「未找到该地点」、锚点名恒「未知位置」，见「走查流程」第 7 步）；
+  系统分享有可用目标（模拟器返回 `16000019`，见「陷阱与纪律」）；真实定位/电量/相机等硬件可用。
+- 选中后所有命令固定 `-t <target>`（下文 `hdc` 在真机/多设备场景一律补 `-t <target>`）。
+- 数据安全：不擅自卸载/清数据/改系统设置；用户日常机涉及这些操作前先征得同意。
+- 无合格真机 → 用本文件「环境准备」的模拟器实例兜底（实例名 `ls ~/.Huawei/Emulator/deployed` 现查），
+  并写明原因（未连接 / 未授权 / 版本不符 / 签名未绑定 / 需隔离数据）。**本文件的坐标、密度标定、权限弹窗与模拟器专属坑均为模拟器基线**，
+  真机必须重新 `dumpLayout` 标定，模拟器结论不得当作真机结论（反之亦然）。
 
 ## 项目事实（唯一维护处）
 
@@ -83,9 +113,9 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 本地库有两个走查群：**走查群A-改前**（`group_553935e9eada256e4091f266`）、**走查群B-改后**（`group_2fa2449f039e11f8845d5e80`，群名即上述标识），均为 `uitest_admin` 所有、`direct` 入群、位于默认位置；uitest_a 未加入，可直接用于「加入态刷新」的端上复核。
 
-## 环境准备：模拟器、反向转发与恢复
+## 环境准备（模拟器兜底路径：实例、反向转发与恢复）
 
-### 1) 启动模拟器（沙盒内直接直启）
+### 1) 启动模拟器（无合格真机时；沙盒内直接直启）
 
 `~/.Huawei/Emulator/deployed`（实例镜像，含 `*.qcow2`/`ram.bin`）已由 DSH sandbox-extra-roots 插件放行，沙盒内直接 `Emulator -start <实例名>` 即可（实例名用 `ls ~/.Huawei/Emulator/deployed` 现查；就绪判据以 `hdc list targets -v` 出现 `Connected` 为准，不固定等待时间）。**不要把实例克隆到 `.workwork/` 或改 `config.ini` 重定向路径**。
 
@@ -122,9 +152,9 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 ## 走查流程（已验证）
 
-1. **连接**：`hdc list targets -v` 出现 `Connected`（目标地址以该命令输出为准）。
+1. **连接**：先按「设备选择」定目标（真机优先）；`hdc list targets -v` 出现 `Connected`，后续所有命令固定 `-t <target>`（目标地址以该命令输出为准）。
 2. **冷启动**：`aa force-stop com.lsyb.social` → `aa start -b com.lsyb.social -a EntryAbility`。
-3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新由 auth 事件驱动，与挂载顺序无关）；坐标一律 `dumpLayout` 取 bounds 后点击，实测基线见 `references/coords-baselines.md`。
+3. **登录**：可从「消息」Tab 的登录提示进入（角色行刷新由 auth 事件驱动，与挂载顺序无关）；坐标一律 `dumpLayout` 取 bounds 后点击，模拟器基线见 `references/coords-baselines.md`（真机坐标需重新标定）。
 4. **进个人中心**：点底部「我的」Tab，然后 `uitest uiInput fling 628 2150 628 900 3500` 滚到动作行。
 5. **断言**：`uitest dumpLayout -p /data/local/tmp/ui.json` 后逐节点取 text，判断「升级为完整账号」/「管理员工具台」/「设置」/「退出登录」是否存在。
 6. **截图**：`snapshot_display -f /data/local/tmp/x.jpeg` → `hdc shell "cat …" > local.jpeg`（`hdc file recv` 会 hang，见下）。
@@ -192,7 +222,7 @@ curl -s -X POST "$API/api/v1/users/update_location" -H "Authorization: Bearer $T
 
 ## 登录流程（坐标、安全键盘与「串位」根因）
 
-**实测可用**（分辨率 1256×2760，Pura 90 Pro 实例；坐标随构建会变，一律以 dump 为准，基线见 `references/coords-baselines.md`）：
+**实测可用（模拟器基线：分辨率 1256×2760、Pura 90 Pro 实例；真机分辨率/密度不同，坐标必须重新 dump 标定）**（坐标随构建会变，一律以 dump 为准，基线见 `references/coords-baselines.md`）：
 
 1. 冷启后停在首页 → 点底部「消息」`(877, 2599)`；
 2. 游客态消息页点 **「登录 / 注册」**（实测中心 `(628, 1279)`——注意不要用 `text.includes("登录")` 匹配，会命中页面文案「消息功能需要登录」而点到非按钮文字上）；

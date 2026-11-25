@@ -51,6 +51,7 @@ Lint & Format: 依赖 DevEco Studio IDE 内置检查；`harmonyapp/code-linter.j
 ## 调试签名（本机绑定）
 
 - `build-profile.json5` 的 `signingConfigs.default` 是**本机调试签名**：材料在各人 `~/.ohos/config/` 下，路径与口令均为单机有效；提交的版本只对提交者本机可用，对其他机器无意义。
+- 端上走查设备真机优先（`hdc list targets -v` 中 `Connected` 且非 `127.0.0.1:5555` 的即真机），无合格真机才用模拟器；真机要求调试签名 profile 覆盖该设备 UDID（未覆盖/签名不一致会安装失败，需在 DevEco 重新生成后再装），判据与走查流程见 skill `hotspot-harmony-device-verify`「设备选择」。
 - DevEco 会在材料失配时自动重生并重写该文件（`git status` 见 M 属正常）：本机能编能装就不用管；**不要把轮换后的口令反复提交**（纯噪音）。
 - 各 checkout 的隐藏由 `.husky/post-checkout` 自动完成（新建 worktree / 切分支即挂 `skip-worktree`，防切分支把文件还原成旧口令导致签名失配），一般不用手动执行；若标记丢失再手动补一次：
   `git update-index --skip-worktree harmonyapp/build-profile.json5`
