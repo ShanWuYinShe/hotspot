@@ -92,6 +92,7 @@ gh run watch <run-id> --exit-status
   3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / **android-apk** / auto-deploy / **post-release-smoke**）全绿。**不需要本机再构建/上传 APK，也不需要本机跑冒烟**。
 - **APK 与冒烟的时序**：`android-apk` job 在 GitHub 内用仓库 Secrets 的签名材料构建 APK 并附到 Release；`post-release-smoke` `needs: [auto-deploy, android-apk]`，等两者完成后跑完整 `release-smoke.sh`（含 APK 资产、镜像包校验和、线上版本三处对齐），发版校验全部在 CI 闭环。
 - **Release 原子性**：`build-push-release` 先创建**草稿** Release，上传 3 个镜像资产并校验齐全后才发布；同 tag 重跑会先清理上次失败留下的草稿，上传失败不会留下「已发布但缺资产」的 Release。
+- **APK 完整性**：`post-release-smoke` 下载 APK 后执行 `unzip -t` ZIP 完整性校验，避免网络截断导致「资产存在但文件损坏」的 APK 通过冒烟。
 - **APK 版本号规则**：`versionName` 与 tag 一致；`versionCode` 由 tag 的 `vX.Y.Z` 推导为 `X*10000 + Y*100 + Z`（如 `v1.15.21 → 11521`），Release workflow 会校验 APK 的版本名和版本码都与 tag 一致。
 
 ### Android APK 分发（CI 构建并附到 Release）
