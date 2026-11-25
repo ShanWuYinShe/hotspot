@@ -114,6 +114,12 @@
 				font-weight: 700;
 				letter-spacing: 0.12em;
 			}
+			#boot-splash .boot-splash__hint {
+				display: none;
+				font-size: 12px;
+				opacity: 0.72;
+			}
+			#boot-splash.boot-splash--slow .boot-splash__hint { display: block; }
 			#boot-splash .boot-splash__bar {
 				position: relative;
 				width: 124px;
@@ -153,6 +159,7 @@
 			<img class="boot-splash__logo" src="/icons/icon-192.png" alt="" width="56" height="56" />
 			<div class="boot-splash__name">HOTSPOT</div>
 			<div class="boot-splash__bar" aria-hidden="true"></div>
+			<div class="boot-splash__hint" aria-live="polite">网络较慢，正在加载…</div>
 		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 		<script>
@@ -168,14 +175,14 @@
 					setTimeout(function () { if (splash.parentNode) splash.remove(); }, 220);
 				}
 				function ready() {
-					if (document.querySelector('h1')) return true;
-					var main = document.querySelector('#main-content');
-					return !!(main && main.textContent && main.textContent.trim().length > 0);
+					// 只认路由渲染出的 h1：根布局的 skip link / 占位文本不算就绪，避免提前撤掉启动壳露出空白。
+					return !!document.querySelector('h1');
 				}
 				if (ready()) { hide(); return; }
 				var observer = new MutationObserver(function () { if (ready()) { observer.disconnect(); hide(); } });
 				observer.observe(document.body, { childList: true, subtree: true });
-				setTimeout(hide, 12000);
+				// 慢网提示：只提示、不撤壳；壳必须等到真实页面内容，避免「壳没了、页面还空」的更差体验。
+				setTimeout(function () { if (!done) splash.classList.add('boot-splash--slow'); }, 12000);
 			})();
 		</script>
 	</body>
