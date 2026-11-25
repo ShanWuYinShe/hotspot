@@ -958,6 +958,18 @@ class ProfileRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
+    /** spec/share create：创建瞬间分享链接（幂等键每次新生成）。 */
+    suspend fun createMomentShare(momentId: String): ApiResult<ShareCreated> = api.post(
+        ApiEndpoint.SHARE_CREATE,
+        buildJsonObject {
+            put("share_type", "moment")
+            put("payload", buildJsonObject { put("shared_moment_id", momentId) })
+            put("expires_in_seconds", JsonNull)
+        },
+        ShareCreated.serializer(),
+        idempotencyKey = UUID.randomUUID().toString(),
+    )
+
     /** spec/share fetch_created：我创建的分享，按类型筛选 + keyset 分页。 */
     suspend fun createdShares(shareType: String?, cursor: String?): ApiResult<Page<ShareListItem>> =
         api.post(
