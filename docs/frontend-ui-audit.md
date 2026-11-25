@@ -1194,3 +1194,19 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 | `/settings` | 148 | 176 | 0 | 258 |
 
 - 解读：`/messages` 传输偏高来自头像/封面图（非首屏 LCP 元素）；`/` 的 CLS 0.0269 来自首屏骨架→媒体卡替换（既有基线，非新增回归）；`/nearby/people`、`/nearby/groups` LCP ~400ms 与首屏图片 eager 一致。回归时用 `--compare` 看差值，不追绝对数。
+
+### 生产公开页冷启动基线（2026-11-25，`--no-login`）
+
+用 `bun run perf:baseline -- --base https://chaoset.com --no-login --pages /login,/register`（每次全新浏览器 profile，等同新访客冷缓存；本机为国内网络经 Cloudflare）连续 3 次：
+
+| 页面 | FCP(ms) | LCP(ms) | CLS | 传输(KB) |
+|---|---|---|---|---|
+| `/login` | 2712 / 3056 / 5552 | 4280 / 3904 / 6384 | 0 | 310 / 311 / 311 |
+| `/register` | 860 / 636 / 488 | 2628 / 1376 / 1304 | 0 | 3 / 3 / 3 |
+
+口径与解读：
+
+- 每次运行使用全新 agent-browser session（独立临时 profile），因此是**冷缓存新访客**口径；同一 session 内二次加载会快很多，不可与 dev 的重复测量直接比较。
+- `/login` 冷启动 LCP 3.9–6.4s、FCP 2.7–5.6s，且三次波动大：既有 Cloudflare/跨境网络因素，也有首包 JS 体积因素，**需要单独排查**（bundle 大小、`/login` 是否被迫加载主包、CF 缓存命中与压缩、HTTP/2/3 表现）；已登记 backlog，不作为已达标结论。
+- `/register` 传输仅 3KB（页面本身轻量/跳转态），LCP 1.3–2.6s 波动同样来自网络与调度。
+- 登录态页面（`/`、`/messages`、`/search` 等）生产测量需要真实账号与专业工具，未纳入本轮；本轮脚本的 `--no-login` 避免向线上发送种子账号登录尝试。
