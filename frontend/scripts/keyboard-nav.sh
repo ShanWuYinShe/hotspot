@@ -314,6 +314,60 @@ else
     fail "/settings 外观模式 radiogroup → 未移动（仍为 ${MODE_AFTER}）"
   fi
 fi
+
+# ---- 5) /me/relationships 列表：搜索框 ↓ 进首行、行间 ↑↓ ----
+relationship_rows_json() {
+  ab eval '(() => {
+    const root = document.querySelector("[data-relationship-list]");
+    const rs = root ? [...root.querySelectorAll("[data-list-item] [data-cover]")] : [];
+    const label = (el) => (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40);
+    return JSON.stringify({
+      count: String(rs.length),
+      first: rs[0] ? label(rs[0]) : "",
+      second: rs[1] ? label(rs[1]) : ""
+    });
+  })()' 2>/dev/null | tail -1
+}
+
+ab open "${BASE}/me/relationships" >/dev/null 2>&1
+WAIT=0
+REL_RAW=""
+while [ "${WAIT}" -lt 25 ]; do
+  REL_RAW="$(relationship_rows_json)"
+  [ "$(qa_json_field "${REL_RAW}" count)" -ge 2 ] 2>/dev/null && break
+  sleep 0.4
+  WAIT=$((WAIT + 1))
+done
+REL_COUNT="$(qa_json_field "${REL_RAW}" count)"
+REL_FIRST="$(qa_json_field "${REL_RAW}" first)"
+REL_SECOND="$(qa_json_field "${REL_RAW}" second)"
+if [ "${REL_COUNT:-0}" -lt 2 ]; then
+  fail "/me/relationships 行不足 2（好友种子缺失或选择器失配），无法验证键盘导航"
+else
+  ab eval '(() => { document.querySelector("input[aria-label=\"搜索关系\"]")?.focus(); return true; })()' >/dev/null 2>&1
+  ab press ArrowDown >/dev/null 2>&1
+  AFTER="$(active_label)"
+  if [ -n "${REL_FIRST}" ] && [ "${AFTER}" = "${REL_FIRST}" ]; then
+    pass "/me/relationships 搜索框 ↓ 进入首行（${REL_FIRST}）"
+  else
+    fail "/me/relationships 搜索框 ↓ 未进入首行（after=${AFTER} first=${REL_FIRST}）"
+  fi
+  ab press ArrowDown >/dev/null 2>&1
+  AFTER="$(active_label)"
+  if [ -n "${REL_SECOND}" ] && [ "${AFTER}" = "${REL_SECOND}" ]; then
+    pass "/me/relationships ↓ 移到第二行（${REL_SECOND}）"
+  else
+    fail "/me/relationships ↓ 未移动（after=${AFTER} second=${REL_SECOND}）"
+  fi
+  ab press ArrowUp >/dev/null 2>&1
+  BACK="$(active_label)"
+  if [ "${BACK}" = "${REL_FIRST}" ]; then
+    pass "/me/relationships ↑ 回到首行"
+  else
+    fail "/me/relationships ↑ 未回到首行（after=${BACK} first=${REL_FIRST}）"
+  fi
+fi
+
 echo ""
 if [ "${FAIL}" -eq 0 ]; then
   say "结果: PASS（通过 ${PASS_COUNT}，跳过 ${SKIP_COUNT}）"
