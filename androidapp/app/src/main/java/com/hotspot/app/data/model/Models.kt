@@ -715,6 +715,14 @@ data class UnreadSummary(
     val total: Int = 0,
 )
 
+/** spec/share create → ShareCreated。 */
+@Serializable
+data class ShareCreated(
+    @SerialName("share_id") val shareId: String = "",
+    @SerialName("share_code") val shareCode: String = "",
+    @SerialName("expires_at") val expiresAt: String? = null,
+)
+
 /** spec/share fetch_created → ShareListItem。 */
 @Serializable
 data class ShareListItem(
