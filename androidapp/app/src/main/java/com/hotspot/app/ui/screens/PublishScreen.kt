@@ -22,7 +22,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +56,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
@@ -79,7 +84,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * 发布瞬间（Android 首版落地）：文案 + 图片（相册选择 → media/presign_upload → PUT → complete_upload）
- * + 氛围标签 + 可见范围 + 位置（ClientConfig 默认浏览位置，无设备定位/地图）→ moments/create（幂等）。
+ * + 氛围标签 + 可见范围 + 位置（复用 MapScreen pickMode 选点，默认回退 ClientConfig 浏览位置）→ moments/create（幂等）。
  * 结构与 Web CreateSheet 同语义（三端一致）；Android 设计稿未提供发布画板，UI 由 design-system 原语组合。
  */
 @Composable
@@ -96,6 +101,7 @@ fun PublishScreen() {
     var status by remember { mutableStateOf("") }
     val moods = remember { mutableStateListOf<String>() }
     val images = remember { mutableStateListOf<Uri>() }
+    var locationPickerOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         limits = AppContainer.limits()
@@ -301,7 +307,10 @@ fun PublishScreen() {
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(Spacing.lg))
-            SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+            SystemCard(
+                modifier = Modifier.clickable { locationPickerOpen = true },
+                contentPadding = PaddingValues(Spacing.md),
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Filled.Place,
@@ -318,7 +327,7 @@ fun PublishScreen() {
                             color = colors.textPrimary,
                         )
                         Text(
-                            text = "发布位置（使用默认浏览位置；地图与设备定位待接入）",
+                            text = "发布位置（点击地图选点；默认使用当前浏览位置）",
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.textSecondary,
                         )
@@ -350,6 +359,31 @@ fun PublishScreen() {
                     enabled = canPublish,
                     loading = publishing,
                 )
+            }
+        }
+    }
+    if (locationPickerOpen) {
+        Dialog(
+            onDismissRequest = { locationPickerOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Surface(Modifier.fillMaxSize(), color = colors.page) {
+                Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                    MapScreen(
+                        onBack = { locationPickerOpen = false },
+                        onAnchorSaved = {},
+                        pickMode = true,
+                        initialPoint = location?.point,
+                        initialLocationName = location?.locationName,
+                        onPicked = { point, label ->
+                            location = DefaultLocation(
+                                point = GeoPoint(point.latitude, point.longitude),
+                                locationName = label.ifBlank { "自定义位置" },
+                            )
+                            locationPickerOpen = false
+                        },
+                    )
+                }
             }
         }
     }
