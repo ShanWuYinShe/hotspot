@@ -184,7 +184,7 @@ app/src/main/java/com/hotspot/app/
 - **群成员管理**：成员 tab 中 owner/admin 对非群主、非自己的成员显示「管理」→ 操作面板
   （设为/取消管理员、禁言 1 小时/解除禁言、移除成员）；分别走 `groups/admin/members/set_role`、
   `set_mute`、`remove`，群主/自己不可被操作，服务端 10400 兜底；成功后刷新成员列表与群详情。
-- **群信息编辑**：群详情更多菜单（owner/admin）→ 名称/简介弹窗，走 `groups/admin/update`；
+- **群信息编辑**：群详情更多菜单（owner/admin）→ 群头像/名称/简介弹窗（群头像 Photo Picker → `AvatarUploader(category=group_avatar)` → 保存时提交 `avatar_file_id`），走 `groups/admin/update`；
   其余字段传 null 不改，成功用返回的 GroupItem 直接刷新头部。
 - **瞬间操作**：详情右上角「更多操作」按角色分流——自己的瞬间：编辑文案、氛围标签与可见范围
   （`moments/update` patch 语义，只提交 description/tags/privacy_level；标签预设与发布页共用 `MoodChips`，

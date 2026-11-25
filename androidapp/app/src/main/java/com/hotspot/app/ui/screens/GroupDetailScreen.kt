@@ -703,15 +703,16 @@ fun GroupDetailScreen(
         GroupInfoEditorDialog(
             initialName = currentDetail.group.name,
             initialDescription = currentDetail.description.orEmpty(),
+            initialAvatarUrl = currentDetail.group.avatarUrl,
             submitting = groupInfoSaving,
             error = groupInfoError,
             onDismiss = { if (!groupInfoSaving) showGroupInfoEditor = false },
-            onSubmit = { name, description ->
+            onSubmit = { name, description, avatarFileId ->
                 if (groupInfoSaving) return@GroupInfoEditorDialog
                 groupInfoSaving = true
                 groupInfoError = null
                 scope.launch {
-                    when (val result = repository.updateGroupInfo(groupId, name, description.ifBlank { null })) {
+                    when (val result = repository.updateGroupInfo(groupId, name, description.ifBlank { null }, avatarFileId)) {
                         is ApiResult.Ok -> {
                             detail = result.data
                             showGroupInfoEditor = false
