@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 # 发版后线上冒烟：校验「版本三处对齐 + 前端入口可达 + Release 资产齐全且校验和正确」。
-# 前置：发布流程已完成（tag 已推、Release workflow 成功、APK 已附）；gh 已登录且仓库可访问。
+# 前置：发布流程已完成（tag 已推、Release workflow 成功；默认还要求 APK 已附）；
+# gh 已登录且仓库可访问。
 #
 # 用法：
 #   ./scripts/release-smoke.sh --version v1.15.4
 #   ./scripts/release-smoke.sh --version v1.15.4 --base https://chaoset.com
-# 参数：--version <vX.Y.Z>（必填）--base <url>（默认 https://chaoset.com）--repo <owner/name>
+# 参数：--version <vX.Y.Z>（必填）
+#       --base <url>（默认 https://chaoset.com）
+#       --repo <owner/name>
+#       --skip-apk  跳过 APK 资产检查。APK 在 Release 工作流之后由本机
+#                   scripts/release-android-apk.sh 附包，CI 的 post-deploy-smoke
+#                   job 必须用它；手动发版后自查不要用。
 # 退出码：任一检查失败 → 1；全过 → 0。
 
 set -u
@@ -13,12 +19,14 @@ set -u
 BASE="https://chaoset.com"
 VERSION=""
 REPO=""
+SKIP_APK=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --version) VERSION="${2:-}"; shift ;;
     --base) BASE="${2:-$BASE}"; shift ;;
     --repo) REPO="${2:-}"; shift ;;
-    -h|--help) sed -n '2,12p' "$0" | sed 's/^# *//'; exit 0 ;;
+    --skip-apk) SKIP_APK=1 ;;
+    -h|--help) sed -n '2,/^$/p' "$0" | sed -e 's/^# //' -e 's/^#$//'; exit 0 ;;
     *) echo "未知参数：$1（--help 查看用法）"; exit 2 ;;
   esac
   shift
@@ -114,7 +122,19 @@ else
   if [ -z "$ASSET_NAMES" ]; then
     fail "Release $VERSION 不存在或不可读"
   else
-    for required in "hotspot-android-$VERSION.apk" "hotspot-images-$VERSION.tar.gz" "hotspot-images-$VERSION.tar.gz.sha256" "hotspot-images-$VERSION.ids.txt"; do
+    # APK 由本机在 Release 工作流之后附包，CI 的 post-deploy-smoke 用
+    # --skip-apk 跳过；镜像三类资产任何时候都必须齐全。
+    REQUIRED_ASSETS=(
+      "hotspot-images-$VERSION.tar.gz"
+      "hotspot-images-$VERSION.tar.gz.sha256"
+      "hotspot-images-$VERSION.ids.txt"
+    )
+    if [ "$SKIP_APK" = "0" ]; then
+      REQUIRED_ASSETS=("hotspot-android-$VERSION.apk" "${REQUIRED_ASSETS[@]}")
+    else
+      say "· 跳过 APK 资产检查（--skip-apk）"
+    fi
+    for required in "${REQUIRED_ASSETS[@]}"; do
       if printf '%s\n' "$ASSET_NAMES" | grep -qx "$required"; then
         pass "Release 资产存在：$required"
       else
@@ -135,7 +155,12 @@ else
       sleep 2
     done
     if [ "$DOWNLOAD_OK" = "1" ]; then
-      ACTUAL_SHA="$(shasum -a 256 "$TMP_DIR/assets/hotspot-images-$VERSION.tar.gz" 2>/dev/null | awk '{print $1}')"
+      # Linux CI 用 sha256sum，macOS 本机用 shasum -a 256（两者输出格式一致）。
+      if command -v sha256sum >/dev/null 2>&1; then
+        ACTUAL_SHA="$(sha256sum "$TMP_DIR/assets/hotspot-images-$VERSION.tar.gz" 2>/dev/null | awk '{print $1}')"
+      else
+        ACTUAL_SHA="$(shasum -a 256 "$TMP_DIR/assets/hotspot-images-$VERSION.tar.gz" 2>/dev/null | awk '{print $1}')"
+      fi
       EXPECTED_SHA="$(awk '{print $1}' "$TMP_DIR/assets/hotspot-images-$VERSION.tar.gz.sha256" 2>/dev/null)"
       if [ -n "$ACTUAL_SHA" ] && [ "$ACTUAL_SHA" = "$EXPECTED_SHA" ]; then
         pass "镜像包校验和一致：${ACTUAL_SHA:0:12}…"
