@@ -256,6 +256,7 @@
 					<div class="flex flex-col divide-y divide-border-subtle/30">
 						{#each data.trendingTopics.slice(0, 5) as topic, i (topic.tag)}
 							<ListItem
+								surface="none"
 								onClick={() => void goto(`${ROUTES.search}?q=${encodeURIComponent('#' + topic.tag)}`)}
 								ariaLabel={`搜索话题 #${topic.tag}`}
 								class="-mx-2 flex w-full items-center gap-2.5 px-2 py-2 first:pt-0 last:pb-0"

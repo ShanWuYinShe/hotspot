@@ -29,6 +29,7 @@
 		children,
 		class: className = '',
 		tone = 'joined',
+		surface = 'default',
 		onClick,
 		ariaLabel,
 		pressed = false,
@@ -37,6 +38,12 @@
 		children: Snippet;
 		class?: string;
 		tone?: 'joined' | 'card';
+		/**
+		 * 行表面：default = joined 行自带 surface-primary；none = 透明（放在非
+		 * ListContainer 的自绘卡/软岛容器里时使用，避免行背景盖住容器表面形成
+		 * 「大色块」，如首页右栏 社区热议）。
+		 */
+		surface?: 'default' | 'none';
 		onClick?: () => void;
 		ariaLabel?: string;
 		/** 选中态（accent 全背景 + 反色）。行自身渲染 aria-pressed/data-active。 */
@@ -125,7 +132,11 @@
 		data-active={pressed ? 'true' : undefined}
 		class={cn(
 			'relative transition-[background-color,border-radius,box-shadow,opacity] duration-rapid ease-standard',
-			isCard ? 'rounded-md border' : inIsland ? 'bg-transparent' : 'bg-surface-primary',
+			isCard
+				? 'rounded-md border'
+				: inIsland || surface === 'none'
+					? 'bg-transparent'
+					: 'bg-surface-primary',
 			isInteractive && inIsland && 'rounded-md',
 			// 行内既有的操作按钮/链接/输入相对定位抬升到行覆盖按钮之上（axe
 			// nested-interactive：button 语义不得嵌套交互子件）；后写的覆盖按钮
