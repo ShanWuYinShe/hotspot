@@ -1195,7 +1195,7 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 
 - 解读：`/messages` 传输偏高来自头像/封面图（非首屏 LCP 元素）；`/` 的 CLS 0.0269 来自首屏骨架→媒体卡替换（既有基线，非新增回归）；`/nearby/people`、`/nearby/groups` LCP ~400ms 与首屏图片 eager 一致。回归时用 `--compare` 看差值，不追绝对数。
 
-### 生产公开页冷启动基线（2026-11-25，`--no-login`）
+### 线上公开页探测（经本机代理，非真实用户基线；2026-11-25，`--no-login`）
 
 用 `bun run perf:baseline -- --base https://chaoset.com --no-login --pages /login,/register`（每次全新浏览器 profile，等同新访客冷缓存；本机为国内网络经 Cloudflare）连续 3 次：
 
@@ -1207,6 +1207,7 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 口径与解读：
 
 - 每次运行使用全新 agent-browser session（独立临时 profile），因此是**冷缓存新访客**口径；同一 session 内二次加载会快很多，不可与 dev 的重复测量直接比较。
-- `/login` 冷启动 LCP 3.9–6.4s、FCP 2.7–5.6s，且三次波动大：既有 Cloudflare/跨境网络因素，也有首包 JS 体积因素，**需要单独排查**（bundle 大小、`/login` 是否被迫加载主包、CF 缓存命中与压缩、HTTP/2/3 表现）；已登记 backlog，不作为已达标结论。
+- **重要口径修正**：本机 macOS 配了系统代理（`scutil --proxy`：HTTP/HTTPS 127.0.0.1:10809），agent-browser 的 Chrome 继承系统代理，因此上述数字是「本机代理链路」的探测值，**不能代表真实用户网络，也不能据此判定登录页慢**。`/login` 探测值波动大（3.9–6.4s）主要受代理链路影响；真实基线需在无代理环境（远程直连主机/云测）用同一脚本复测后再下结论。
 - `/register` 传输仅 3KB（页面本身轻量/跳转态），LCP 1.3–2.6s 波动同样来自网络与调度。
 - 登录态页面（`/`、`/messages`、`/search` 等）生产测量需要真实账号与专业工具，未纳入本轮；本轮脚本的 `--no-login` 避免向线上发送种子账号登录尝试。
+- 已验证：本机 `curl` 直连（`--noproxy "*"`）可访问；但 Chrome 侧本轮尝试用 `--args --no-proxy-server` 未确认生效（脚本仍输出偏慢的 FCP/LCP），真实网络基线不在本机代理环境下采集。

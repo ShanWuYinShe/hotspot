@@ -404,7 +404,7 @@
     并把 main/landmark、整卡覆盖按钮、列表 role、触控 44 加入 PR 自查清单。
 21. **触控例外清单（R16）**：地图 marker/控件（防相邻误点）、相邻 TagPill（WCAG 24 + 间距）、表单控件、skip link；
     新增「相邻可点元素」场景先跑 390 扫描再决定扩热区方式。
-22. **性能基线口径（R16/R17，已脚本化 + 生产公开页已测）**：`bun run perf:baseline`（agent-browser 逐页 FCP/LCP/CLS/TTFB/传输字节，`--compare` 输出差值）；本地 dev 基线见 `docs/frontend-ui-audit.md`「前端体验性能基线脚本」。**生产公开页**已用 `--no-login --base https://chaoset.com --pages /login,/register` 测 3 轮：`/login` 冷启动 FCP 2.7–5.6s / LCP 3.9–6.4s（波动大），`/register` LCP 1.3–2.6s → **登记 backlog：排查登录页冷启动（bundle 体积/是否加载主包/CF 缓存与压缩）**。登录态页面生产测量仍未做（需真实账号/专业工具，勿向线上发种子账号登录）。
+22. **性能基线口径（R16/R17，已脚本化）**：`bun run perf:baseline`（agent-browser 逐页 FCP/LCP/CLS/TTFB/传输字节，`--compare` 输出差值），本地 dev 基线见 `docs/frontend-ui-audit.md`「前端体验性能基线脚本」；脚本支持 `--no-login` 安全探测线上公开页（不发送种子账号登录）。**注意**：本机 Chrome 继承系统代理（127.0.0.1:10809），线上探测值只代表代理链路、不能当真实用户基线；真实基线需在无代理/远程直连环境复测（或 WebPageTest/CrUX），登录态页面未测量。**当前不登记登录页性能问题**（原「LCP 3.9–6.4s」为代理链路探测值，已更正）。
 23. **inkwash light 岛合成口径（R16）**：有效合成 #FAF8F2；不同采样点（ambient 高光）会读到 #FCF9F3，报告需标注取样口径。
 24. **交互状态契约守护（R15）**：focus-visible/reduced-motion/四态已入 design-system §20 与 skills；新页面按契约自查。
 25. **admin mock 空态不可复现（R15）**：mock 列表未实现筛选参数，空态不可达；联调环境补验证。
