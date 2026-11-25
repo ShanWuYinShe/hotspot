@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, ChevronRight, Flag, Lock, MapPin } from '@lucide/svelte';
+	import { Bell, ChevronRight, Flag, Lock, MapPin, Share2 } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
@@ -91,6 +91,17 @@
 			>
 				{#snippet icon()}
 					<Flag class="size-4 text-accent-default" strokeWidth={1.5} />
+				{/snippet}
+				<ChevronRight class="size-4 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-text-primary" strokeWidth={1.75} />
+			</SettingRow>
+
+			<SettingRow
+				title="我的分享"
+				description="管理已创建分享链接的复制与撤销"
+				onRowClick={() => void goto(ROUTES.meShares)}
+			>
+				{#snippet icon()}
+					<Share2 class="size-4 text-accent-default" strokeWidth={1.5} />
 				{/snippet}
 				<ChevronRight class="size-4 text-text-secondary transition-transform duration-rapid group-hover:translate-x-0.5 group-hover:text-text-primary" strokeWidth={1.75} />
 			</SettingRow>

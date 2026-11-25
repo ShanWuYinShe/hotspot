@@ -1328,7 +1328,7 @@ eager 图各 2 张且像素 diff 0 回归。
 | 页面类型 | title | meta | trailing | 展开中枢 |
 |---|---|---|---|---|
 | 首页 /（`HomeDesktop` 注册） | 为你推荐 / 正在关注 | 推荐语境 / 关注语境 | — | 信息流频道切换（segmented）+ 刷新动态 |
-| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/notify） | 页面标题 | 当前筛选/分类/tab + 计数 / 未读数（如「附近的人 · … · 20 人」） | 全部已读（/notify）/ — | 页面 `below` 筛选/标签/工具行（分类、排序、话题等）+ trailing + Esc/回顶 |
+| hub/列表（/nearby/people、/nearby/groups、/nearby/moments、/me/relationships、/me/reports、/me/shares、/notify） | 页面标题 | 当前筛选/分类/tab + 计数 / 未读数（如「附近的人 · … · 20 人」） | 全部已读（/notify）/ — | 页面 `below` 筛选/标签/工具行（分类、排序、话题等）+ trailing + Esc/回顶 |
 | /nearby 枢纽 | 附近 | 地点 · 5km 内 | — | 页面控制与导航（当前定位） |
 | /search（自定义注册） | —（`center` 内联搜索框 + ⌘K 提示） | — | 清空搜索（有词时） | 搜索中枢（类型/结果计数 + 热门话题） |
 | 详情（瞬间/群组/他人主页，`DetailHeader`） | 作者名 / 实体名 | 作者地点 · 时间；群组为分类 · 成员数 | 分享动态 / 分享资料 / 更多操作（≤2） | 作者/用户/群组卡（头像 + 名称/角色 + 地点·时间 + 查看资料/查看群组） |

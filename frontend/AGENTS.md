@@ -86,9 +86,9 @@ HTTPS（OrbStack 自带受信任的开发证书）：
 重装会把它覆盖成上游原版，直接失去浏览器自动化红线。缺失时按 `browser-automation-safety` skill 处置。
 
 ```bash
-# 桌面 21 页（QA 18 + 详情 3）
+# 桌面 22 页（QA 19 + 详情 3）
 bun run browser:qa
-# 桌面 21 页 + 移动 5 页（390×844）
+# 桌面 22 页 + 移动 5 页（390×844）
 bun run browser:qa:mobile
 # 指定网关地址（如 worktree 独立环境 8889）
 bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
@@ -119,11 +119,11 @@ bash scripts/browser-qa.sh --base http://localhost:8889 --mobile
 ### 质量门禁脚本（需 dev 环境 + agent-browser）
 
 ```bash
-# axe 可访问性：全部桌面页（QA 18 + 审计扩展 17 + 详情页 3，详情取不到则 35）
+# axe 可访问性：全部桌面页（QA 19 + 审计扩展 17 + 详情页 3，详情取不到则 36）
 bun run audit:a11y
 # 追加 390×844 移动 5 页（可与 --reduced 组合）
 bun run audit:a11y -- --mobile --reduced
-# 390 触控热区：默认全量页面（QA 18 + 审计扩展 17 + 详情），对照 allowlist，未登记离群即失败
+# 390 触控热区：默认全量页面（QA 19 + 审计扩展 17 + 详情），对照 allowlist，未登记离群即失败
 bun run audit:touch
 # 列表键盘导航：消息会话列表 ↑↓、搜索框 ↓ 进首行、/notify 列表 ↑↓、/search 结果候选 ↑↓、/settings 分段控件方向键、/me/relationships 行 ↑↓
 bun run audit:keyboard
