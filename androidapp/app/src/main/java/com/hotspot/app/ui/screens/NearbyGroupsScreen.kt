@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -69,6 +70,7 @@ private val GROUP_SORTS = listOf("距离最近" to "distance", "最新创建" to
 fun NearbyGroupsScreen(
     onBack: () -> Unit,
     onOpenSearch: () -> Unit,
+    onCreateGroup: () -> Unit,
     onOpenGroup: (groupId: String) -> Unit,
     onOpenMap: () -> Unit,
 ) {
@@ -82,6 +84,7 @@ fun NearbyGroupsScreen(
             title = "附近群组",
             onBack = onBack,
             actions = {
+                HeaderIconButton(icon = Icons.Filled.Add, contentDescription = "创建群组", onClick = onCreateGroup)
                 HeaderIconButton(icon = Icons.Filled.Search, contentDescription = "搜索", onClick = onOpenSearch)
                 HeaderIconButton(
                     icon = Icons.Filled.Place,

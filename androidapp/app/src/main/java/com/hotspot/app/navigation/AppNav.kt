@@ -28,6 +28,7 @@ import com.hotspot.app.ui.screens.AdminReportsScreen
 import com.hotspot.app.ui.screens.AdminUsersScreen
 import com.hotspot.app.ui.screens.BlockedUsersScreen
 import com.hotspot.app.ui.screens.ChatScreen
+import com.hotspot.app.ui.screens.CreateGroupScreen
 import com.hotspot.app.ui.screens.EditProfileScreen
 import com.hotspot.app.ui.screens.GroupChatScreen
 import com.hotspot.app.ui.screens.GroupDetailScreen
@@ -120,6 +121,7 @@ private fun MainScaffold() {
                     NearbyGroupsScreen(
                         onBack = { navController.popBackStack() },
                         onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                        onCreateGroup = { navController.navigate(Routes.CREATE_GROUP) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                         onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
@@ -200,6 +202,7 @@ private fun MainScaffold() {
                 composable(Routes.ME_GROUPS) {
                     MeGroupsScreen(
                         onBack = { navController.popBackStack() },
+                        onCreateGroup = { navController.navigate(Routes.CREATE_GROUP) },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                     )
                 }
@@ -352,6 +355,16 @@ private fun MainScaffold() {
                         onBack = {
                             GroupChatTarget.clear()
                             navController.popBackStack()
+                        },
+                    )
+                }
+                composable(Routes.CREATE_GROUP) {
+                    CreateGroupScreen(
+                        onBack = { navController.popBackStack() },
+                        onCreated = { groupId ->
+                            navController.navigate(Routes.group(groupId)) {
+                                popUpTo(Routes.CREATE_GROUP) { inclusive = true }
+                            }
                         },
                     )
                 }

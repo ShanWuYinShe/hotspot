@@ -56,6 +56,7 @@ object ApiEndpoint {
     const val MOMENTS_CREATE = "/api/v1/moments/create"
 
     const val GROUPS_SEARCH = "/api/v1/groups/search"
+    const val GROUPS_CREATE = "/api/v1/groups/create"
     const val GROUPS_FETCH_JOINED = "/api/v1/groups/fetch_joined"
     // 群详情（spec/api_spec_group.md）：群组详情 / 加入 / 退出 / 成员列表（登录版）。
     const val GROUPS_OPEN_THE_DOOR = "/api/v1/groups/open_the_door"

@@ -1034,6 +1034,40 @@ class ProfileRepository(private val api: ApiClient) {
  * 距离/位置由后端计算，客户端只展示；加入/退出结果以服务端 status/错误码为准。
  */
 class GroupRepository(private val api: ApiClient) {
+    /** 创建群组（幂等；owner 为当前用户，返回 GroupItem）。 */
+    suspend fun createGroup(
+        name: String,
+        description: String?,
+        tags: List<String>,
+        joinMethod: String,
+        requiresApproval: Boolean,
+        location: DefaultLocation,
+        idempotencyKey: String,
+    ): ApiResult<GroupItem> = api.post(
+        ApiEndpoint.GROUPS_CREATE,
+        buildJsonObject {
+            put("name", name)
+            put("description", description)
+            put("avatar_file_id", JsonNull)
+            put("tags", buildJsonArray { tags.forEach { add(JsonPrimitive(it)) } })
+            put("password", JsonNull)
+            put("join_method", joinMethod)
+            put("requires_approval", requiresApproval)
+            put("is_searchable", true)
+            put("members_searchable", true)
+            put("max_members", 200)
+            put("location", buildJsonObject {
+                put("point", buildJsonObject {
+                    put("latitude", location.point.latitude)
+                    put("longitude", location.point.longitude)
+                })
+                put("location_name", location.locationName)
+            })
+        },
+        GroupItem.serializer(),
+        idempotencyKey = idempotencyKey,
+    )
+
     /** 群组详情（登录视角 GroupItem，含 viewer_state：null = 非成员）。 */
     suspend fun open(groupId: String): ApiResult<GroupItem> = api.post(
         ApiEndpoint.GROUPS_OPEN_THE_DOOR,
