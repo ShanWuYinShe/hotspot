@@ -1,0 +1,29 @@
+name: Release Verify
+
+# 完整发版冒烟（含 APK 资产）：在本地 release-android-apk.sh 附包后手动触发，
+# 把 runbook 第 5 步的「全量冒烟」搬到 GitHub 上执行。
+# Release workflow 内的 post-deploy-smoke 只能 --skip-apk（此刻 APK 尚未附包）。
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag（vX.Y.Z）'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-release:
+    name: Verify release assets (incl. APK)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+      - name: Run full release smoke
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./scripts/release-smoke.sh --version "${{ inputs.version }}"

@@ -3,11 +3,11 @@
 # GIT_BUILD_TIME 版本指纹）→ docker save 压缩 → 挂到同名 GitHub Release。
 #
 # 生产部署（auto-deploy job 经 SSH 自动触发）：从 Release 下载镜像包 →
-# 服务器 docker load → compose up；post-deploy-smoke job 随后自动跑
-# scripts/release-smoke.sh 复核线上版本/入口与镜像资产校验和（Android APK 由
-# 本机在 Release 之后附包，故该 job 跳过 APK）。服务器全程不接触源码、不构建，
-# 替代早期 rsync 源码到服务器构建的非常规做法；手动兜底仍可本地执行
-# scripts/deploy-production.sh vX.Y.Z（同一条链路）。
+# 服务器 docker load → compose up；android-apk job 在 CI 内用仓库 Secrets 中的
+# 签名材料构建 APK 并附到同一 Release；post-release-smoke job 等 APK 与部署都完成后
+# 跑完整 scripts/release-smoke.sh（含 APK 资产），发版校验全程在 GitHub 闭环。
+# 服务器全程不接触源码、不构建，替代早期 rsync 源码到服务器构建的非常规做法；
+# 手动兜底仍可本地执行 scripts/deploy-production.sh vX.Y.Z（同一条链路）。
 #
 # 触发前条件：tag 形态为 vX.Y.Z、tag 指向的提交已在 origin/main 上、且该提交的
 # CI 已跑完并全绿——三条都在工作流内强制断言（tag 不合规 / 未合并 / CI 未过一律
@@ -196,6 +196,76 @@ jobs:
           fi
           echo "release assets verified: ${actual_assets}/${expected_assets}"
 
+  android-apk:
+    name: Build & Attach Android APK
+    needs: build-push-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4.0.4
+
+      - name: Install Android SDK platform / build-tools
+        run: sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" > /dev/null
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+
+      - name: Decode release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -eo pipefail
+          test -n "${ANDROID_KEYSTORE_BASE64}" || { echo "::error::缺少 ANDROID_KEYSTORE_BASE64"; exit 1; }
+          printf '%s' "${ANDROID_KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/hotspot-release.jks"
+          chmod 600 "${RUNNER_TEMP}/hotspot-release.jks"
+
+      - name: Build signed release APK
+        working-directory: androidapp
+        env:
+          HOTSPOT_KEYSTORE_FILE: ${{ runner.temp }}/hotspot-release.jks
+          HOTSPOT_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          HOTSPOT_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          HOTSPOT_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          HOTSPOT_VERSION_NAME: ${{ github.ref_name }}
+        run: ./gradlew --no-daemon assembleRelease
+
+      - name: Verify signature and version
+        working-directory: androidapp
+        run: |
+          set -eo pipefail
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "${APK}"
+          APKSIGNER="$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -1)"
+          AAPT2="$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name aapt2 -type f 2>/dev/null | sort -V | tail -1)"
+          "${APKSIGNER}" verify --print-certs "${APK}" | sed -n "1,2p"
+          BADGING="$("${AAPT2}" dump badging "${APK}" | sed -n "1p")"
+          echo "${BADGING}"
+          echo "${BADGING}" | grep -q "versionName='${GITHUB_REF_NAME#v}'" || { echo "::error::APK versionName 与 ${GITHUB_REF_NAME} 不一致"; exit 1; }
+
+      - name: Attach APK to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eo pipefail
+          ARTIFACT="${RUNNER_TEMP}/hotspot-android-${GITHUB_REF_NAME}.apk"
+          cp androidapp/app/build/outputs/apk/release/app-release.apk "${ARTIFACT}"
+          gh release upload "${GITHUB_REF_NAME}" "${ARTIFACT}#hotspot-android-${GITHUB_REF_NAME}.apk" --clobber
+          gh release view "${GITHUB_REF_NAME}" --json assets --jq '.assets[] | "\(.name)  \(.size) bytes"'
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/hotspot-release.jks"
+
   auto-deploy:
     name: Auto Deploy to Production
     needs: build-push-release
@@ -229,18 +299,17 @@ jobs:
           # 并发锁、备份、指纹核对、失败回滚全部保留，与手动执行同一条链路。
           SERVER=prod-deploy ./scripts/deploy-production.sh "${GITHUB_REF_NAME}"
 
-  post-deploy-smoke:
-    name: Post-deploy Smoke (version + assets)
-    needs: auto-deploy
+  post-release-smoke:
+    name: Post-release Smoke (version + assets incl. APK)
+    needs: [auto-deploy, android-apk]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 1
-      - name: Verify production after deploy
+      - name: Verify production and all release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # APK 由本机在 Release 工作流之后用 release-android-apk.sh 附包，此刻必然
-        # 还不存在；--skip-apk 只跳过 APK 一项，版本/入口/镜像资产与校验和仍全查。
-        # APK 的完整性由发版后自查（runbook 标准发布第 5 步，不带 --skip-apk）复核。
-        run: ./scripts/release-smoke.sh --version "${GITHUB_REF_NAME}" --skip-apk
+        # APK 已由 android-apk job 附到同一 Release；这里跑完整冒烟（不再 --skip-apk），
+        # 发版全部校验都在 GitHub 上闭环，本地无需再跑。
+        run: ./scripts/release-smoke.sh --version "${GITHUB_REF_NAME}"

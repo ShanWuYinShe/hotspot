@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# 发版后自动构建并上传 Android 签名 APK 到对应 GitHub Release。
+# 应急兜底：本机构建并上传 Android 签名 APK 到对应 GitHub Release。
+# 正常发版由 GitHub Release workflow 的 android-apk job 构建并附包，不要在本地跑本脚本。
+# 仅在 GitHub Actions 故障时使用；用完手动触发完整冒烟：
+#   gh workflow run release-verify.yml -f version=vX.Y.Z
 #
 # 用法：scripts/release-android-apk.sh vX.Y.Z <versionCode>
 #   例：scripts/release-android-apk.sh v1.14.0 5

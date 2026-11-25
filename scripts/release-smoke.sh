@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # 发版后线上冒烟：校验「版本三处对齐 + 前端入口可达 + Release 资产齐全且校验和正确」。
+# 正常发版由 Release workflow 的 post-release-smoke job 在 APK 附包后自动执行完整版；
+# 本脚本用于手动重跑 release-verify.yml 或本地诊断，不是日常发版步骤。
 # 前置：发布流程已完成（tag 已推、Release workflow 成功；默认还要求 APK 已附）；
 # gh 已登录且仓库可访问。
 #
@@ -9,9 +11,8 @@
 # 参数：--version <vX.Y.Z>（必填）
 #       --base <url>（默认 https://chaoset.com）
 #       --repo <owner/name>
-#       --skip-apk  跳过 APK 资产检查。APK 在 Release 工作流之后由本机
-#                   scripts/release-android-apk.sh 附包，CI 的 post-deploy-smoke
-#                   job 必须用它；手动发版后自查不要用。
+#       --skip-apk  跳过 APK 资产检查，仅用于排查「APK 尚未上传」等特殊场景；
+#                   正常发版/手动补跑都不要用。
 # 退出码：任一检查失败 → 1；全过 → 0。
 
 set -u
