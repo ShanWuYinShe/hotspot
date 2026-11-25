@@ -715,6 +715,26 @@ data class UnreadSummary(
     val total: Int = 0,
 )
 
+/** spec/auth fetch_sessions → SessionList。 */
+@Serializable
+data class SessionListData(
+    val items: List<SessionItem> = emptyList(),
+)
+
+/** 活跃登录会话（device_type/device_name/ip 均可能为 null）。 */
+@Serializable
+data class SessionItem(
+    @SerialName("session_id") val sessionId: String,
+    @SerialName("device_id") val deviceId: String = "",
+    @SerialName("device_type") val deviceType: String? = null,
+    @SerialName("device_name") val deviceName: String? = null,
+    @SerialName("ip_address") val ipAddress: String? = null,
+    @SerialName("ip_location") val ipLocation: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("last_active_at") val lastActiveAt: String = "",
+    @SerialName("is_current") val isCurrent: Boolean = false,
+)
+
 @Serializable
 data class AccountData(
     @SerialName("user_id") val userId: String = "",

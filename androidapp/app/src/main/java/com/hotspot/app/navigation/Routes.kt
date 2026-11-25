@@ -16,6 +16,7 @@ object Routes {
     const val ME_REPORTS = "me/reports"
     // 屏蔽名单（入口：设置 → 系统与关于）
     const val ME_BLOCKED = "me/blocked"
+    const val SETTINGS_SESSIONS = "settings/sessions"
     // 管理后台（仅平台管理员可从设置进入）
     const val ADMIN_HOME = "admin"
     const val ADMIN_REPORTS = "admin/reports"

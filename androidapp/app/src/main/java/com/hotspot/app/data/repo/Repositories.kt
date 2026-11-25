@@ -33,6 +33,7 @@ import com.hotspot.app.data.model.NotifyItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PresignFileInput
 import com.hotspot.app.data.model.PresignedUploads
+import com.hotspot.app.data.model.SessionListData
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
 import com.hotspot.app.data.model.RelatedUserItem
@@ -157,6 +158,21 @@ class AuthRepository(
                 put("new_password", newPassword)
             },
         )
+
+    /** spec/auth fetch_sessions：全部活跃会话，当前会话置顶，无分页。 */
+    suspend fun fetchSessions(): ApiResult<SessionListData> =
+        api.post(ApiEndpoint.AUTH_FETCH_SESSIONS, deserializer = SessionListData.serializer())
+
+    /** spec/auth revoke_session：撤销指定会话；不允许撤销当前会话（10400）。 */
+    suspend fun revokeSession(sessionId: String): ApiResult<Unit> =
+        api.postVoid(
+            ApiEndpoint.AUTH_REVOKE_SESSION,
+            buildJsonObject { put("session_id", sessionId) },
+        )
+
+    /** spec/auth revoke_other_sessions：撤销当前会话之外的所有会话。 */
+    suspend fun revokeOtherSessions(): ApiResult<Unit> =
+        api.postVoid(ApiEndpoint.AUTH_REVOKE_OTHER_SESSIONS)
 
     /** spec/user delete_account：confirmation 必须精确为 DELETE_MY_ACCOUNT；成功后调用方清会话。 */
     suspend fun deleteAccount(confirmation: String): ApiResult<Unit> =

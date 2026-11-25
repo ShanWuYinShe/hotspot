@@ -49,6 +49,7 @@ import com.hotspot.app.ui.screens.PublishScreen
 import com.hotspot.app.ui.screens.RelationshipsScreen
 import com.hotspot.app.ui.screens.ReportsScreen
 import com.hotspot.app.ui.screens.SearchScreen
+import com.hotspot.app.ui.screens.SessionManagementScreen
 import com.hotspot.app.ui.screens.SettingsScreen
 import com.hotspot.app.ui.screens.UserProfileScreen
 
@@ -233,12 +234,16 @@ private fun MainScaffold() {
                         onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
                         onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
                         onOpenBlocked = { navController.navigate(Routes.ME_BLOCKED) },
+                        onOpenSessions = { navController.navigate(Routes.SETTINGS_SESSIONS) },
                         onOpenAdmin = { navController.navigate(Routes.ADMIN_HOME) },
                         onOpenMap = { navController.navigate(Routes.NEARBY_MAP) },
                     )
                 }
                 composable(Routes.ME_REPORTS) {
                     ReportsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.SETTINGS_SESSIONS) {
+                    SessionManagementScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.ME_BLOCKED) {
                     BlockedUsersScreen(

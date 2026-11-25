@@ -1,5 +1,6 @@
 package com.hotspot.app.data.api
 
+import android.os.Build
 import com.hotspot.app.BuildConfig
 import com.hotspot.app.data.auth.TokenStore
 import kotlinx.coroutines.Dispatchers
@@ -64,6 +65,10 @@ fun <T> ApiResult<T>.errorOrNull(): ApiError? = (this as? ApiResult.Err)?.error
  * - 业务码 10100 统一视为登录失效：清空本地会话，UI 导航回登录页
  */
 class ApiClient(private val tokenStore: TokenStore) {
+    // 登录设备列表的 device_name 来自 UA；默认 okhttp/5.x 对用户没有可读性。
+    private val userAgent = "HotSpot Android/${BuildConfig.VERSION_NAME} " +
+        "(${Build.MANUFACTURER} ${Build.MODEL}; Android ${Build.VERSION.RELEASE})"
+
     private val json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -107,6 +112,7 @@ class ApiClient(private val tokenStore: TokenStore) {
             .url(BuildConfig.API_BASE_URL + path)
             .post(bodyText.toRequestBody(JSON_MEDIA_TYPE))
             .header("Accept", "application/json")
+            .header("User-Agent", userAgent)
             .header("X-Request-Id", UUID.randomUUID().toString())
             .apply {
                 tokenStore.accessToken?.let { header("Authorization", "Bearer " + it) }
