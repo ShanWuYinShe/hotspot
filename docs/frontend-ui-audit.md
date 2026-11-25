@@ -1210,7 +1210,7 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 
 ### 线上公开页探测（经本机代理，非真实用户基线；2026-11-25，`--no-login`）
 
-用 `bun run perf:baseline -- --base https://chaoset.com --no-login --pages /login,/register`（每次全新浏览器 profile，等同新访客冷缓存；本机为国内网络经 Cloudflare）连续 3 次：
+用 `bun run perf:baseline -- --base https://chaoset.com --no-login --pages /login,/register`（每次全新浏览器 profile，等同新访客冷缓存）连续 3 次：
 
 | 页面 | FCP(ms) | LCP(ms) | CLS | 传输(KB) |
 |---|---|---|---|---|
