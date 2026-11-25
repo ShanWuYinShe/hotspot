@@ -44,7 +44,7 @@ object ChatVideoUploader {
             headers = presigned.headers,
             contentLength = meta.size,
             mimeType = meta.mime,
-            openStream = { context.contentResolver.openInputStream(uri) ?: error("无法读取视频") },
+            openStream = { MediaReadErrors.open(context.contentResolver, uri, "视频") ?: error("无法读取视频") },
         ).getOrThrow()
         when (val completed = AppContainer.mediaRepository.complete(listOf(presigned.uploadId))) {
             is ApiResult.Ok -> completed.data.uploads.firstOrNull() ?: error("上传结果为空")

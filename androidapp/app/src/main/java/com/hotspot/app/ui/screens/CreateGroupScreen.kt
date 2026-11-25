@@ -100,7 +100,7 @@ fun CreateGroupScreen(
                         coverUri = uri
                         avatarFileId = it.fileId
                     }
-                    .onFailure { error = "群头像读取或上传失败，请重新选择图片" }
+                    .onFailure { error = it.message ?: "群头像读取或上传失败，请重新选择图片" }
                 uploadingCover = false
             }
         }

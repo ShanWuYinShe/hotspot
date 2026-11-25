@@ -41,7 +41,7 @@ object ChatFileUploader {
             headers = presigned.headers,
             contentLength = meta.size,
             mimeType = meta.mime,
-            openStream = { context.contentResolver.openInputStream(uri) ?: error("无法读取文件") },
+            openStream = { MediaReadErrors.open(context.contentResolver, uri, "文件") ?: error("无法读取文件") },
         ).getOrThrow()
         when (val completed = AppContainer.mediaRepository.complete(listOf(presigned.uploadId))) {
             is ApiResult.Ok -> completed.data.uploads.firstOrNull() ?: error("上传结果为空")
