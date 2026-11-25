@@ -265,7 +265,7 @@ private fun ConversationRow(
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = Spacing.md, vertical = Spacing.md2),
+            .padding(start = Spacing.lg, end = Spacing.md, top = Spacing.md2, bottom = Spacing.md2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box {

@@ -1112,7 +1112,8 @@ export struct MessagePage {
     // 「一行一张卡」，置顶语义只留在昵称旁的 Pin 图标。
     .padding({
       left: DesignConstants.SPACING.LG,
-      right: DesignConstants.SPACING.LG,
+      // 尾部时间/未读徽标距行右缘 12（对齐 Figma 934:34 与 Web pr-3）
+      right: DesignConstants.SPACING.MD,
       top: DesignConstants.SPACING.MD,
       bottom: DesignConstants.SPACING.MD
     })

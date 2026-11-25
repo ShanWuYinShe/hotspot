@@ -1139,6 +1139,7 @@ Toast/震动等行为时长保留字面量并注释（非视觉 token 范畴）�
   228px 死空白是「消息页很怪」的主因之一。
 - 「没有更多了」（ListEnd）只在历史确实分页并耗尽后出现；首屏一次返回全部
   （`next_cursor=null`）不得显示。
+- 列表行右侧时间/未读徽标/状态等尾部元素距卡片右缘 **12px**（Figma 934:34、Web ChatListItem `pr-3`、鸿蒙 MessagePage、Android ConversationRow 同一内距），不得贴边；
 - 字号：消息正文 `text-md`(14) + `leading-chat`(1.43→20)；气泡内距 12×6（`px-3 py-1.5`，三端一致）；时间戳 `text-xs`(11)；群聊发送者名
   `text-sm`(12)；输入框 `text-md`(14)。accent 实底气泡内文字用 `text-text-on-accent`
   全量、**不得叠 opacity**（叠 0.7 只有 3.97:1，不达标）。
