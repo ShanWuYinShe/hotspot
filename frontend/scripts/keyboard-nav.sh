@@ -223,6 +223,97 @@ else
   fi
 fi
 
+
+# ---- 4) 设置页分段控件（role=radiogroup）：方向键移动并选中，Home/End 跳首末项 ----
+# 规则见 src/lib/roving-radio.ts；这里验证 DOM 侧接线（焦点/aria-checked/主题类同步）。
+radio_state_json() { # $1=radiogroup 下标（0=应用主题，1=外观模式）
+  ab eval '(() => {
+    const g = [...document.querySelectorAll("[role=radiogroup]")]['"$1"'];
+    if (!g) return JSON.stringify({ found: "0" });
+    const rs = [...g.querySelectorAll("[role=radio]")];
+    const themeClass = ["vibrant", "forest", "inkwash"].find((c) => document.documentElement.classList.contains(c)) || "";
+    return JSON.stringify({
+      found: "1",
+      checkedIndex: String(rs.findIndex((r) => r.getAttribute("aria-checked") === "true")),
+      active: (document.activeElement?.textContent || "").trim().slice(0, 8),
+      themeClass: themeClass
+    });
+  })()' 2>/dev/null | tail -1
+}
+
+ab open "${BASE}/settings" >/dev/null 2>&1
+WAIT=0
+THEME_RAW=""
+while [ "${WAIT}" -lt 25 ]; do
+  THEME_RAW="$(radio_state_json 0)"
+  [ "$(qa_json_field "${THEME_RAW}" found)" = "1" ] && break
+  sleep 0.4
+  WAIT=$((WAIT + 1))
+done
+if [ "$(qa_json_field "${THEME_RAW}" found)" != "1" ]; then
+  fail "/settings 未找到主题 radiogroup（页面未加载或结构变更）"
+else
+  ORIG_INDEX="$(qa_json_field "${THEME_RAW}" checkedIndex)"
+  [ "${ORIG_INDEX}" -ge 0 ] 2>/dev/null || ORIG_INDEX=0
+  NEXT_INDEX=$(((ORIG_INDEX + 1) % 3))
+  case "${NEXT_INDEX}" in
+    0) NEXT_THEME=vibrant ;;
+    1) NEXT_THEME=forest ;;
+    *) NEXT_THEME=inkwash ;;
+  esac
+  ab eval '(() => {
+    const g = [...document.querySelectorAll("[role=radiogroup]")][0];
+    g.querySelector("[role=radio][aria-checked=true]")?.focus();
+    return true;
+  })()' >/dev/null 2>&1
+  ab press ArrowRight >/dev/null 2>&1
+  sleep 0.6
+  AFTER_THEME="$(radio_state_json 0)"
+  AFTER_CLASS="$(qa_json_field "${AFTER_THEME}" themeClass)"
+  AFTER_INDEX="$(qa_json_field "${AFTER_THEME}" checkedIndex)"
+  if [ "${AFTER_CLASS}" = "${NEXT_THEME}" ] && [ "${AFTER_INDEX}" = "${NEXT_INDEX}" ]; then
+    pass "/settings 主题 radiogroup → 移动到 ${NEXT_THEME}（aria-checked 与 html class 同步）"
+  else
+    fail "/settings 主题 radiogroup → 未按预期移动（class=${AFTER_CLASS} index=${AFTER_INDEX} 期望=${NEXT_THEME}/${NEXT_INDEX}）"
+  fi
+  ab press End >/dev/null 2>&1
+  sleep 0.6
+  END_STATE="$(radio_state_json 0)"
+  if [ "$(qa_json_field "${END_STATE}" themeClass)" = "inkwash" ]; then
+    pass "/settings 主题 radiogroup End → 末项 inkwash"
+  else
+    fail "/settings 主题 radiogroup End 未到末项（class=$(qa_json_field "${END_STATE}" themeClass)）"
+  fi
+  ab press Home >/dev/null 2>&1
+  sleep 0.6
+  HOME_STATE="$(radio_state_json 0)"
+  if [ "$(qa_json_field "${HOME_STATE}" themeClass)" = "vibrant" ]; then
+    pass "/settings 主题 radiogroup Home → 首项 vibrant"
+  else
+    fail "/settings 主题 radiogroup Home 未回首项（class=$(qa_json_field "${HOME_STATE}" themeClass)）"
+  fi
+  # 恢复运行前的主题选择，避免门禁回写用户偏好
+  ab eval '(() => {
+    const g = [...document.querySelectorAll("[role=radiogroup]")][0];
+    g.querySelectorAll("[role=radio]")['"${ORIG_INDEX}"']?.click();
+    return true;
+  })()' >/dev/null 2>&1
+  # 外观模式组：方向键移动并选中（与主题组同一 handler）
+  ab eval '(() => {
+    const g = [...document.querySelectorAll("[role=radiogroup]")][1];
+    g.querySelector("[role=radio][aria-checked=true]")?.focus();
+    return true;
+  })()' >/dev/null 2>&1
+  MODE_BEFORE="$(qa_json_field "$(radio_state_json 1)" active)"
+  ab press ArrowRight >/dev/null 2>&1
+  sleep 0.6
+  MODE_AFTER="$(qa_json_field "$(radio_state_json 1)" active)"
+  if [ "${MODE_AFTER}" != "${MODE_BEFORE}" ]; then
+    pass "/settings 外观模式 radiogroup → 移动并选中（${MODE_BEFORE} → ${MODE_AFTER}）"
+  else
+    fail "/settings 外观模式 radiogroup → 未移动（仍为 ${MODE_AFTER}）"
+  fi
+fi
 echo ""
 if [ "${FAIL}" -eq 0 ]; then
   say "结果: PASS（通过 ${PASS_COUNT}，跳过 ${SKIP_COUNT}）"
