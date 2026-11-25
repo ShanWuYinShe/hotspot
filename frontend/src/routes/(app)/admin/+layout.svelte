@@ -73,6 +73,22 @@
 		config: '系统配置'
 	};
 	const pageTitle = $derived(MODULE_HEADINGS[activeId] ?? '管理后台');
+
+	// 无权限（未登录/校验中/非管理员）时不得渲染「平台管理」语境与后台工具：
+	// 头部标题回落到中性「管理后台」，meta 说明当前门槛；模块导航/返回概览仅管理员可见。
+	// 修复点：此前非管理员打开 /admin/xxx 仍显示 island「用户管理 / 平台管理」+「返回概览」，
+	// 与正文「无访问权限」空态自相矛盾。
+	const adminAccess = $derived(auth.status === 'authenticated' && admin.loaded && admin.isAdmin);
+	const headerTitle = $derived(adminAccess ? pageTitle : '管理后台');
+	const headerMeta = $derived(
+		adminAccess
+			? '平台管理'
+			: auth.status !== 'authenticated'
+				? '需要登录'
+				: !admin.loaded
+					? '权限校验中'
+					: '需要管理员权限'
+	);
 </script>
 
 <StandardPageLayout contentMaxWidth="var(--cst-content-breath)" contentClassName="pt-4 pb-6">
@@ -82,9 +98,9 @@
 		<PageHeader
 			variant="integrated"
 			maxWidth="var(--cst-content-breath)"
-			title={pageTitle}
-			subtitle="平台管理"
-			islandMeta="平台管理"
+			title={headerTitle}
+			subtitle={headerMeta}
+			islandMeta={headerMeta}
 			titleSize={device === 'desktop' ? 'xl' : '2xl'}
 			onBack={() => smartBack()}
 		>
@@ -93,7 +109,7 @@
 			{/snippet}
 			{#snippet islandTrailing()}
 				<!-- 岛内行动区（≤2 控件）：子模块滚动后给「返回概览」出口，概览页不重复提供 -->
-				{#if activeId !== 'overview'}
+				{#if adminAccess && activeId !== 'overview'}
 					<Button type="button" variant="soft" size="sm" shape="pill" class="h-6.5 px-2.5 text-xs" onclick={() => void goto(ROUTES.admin)}>
 						返回概览
 					</Button>
@@ -102,7 +118,7 @@
 			{#snippet islandExpanded()}
 				<!-- 桌面岛面板是模块导航的唯一常驻入口：10 项一屏放不下 → 面板内两行网格（5×2）。
 				     不用 below 默认展开片段：它会与 IslandCapsule 外壳的统一 footer 重复一份控制条。 -->
-				{#if admin.isAdmin}
+				{#if adminAccess}
 					<div class="flex flex-col gap-2.5">
 						<div class="flex items-center justify-between text-xs">
 							<span class="font-medium text-text-primary">管理模块</span>
@@ -121,7 +137,7 @@
 				{/if}
 			{/snippet}
 			{#snippet below()}
-				{#if admin.isAdmin}
+				{#if adminAccess}
 					<div class="mt-3" role="group" aria-label="管理模块导航">
 						<TabBar
 							items={MODULES.map((m) => ({ id: m.id, label: m.label, count: m.id === 'reports' && pendingReports ? pendingReports : undefined }))}
