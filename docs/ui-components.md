@@ -199,7 +199,7 @@
 11. **图片加载（design-system §17 / §20.4）**：所有 `<img>` 走 `lib/images.ts` 档位 + srcset/sizes；
    首屏仅可见图 eager+high、其余 lazy+async；占位 + 0.22s 渐显（reduced 直接显示）；失败走既有 fallback；
    非 unsplash/本地/blob 原样。`ImageViewer` 用 full 档（1600/q85）打开即加载。
-12. **键盘导航**：搜索页 ↑↓ 在真实结果链接/最近/话题间移动焦点、Enter 打开、Esc 清空；列表页（/messages、/notify、/me/relationships）行间 ↑↓、页头搜索框 ↓ 进首行，列表页搜索框不得放在桌面端整条隐藏的页头里（关系页已统一移到正文顶部）；
+12. **键盘导航**：搜索页 ↑↓ 在真实结果链接/最近/话题间移动焦点、Enter 打开、Esc 清空；列表页（/messages、/notify、/me/relationships）行间 ↑↓、搜索框 ↓ 进首行；高频输入控件（搜索框）放正文顶部直接可达——integrated 页头的 `below` 在桌面端会映射进岛展开面板（需先展开岛才能操作），不适合作为搜索入口（关系页已统一移到正文顶部）；
     设置页 `role=radiogroup` 分段控件（应用主题/外观模式）必须支持 ←→↑↓ 移动并选中、Home/End 跳首末项，组内 roving tabindex（仅选中项可 Tab 到达）；纯逻辑抽 `lib/roving-radio.ts`，新增长按选项组按同一契约接入并补 `audit:keyboard` 断言；
    不引入 combobox/aria-activedescendant；Tab 顺序与焦点环不变。
 13. **动效（design-system §10）**：enter 180/exit 150/pop 220，仅 transform/opacity；页面进场仅客户端导航

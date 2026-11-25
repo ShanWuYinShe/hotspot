@@ -1161,7 +1161,7 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 | `/messages` | 会话列表 ↑↓；搜索框 ↓ 进首行 | `lib/chat-list-nav` + `ChatListBody` / `SearchInput.onKeydown`（PR #281/#283） | 搜索框 ↓ 进首行、↓ 到第二行、↑ 回第一行 |
 | `/search` | 输入框/相关话题/结果行/最近条目间 ↑↓、Esc 清空回输入框、Enter 打开 | `useSearchPageData.handleSearchNavKeydown` + `searchNavCandidates`（PR #242） | 首候选 ↓ 到第二、↑ 回第一 |
 | `/settings` | 分段控件（应用主题 / 外观模式，`role=radiogroup`）←→↑↓ 移动并选中、Home/End 跳首末项；roving tabindex（组内仅选中项可 Tab 进入） | `lib/roving-radio.ts` + `AppearanceSection` 组内接线 | 主题 → 移动到 forest 且 html class 同步、End→inkwash、Home→vibrant、外观模式 → 移动并选中 |
-| `/me/relationships` | 搜索框 ↓ 进入好友列表首行、行间 ↑↓；候选 = 行覆盖按钮（`[data-list-item] [data-cover]`），行内动作按钮用 Tab 到达 | `RelationshipsPage` 页级 window 监听 + `lib/search-nav` | 搜索框 ↓ 到首行、↓ 到第二行、↑ 回首行 |
+| `/me/relationships` | 搜索框 ↓ 进入好友列表首行、行间 ↑↓；候选 = 行覆盖按钮（`[data-list-item] [data-cover]`），行内动作按钮用 Tab 到达；搜索框放正文顶部（桌面直接可见） | `RelationshipsPage` 页级 window 监听 + `lib/search-nav` | 搜索框 ↓ 到首行、↓ 到第二行、↑ 回首行；桌面 1440 搜索框可见 |
 
 **自动门禁**：`bun run audit:keyboard`（`scripts/keyboard-nav.sh`）——复用 `qa-common.sh` 的健康检查/QA 登录/session 清理，行数据异步轮询，未登录或候选不足 2 直接失败；已作为第四步纳入 `bun run audit:ui`。最近一次：
 

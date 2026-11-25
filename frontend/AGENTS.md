@@ -75,6 +75,7 @@ HTTPS（OrbStack 自带受信任的开发证书）：
 - 类型检查：`bun run check`（svelte-check）
 - 测试：`bun run test`（vitest，不依赖 Docker）
 - 构建验证：`bun run build`
+- **`bun run check` 会执行 `svelte-kit sync` 重建 `.svelte-kit/`**：与运行中的 Vite dev container 共用该目录，在 dev 环境运行时跑 check 可能让页面 500；在 worktree 调试时跑完 check 请重启对应 frontend 容器（验证：`curl -s -o /dev/null -w '%{http_code}' http://localhost:8889/` 应为 200）。
 - 体验性能基线：`bun run perf:baseline`（逐页 FCP/LCP/CLS/TTFB/传输字节，输出 `.workwork/browser-check/perf-<ts>/`；本地 dev 口径仅作相对参考，生产需真实网络另测；`--compare <旧 report.json>` 输出差值）
 
 ### 浏览器巡检（可选，需 dev 环境已启动）
