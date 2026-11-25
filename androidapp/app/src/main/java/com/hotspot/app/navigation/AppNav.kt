@@ -37,6 +37,7 @@ import com.hotspot.app.ui.screens.LoginScreen
 import com.hotspot.app.ui.screens.MeGroupsScreen
 import com.hotspot.app.ui.screens.MeMomentsScreen
 import com.hotspot.app.ui.screens.MeScreen
+import com.hotspot.app.ui.screens.MySharesScreen
 import com.hotspot.app.ui.screens.MessagesScreen
 import com.hotspot.app.ui.screens.MomentDetailScreen
 import com.hotspot.app.ui.screens.MapScreen
@@ -233,6 +234,7 @@ private fun MainScaffold() {
                         onBack = { navController.popBackStack() },
                         onOpenEditProfile = { navController.navigate(Routes.ME_EDIT) },
                         onOpenReports = { navController.navigate(Routes.ME_REPORTS) },
+                        onOpenShares = { navController.navigate(Routes.ME_SHARES) },
                         onOpenBlocked = { navController.navigate(Routes.ME_BLOCKED) },
                         onOpenSessions = { navController.navigate(Routes.SETTINGS_SESSIONS) },
                         onOpenAdmin = { navController.navigate(Routes.ADMIN_HOME) },
@@ -241,6 +243,9 @@ private fun MainScaffold() {
                 }
                 composable(Routes.ME_REPORTS) {
                     ReportsScreen(onBack = { navController.popBackStack() })
+                }
+                composable(Routes.ME_SHARES) {
+                    MySharesScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.SETTINGS_SESSIONS) {
                     SessionManagementScreen(onBack = { navController.popBackStack() })

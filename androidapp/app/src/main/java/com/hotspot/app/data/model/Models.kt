@@ -715,6 +715,25 @@ data class UnreadSummary(
     val total: Int = 0,
 )
 
+/** spec/share fetch_created → ShareListItem。 */
+@Serializable
+data class ShareListItem(
+    @SerialName("share_id") val shareId: String,
+    @SerialName("share_code") val shareCode: String,
+    @SerialName("share_type") val shareType: String,
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("is_revoked") val isRevoked: Boolean = false,
+    val preview: SharePreview? = null,
+)
+
+@Serializable
+data class SharePreview(
+    val title: String = "",
+    val subtitle: String? = null,
+    @SerialName("cover_url") val coverUrl: String? = null,
+)
+
 /** spec/types → UserSettings 的客户端子集（隐私与位置）。 */
 @Serializable
 data class UserSettings(

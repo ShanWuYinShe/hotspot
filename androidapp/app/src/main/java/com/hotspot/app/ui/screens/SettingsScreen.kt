@@ -84,6 +84,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenEditProfile: () -> Unit,
     onOpenReports: () -> Unit,
+    onOpenShares: () -> Unit,
     onOpenBlocked: () -> Unit,
     onOpenSessions: () -> Unit,
     onOpenAdmin: () -> Unit,
@@ -444,6 +445,11 @@ fun SettingsScreen(
                     title = "版本",
                     subtitle = BuildConfig.VERSION_NAME + " · " + BuildConfig.BUILD_TYPE,
                     onClick = null,
+                )
+                ListRow(
+                    title = "我的分享",
+                    subtitle = "管理已创建的分享链接与撤销记录",
+                    onClick = onOpenShares,
                 )
                 ListRow(
                     title = "我的举报",

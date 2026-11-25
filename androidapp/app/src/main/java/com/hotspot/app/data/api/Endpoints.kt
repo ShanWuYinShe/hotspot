@@ -25,6 +25,8 @@ object ApiEndpoint {
     const val USERS_DELETE_ACCOUNT = "/api/v1/users/delete_account"
     const val USERS_SETTINGS = "/api/v1/users/settings"
     const val USERS_UPDATE_SETTINGS = "/api/v1/users/update_settings"
+    const val SHARE_FETCH_CREATED = "/api/v1/share/fetch_created"
+    const val SHARE_REVOKE = "/api/v1/share/revoke"
 
     const val MOMENTS_SEARCH = "/api/v1/moments/search"
     const val MOMENTS_OPEN = "/api/v1/moments/open_the_door"
