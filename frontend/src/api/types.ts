@@ -1591,6 +1591,35 @@ export interface ShareCreated {
 	share_code: string;
 	expires_at: string | null;
 }
+// spec: api_spec_types.md → SharePreview（share 域跨节点共享，列表/落地共用的展示摘要）
+export interface SharePreview {
+	title: string;
+	subtitle: string | null;
+	cover_url: string | null;
+}
+
+// spec: api_spec_share.md → share/fetch_created
+export interface ShareListItem {
+	share_id: string;
+	share_code: string;
+	share_type: ShareType;
+	created_at: string;
+	expires_at: string | null;
+	/** true = 当前不可用（已撤销或已过期；服务端同口径，preview 此时为 null） */
+	is_revoked: boolean;
+	preview: SharePreview | null;
+}
+
+export interface FetchCreatedSharesRequest {
+	share_type: ShareType | null;
+	pagination: PaginationParams | null;
+}
+
+// spec: api_spec_share.md → share/revoke（share_id 与 share_code 二选一）
+export interface RevokeShareRequest {
+	share_id: string | null;
+	share_code: string | null;
+}
 
 export interface ShareBase {
 	share_id: string;

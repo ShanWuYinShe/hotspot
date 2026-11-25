@@ -487,16 +487,26 @@
 
 | 命令 | 作用 | 失败条件 | 输出 |
 |---|---|---|---|
-| `bun run audit:a11y` | axe-core 扫描全部桌面页（默认 1440，38 页：QA 18 + 审计扩展 17 + 详情 3；详情 ID 取不到则 35） | serious/critical > 0、axe 未注入、页面加载失败 | `.workwork/browser-check/a11y-<ts>/` |
+| `bun run audit:a11y` | axe-core 扫描全部桌面页（默认 1440，39 页：QA 19 + 审计扩展 17 + 详情 3；详情 ID 取不到则 36） | serious/critical > 0、axe 未注入、页面加载失败 | `.workwork/browser-check/a11y-<ts>/` |
 | `bun run audit:a11y -- --mobile` | 追加 390×844 5 页（首页/附近的人/搜索/设置/通知） | 同上 | 同上 |
 | `bun run audit:a11y -- --reduced` | reduced-motion：关键类残留 + 非允许 CSS 动画 >20ms | 有残留/长动画 | `raw/reduced.jsonl` |
-| `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 18 + 审计扩展 17 + 详情页，最多 38 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
+| `bun run audit:touch` | 390×844 触控有效热区，**默认全量页面**（QA 19 + 审计扩展 17 + 详情页，最多 39 页），对照 allowlist | 未登记离群、页面加载失败 | `.workwork/browser-check/touch-<ts>/` |
 | `bun run audit:touch -- --baseline` | 仅 r5 基线 22 页（快速/对照） | 同上 | 同上 |
 | `bun run audit:keyboard` | 列表键盘导航：消息会话列表 ↑↓ + 搜索框 ↓ 进首行、/notify ↑↓、/search 结果候选 ↑↓、/settings 分段控件（主题/明暗）←→↑↓ + Home/End、/me/relationships 搜索框 ↓ 进首行 + 行 ↑↓（14 条断言） | 任一断言失败、未登录、候选不足 | `.workwork/browser-check/keyboard-<ts>/` |
 | `bun run audit:permission` | 权限态：QA 普通账号打开 /admin/users（正文无访问权限、岛「管理后台 / 需要管理员权限」、无平台管理语境/返回概览/模块导航）；切换 admin 后恢复模块语境与后台工具（11 条断言） | 任一断言失败、登录失败、后端不可达 | `.workwork/browser-check/permission-<ts>/` |
 | `bun run audit:ui` | browser-qa --mobile + a11y + touch + keyboard + permission | 任一子检查失败整体 exit 1 | 五个报告路径 + 摘要 |
 
 参数：`--base`、`--session`、`--theme vibrant|forest|inkwash`、`--mode light|dark`、`--reduced`、`--mobile`、`--limit <n>`（调试）、`--allowlist <path>`（touch，负向验证用）、`--help`。
+
+### 我的分享页（/me/shares）
+
+Web 端分享管理页（对齐鸿蒙/Android「我的分享」）：类型 Tab（全部/瞬间/用户/群组/位置）+ 列表（预览、有效/已失效状态、复制链接、撤销确认）+ 空/加载/失败/鉴权四态；消费 `share/fetch_created` 与 `share/revoke`（spec `api_spec_share.md`），入口在设置页「隐私与安全」。
+
+接入门禁基线（worktree 独立环境 8889，种子 `share_seed_1`）：
+
+- `audit:a11y`：39 页 / 788 元素，**0 violation**（含 /me/shares）→ PASS；
+- `audit:touch`：39 页 / 788 元素 / 分母 728、≥44 通过 691、登记例外 37、覆盖率 94.9%、未登记离群 0 → PASS（行内「复制链接/撤销」28px 视觉高 + `hit-slop-44` 命中区）；
+- 单元测试：`lib/shares.test.ts`（状态同口径、分享链接拼接、类型文案）3 项通过。
 
 ### 基线（8898 worktree / 2026-10-27）
 

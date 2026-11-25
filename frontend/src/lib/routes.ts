@@ -28,6 +28,7 @@ export const ROUTES = {
   me: "/me",
   meEdit: "/me/edit",
   meReports: "/me/reports",
+  meShares: "/me/shares",
   settings: "/settings",
   map: "/map",
   admin: "/admin",

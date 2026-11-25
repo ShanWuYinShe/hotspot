@@ -413,13 +413,13 @@ resolve_detail_ids() {
   return 0
 }
 
-# 页面清单：QA 基线 18 页 + R5 审计扩展 17 页 + 详情页 3 个（seed 固定 ID → API → 首页 href → 跳过）。
-# 详情可取时桌面 38 页；a11y 桌面 38 + 移动 5 = 43 项检查（≥ 39 项门禁目标）。
+# 页面清单：QA 基线 19 页 + R5 审计扩展 17 页 + 详情页 3 个（seed 固定 ID → API → 首页 href → 跳过）。
+# 详情可取时桌面 39 页；a11y 桌面 39 + 移动 5 = 44 项检查（≥ 39 项门禁目标）。
 build_page_lists() {
   QA_DESKTOP_PAGES=(
     "/" "/nearby/people" "/nearby/groups" "/nearby/moments" "/notify"
     "/messages" "/me" "/me/edit" "/settings" "/map" "/search" "/me/relationships"
-    "/me/moments" "/me/groups" "/me/reports" "/me/friends" "/me/following" "/me/fans"
+    "/me/moments" "/me/groups" "/me/reports" "/me/shares" "/me/friends" "/me/following" "/me/fans"
   )
   AUDIT_EXTRA_PAGES=(
     "/nearby" "/login" "/register"
