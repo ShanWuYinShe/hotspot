@@ -1042,13 +1042,14 @@ class GroupRepository(private val api: ApiClient) {
         joinMethod: String,
         requiresApproval: Boolean,
         location: DefaultLocation,
+        avatarFileId: String? = null,
         idempotencyKey: String,
     ): ApiResult<GroupItem> = api.post(
         ApiEndpoint.GROUPS_CREATE,
         buildJsonObject {
             put("name", name)
             put("description", description)
-            put("avatar_file_id", JsonNull)
+            if (avatarFileId != null) put("avatar_file_id", avatarFileId) else put("avatar_file_id", JsonNull)
             put("tags", buildJsonArray { tags.forEach { add(JsonPrimitive(it)) } })
             put("password", JsonNull)
             put("join_method", joinMethod)
