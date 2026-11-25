@@ -1,6 +1,9 @@
 package com.hotspot.app.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -44,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.media.AvatarUploader
 import com.hotspot.app.data.model.AccountData
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.ButtonSize
@@ -69,8 +74,8 @@ private val GENDER_OPTIONS = listOf("男" to "male", "女" to "female", "其他"
 /**
  * 编辑资料（设计稿 87:3128）：头像卡（点头像可更换照片）+ 基本信息（昵称 / 个人简介 150 字）
  * + 更多信息（性别单选 / 兴趣标签最多 5 个）+ 吸底「保存资料」。
- * 保存走 users/update_account（patch 语义）；头像上传链路未接入（media/complete_upload TODO），
- * 点击头像只提示占位，不伪造上传入口。
+ * 保存走 users/update_account（patch 语义）；点头像走 Photo Picker → AvatarUploader(category=avatar)
+ * → update_account(avatar_file_id)，成功后重新拉取 account 刷新头像 URL。
  */
 @Composable
 fun EditProfileScreen(onBack: () -> Unit) {
@@ -83,7 +88,36 @@ fun EditProfileScreen(onBack: () -> Unit) {
     var nickname by remember { mutableStateOf("") }
     var bio by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf<String?>(null) }
+    var avatarUploading by remember { mutableStateOf(false) }
     val selectedTags = remember { mutableStateListOf<String>() }
+    val avatarPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null && !avatarUploading) {
+            avatarUploading = true
+            scope.launch {
+                try {
+                    runCatching {
+                        val media = AvatarUploader.upload(context, uri)
+                            .getOrElse { error(it.message ?: "头像上传失败") }
+                        require(media.fileId.isNotBlank()) { "头像上传结果为空" }
+                        when (val update = AppContainer.profileRepository.updateAccount(avatarFileId = media.fileId)) {
+                            is ApiResult.Ok -> {
+                                when (val refreshed = AppContainer.profileRepository.account()) {
+                                    is ApiResult.Ok -> account = refreshed.data
+                                    is ApiResult.Err -> Unit
+                                }
+                                Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
+                            }
+                            is ApiResult.Err -> error(update.error.userMessage)
+                        }
+                    }.onFailure {
+                        Toast.makeText(context, it.message ?: "头像上传失败，请重试", Toast.LENGTH_SHORT).show()
+                    }
+                } finally {
+                    avatarUploading = false
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         when (val result = AppContainer.profileRepository.account()) {
@@ -156,17 +190,27 @@ fun EditProfileScreen(onBack: () -> Unit) {
                                 .size(22.dp)
                                 .clip(CircleShape)
                                 .background(colors.accent)
-                                .clickable {
-                                    Toast.makeText(context, "头像上传待接入（首版占位）", Toast.LENGTH_SHORT).show()
+                                .clickable(enabled = !avatarUploading) {
+                                    avatarPicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+                                    )
                                 },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Edit,
-                                contentDescription = "更换头像",
-                                modifier = Modifier.size(12.dp),
-                                tint = colors.textOnAccent,
-                            )
+                            if (avatarUploading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 2.dp,
+                                    color = colors.textOnAccent,
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = "更换头像",
+                                    modifier = Modifier.size(12.dp),
+                                    tint = colors.textOnAccent,
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.width(Spacing.md))
