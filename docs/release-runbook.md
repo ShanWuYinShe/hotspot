@@ -91,7 +91,7 @@ gh run watch <run-id> --exit-status
   2. 合并后等 main CI 全绿；涉及鸿蒙改动时本机确认 hvigor 构建；
   3. `git tag -a vX.Y.Z -m "vX.Y.Z"` 逐个推送 → 等 Release 工作流（require-ci / build-push-release / auto-deploy / **post-deploy-smoke**）全绿；
   4. 构建并附 APK：`scripts/release-android-apk.sh vX.Y.Z <versionCode>`（校验 tag/Release/签名/版本后上传）；
-  5. 跑发版后冒烟：`./scripts/release-smoke.sh --version vX.Y.Z`（一次核对 version.json / healthz / tag commit 三处一致、前端入口可达、Release 含镜像包 + `.sha256` + `.ids.txt` + APK 且镜像包校验和正确）。
+  5. 跑发版后冒烟：`./scripts/release-smoke.sh --version vX.Y.Z`（一次核对 version.json / healthz / tag commit 三处一致、前端入口可达、Release 含镜像包 + `.sha256` + `.ids.txt` + APK 且镜像包校验和正确）。脚本对 version.json / healthz / 前端入口各做 3 次重试、镜像包下载 3 次重试——本机网络经系统代理/跨境链路偶发超时不会误判为发版失败；连续失败才是真异常。
 - **APK 与 CI 冒烟的时序**：`post-deploy-smoke` 在 Release 工作流内执行，此时 APK 尚未附包（第 4 步才上传），故该 job 用 `--skip-apk`，只校验线上版本/入口与镜像资产；第 5 步在 APK 附包后跑完整命令（不带 `--skip-apk`），补上 APK 资产检查。
 - **APK 版本号规则不变**：`versionCode` 必须递增（否则无法覆盖安装），`versionName` 与 tag 一致。
 

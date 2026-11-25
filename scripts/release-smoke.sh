@@ -64,7 +64,12 @@ say "BASE=$BASE VERSION=$VERSION"
 say ""
 
 # 1) version.json：version / commit / project
-VJ="$(curl -sS -m 20 "$BASE/version.json" 2>/dev/null)"
+# 同一类网络抖动：version.json / healthz 也重试 3 次（http_get 定义在后，先就地内联简单重试）
+VJ=""
+for _try in 1 2 3; do
+  VJ="$(curl -sS -m 20 "$BASE/version.json" 2>/dev/null)" && [ -n "$VJ" ] && break
+  sleep 2
+done
 VJ_VERSION="$(json_field "$VJ" version)"
 VJ_COMMIT="$(json_field "$VJ" commit)"
 VJ_PROJECT="$(json_field "$VJ" project)"
@@ -84,7 +89,11 @@ else
 fi
 
 # 2) healthz：code=0 / status=ok / version 与 commit 与前端一致
-HZ="$(curl -sS -m 20 "$BASE/healthz" 2>/dev/null)"
+HZ=""
+for _try in 1 2 3; do
+  HZ="$(curl -sS -m 20 "$BASE/healthz" 2>/dev/null)" && [ -n "$HZ" ] && break
+  sleep 2
+done
 HZ_DATA="$(printf '%s' "$HZ" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin).get("data", {})))' 2>/dev/null)"
 HZ_CODE="$(json_field "$HZ" code)"
 HZ_STATUS="$(json_field "$HZ_DATA" status)"
@@ -107,7 +116,22 @@ else
 fi
 
 # 3) 前端入口可达（SPA index.html）
-INDEX_CODE="$(curl -sS -m 20 -o "$TMP_DIR/index.html" -w '%{http_code}' "$BASE/" 2>/dev/null)"
+# 本机网络（尤其经系统代理/跨境链路）偶发超时会让单次 curl 返回 000，导致误报；
+# 入口检查做 3 次重试（每次 20s 超时），只有连续失败才判失败。
+http_get() { # $1=url $2=out_file [$3=attempts]；输出最后一次 http_code
+  local url="$1" out="$2" attempts="$3" i code
+  attempts="${attempts:-3}"
+  for i in $(seq 1 "$attempts"); do
+    code="$(curl -sS -m 20 -o "$out" -w '%{http_code}' "$url" 2>/dev/null)" || true
+    if [ "$code" = "200" ]; then
+      echo "$code"
+      return 0
+    fi
+    if [ "$i" -lt "$attempts" ]; then sleep 2; fi
+  done
+  echo "${code:-}"
+}
+INDEX_CODE="$(http_get "$BASE/" "$TMP_DIR/index.html" 3)"
 if [ "$INDEX_CODE" = "200" ] && grep -qi '<!doctype html' "$TMP_DIR/index.html"; then
   pass "前端入口 200 + HTML：$BASE/"
 else
