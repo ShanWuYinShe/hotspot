@@ -1226,3 +1226,5 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 **取数口径**：岛文本取 `[data-desktop-dynamic-island]` 的 innerText（归一空白）；正文取 `document.body.innerText`；布尔字段在 eval 内转字符串（`qa_json_field` 只解析字符串字段）。
 
 **最近一次**：11 条断言 PASS（`permission-20261125-101325`）。
+
+**五步串联最近一次**：`bun run audit:ui` PASS——browser-qa / audit:a11y / audit:touch / audit:keyboard / audit:permission 退出码均为 0；子报告：`qa-20261125-102047`、`a11y-20261125-102211`、`touch-20261125-102525`、`keyboard-20261125-102812`、`permission-20261125-102835`。
