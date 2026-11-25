@@ -34,6 +34,7 @@ import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.PresignFileInput
 import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.SessionListData
+import com.hotspot.app.data.model.ShareListItem
 import com.hotspot.app.data.model.UserSettings
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
@@ -931,6 +932,26 @@ class ProfileRepository(private val api: ApiClient) {
     /** spec/users settings：隐私级别与位置共享。 */
     suspend fun settings(): ApiResult<UserSettings> =
         api.post(ApiEndpoint.USERS_SETTINGS, emptyObject(), UserSettings.serializer())
+
+    /** spec/share fetch_created：我创建的分享，按类型筛选 + keyset 分页。 */
+    suspend fun createdShares(shareType: String?, cursor: String?): ApiResult<Page<ShareListItem>> =
+        api.post(
+            ApiEndpoint.SHARE_FETCH_CREATED,
+            buildJsonObject {
+                put("share_type", shareType?.let(::JsonPrimitive) ?: JsonNull)
+                put("pagination", pagination(cursor))
+            },
+            Page.serializer(ShareListItem.serializer()),
+        )
+
+    /** spec/share revoke：仅创建者可撤销；已撤销再撤销为 no-op。 */
+    suspend fun revokeShare(shareId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.SHARE_REVOKE,
+        buildJsonObject {
+            put("share_id", shareId)
+            put("share_code", JsonNull)
+        },
+    )
 
     /** spec/users update_settings：只提交需要修改的字段（settings 为 Partial<UserSettings>）。 */
     suspend fun updateSettings(

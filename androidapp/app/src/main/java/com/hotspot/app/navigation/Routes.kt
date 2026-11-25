@@ -14,6 +14,7 @@ object Routes {
     const val ME_EDIT = "me/edit"
     // 我的举报（设计稿 87:3350，入口：设置 → 系统与关于）
     const val ME_REPORTS = "me/reports"
+    const val ME_SHARES = "me/shares"
     // 屏蔽名单（入口：设置 → 系统与关于）
     const val ME_BLOCKED = "me/blocked"
     const val SETTINGS_SESSIONS = "settings/sessions"
