@@ -20,7 +20,7 @@
 | 原语 | 职责 |
 |---|---|
 | `list/ListContainer` | 列表容器。`bordered` = 「开放页面内容软岛」——`bg-surface-island + shadow-xs + rounded-lg(20)`、无 1px 描边、`p-2`(8)、行背景透明、行间 `gap-y-0.5`(2)、hover 填充离岛边 8（不画行横线）；embedded（面板内集合）× `inset`（内缩圆角行）/ 默认（分隔线）不变。调用方不得再给 `bordered` 覆写 border/bg/radius |
-| `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变。行点击由内部透明覆盖按钮（`[data-cover]`）承载，行内操作按钮自动抬升（z 序），根不持 button 语义（axe nested-interactive 清零） |
+| `list/ListItem` | **唯一行交互原语**。hover/选中填充、12px 圆角、键盘、aria、`tone: joined/card`、`surface: default/none`（放在自绘软岛卡内时传 `none` 让行背景透明，避免行自带 surface 盖出「大色块」）。行级卡片类禁止（eslint 强制）。列表容器内自动包 `role=listitem`（ListContainer 经 context 声明；ListEnd/InlineLoading 同机制），裸用不变。行点击由内部透明覆盖按钮（`[data-cover]`）承载，行内操作按钮自动抬升（z 序），根不持 button 语义（axe nested-interactive 清零） |
 | 行包装组件 | `ChatListItem` / `home/ActivityRow` / `profile/UserCardRow`（用户/群组实体行；avatarShape 区分圆形/圆角方头像） / `forms/SettingRow`——只做内容编排，交互全部委托 ListItem |
 | `messages/GroupChatBadge` | 群聊类型角标（群头像右下角 Users 图标；与私聊 `OnlineDot` 同位互斥）——会话列表与群聊头部的唯一实现，保证「群聊 / 私聊」在混合列表与聊天头部一眼可分 |
 

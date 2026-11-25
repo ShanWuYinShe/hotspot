@@ -50,6 +50,15 @@ describe('ListItem', () => {
 		expect(src).toMatch(/color: var\(--cst-text-primary\)/);
 	});
 
+	it('surface=none 时行背景透明（自绘卡/软岛内避免大色块）', () => {
+		const { container } = render(ListItem, {
+			props: { children: (() => '内容') as never, surface: 'none', onClick: () => {}, ariaLabel: '行' }
+		});
+		const row = container.querySelector('[data-list-item]') as HTMLElement;
+		expect(row.className).toContain('bg-transparent');
+		expect(row.className).not.toContain('bg-surface-primary');
+	});
+
 	it('tone=card 生成独立卡片行类', () => {
 		const { container } = render(ListItem, {
 			props: { children: (() => '内容') as never, tone: 'card', ariaLabel: '行' }
