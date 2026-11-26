@@ -32,6 +32,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import com.hotspot.app.AppContainer
@@ -414,6 +417,16 @@ private fun notifyBody(item: NotifyItem): String {
 @Composable
 private fun AnnouncementCard(announcement: SystemAnnouncementItem) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
+    val actionUrl = announcement.actionUrl?.trim().orEmpty()
+    fun openAction() {
+        if (actionUrl.isBlank()) return
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(actionUrl)))
+        } catch (e: ActivityNotFoundException) {
+            Toast.makeText(context, "无法打开链接", Toast.LENGTH_SHORT).show()
+        }
+    }
     val tone = when (announcement.severity) {
         "warning" -> BadgeTone.WARNING
         "error" -> BadgeTone.DANGER
@@ -424,7 +437,10 @@ private fun AnnouncementCard(announcement: SystemAnnouncementItem) {
         "error" -> "重要"
         else -> "通知"
     }
-    SystemCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
+    SystemCard(
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md),
+        modifier = if (actionUrl.isNotBlank()) Modifier.clickable { openAction() } else Modifier,
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = announcement.title,
@@ -446,5 +462,14 @@ private fun AnnouncementCard(announcement: SystemAnnouncementItem) {
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
         )
+        if (actionUrl.isNotBlank()) {
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                text = "查看详情",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = colors.accent,
+            )
+        }
     }
 }
