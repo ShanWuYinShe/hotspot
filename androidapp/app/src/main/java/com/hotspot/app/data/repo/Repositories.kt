@@ -37,6 +37,8 @@ import com.hotspot.app.data.model.PresignedUploads
 import com.hotspot.app.data.model.SessionListData
 import com.hotspot.app.data.model.ShareCreated
 import com.hotspot.app.data.model.ShareListItem
+import com.hotspot.app.data.model.SystemAnnouncementItem
+import com.hotspot.app.data.model.SystemAnnouncementList
 import com.hotspot.app.data.model.UserSettings
 import com.hotspot.app.data.model.PrivateChatItem
 import com.hotspot.app.data.model.PrivateMessageItem
@@ -1839,6 +1841,18 @@ class ReportsRepository(private val api: ApiClient) {
 class SystemRepository(private val api: ApiClient) {
     suspend fun clientConfig(): ApiResult<ClientConfig> =
         api.post(ApiEndpoint.SYSTEM_CLIENT_CONFIG, emptyObject(), ClientConfig.serializer())
+
+    /** spec/public system/announcements/fetch：当前有效系统公告（服务端控制条数，无分页）。 */
+    suspend fun announcements(): ApiResult<List<SystemAnnouncementItem>> = api.post(
+        ApiEndpoint.SYSTEM_ANNOUNCEMENTS_FETCH,
+        emptyObject(),
+        SystemAnnouncementList.serializer(),
+    ).let { result ->
+        when (result) {
+            is ApiResult.Ok -> ApiResult.Ok(result.data.items)
+            is ApiResult.Err -> result
+        }
+    }
 }
 
 /** 通知中心：列表 / 未读摘要 / 全部已读。 */

@@ -256,8 +256,23 @@ data class AdminTagItem(
     @SerialName("is_blocked") val isBlocked: Boolean = false,
 )
 
-/**
- * 管理端系统公告（spec/api_spec_admin.md → AdminAnnouncementItem extends SystemAnnouncementItem）。
+/** 公开系统公告（spec/api_spec_types.md → SystemAnnouncementItem）。 */
+@Serializable
+data class SystemAnnouncementItem(
+    @SerialName("announcement_id") val announcementId: String = "",
+    val title: String = "",
+    val content: String = "",
+    val severity: String = "info",
+    @SerialName("action_url") val actionUrl: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+@Serializable
+data class SystemAnnouncementList(
+    val items: List<SystemAnnouncementItem> = emptyList(),
+)
+
+/** 管理端系统公告（spec/api_spec_admin.md → AdminAnnouncementItem extends SystemAnnouncementItem）。
  * severity: info / warning / error。
  */
 @Serializable
