@@ -1085,6 +1085,16 @@ class ProfileRepository(private val api: ApiClient) {
         Page.serializer(GroupItem.serializer()),
     )
 
+    /** spec/users users/fetch_reacted_moments：指定用户反应过的公开瞬间。 */
+    suspend fun userReactedMoments(userId: String, cursor: String? = null): ApiResult<Page<MomentItem>> = api.post(
+        ApiEndpoint.USERS_FETCH_REACTED_MOMENTS,
+        buildJsonObject {
+            put("user_id", userId)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(MomentItem.serializer()),
+    )
+
     /** spec/users users/update_location：把坐标上报为真实位置（用于附近发现与主页大致位置）。 */
     suspend fun updateLocation(
         latitude: Double,

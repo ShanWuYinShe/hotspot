@@ -125,6 +125,7 @@ fun UserProfileScreen(
 
     val gallery = remember { mutableStateListOf<MomentItem>() }
     var groups by remember { mutableStateOf<List<GroupItem>>(emptyList()) }
+    var reactedMoments by remember { mutableStateOf<List<MomentItem>>(emptyList()) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var loadingMore by remember { mutableStateOf(false) }
     var endReached by remember { mutableStateOf(false) }
@@ -147,6 +148,10 @@ fun UserProfileScreen(
                 endReached = page?.nextCursor == null
                 groups = when (val groupResult = AppContainer.profileRepository.userGroups(userId)) {
                     is ApiResult.Ok -> groupResult.data.items
+                    is ApiResult.Err -> emptyList()
+                }
+                reactedMoments = when (val reactedResult = AppContainer.profileRepository.userReactedMoments(userId)) {
+                    is ApiResult.Ok -> reactedResult.data.items.filter { it.images.isNotEmpty() }
                     is ApiResult.Err -> emptyList()
                 }
                 loading = false
@@ -273,6 +278,45 @@ fun UserProfileScreen(
                                 },
                                 onClick = { onOpenGroup(group.group.groupId) },
                             )
+                        }
+                    }
+                    if (reactedMoments.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(Spacing.xl))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_heart),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(Dimens.iconSm),
+                                    tint = colors.textPrimary,
+                                )
+                                Spacer(Modifier.width(Spacing.sm))
+                                Text(
+                                    text = "TA 反应过的瞬间",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.textPrimary,
+                                )
+                            }
+                            Spacer(Modifier.height(Spacing.sm))
+                        }
+                        items((reactedMoments.take(4).size + 1) / 2) { rowIndex ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                                for (column in 0..1) {
+                                    val index = rowIndex * 2 + column
+                                    val reacted = reactedMoments.getOrNull(index)
+                                    if (reacted != null) {
+                                        GalleryTile(
+                                            moment = reacted,
+                                            modifier = Modifier.weight(1f),
+                                            onClick = { onOpenMoment(reacted.momentId) },
+                                        )
+                                    } else {
+                                        Spacer(Modifier.weight(1f))
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(Spacing.sm))
                         }
                     }
                     item {
