@@ -179,6 +179,9 @@ fun MomentDetailScreen(
     // 收藏态：以 open_the_door 的 is_favorited 为初始值，点击即时翻转（失败回滚）
     var favorite by remember { mutableStateOf(false) }
     var favoriteBusy by remember { mutableStateOf(false) }
+    var likedByMe by remember { mutableStateOf(false) }
+    var likeCount by remember { mutableIntStateOf(0) }
+    var likeBusy by remember { mutableStateOf(false) }
     // 作者操作：更多菜单 / 编辑文案 / 删除瞬间
     var ownerSheetOpen by remember { mutableStateOf(false) }
     var editDialogOpen by remember { mutableStateOf(false) }
@@ -233,6 +236,8 @@ fun MomentDetailScreen(
                 moment = result.data
                 commentCount = result.data.commentsCount
                 favorite = result.data.isFavorited
+                likedByMe = result.data.reactions.any { it.reactedByMe }
+                likeCount = result.data.likeCount
             }
             is ApiResult.Err -> error = result.error.userMessage
         }
@@ -262,6 +267,32 @@ fun MomentDetailScreen(
                 }
             }
             favoriteBusy = false
+        }
+    }
+
+    /** 点赞/取消点赞（reactions/set target_type=moment）：乐观更新 + 失败回滚。 */
+    fun toggleLike() {
+        if (likeBusy) return
+        if (!loggedIn) {
+            actionError = "登录后才能点赞瞬间"
+            return
+        }
+        val next = !likedByMe
+        val previousCount = likeCount
+        likedByMe = next
+        likeCount = (likeCount + if (next) 1 else -1).coerceAtLeast(0)
+        likeBusy = true
+        actionError = null
+        scope.launch {
+            when (val result = feedRepository.setMomentReaction(momentId, next)) {
+                is ApiResult.Ok -> Unit
+                is ApiResult.Err -> {
+                    likedByMe = !next
+                    likeCount = previousCount
+                    actionError = result.error.userMessage
+                }
+            }
+            likeBusy = false
         }
     }
 
@@ -537,6 +568,10 @@ fun MomentDetailScreen(
                             commentCount = commentCount,
                             favorite = favorite,
                             favoriteBusy = favoriteBusy,
+                            likedByMe = likedByMe,
+                            likeCount = likeCount,
+                            likeBusy = likeBusy,
+                            onToggleLike = { toggleLike() },
                             onToggleFavorite = { toggleFavorite() },
                             onAuthorClick = { onOpenUser(data.user.userId) },
                             modifier = Modifier.padding(horizontal = Spacing.lg),
@@ -956,6 +991,10 @@ private fun MomentBody(
     commentCount: Int,
     favorite: Boolean,
     favoriteBusy: Boolean,
+    likedByMe: Boolean,
+    likeCount: Int,
+    likeBusy: Boolean,
+    onToggleLike: () -> Unit,
     onToggleFavorite: () -> Unit,
     modifier: Modifier = Modifier,
     onAuthorClick: (() -> Unit)? = null,
@@ -1006,7 +1045,13 @@ private fun MomentBody(
         Spacer(Modifier.height(Spacing.lg))
         // 动作条（设计稿 87:3687 PostActions）：左 点赞数 + 评论数；右 收藏两态（分享在顶部浮层）。
         Row(verticalAlignment = Alignment.CenterVertically) {
-            DetailCount(Icons.Filled.Favorite, data.likeCount)
+            DetailCount(
+                icon = Icons.Filled.Favorite,
+                count = likeCount,
+                active = likedByMe,
+                enabled = !likeBusy,
+                onClick = onToggleLike,
+            )
             Spacer(Modifier.width(Spacing.xl))
             DetailCount(Icons.Filled.MailOutline, commentCount)
             Spacer(Modifier.weight(1f))
@@ -1241,20 +1286,39 @@ private fun MomentIconButton(
 }
 
 @Composable
-private fun DetailCount(icon: ImageVector, count: Int) {
+private fun DetailCount(
+    icon: ImageVector,
+    count: Int,
+    active: Boolean = false,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null,
+) {
     val colors = HotSpotTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier
+            .heightIn(min = Dimens.minTouchTarget)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clip(AppShapes.pill)
+                        .clickable(enabled = enabled, onClick = onClick)
+                } else {
+                    Modifier
+                },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = if (onClick != null) (if (active) "取消点赞" else "点赞瞬间") else null,
             modifier = Modifier.size(18.dp),
-            tint = colors.textSecondary,
+            tint = if (active) colors.accent else colors.textSecondary,
         )
         Spacer(Modifier.width(Spacing.xs))
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelSmall,
-            color = colors.textSecondary,
+            color = if (active) colors.accent else colors.textSecondary,
         )
     }
 }
