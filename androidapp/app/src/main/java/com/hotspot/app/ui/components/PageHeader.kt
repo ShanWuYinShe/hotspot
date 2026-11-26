@@ -45,6 +45,7 @@ fun PageHeader(
     modifier: Modifier = Modifier,
     onBack: (() -> Unit)? = null,
     subtitle: String? = null,
+    onTitleClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val colors = HotSpotTheme.colors
@@ -93,7 +94,11 @@ fun PageHeader(
             }
             Spacer(Modifier.width(Spacing.xs))
         }
-        Column(Modifier.weight(1f)) {
+        Column(
+            Modifier
+                .weight(1f)
+                .then(if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier),
+        ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,

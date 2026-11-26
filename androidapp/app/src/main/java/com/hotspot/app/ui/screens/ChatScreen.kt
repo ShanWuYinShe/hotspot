@@ -99,7 +99,10 @@ import kotlinx.coroutines.launch
  * 历史消息按 sent_at 倒序返回，reverseLayout = true 让最新消息贴底（对齐前端「短会话底对齐」）。
  */
 @Composable
-fun ChatScreen(onBack: () -> Unit) {
+fun ChatScreen(
+    onBack: () -> Unit,
+    onOpenUser: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val chatRepository = AppContainer.chatRepository
     val myUserId = AppContainer.tokenStore.session.value?.userId
@@ -404,6 +407,11 @@ fun ChatScreen(onBack: () -> Unit) {
             onBack = {
                 ChatTarget.clear()
                 onBack()
+            },
+            onTitleClick = if (targetUserId.isNotBlank()) {
+                { onOpenUser(targetUserId) }
+            } else {
+                null
             },
         )
         Box(Modifier.weight(1f)) {

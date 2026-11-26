@@ -6,13 +6,13 @@
 
 按 Figma 设计稿（多端 UI Design Kit 移动端 390 屏）实现的 Android 客户端，与 `frontend` / `harmonyapp`
 同源同设计系统。**首版为可构建、可联调的骨架**：设计 token、原语、应用壳（底部 5 tab + 登录态门禁）、
-登录/注册/访客模式（390 设计稿 87:1818 版式；忘记密码：邮箱/手机号验证码重置，成功后自动登录，dev 验证码走 Mailpit）、首页信息流（整卡列表；通知铃铛按 notify/unread_summary 显示未读红点，回到首页自动刷新；卡片爱心可直接点赞，`reactions/set target_type=moment` 乐观更新；点卡进详情、点作者进主页）/ 附近 / 消息（私聊 + 群聊会话混合列表；长按会话置顶/免打扰，私聊可删除会话，`private_chats/update_preferences|delete`、`groups/update_preferences`）/ 我的 / 搜索（用户/瞬间/群组分页 + `search/suggest` 300ms 防抖联想（用户/群组/瞬间/标签）+ 标签点击走 `moments/search` tag 模式 + 最近搜索（本地最多 5 条，点击回填），点击直达）/ 通知 / 设置 /
+登录/注册/访客模式（390 设计稿 87:1818 版式；忘记密码：邮箱/手机号验证码重置，成功后自动登录，dev 验证码走 Mailpit）、首页信息流（整卡列表；通知铃铛按 notify/unread_summary 显示未读红点，回到首页自动刷新；卡片爱心可直接点赞，`reactions/set target_type=moment` 乐观更新；点卡进详情、点作者进主页）/ 附近 / 消息（私聊 + 群聊会话混合列表（私聊/群聊标题可点进对方主页/群详情）；长按会话置顶/免打扰，私聊可删除会话，`private_chats/update_preferences|delete`、`groups/update_preferences`）/ 我的 / 搜索（用户/瞬间/群组分页 + `search/suggest` 300ms 防抖联想（用户/群组/瞬间/标签）+ 标签点击走 `moments/search` tag 模式 + 最近搜索（本地最多 5 条，点击回填），点击直达）/ 通知 / 设置 /
 我的瞬间（发布 + 收藏，含 private 徽章与软删占位）/ 我的群组（成员视角 + 本地过滤 + 页头创建群组；顶部展示待处理入群邀请（接受/拒绝）与我提交的审核中申请（撤回），`groups/invites/fetch_received|accept|reject`、`groups/applications/fetch_submitted|cancel`）/ 创建群组（groups/create：可选封面/名称/简介/分类/公开或仅邀请/新人审核/默认位置）/
 瞬间详情（点赞/取消点赞，reactions/set target_type=moment 乐观更新；含评论楼中楼列表、常驻贴底评论输入条、收藏与系统分享（分享走 `share/create` 生成可撤销链接，失败降级原始详情链接）；hero 支持多图横滑与点击全屏查看；作者可编辑文案/删除瞬间，非作者可举报）/ 群详情（设计稿 87:1696：封面卡 + 简介/成员/公告
 三 tab（公告 tab 对 owner/admin 提供发布/编辑/删除，其余角色只读）+ 加入/退出群组；
 更多菜单「分享群组」走 `share/create` 生成 /share/<code>，失败降级原始群组链接，
 入口接我的群组行、附近群组卡、搜索群组结果；成员 tab 支持按昵称搜索 `groups/members/search`，350ms 防抖）/ 群聊会话（设计稿 87:3529：
-群头像/群名/成员数头部 + 多人群消息（他人头像+昵称、自己右对齐、系统与撤回消息居中）+ 文本发送，
+群头像/群名/成员数头部（点击群名进群详情）+ 多人群消息（他人头像+昵称、自己右对齐、系统与撤回消息居中）+ 文本发送，
 入口 = 群详情「打开群聊」）/
 个人中心（设计稿 87:3393：资料卡 + 瞬间/粉丝/群组指标 + 编辑资料/设置 + 我的内容 5 行计数入口）/
 关系页（87:3300：好友/关注/粉丝/黑名单四 tab + 搜索；好友发消息（进入私聊前写入对方昵称）、关注两态、黑名单解除屏蔽）/
