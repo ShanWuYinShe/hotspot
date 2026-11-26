@@ -102,6 +102,7 @@ import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.MentionQuery
+import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.util.MentionRules
 import com.hotspot.app.util.MessageAction
 import com.hotspot.app.util.MessageActionRules
@@ -147,7 +148,9 @@ fun GroupChatScreen(
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
     var fileUploading by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
+    val draftContext = LocalContext.current
+    val draftKey = "group_$groupId"
+    var input by remember(draftKey) { mutableStateOf(ChatDrafts.load(draftContext, draftKey)) }
     var readMarked by remember { mutableStateOf(false) }
     var members by remember { mutableStateOf<List<GroupMemberItem>>(emptyList()) }
     var selectedMentionIds by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -431,6 +434,7 @@ fun GroupChatScreen(
 
     fun onInputChange(value: String) {
         input = value
+        ChatDrafts.save(draftContext, draftKey, value)
         val now = System.currentTimeMillis()
         if (value.isBlank()) {
             realtime.sendGroupTyping(groupId, false)
@@ -462,6 +466,7 @@ fun GroupChatScreen(
             when (val result = chatRepository.sendGroupTextMessage(groupId, text, mentionIds)) {
                 is ApiResult.Ok -> {
                     input = ""
+                    ChatDrafts.clear(draftContext, draftKey)
                     selectedMentionIds = emptySet()
                     realtime.sendGroupTyping(groupId, false)
                     lastTypingSentAt = 0L

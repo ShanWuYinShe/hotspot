@@ -85,6 +85,7 @@ import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTextStyles
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.MessageAction
 import com.hotspot.app.util.MessageActionRules
@@ -122,7 +123,9 @@ fun ChatScreen(
     var sending by remember { mutableStateOf(false) }
     var uploading by remember { mutableStateOf(false) }
     var fileUploading by remember { mutableStateOf(false) }
-    var input by remember { mutableStateOf("") }
+    val draftContext = LocalContext.current
+    val draftKey = "private_$targetUserId"
+    var input by remember(draftKey) { mutableStateOf(ChatDrafts.load(draftContext, draftKey)) }
     // 消息举报：长按他人消息弹出（spec/reports/create target_type=message，服务端冻结快照）
     var reportTarget by remember { mutableStateOf<PrivateMessageItem?>(null) }
     var reportSubmitting by remember { mutableStateOf(false) }
@@ -363,6 +366,7 @@ fun ChatScreen(
 
     fun onInputChange(value: String) {
         input = value
+        ChatDrafts.save(draftContext, draftKey, value)
         val now = System.currentTimeMillis()
         if (value.isBlank()) {
             realtime.sendPrivateTyping(targetUserId, false)
@@ -389,6 +393,7 @@ fun ChatScreen(
             when (val result = chatRepository.sendTextMessage(targetUserId, text)) {
                 is ApiResult.Ok -> {
                     input = ""
+                    ChatDrafts.clear(draftContext, draftKey)
                     realtime.sendPrivateTyping(targetUserId, false)
                     lastTypingSentAt = 0L
                     reload()
