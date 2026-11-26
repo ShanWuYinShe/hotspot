@@ -760,6 +760,7 @@ data class SharePreview(
 data class UserSettings(
     @SerialName("privacy_level") val privacyLevel: String = "public",
     @SerialName("location_visible") val locationVisible: Boolean = true,
+    @SerialName("nearby_moment_notify") val nearbyMomentNotify: Boolean = false,
 )
 
 /** spec/auth fetch_sessions → SessionList。 */

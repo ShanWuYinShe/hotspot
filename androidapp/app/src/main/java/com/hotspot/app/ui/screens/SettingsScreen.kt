@@ -118,6 +118,7 @@ fun SettingsScreen(
     var locationSyncing by remember { mutableStateOf(false) }
     var privacyLevel by remember { mutableStateOf("public") }
     var locationVisible by remember { mutableStateOf(true) }
+    var nearbyMomentNotify by remember { mutableStateOf(false) }
     var privacyLoaded by remember { mutableStateOf(false) }
     var privacyUpdating by remember { mutableStateOf(false) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -157,24 +158,31 @@ fun SettingsScreen(
             is ApiResult.Ok -> {
                 privacyLevel = settings.data.privacyLevel
                 locationVisible = settings.data.locationVisible
+                nearbyMomentNotify = settings.data.nearbyMomentNotify
             }
             is ApiResult.Err -> Toast.makeText(context, settings.error.userMessage, Toast.LENGTH_SHORT).show()
         }
         privacyLoaded = true
     }
 
-    fun updatePrivacy(privacy: String? = null, location: Boolean? = null) {
+    fun updatePrivacy(
+        privacy: String? = null,
+        location: Boolean? = null,
+        nearbyNotify: Boolean? = null,
+    ) {
         if (!privacyLoaded || privacyUpdating) return
         privacyUpdating = true
         scope.launch {
             when (val result = AppContainer.profileRepository.updateSettings(
                 privacyLevel = privacy,
                 locationVisible = location,
+                nearbyMomentNotify = nearbyNotify,
             )) {
                 is ApiResult.Ok -> {
                     if (privacy != null) privacyLevel = privacy
                     if (location != null) locationVisible = location
-                    Toast.makeText(context, "隐私设置已更新", Toast.LENGTH_SHORT).show()
+                    if (nearbyNotify != null) nearbyMomentNotify = nearbyNotify
+                    Toast.makeText(context, "设置已更新", Toast.LENGTH_SHORT).show()
                 }
                 is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
             }
@@ -342,6 +350,26 @@ fun SettingsScreen(
                     options = listOf("共享", "隐藏"),
                     selectedIndex = if (locationVisible) 0 else 1,
                     onSelected = { index -> updatePrivacy(location = index == 0) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                Text(
+                    text = "附近新瞬间通知",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (nearbyMomentNotify) "附近出现新瞬间时会通知你" else "不会收到附近新瞬间通知",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("开启", "关闭"),
+                    selectedIndex = if (nearbyMomentNotify) 0 else 1,
+                    onSelected = { index -> updatePrivacy(nearbyNotify = index == 0) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
