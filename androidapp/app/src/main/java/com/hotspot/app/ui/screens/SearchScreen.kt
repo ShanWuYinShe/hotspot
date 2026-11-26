@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -129,11 +130,29 @@ fun SearchScreen(
             )
             if (query.isBlank() && recent.isNotEmpty()) {
                 Spacer(Modifier.height(Spacing.sm))
-                Text(
-                    text = "最近搜索",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = colors.textSecondary,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "最近搜索",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "清空",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.accent,
+                        modifier = Modifier
+                            .clip(AppShapes.pill)
+                            .clickable {
+                                recent = emptyList()
+                                prefs.edit().remove("queries").apply()
+                            }
+                            .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
+                    )
+                }
                 Spacer(Modifier.height(Spacing.xs))
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
