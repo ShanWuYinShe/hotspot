@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,6 +73,7 @@ fun HomeScreen(
     val feedRepository = AppContainer.feedRepository
     val scope = rememberCoroutineScope()
     var tabIndex by remember { mutableIntStateOf(0) }
+    var unreadTotal by remember { mutableIntStateOf(0) }
     val state = remember(tabIndex) { PagedListState<MomentItem>() }
     val listState = rememberLazyListState()
 
@@ -81,6 +83,17 @@ fun HomeScreen(
 
     LaunchedEffect(tabIndex) { state.initialLoad(loader) }
     InfiniteScrollHandler(state, listState, loader)
+
+    // 每次回到首页刷新未读通知总数：读完通知返回时红点立即消失。
+    LifecycleResumeEffect(Unit) {
+        scope.launch {
+            when (val result = AppContainer.notifyRepository.unreadSummary()) {
+                is ApiResult.Ok -> unreadTotal = result.data.total
+                is ApiResult.Err -> Unit
+            }
+        }
+        onPauseOrDispose {}
+    }
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -105,6 +118,7 @@ fun HomeScreen(
                 icon = Icons.Filled.Notifications,
                 contentDescription = "通知",
                 onClick = onOpenNotify,
+                badgeCount = unreadTotal,
             )
         }
         SegmentedTabs(
