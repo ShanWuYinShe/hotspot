@@ -102,6 +102,9 @@ object ApiEndpoint {
     const val GROUPS_ADMIN_ANNOUNCEMENTS_DELETE = "/api/v1/groups/admin/announcements/delete"
 
     const val PRIVATE_CHATS_FETCH = "/api/v1/private_chats/fetch"
+    const val PRIVATE_CHATS_UPDATE_PREFERENCES = "/api/v1/private_chats/update_preferences"
+    const val PRIVATE_CHATS_DELETE = "/api/v1/private_chats/delete"
+    const val GROUPS_UPDATE_PREFERENCES = "/api/v1/groups/update_preferences"
     const val PRIVATE_MESSAGES_FETCH = "/api/v1/private_messages/fetch"
     const val PRIVATE_MESSAGES_SEND = "/api/v1/private_messages/send"
     const val PRIVATE_MESSAGES_RECALL = "/api/v1/private_messages/recall"

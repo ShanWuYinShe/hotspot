@@ -648,6 +648,26 @@ class ChatRepository(private val api: ApiClient) {
         Page.serializer(PrivateChatItem.serializer()),
     )
 
+    /** spec/chat private_chats/update_preferences：只提交非 null 字段，null 不改。 */
+    suspend fun updateConversationPreferences(
+        targetUserId: String,
+        isMuted: Boolean? = null,
+        isPinned: Boolean? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.PRIVATE_CHATS_UPDATE_PREFERENCES,
+        buildJsonObject {
+            put("target_user_id", targetUserId)
+            put("is_muted", isMuted?.let(::JsonPrimitive) ?: JsonNull)
+            put("is_pinned", isPinned?.let(::JsonPrimitive) ?: JsonNull)
+        },
+    )
+
+    /** spec/chat private_chats/delete：仅移除当前用户视角的会话入口与历史。 */
+    suspend fun deleteConversation(targetUserId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.PRIVATE_CHATS_DELETE,
+        buildJsonObject { put("target_user_id", targetUserId) },
+    )
+
     suspend fun messages(targetUserId: String, cursor: String?): ApiResult<Page<PrivateMessageItem>> = api.post(
         ApiEndpoint.PRIVATE_MESSAGES_FETCH,
         buildJsonObject {
@@ -1173,6 +1193,20 @@ class ProfileRepository(private val api: ApiClient) {
  * 距离/位置由后端计算，客户端只展示；加入/退出结果以服务端 status/错误码为准。
  */
 class GroupRepository(private val api: ApiClient) {
+    /** spec/groups update_preferences：我的群组静音/置顶（区别于 admin/update 群信息）。 */
+    suspend fun updateGroupPreferences(
+        groupId: String,
+        isMuted: Boolean? = null,
+        isPinned: Boolean? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_UPDATE_PREFERENCES,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("is_muted", isMuted?.let(::JsonPrimitive) ?: JsonNull)
+            put("is_pinned", isPinned?.let(::JsonPrimitive) ?: JsonNull)
+        },
+    )
+
     /** spec/groups invites/fetch_received：我收到的群邀请（默认 pending）。 */
     suspend fun receivedInvites(status: String = "pending"): ApiResult<Page<GroupInviteItem>> = api.post(
         ApiEndpoint.GROUPS_INVITES_FETCH_RECEIVED,
