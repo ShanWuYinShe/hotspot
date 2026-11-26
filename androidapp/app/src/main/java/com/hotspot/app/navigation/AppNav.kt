@@ -349,6 +349,7 @@ private fun MainScaffold() {
                             ChatTarget.select(userId, "")
                             navController.navigate(Routes.chat(userId))
                         },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                     )
                 }
                 composable(

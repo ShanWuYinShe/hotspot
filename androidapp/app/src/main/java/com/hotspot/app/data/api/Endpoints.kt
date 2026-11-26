@@ -57,6 +57,7 @@ object ApiEndpoint {
     const val USERS_OPEN_THE_DOOR = "/api/v1/users/open_the_door"
     // 用户瞬间历史（公开视角，spec → users/fetch_moments）
     const val USERS_FETCH_MOMENTS = "/api/v1/users/fetch_moments"
+    const val USERS_FETCH_GROUPS = "/api/v1/users/fetch_groups"
     const val USERS_SET_REMARK = "/api/v1/users/set_remark"
     const val USERS_SET_BLOCK = "/api/v1/users/set_block"
     const val USERS_FETCH_BLOCKED = "/api/v1/users/fetch_blocked"

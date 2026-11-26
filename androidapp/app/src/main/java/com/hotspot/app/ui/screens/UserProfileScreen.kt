@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +60,7 @@ import coil.compose.AsyncImage
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.Relationship
 import com.hotspot.app.data.model.UserItem
@@ -70,6 +72,7 @@ import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
+import com.hotspot.app.ui.components.ListRow
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
@@ -97,6 +100,7 @@ fun UserProfileScreen(
     onBack: () -> Unit,
     onOpenMoment: (String) -> Unit,
     onOpenMessage: (String) -> Unit,
+    onOpenGroup: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
@@ -120,6 +124,7 @@ fun UserProfileScreen(
     var reportSubmitting by remember { mutableStateOf(false) }
 
     val gallery = remember { mutableStateListOf<MomentItem>() }
+    var groups by remember { mutableStateOf<List<GroupItem>>(emptyList()) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var loadingMore by remember { mutableStateOf(false) }
     var endReached by remember { mutableStateOf(false) }
@@ -140,6 +145,10 @@ fun UserProfileScreen(
                 gallery.addAll(page?.items.orEmpty().filter { it.images.isNotEmpty() })
                 nextCursor = page?.nextCursor
                 endReached = page?.nextCursor == null
+                groups = when (val groupResult = AppContainer.profileRepository.userGroups(userId)) {
+                    is ApiResult.Ok -> groupResult.data.items
+                    is ApiResult.Err -> emptyList()
+                }
                 loading = false
             }
             is ApiResult.Err -> {
@@ -229,6 +238,42 @@ fun UserProfileScreen(
                                 if (!blocked) onOpenMessage(userId) else Toast.makeText(context, "已屏蔽该用户，无法私信", Toast.LENGTH_SHORT).show()
                             },
                         )
+                    }
+                    if (groups.isNotEmpty()) {
+                        item {
+                            Spacer(Modifier.height(Spacing.xl))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_badge_group),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(Dimens.iconSm),
+                                    tint = colors.textPrimary,
+                                )
+                                Spacer(Modifier.width(Spacing.sm))
+                                Text(
+                                    text = "TA 的群组",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = colors.textPrimary,
+                                )
+                            }
+                            Spacer(Modifier.height(Spacing.sm))
+                        }
+                        items(groups.take(5), key = { "group-" + it.group.groupId }) { group: GroupItem ->
+                            ListRow(
+                                title = group.group.name.ifBlank { "未命名群组" },
+                                subtitle = group.group.membersCount.toString() + " 成员",
+                                leading = {
+                                    Avatar(
+                                        name = group.group.name,
+                                        imageUrl = group.group.avatarUrl,
+                                        size = Dimens.avatarSm,
+                                        shape = AppShapes.iconTile,
+                                    )
+                                },
+                                onClick = { onOpenGroup(group.group.groupId) },
+                            )
+                        }
                     }
                     item {
                         Spacer(Modifier.height(Spacing.xl))
