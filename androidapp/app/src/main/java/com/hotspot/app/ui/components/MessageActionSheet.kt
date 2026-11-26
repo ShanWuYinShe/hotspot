@@ -38,6 +38,7 @@ fun MessageActionSheet(
     actions: List<MessageAction>,
     onAction: (MessageAction) -> Unit,
     onDismiss: () -> Unit,
+    liked: Boolean = false,
 ) {
     val colors = HotSpotTheme.colors
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -63,7 +64,7 @@ fun MessageActionSheet(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = actionLabel(action),
+                        text = actionLabel(action, liked),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                         color = if (action == MessageAction.RECALL) colors.danger else colors.textPrimary,
@@ -77,7 +78,8 @@ fun MessageActionSheet(
     }
 }
 
-private fun actionLabel(action: MessageAction): String = when (action) {
+private fun actionLabel(action: MessageAction, liked: Boolean): String = when (action) {
+    MessageAction.LIKE -> if (liked) "取消点赞" else "点赞"
     MessageAction.COPY -> "复制"
     MessageAction.RECALL -> "撤回"
     MessageAction.REPORT -> "举报"
