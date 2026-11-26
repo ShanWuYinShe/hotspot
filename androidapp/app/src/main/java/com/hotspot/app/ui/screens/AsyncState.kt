@@ -43,6 +43,11 @@ class PagedListState<T> {
     var endReached by mutableStateOf(false)
         private set
 
+    /** 局部更新已加载条目（如点赞后立即回写计数），不触发重新请求。 */
+    fun updateItem(predicate: (T) -> Boolean, transform: (T) -> T) {
+        items = items.map { item -> if (predicate(item)) transform(item) else item }
+    }
+
     /** 清空状态（切换搜索关键词/退出搜索时复用，避免旧结果串到新查询）。 */
     fun reset() {
         items = emptyList()
