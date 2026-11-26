@@ -13,6 +13,7 @@ object ApiEndpoint {
 
     // /public/v1/system（匿名：客户端公开配置，含 defaults.default_location 浏览锚点）
     const val SYSTEM_CLIENT_CONFIG = "/public/v1/system/client_config"
+    const val SYSTEM_ANNOUNCEMENTS_FETCH = "/public/v1/system/announcements/fetch"
     // 地图视口渲染（spec/api_spec_public.md → map/canvas；仅 public 版，无登录镜像）
     const val PUBLIC_MAP_CANVAS = "/public/v1/map/canvas"
 

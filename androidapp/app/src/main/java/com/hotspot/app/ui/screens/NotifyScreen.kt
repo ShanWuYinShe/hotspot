@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.hotspot.app.AppContainer
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.model.NotifyItem
+import com.hotspot.app.data.model.SystemAnnouncementItem
 import com.hotspot.app.ui.components.Badge
 import com.hotspot.app.ui.components.BadgeTone
 import com.hotspot.app.ui.components.ButtonSize
@@ -48,6 +49,7 @@ import com.hotspot.app.ui.components.ListGroup
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SearchInput
+import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
@@ -76,6 +78,7 @@ fun NotifyScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var items by remember { mutableStateOf<List<NotifyItem>>(emptyList()) }
+    var announcements by remember { mutableStateOf<List<SystemAnnouncementItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var marking by remember { mutableStateOf(false) }
@@ -99,6 +102,13 @@ fun NotifyScreen(
     }
 
     LaunchedEffect(retryKey) { load() }
+
+    LaunchedEffect(retryKey) {
+        when (val result = AppContainer.systemRepository.announcements()) {
+            is ApiResult.Ok -> announcements = result.data
+            is ApiResult.Err -> Unit
+        }
+    }
 
     fun loadMore() {
         val next = cursor ?: return
@@ -224,16 +234,33 @@ fun NotifyScreen(
             )
             Spacer(Modifier.height(Spacing.sm))
         }
+        if (announcements.isNotEmpty()) {
+            Column(Modifier.padding(horizontal = Spacing.lg)) {
+                Text(
+                    text = "平台公告",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = HotSpotTheme.colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                announcements.take(3).forEach { announcement ->
+                    AnnouncementCard(announcement)
+                    Spacer(Modifier.height(Spacing.sm))
+                }
+            }
+        }
         when {
             loading -> LoadingState(message = "正在加载通知…")
             error != null && items.isEmpty() -> ErrorState(
                 message = error ?: "加载失败",
                 onRetry = { retryKey++ },
             )
-            items.isEmpty() -> EmptyState(
-                title = "暂时没有通知",
-                description = "互动、关注与系统消息都会出现在这里",
-            )
+            items.isEmpty() -> if (announcements.isEmpty()) {
+                EmptyState(
+                    title = "暂时没有通知",
+                    description = "互动、关注与系统消息都会出现在这里",
+                )
+            }
             searchLoadingAll && filteredItems.isEmpty() -> LoadingState(message = "正在加载全部通知用于搜索…")
             filteredItems.isEmpty() -> EmptyState(
                 title = "没有匹配的通知",
@@ -371,4 +398,41 @@ private fun notifyBody(item: NotifyItem): String {
         ?: payloadString(item, "message")
         ?: payloadString(item, "emoji")
     return listOfNotNull(actor, preview).joinToString("：")
+}
+@Composable
+private fun AnnouncementCard(announcement: SystemAnnouncementItem) {
+    val colors = HotSpotTheme.colors
+    val tone = when (announcement.severity) {
+        "warning" -> BadgeTone.WARNING
+        "error" -> BadgeTone.DANGER
+        else -> BadgeTone.ACCENT
+    }
+    val label = when (announcement.severity) {
+        "warning" -> "警告"
+        "error" -> "重要"
+        else -> "通知"
+    }
+    SystemCard(contentPadding = androidx.compose.foundation.layout.PaddingValues(Spacing.md)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = announcement.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textPrimary,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.width(Spacing.sm))
+            Badge(text = label, tone = tone)
+        }
+        Spacer(Modifier.height(Spacing.xs))
+        Text(
+            text = announcement.content,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.textSecondary,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
