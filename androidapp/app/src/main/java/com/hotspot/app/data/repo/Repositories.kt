@@ -1079,6 +1079,7 @@ class ProfileRepository(private val api: ApiClient) {
     suspend fun updateSettings(
         privacyLevel: String? = null,
         locationVisible: Boolean? = null,
+        nearbyMomentNotify: Boolean? = null,
     ): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.USERS_UPDATE_SETTINGS,
         buildJsonObject {
@@ -1087,6 +1088,7 @@ class ProfileRepository(private val api: ApiClient) {
                 buildJsonObject {
                     if (privacyLevel != null) put("privacy_level", privacyLevel)
                     if (locationVisible != null) put("location_visible", locationVisible)
+                    if (nearbyMomentNotify != null) put("nearby_moment_notify", nearbyMomentNotify)
                 },
             )
         },
