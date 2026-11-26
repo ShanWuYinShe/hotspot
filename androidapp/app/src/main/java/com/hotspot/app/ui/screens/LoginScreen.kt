@@ -23,10 +23,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.ui.components.ButtonSize
 import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.components.SystemInput
@@ -98,6 +101,15 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
     var passwordVisible by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf<AuthAction?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var showReset by remember { mutableStateOf(false) }
+    var resetStep by remember { mutableIntStateOf(1) }
+    var resetLoginId by remember { mutableStateOf("") }
+    var resetCode by remember { mutableStateOf("") }
+    var resetPassword by remember { mutableStateOf("") }
+    var resetConfirm by remember { mutableStateOf("") }
+    var resetBusy by remember { mutableStateOf(false) }
+    var resetError by remember { mutableStateOf<String?>(null) }
+    var resetNotice by remember { mutableStateOf<String?>(null) }
 
     val isRegister = mode == AuthMode.REGISTER
     val idle = busy == null
@@ -340,6 +352,21 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                         )
                     },
                 )
+                if (!isRegister) {
+                    Spacer(Modifier.height(Spacing.xs))
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        AuthLink(text = "忘记密码？", enabled = idle) {
+                            resetLoginId = loginId.trim()
+                            resetStep = 1
+                            resetCode = ""
+                            resetPassword = ""
+                            resetConfirm = ""
+                            resetError = null
+                            resetNotice = null
+                            showReset = true
+                        }
+                    }
+                }
                 Spacer(Modifier.height(Spacing.xxl))
 
                 // 协议行：无对应页面 → 两词用 accent 纯文本（不做假跳转）
@@ -398,6 +425,147 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
         }
+    }
+
+    if (showReset) {
+        AlertDialog(
+            onDismissRequest = { if (!resetBusy) showReset = false },
+            title = { Text(if (resetStep == 1) "找回密码" else "重置密码") },
+            text = {
+                Column {
+                    Text(
+                        text = if (resetStep == 1) {
+                            "输入注册时使用的邮箱或手机号，我们会发送重置验证码。"
+                        } else {
+                            "验证码已发送。重置成功后其他设备会自动退出登录。"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = HotSpotTheme.colors.textSecondary,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    if (resetStep == 1) {
+                        SystemInput(
+                            value = resetLoginId,
+                            onValueChange = { resetLoginId = it; resetError = null },
+                            label = "邮箱或手机号",
+                            placeholder = "name@example.com",
+                            enabled = !resetBusy,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        )
+                    } else {
+                        SystemInput(
+                            value = resetCode,
+                            onValueChange = { resetCode = it; resetError = null },
+                            label = "验证码",
+                            placeholder = "请输入验证码",
+                            enabled = !resetBusy,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        )
+                        Spacer(Modifier.height(Spacing.sm))
+                        SystemInput(
+                            value = resetPassword,
+                            onValueChange = { resetPassword = it; resetError = null },
+                            label = "新密码",
+                            placeholder = "至少 8 位，包含字母和数字",
+                            enabled = !resetBusy,
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                        Spacer(Modifier.height(Spacing.sm))
+                        SystemInput(
+                            value = resetConfirm,
+                            onValueChange = { resetConfirm = it; resetError = null },
+                            label = "确认新密码",
+                            placeholder = "再次输入新密码",
+                            enabled = !resetBusy,
+                            visualTransformation = PasswordVisualTransformation(),
+                        )
+                    }
+                    resetNotice?.let { notice ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            text = notice,
+                            style = HotSpotTextStyles.caption,
+                            color = HotSpotTheme.colors.online,
+                        )
+                    }
+                    resetError?.let { message ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            text = message,
+                            style = HotSpotTextStyles.caption,
+                            color = HotSpotTheme.colors.danger,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (resetStep == 1) "发送验证码" else "重置并登录",
+                    onClick = {
+                        if (resetBusy) return@SystemButton
+                        if (resetStep == 1) {
+                            val id = resetLoginId.trim()
+                            if (id.isBlank()) {
+                                resetError = "请输入邮箱或手机号"
+                                return@SystemButton
+                            }
+                            scope.launch {
+                                resetBusy = true
+                                resetError = null
+                                resetNotice = null
+                                when (val result = auth.requestPasswordReset(id)) {
+                                    is ApiResult.Ok -> {
+                                        resetStep = 2
+                                        resetNotice = "如果账号存在，验证码已发送，请查收。"
+                                    }
+                                    is ApiResult.Err -> resetError = result.error.userMessage
+                                }
+                                resetBusy = false
+                            }
+                        } else {
+                            val id = resetLoginId.trim()
+                            if (resetCode.isBlank()) {
+                                resetError = "请输入验证码"
+                                return@SystemButton
+                            }
+                            if (resetPassword.length < 8) {
+                                resetError = "新密码至少 8 位，且包含字母和数字"
+                                return@SystemButton
+                            }
+                            if (resetPassword != resetConfirm) {
+                                resetError = "两次输入的新密码不一致"
+                                return@SystemButton
+                            }
+                            scope.launch {
+                                resetBusy = true
+                                resetError = null
+                                when (val result = auth.resetPassword(id, resetCode.trim(), resetPassword)) {
+                                    is ApiResult.Ok -> {
+                                        showReset = false
+                                        onLoggedIn()
+                                    }
+                                    is ApiResult.Err -> resetError = result.error.userMessage
+                                }
+                                resetBusy = false
+                            }
+                        }
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    loading = resetBusy,
+                    enabled = !resetBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!resetBusy) showReset = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !resetBusy,
+                )
+            },
+        )
     }
 }
 
