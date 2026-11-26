@@ -115,6 +115,7 @@ fun SettingsScreen(
     var upgradeConfirm by remember { mutableStateOf("") }
     var upgradeError by remember { mutableStateOf<String?>(null) }
     var upgradeBusy by remember { mutableStateOf(false) }
+    var locationSyncing by remember { mutableStateOf(false) }
     var privacyLevel by remember { mutableStateOf("public") }
     var locationVisible by remember { mutableStateOf(true) }
     var privacyLoaded by remember { mutableStateOf(false) }
@@ -467,6 +468,36 @@ fun SettingsScreen(
                         )
                     }
                 }
+                Spacer(Modifier.height(Spacing.sm))
+                SystemButton(
+                    text = if (locationSyncing) "正在更新位置…" else "同步当前位置",
+                    onClick = {
+                        if (locationSyncing) return@SystemButton
+                        scope.launch {
+                            val current = anchor
+                            val fallback = AppContainer.defaultLocation()
+                            val latitude = current?.latitude ?: fallback?.point?.latitude
+                            val longitude = current?.longitude ?: fallback?.point?.longitude
+                            if (latitude == null || longitude == null) {
+                                Toast.makeText(context, "暂无可同步的位置", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            val label = current?.label
+                                ?: fallback?.locationName?.ifBlank { null }
+                                ?: "当前位置"
+                            locationSyncing = true
+                            when (val result = AppContainer.profileRepository.updateLocation(latitude, longitude, label)) {
+                                is ApiResult.Ok -> Toast.makeText(context, "位置已更新", Toast.LENGTH_SHORT).show()
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                            locationSyncing = false
+                        }
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    loading = locationSyncing,
+                    enabled = !locationSyncing,
+                )
             }
             Spacer(Modifier.height(Spacing.xl))
             SettingsSectionTitle(title = "系统与关于", subtitle = "客户端版本及当前设备会话状态")
