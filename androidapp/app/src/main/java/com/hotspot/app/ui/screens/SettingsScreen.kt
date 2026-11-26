@@ -119,6 +119,9 @@ fun SettingsScreen(
     var privacyLevel by remember { mutableStateOf("public") }
     var locationVisible by remember { mutableStateOf(true) }
     var nearbyMomentNotify by remember { mutableStateOf(false) }
+    var searchable by remember { mutableStateOf(true) }
+    var allowPrivateChat by remember { mutableStateOf(true) }
+    var allowFollow by remember { mutableStateOf(true) }
     var privacyLoaded by remember { mutableStateOf(false) }
     var privacyUpdating by remember { mutableStateOf(false) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -159,6 +162,9 @@ fun SettingsScreen(
                 privacyLevel = settings.data.privacyLevel
                 locationVisible = settings.data.locationVisible
                 nearbyMomentNotify = settings.data.nearbyMomentNotify
+                searchable = settings.data.searchable
+                allowPrivateChat = settings.data.allowPrivateChat
+                allowFollow = settings.data.allowFollow
             }
             is ApiResult.Err -> Toast.makeText(context, settings.error.userMessage, Toast.LENGTH_SHORT).show()
         }
@@ -169,6 +175,9 @@ fun SettingsScreen(
         privacy: String? = null,
         location: Boolean? = null,
         nearbyNotify: Boolean? = null,
+        searchableValue: Boolean? = null,
+        privateChatValue: Boolean? = null,
+        followValue: Boolean? = null,
     ) {
         if (!privacyLoaded || privacyUpdating) return
         privacyUpdating = true
@@ -177,11 +186,17 @@ fun SettingsScreen(
                 privacyLevel = privacy,
                 locationVisible = location,
                 nearbyMomentNotify = nearbyNotify,
+                searchable = searchableValue,
+                allowPrivateChat = privateChatValue,
+                allowFollow = followValue,
             )) {
                 is ApiResult.Ok -> {
                     if (privacy != null) privacyLevel = privacy
                     if (location != null) locationVisible = location
                     if (nearbyNotify != null) nearbyMomentNotify = nearbyNotify
+                    if (searchableValue != null) searchable = searchableValue
+                    if (privateChatValue != null) allowPrivateChat = privateChatValue
+                    if (followValue != null) allowFollow = followValue
                     Toast.makeText(context, "设置已更新", Toast.LENGTH_SHORT).show()
                 }
                 is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
@@ -370,6 +385,70 @@ fun SettingsScreen(
                     options = listOf("开启", "关闭"),
                     selectedIndex = if (nearbyMomentNotify) 0 else 1,
                     onSelected = { index -> updatePrivacy(nearbyNotify = index == 0) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            SettingsSectionTitle(title = "互动与发现", subtitle = "控制他人能否搜索到你、关注你或给你发私信")
+            Spacer(Modifier.height(Spacing.sm))
+            SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                Text(
+                    text = "允许被搜索",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (searchable) "其他用户可通过昵称搜索到你" else "你不会出现在搜索结果中",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("允许", "禁止"),
+                    selectedIndex = if (searchable) 0 else 1,
+                    onSelected = { index -> updatePrivacy(searchableValue = index == 0) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                Text(
+                    text = "允许关注",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (allowFollow) "他人可以关注你并接收你的公开动态" else "他人无法关注你",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("允许", "禁止"),
+                    selectedIndex = if (allowFollow) 0 else 1,
+                    onSelected = { index -> updatePrivacy(followValue = index == 0) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                Text(
+                    text = "允许私信",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.textPrimary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Text(
+                    text = if (allowPrivateChat) "其他用户可给你发送私信" else "他人无法给你发送私信",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                SegmentedTabs(
+                    options = listOf("允许", "禁止"),
+                    selectedIndex = if (allowPrivateChat) 0 else 1,
+                    onSelected = { index -> updatePrivacy(privateChatValue = index == 0) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }

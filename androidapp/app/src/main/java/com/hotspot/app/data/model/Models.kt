@@ -761,6 +761,9 @@ data class UserSettings(
     @SerialName("privacy_level") val privacyLevel: String = "public",
     @SerialName("location_visible") val locationVisible: Boolean = true,
     @SerialName("nearby_moment_notify") val nearbyMomentNotify: Boolean = false,
+    val searchable: Boolean = true,
+    @SerialName("allow_private_chat") val allowPrivateChat: Boolean = true,
+    @SerialName("allow_follow") val allowFollow: Boolean = true,
 )
 
 /** spec/auth fetch_sessions → SessionList。 */
