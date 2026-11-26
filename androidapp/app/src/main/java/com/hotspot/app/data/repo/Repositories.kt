@@ -239,7 +239,7 @@ class AuthRepository(
  * - 为你推荐 = moments/search 热门模式（spec：无输入条件的热门瞬间，承接发现页首屏）
  * - 正在关注 = moments/fetch_following
  */
-/** 搜索建议条目（用户/群组/瞬间；标签暂不进入 App 导航）。 */
+/** 搜索建议条目（标签/用户/群组/瞬间）。 */
 data class SearchSuggestion(
     val type: String,
     val id: String,
@@ -271,7 +271,7 @@ class FeedRepository(private val api: ApiClient) {
         Page.serializer(MomentItem.serializer()),
     )
 
-    /** spec/discovery search/suggest：输入联想（用户/群组/瞬间），标签暂不展示。 */
+    /** spec/discovery search/suggest：输入联想（标签/用户/群组/瞬间）。 */
     suspend fun suggest(prefix: String, referencePoint: GeoPoint?): ApiResult<List<SearchSuggestion>> {
         val body = buildJsonObject {
             put("prefix", prefix)
@@ -285,6 +285,7 @@ class FeedRepository(private val api: ApiClient) {
                 } ?: JsonNull,
             )
             put("types", buildJsonArray {
+                add(JsonPrimitive("tag"))
                 add(JsonPrimitive("user"))
                 add(JsonPrimitive("group"))
                 add(JsonPrimitive("moment"))
@@ -295,6 +296,17 @@ class FeedRepository(private val api: ApiClient) {
             is ApiResult.Ok -> ApiResult.Ok(result.data.items.mapNotNull { item ->
                 val payload = item.payload
                 when (item.type) {
+                    "tag" -> {
+                        val name = payload["name"]?.jsonPrimitive?.contentOrNull.orEmpty()
+                        if (name.isBlank()) return@mapNotNull null
+                        SearchSuggestion(
+                            type = "标签",
+                            id = name,
+                            title = "#" + name,
+                            subtitle = (payload["usage_count"]?.jsonPrimitive?.contentOrNull ?: "0") + " 个瞬间",
+                            avatarUrl = null,
+                        )
+                    }
                     "user" -> {
                         val user = payload["user"]?.jsonObject ?: return@mapNotNull null
                         SearchSuggestion(
@@ -715,11 +727,12 @@ class SearchRepository(private val api: ApiClient) {
         Page.serializer(UserItem.serializer()),
     )
 
-    suspend fun searchMoments(keyword: String, cursor: String?): ApiResult<Page<MomentItem>> = api.post(
+    /** 瞬间搜索：keyword 与 tag 二选一（标签模式由搜索建议进入）。 */
+    suspend fun searchMoments(keyword: String, cursor: String?, tag: String? = null): ApiResult<Page<MomentItem>> = api.post(
         ApiEndpoint.MOMENTS_SEARCH,
         buildJsonObject {
-            put("keyword", keyword)
-            put("tag", JsonNull)
+            put("keyword", if (keyword.isBlank()) JsonNull else JsonPrimitive(keyword))
+            put("tag", tag?.let(::JsonPrimitive) ?: JsonNull)
             put("sort_by", "relevance")
             put("pagination", pagination(cursor))
         },
