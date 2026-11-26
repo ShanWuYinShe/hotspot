@@ -29,6 +29,7 @@ import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.MomentItem
 import com.hotspot.app.data.model.Page
 import com.hotspot.app.data.model.UserItem
+import com.hotspot.app.data.repo.SearchSuggestion
 import com.hotspot.app.ui.components.Avatar
 import com.hotspot.app.ui.components.Badge
 import com.hotspot.app.ui.components.BadgeTone
@@ -41,9 +42,11 @@ import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemInput
 import com.hotspot.app.ui.components.TabPills
 import com.hotspot.app.ui.theme.AppShapes
+import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.TimeFormat
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val SEARCH_TABS = listOf("用户", "瞬间", "群组")
@@ -63,6 +66,21 @@ fun SearchScreen(
     var query by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf("") }
     var tabIndex by remember { mutableIntStateOf(0) }
+    var suggestions by remember { mutableStateOf<List<SearchSuggestion>>(emptyList()) }
+
+    LaunchedEffect(query) {
+        val prefix = query.trim()
+        if (prefix.isBlank()) {
+            suggestions = emptyList()
+            return@LaunchedEffect
+        }
+        delay(300)
+        val point = AppContainer.defaultLocation()?.point
+        when (val result = AppContainer.feedRepository.suggest(prefix, point)) {
+            is ApiResult.Ok -> suggestions = result.data
+            is ApiResult.Err -> suggestions = emptyList()
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         PageHeader(title = "搜索", onBack = onBack)
@@ -76,6 +94,34 @@ fun SearchScreen(
                 keyboardActions = KeyboardActions(onSearch = { submitted = query.trim() }),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (query.isNotBlank() && query.trim() != submitted && suggestions.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.sm))
+                ListGroup {
+                    suggestions.take(5).forEach { suggestion ->
+                        ListRow(
+                            title = suggestion.title,
+                            subtitle = suggestion.subtitle.ifBlank { suggestion.type },
+                            leading = {
+                                Avatar(
+                                    name = suggestion.title,
+                                    imageUrl = suggestion.avatarUrl,
+                                    size = Dimens.avatarSm,
+                                    shape = AppShapes.iconTile,
+                                )
+                            },
+                            trailing = { Badge(text = suggestion.type, tone = BadgeTone.NEUTRAL) },
+                            onClick = {
+                                submitted = query.trim()
+                                when (suggestion.type) {
+                                    "用户" -> onOpenUser(suggestion.id)
+                                    "群组" -> onOpenGroup(suggestion.id)
+                                    "瞬间" -> onOpenMoment(suggestion.id)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(Spacing.md))
             TabPills(
                 options = SEARCH_TABS,
