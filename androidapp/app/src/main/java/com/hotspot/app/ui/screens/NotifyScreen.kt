@@ -50,6 +50,7 @@ import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemCard
+import com.hotspot.app.ui.components.TabPills
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
@@ -87,6 +88,7 @@ fun NotifyScreen(
     var cursor by remember { mutableStateOf<String?>(null) }
     var loadingMore by remember { mutableStateOf(false) }
     var searchLoadingAll by remember { mutableStateOf(false) }
+    var unreadOnly by remember { mutableStateOf(false) }
 
     suspend fun load() {
         loading = items.isEmpty()
@@ -152,12 +154,15 @@ fun NotifyScreen(
         searchLoadingAll = false
     }
 
-    val filteredItems = remember(items, query) {
+    val filteredItems = remember(items, query, unreadOnly) {
         val keyword = query.trim()
-        if (keyword.isBlank()) items else items.filter { item ->
-            item.type.contains(keyword, ignoreCase = true) ||
-                item.notifyId.contains(keyword, ignoreCase = true) ||
-                item.payload.toString().contains(keyword, ignoreCase = true)
+        items.filter { item ->
+            (!unreadOnly || !item.isRead) && (
+                keyword.isBlank() ||
+                    item.type.contains(keyword, ignoreCase = true) ||
+                    item.notifyId.contains(keyword, ignoreCase = true) ||
+                    item.payload.toString().contains(keyword, ignoreCase = true)
+                )
         }
     }
 
@@ -233,6 +238,13 @@ fun NotifyScreen(
                 placeholder = "搜索通知内容 / 用户 ID / 类型…",
             )
             Spacer(Modifier.height(Spacing.sm))
+            TabPills(
+                options = listOf("全部", "未读"),
+                selectedIndex = if (unreadOnly) 1 else 0,
+                onSelected = { unreadOnly = it == 1 },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(Spacing.sm))
         }
         if (announcements.isNotEmpty()) {
             Column(Modifier.padding(horizontal = Spacing.lg)) {
@@ -263,8 +275,8 @@ fun NotifyScreen(
             }
             searchLoadingAll && filteredItems.isEmpty() -> LoadingState(message = "正在加载全部通知用于搜索…")
             filteredItems.isEmpty() -> EmptyState(
-                title = "没有匹配的通知",
-                description = "换个通知内容、用户 ID 或类型关键词试试",
+                title = if (unreadOnly && query.isBlank()) "没有未读通知" else "没有匹配的通知",
+                description = if (unreadOnly && query.isBlank()) "全部通知都已读，切回「全部」查看历史" else "换个通知内容、用户 ID 或类型关键词试试",
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
