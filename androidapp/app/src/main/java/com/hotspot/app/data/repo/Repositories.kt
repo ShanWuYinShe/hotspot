@@ -88,6 +88,31 @@ class AuthRepository(
         return toSession(api.post(ApiEndpoint.SIGNIN, body, AuthTokenPair.serializer()))
     }
 
+    /** 忘记密码：触发验证码投递；无论账号是否存在服务端都返回成功（防枚举）。 */
+    suspend fun requestPasswordReset(loginId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.AUTH_FORGOT_PASSWORD,
+        buildJsonObject {
+            put("login_id", loginId)
+            put("client_type", "app")
+        },
+    )
+
+    /** 验证码重置密码：成功自动登录并返回会话（服务端撤销全部旧会话）。 */
+    suspend fun resetPassword(
+        loginId: String,
+        verificationCode: String,
+        newPassword: String,
+    ): ApiResult<AuthSession> {
+        val body = buildJsonObject {
+            put("login_id", loginId)
+            put("verification_code", verificationCode)
+            put("new_password", newPassword)
+            put("client_type", "app")
+            put("device_id", tokens.deviceId())
+        }
+        return toSession(api.post(ApiEndpoint.AUTH_RESET_PASSWORD, body, AuthTokenPair.serializer()))
+    }
+
     suspend fun register(loginId: String, nickname: String, password: String): ApiResult<AuthSession> {
         val body = buildJsonObject {
             put("login_id", loginId)
