@@ -109,6 +109,12 @@ fun SettingsScreen(
     val updateChecker = remember { UpdateChecker() }
     var updateChecking by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<AppUpdateInfo?>(null) }
+    var showUpgrade by remember { mutableStateOf(false) }
+    var upgradeLoginId by remember { mutableStateOf("") }
+    var upgradePassword by remember { mutableStateOf("") }
+    var upgradeConfirm by remember { mutableStateOf("") }
+    var upgradeError by remember { mutableStateOf<String?>(null) }
+    var upgradeBusy by remember { mutableStateOf(false) }
     var privacyLevel by remember { mutableStateOf("public") }
     var locationVisible by remember { mutableStateOf(true) }
     var privacyLoaded by remember { mutableStateOf(false) }
@@ -213,7 +219,11 @@ fun SettingsScreen(
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Spacer(Modifier.width(Spacing.sm))
-                            Badge(text = "已登录", tone = BadgeTone.ONLINE)
+                            if (account?.userType == "temp") {
+                                Badge(text = "访客", tone = BadgeTone.WARNING)
+                            } else {
+                                Badge(text = "已登录", tone = BadgeTone.ONLINE)
+                            }
                         }
                         val handle = accountHandle(account)
                         if (handle != null) {
@@ -243,6 +253,19 @@ fun SettingsScreen(
             SettingsSectionTitle(title = "账号安全", subtitle = "修改密码或注销账号，操作立即生效")
             Spacer(Modifier.height(Spacing.sm))
             SystemCard(contentPadding = PaddingValues(vertical = Spacing.xs)) {
+                if (account?.userType == "temp") {
+                    ListRow(
+                        title = "升级为正式账号",
+                        subtitle = "设置用户名与密码，保留访客期间的内容",
+                        onClick = {
+                            upgradeLoginId = ""
+                            upgradePassword = ""
+                            upgradeConfirm = ""
+                            upgradeError = null
+                            showUpgrade = true
+                        },
+                    )
+                }
                 ListRow(
                     title = "修改密码",
                     subtitle = "验证当前密码后设置新密码，其他设备会自动退出",
@@ -651,6 +674,104 @@ fun SettingsScreen(
                     variant = ButtonVariant.SECONDARY,
                     size = ButtonSize.SM,
                     enabled = !deletingAccount,
+                )
+            },
+        )
+    }
+
+    if (showUpgrade) {
+        AlertDialog(
+            onDismissRequest = { if (!upgradeBusy) showUpgrade = false },
+            title = { Text("升级为正式账号") },
+            text = {
+                Column {
+                    Text(
+                        text = "设置用户名与密码后，当前访客账号及内容会保留，并可用该凭证重新登录。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.textSecondary,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    SystemInput(
+                        value = upgradeLoginId,
+                        onValueChange = { upgradeLoginId = it; upgradeError = null },
+                        label = "用户名",
+                        placeholder = "暂不支持手机号/邮箱",
+                        enabled = !upgradeBusy,
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    SystemInput(
+                        value = upgradePassword,
+                        onValueChange = { upgradePassword = it; upgradeError = null },
+                        label = "密码",
+                        placeholder = "至少 8 位，包含字母和数字",
+                        enabled = !upgradeBusy,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    SystemInput(
+                        value = upgradeConfirm,
+                        onValueChange = { upgradeConfirm = it; upgradeError = null },
+                        label = "确认密码",
+                        placeholder = "再次输入密码",
+                        enabled = !upgradeBusy,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    upgradeError?.let { message ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = colors.danger,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                SystemButton(
+                    text = if (upgradeBusy) "升级中…" else "确认升级",
+                    onClick = {
+                        if (upgradeBusy) return@SystemButton
+                        if (upgradeLoginId.isBlank()) {
+                            upgradeError = "请输入用户名"
+                            return@SystemButton
+                        }
+                        if (upgradePassword.length < 8) {
+                            upgradeError = "密码至少 8 位，且包含字母和数字"
+                            return@SystemButton
+                        }
+                        if (upgradePassword != upgradeConfirm) {
+                            upgradeError = "两次输入的密码不一致"
+                            return@SystemButton
+                        }
+                        scope.launch {
+                            upgradeBusy = true
+                            upgradeError = null
+                            when (val result = AppContainer.profileRepository.upgradeAccount(
+                                loginId = upgradeLoginId.trim(),
+                                password = upgradePassword,
+                            )) {
+                                is ApiResult.Ok -> {
+                                    account = result.data
+                                    showUpgrade = false
+                                    Toast.makeText(context, "已升级为正式账号", Toast.LENGTH_SHORT).show()
+                                }
+                                is ApiResult.Err -> upgradeError = result.error.userMessage
+                            }
+                            upgradeBusy = false
+                        }
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                    enabled = !upgradeBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!upgradeBusy) showUpgrade = false },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !upgradeBusy,
                 )
             },
         )

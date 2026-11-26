@@ -977,6 +977,16 @@ class ProfileRepository(private val api: ApiClient) {
         api.post(ApiEndpoint.USERS_ACCOUNT, emptyObject(), AccountData.serializer())
 
     /** spec/users settings：隐私级别与位置共享。 */
+    /** spec/users users/upgrade：访客升级为正式账号（仅 temp；返回最新 AccountData）。 */
+    suspend fun upgradeAccount(loginId: String, password: String): ApiResult<AccountData> = api.post(
+        ApiEndpoint.USERS_UPGRADE,
+        buildJsonObject {
+            put("login_id", loginId)
+            put("password", password)
+        },
+        AccountData.serializer(),
+    )
+
     suspend fun settings(): ApiResult<UserSettings> =
         api.post(ApiEndpoint.USERS_SETTINGS, emptyObject(), UserSettings.serializer())
 
