@@ -1177,6 +1177,9 @@ class ProfileRepository(private val api: ApiClient) {
         privacyLevel: String? = null,
         locationVisible: Boolean? = null,
         nearbyMomentNotify: Boolean? = null,
+        searchable: Boolean? = null,
+        allowPrivateChat: Boolean? = null,
+        allowFollow: Boolean? = null,
     ): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.USERS_UPDATE_SETTINGS,
         buildJsonObject {
@@ -1186,6 +1189,9 @@ class ProfileRepository(private val api: ApiClient) {
                     if (privacyLevel != null) put("privacy_level", privacyLevel)
                     if (locationVisible != null) put("location_visible", locationVisible)
                     if (nearbyMomentNotify != null) put("nearby_moment_notify", nearbyMomentNotify)
+                    if (searchable != null) put("searchable", searchable)
+                    if (allowPrivateChat != null) put("allow_private_chat", allowPrivateChat)
+                    if (allowFollow != null) put("allow_follow", allowFollow)
                 },
             )
         },
