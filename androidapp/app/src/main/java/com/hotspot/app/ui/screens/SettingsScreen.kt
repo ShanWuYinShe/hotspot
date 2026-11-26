@@ -1,5 +1,8 @@
 package com.hotspot.app.ui.screens
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,6 +51,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hotspot.app.AppContainer
 import com.hotspot.app.BuildConfig
+import com.hotspot.app.data.update.AppUpdateInfo
+import com.hotspot.app.data.update.UpdateChecker
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
 import com.hotspot.app.data.location.BrowseAnchor
@@ -101,6 +106,9 @@ fun SettingsScreen(
     var account by remember { mutableStateOf<AccountData?>(null) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
     var loggingOut by remember { mutableStateOf(false) }
+    val updateChecker = remember { UpdateChecker() }
+    var updateChecking by remember { mutableStateOf(false) }
+    var updateInfo by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var privacyLevel by remember { mutableStateOf("public") }
     var locationVisible by remember { mutableStateOf(true) }
     var privacyLoaded by remember { mutableStateOf(false) }
@@ -447,6 +455,29 @@ fun SettingsScreen(
                     onClick = null,
                 )
                 ListRow(
+                    title = "检查更新",
+                    subtitle = if (updateChecking) "正在检查新版本…" else "当前版本 " + BuildConfig.VERSION_NAME + " · 点击检查",
+                    onClick = {
+                        if (!updateChecking) {
+                            scope.launch {
+                                updateChecking = true
+                                updateChecker.check(BuildConfig.VERSION_NAME)
+                                    .onSuccess { info ->
+                                        if (info.isNewer) {
+                                            updateInfo = info
+                                        } else {
+                                            Toast.makeText(context, "已是最新版本", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    .onFailure { error ->
+                                        Toast.makeText(context, error.message ?: "更新检查失败", Toast.LENGTH_SHORT).show()
+                                    }
+                                updateChecking = false
+                            }
+                        }
+                    },
+                )
+                ListRow(
                     title = "我的分享",
                     subtitle = "管理已创建的分享链接与撤销记录",
                     onClick = onOpenShares,
@@ -625,6 +656,45 @@ fun SettingsScreen(
         )
     }
 
+    updateInfo?.takeIf { it.isNewer }?.let { info ->
+        AlertDialog(
+            onDismissRequest = { updateInfo = null },
+            title = { Text("发现新版本 v" + info.latestVersion) },
+            text = {
+                Text(
+                    text = "当前版本 " + info.currentVersion + " → 最新版本 " + info.latestVersion +
+                        "\n\n" + releaseHighlights(info.notes),
+                )
+            },
+            confirmButton = {
+                SystemButton(
+                    text = "去下载",
+                    onClick = {
+                        val url = info.apkUrl?.takeIf { it.isNotBlank() } ?: info.pageUrl
+                        if (url.isNotBlank()) {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            } catch (_: ActivityNotFoundException) {
+                                Toast.makeText(context, "没有可用的浏览器", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        updateInfo = null
+                    },
+                    variant = ButtonVariant.PRIMARY,
+                    size = ButtonSize.SM,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "稍后",
+                    onClick = { updateInfo = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                )
+            },
+        )
+    }
+
     if (showLogoutConfirm) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirm = false },
@@ -655,6 +725,23 @@ fun SettingsScreen(
                 )
             },
         )
+    }
+}
+
+/** 从 GitHub Release 正文提炼变更条目：优先「What's Changed」下的 bullet，过滤链接与署名。 */
+private fun releaseHighlights(notes: String): String {
+    val lines = notes.lineSequence().map { it.trim() }.toList()
+    val start = lines.indexOfFirst { it.startsWith("## What's Changed") }
+    val relevant = if (start >= 0) lines.drop(start + 1) else lines
+    val bullets = relevant
+        .filter { it.startsWith("* ") || it.startsWith("- ") }
+        .map { it.removePrefix("* ").removePrefix("- ").substringBefore(" by @").trim() }
+        .filter { it.isNotBlank() && !it.startsWith("http") }
+        .take(6)
+    return if (bullets.isEmpty()) {
+        "建议更新到最新版本，获得最新功能与修复。"
+    } else {
+        bullets.joinToString("\n") { "• " + it }
     }
 }
 
