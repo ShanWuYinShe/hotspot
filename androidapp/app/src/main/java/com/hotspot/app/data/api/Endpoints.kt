@@ -76,6 +76,11 @@ object ApiEndpoint {
     const val GROUPS_MEMBERS_SEARCH = "/api/v1/groups/members/search"
     // 群公告列表仅 public 版（spec/api_spec_public.md：无查看者字段、不设登录镜像）。
     const val GROUPS_ANNOUNCEMENTS_FETCH = "/public/v1/groups/announcements/fetch"
+    const val GROUPS_INVITES_FETCH_RECEIVED = "/api/v1/groups/invites/fetch_received"
+    const val GROUPS_INVITES_ACCEPT = "/api/v1/groups/invites/accept"
+    const val GROUPS_INVITES_REJECT = "/api/v1/groups/invites/reject"
+    const val GROUPS_APPLICATIONS_FETCH_SUBMITTED = "/api/v1/groups/applications/fetch_submitted"
+    const val GROUPS_APPLICATIONS_CANCEL = "/api/v1/groups/applications/cancel"
     const val GROUPS_ADMIN_UPDATE = "/api/v1/groups/admin/update"
     const val GROUPS_ADMIN_SETTINGS = "/api/v1/groups/admin/settings"
     const val GROUPS_ADMIN_APPLICATIONS_FETCH = "/api/v1/groups/admin/applications/fetch"
