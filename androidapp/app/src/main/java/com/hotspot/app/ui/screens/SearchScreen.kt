@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
@@ -73,6 +74,7 @@ fun SearchScreen(
 ) {
     val colors = HotSpotTheme.colors
     val context = LocalContext.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val prefs = remember { context.getSharedPreferences("search_history", Context.MODE_PRIVATE) }
     var recent by remember {
         mutableStateOf(
@@ -81,12 +83,14 @@ fun SearchScreen(
     }
     var query by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf("") }
+    var tagFilter by remember { mutableStateOf<String?>(null) }
     var tabIndex by remember { mutableIntStateOf(0) }
     var suggestions by remember { mutableStateOf<List<SearchSuggestion>>(emptyList()) }
 
     fun rememberSearch(value: String) {
         val term = value.trim()
         if (term.isBlank()) return
+        tagFilter = null
         recent = (listOf(term) + recent.filterNot { it == term }).take(5)
         prefs.edit().putString("queries", recent.joinToString("\n")).apply()
         query = term
@@ -114,6 +118,7 @@ fun SearchScreen(
                 value = query,
                 onValueChange = {
                     query = it
+                    tagFilter = null
                     if (it.isBlank()) submitted = ""
                 },
                 placeholder = "搜索用户 / 瞬间 / 群组",
@@ -165,11 +170,19 @@ fun SearchScreen(
                             },
                             trailing = { Badge(text = suggestion.type, tone = BadgeTone.NEUTRAL) },
                             onClick = {
-                                rememberSearch(query)
-                                when (suggestion.type) {
-                                    "用户" -> onOpenUser(suggestion.id)
-                                    "群组" -> onOpenGroup(suggestion.id)
-                                    "瞬间" -> onOpenMoment(suggestion.id)
+                                if (suggestion.type == "标签") {
+                                    // 标签没有详情页：回填关键词并切到瞬间结果，用 moments/search 的 tag 模式检索。
+                                    rememberSearch(suggestion.id)
+                                    tagFilter = suggestion.id
+                                    tabIndex = 1
+                                    keyboard?.hide()
+                                } else {
+                                    rememberSearch(query)
+                                    when (suggestion.type) {
+                                        "用户" -> onOpenUser(suggestion.id)
+                                        "群组" -> onOpenGroup(suggestion.id)
+                                        "瞬间" -> onOpenMoment(suggestion.id)
+                                    }
                                 }
                             },
                         )
@@ -187,7 +200,7 @@ fun SearchScreen(
         }
         when (tabIndex) {
             0 -> UserResults(query = submitted, onOpenUser = onOpenUser)
-            1 -> MomentResults(query = submitted, onOpenMoment = onOpenMoment)
+            1 -> MomentResults(query = submitted, tag = tagFilter, onOpenMoment = onOpenMoment)
             else -> GroupResults(query = submitted, onOpenGroup = onOpenGroup)
         }
     }
@@ -243,15 +256,19 @@ private fun UserResults(query: String, onOpenUser: (String) -> Unit) {
 }
 
 @Composable
-private fun MomentResults(query: String, onOpenMoment: (String) -> Unit) {
+private fun MomentResults(query: String, tag: String?, onOpenMoment: (String) -> Unit) {
     val state = rememberSingleLoadState<MomentItem>()
     var retryKey by remember { mutableIntStateOf(0) }
-    LaunchedEffect(query, retryKey) {
-        if (query.isBlank()) {
+    LaunchedEffect(query, tag, retryKey) {
+        if (query.isBlank() && tag.isNullOrBlank()) {
             state.load { ApiResult.Ok(emptyList()) }
         } else {
             state.load {
-                when (val result = AppContainer.searchRepository.searchMoments(query, null)) {
+                when (val result = AppContainer.searchRepository.searchMoments(
+                    keyword = if (tag.isNullOrBlank()) query else "",
+                    cursor = null,
+                    tag = tag,
+                )) {
                     is ApiResult.Ok -> ApiResult.Ok(result.data.items)
                     is ApiResult.Err -> result
                 }
@@ -263,7 +280,7 @@ private fun MomentResults(query: String, onOpenMoment: (String) -> Unit) {
         loading = state.loading,
         error = state.error,
         empty = state.items.isEmpty(),
-        emptyTitle = "没有找到相关瞬间",
+        emptyTitle = if (tag.isNullOrBlank()) "没有找到相关瞬间" else "该标签下暂时没有瞬间",
         onRetry = { retryKey++ },
     ) {
         ListGroup {
