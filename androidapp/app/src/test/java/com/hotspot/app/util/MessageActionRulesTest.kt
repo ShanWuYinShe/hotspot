@@ -7,7 +7,7 @@ class MessageActionRulesTest {
     @Test
     fun ownTextMessageCanCopyAndRecall() {
         assertEquals(
-            listOf(MessageAction.COPY, MessageAction.RECALL),
+            listOf(MessageAction.LIKE, MessageAction.COPY, MessageAction.RECALL),
             MessageActionRules.availableActions(isMine = true, isRecalled = false, type = "text", content = "hi"),
         )
     }
@@ -15,7 +15,7 @@ class MessageActionRulesTest {
     @Test
     fun otherTextMessageCanCopyAndReport() {
         assertEquals(
-            listOf(MessageAction.COPY, MessageAction.REPORT),
+            listOf(MessageAction.LIKE, MessageAction.COPY, MessageAction.REPORT),
             MessageActionRules.availableActions(isMine = false, isRecalled = false, type = "text", content = "hi"),
         )
     }
@@ -23,11 +23,11 @@ class MessageActionRulesTest {
     @Test
     fun imageMessageHasNoCopyOnlyRecallOrReport() {
         assertEquals(
-            listOf(MessageAction.RECALL),
+            listOf(MessageAction.LIKE, MessageAction.RECALL),
             MessageActionRules.availableActions(isMine = true, isRecalled = false, type = "image", content = null),
         )
         assertEquals(
-            listOf(MessageAction.REPORT),
+            listOf(MessageAction.LIKE, MessageAction.REPORT),
             MessageActionRules.availableActions(isMine = false, isRecalled = false, type = "image", content = null),
         )
     }

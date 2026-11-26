@@ -852,6 +852,17 @@ class ChatRepository(private val api: ApiClient) {
     )
 
     /** 撤回私聊消息（仅作者；时间窗由服务端 AppConfig 控制，超时 10400）。 */
+    /** 消息点赞/取消（reactions/set target_type=message，👍 白名单）。 */
+    suspend fun setMessageReaction(messageId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.REACTIONS_SET,
+        buildJsonObject {
+            put("target_type", "message")
+            put("target_id", messageId)
+            put("emoji", "👍")
+            put("active", active)
+        },
+    )
+
     suspend fun recallPrivateMessage(messageId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.PRIVATE_MESSAGES_RECALL,
         buildJsonObject { put("message_id", messageId) },

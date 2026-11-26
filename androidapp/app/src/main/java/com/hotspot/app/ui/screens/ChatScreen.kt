@@ -74,6 +74,7 @@ import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.FullscreenImageViewer
 import com.hotspot.app.ui.components.MessageActionSheet
+import com.hotspot.app.ui.components.MessageReactionBadge
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.ReportDialog
 import com.hotspot.app.ui.components.SystemButton
@@ -87,6 +88,7 @@ import com.hotspot.app.ui.theme.Spacing
 import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.MessageAction
 import com.hotspot.app.util.MessageActionRules
+import com.hotspot.app.util.toggleThumbReaction
 import com.hotspot.app.util.TimeFormat
 import java.time.Instant
 import kotlinx.coroutines.delay
@@ -580,10 +582,33 @@ fun ChatScreen(onBack: () -> Unit) {
         if (actions.isNotEmpty()) {
             MessageActionSheet(
                 actions = actions,
+                liked = target.reactions.any { it.reactedByMe },
                 onDismiss = { actionTarget = null },
                 onAction = { action ->
                     actionTarget = null
                     when (action) {
+                        MessageAction.LIKE -> {
+                            val next = !target.reactions.any { it.reactedByMe }
+                            val previous = target
+                            messages = messages.map { message ->
+                                if (message.messageId == target.messageId) {
+                                    message.copy(reactions = toggleThumbReaction(message.reactions, next))
+                                } else {
+                                    message
+                                }
+                            }
+                            scope.launch {
+                                when (val result = chatRepository.setMessageReaction(target.messageId, next)) {
+                                    is ApiResult.Ok -> Unit
+                                    is ApiResult.Err -> {
+                                        messages = messages.map { message ->
+                                            if (message.messageId == target.messageId) message.copy(reactions = previous.reactions) else message
+                                        }
+                                        Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        }
                         MessageAction.COPY -> {
                             val text = target.content.orEmpty()
                             if (text.isNotBlank()) {
@@ -750,6 +775,7 @@ private fun MessageBubble(
                 }
             }
             }
+            MessageReactionBadge(message.reactions)
             Text(
                 text = TimeFormat.relative(message.sentAt),
                 style = MaterialTheme.typography.labelSmall,

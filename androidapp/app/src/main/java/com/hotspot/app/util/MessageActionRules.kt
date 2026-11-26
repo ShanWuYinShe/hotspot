@@ -1,7 +1,7 @@
 package com.hotspot.app.util
 
-/** 消息长按操作（私聊/群聊共用）：复制、撤回（自己的）、举报（他人的）。 */
-enum class MessageAction { COPY, RECALL, REPORT }
+/** 消息长按操作（私聊/群聊共用）：点赞、复制、撤回（自己的）、举报（他人的）。 */
+enum class MessageAction { LIKE, COPY, RECALL, REPORT }
 
 object MessageActionRules {
     /**
@@ -17,6 +17,7 @@ object MessageActionRules {
         content: String?,
     ): List<MessageAction> = buildList {
         if (isRecalled || type == "system") return@buildList
+        add(MessageAction.LIKE)
         if (type == "text" && !content.isNullOrBlank()) add(MessageAction.COPY)
         if (isMine) add(MessageAction.RECALL) else add(MessageAction.REPORT)
     }

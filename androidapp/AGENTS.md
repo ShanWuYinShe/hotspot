@@ -210,7 +210,7 @@ app/src/main/java/com/hotspot/app/
   目标评论不在首屏时自动续页查找，直到命中或评论到底）；
   `nearby_new_moment` → 瞬间详情；`group_mentioned` → 群聊；群邀请/入群申请 → 群详情；举报处理 → 我的举报；
   无可跳转目标（系统公告等）只标记已读。
-- **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 复制（文本）/ 撤回（自己的消息）/
+- **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 点赞/取消点赞（`reactions/set target_type=message`，👍，乐观更新 + 失败回滚；气泡下展示反应胶囊）/ 复制（文本）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
 - **聊天文件**：输入条相册右侧文件按钮 → 系统 DocumentsUI → `data/media/ChatFileUploader`
