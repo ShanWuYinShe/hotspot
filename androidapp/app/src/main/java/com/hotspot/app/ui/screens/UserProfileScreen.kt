@@ -99,7 +99,7 @@ fun UserProfileScreen(
     userId: String,
     onBack: () -> Unit,
     onOpenMoment: (String) -> Unit,
-    onOpenMessage: (String) -> Unit,
+    onOpenMessage: (String, String) -> Unit,
     onOpenGroup: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -240,7 +240,7 @@ fun UserProfileScreen(
                                 }
                             },
                             onMessage = {
-                                if (!blocked) onOpenMessage(userId) else Toast.makeText(context, "已屏蔽该用户，无法私信", Toast.LENGTH_SHORT).show()
+                                if (!blocked) onOpenMessage(userId, data.user.nickname) else Toast.makeText(context, "已屏蔽该用户，无法私信", Toast.LENGTH_SHORT).show()
                             },
                         )
                     }
