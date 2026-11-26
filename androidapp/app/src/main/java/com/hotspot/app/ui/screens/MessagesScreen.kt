@@ -1,7 +1,9 @@
 package com.hotspot.app.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +24,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,10 +38,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import androidx.compose.ui.window.Dialog
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
@@ -98,6 +103,10 @@ fun MessagesScreen(
     var groupChats by remember { mutableStateOf<List<GroupItem>>(emptyList()) }
     var groupLoading by remember { mutableStateOf(true) }
     var groupError by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    var actionEntry by remember { mutableStateOf<ConversationEntry?>(null) }
+    var deleteEntry by remember { mutableStateOf<ConversationEntry?>(null) }
+    var actionBusy by remember { mutableStateOf(false) }
 
     suspend fun reloadGroups() {
         groupLoading = true
@@ -223,6 +232,7 @@ fun MessagesScreen(
                                     entry.group?.let(onOpenGroupChat)
                                 }
                             },
+                            onLongClick = { actionEntry = entry },
                         )
                     }
                     // 本地过滤时不展示分页尾注（避免「没有更多了」紧跟单条过滤结果）
@@ -239,6 +249,150 @@ fun MessagesScreen(
         }
     }
 
+    actionEntry?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { if (!actionBusy) actionEntry = null },
+            title = { Text(entry.name.ifBlank { "会话操作" }) },
+            text = {
+                Column {
+                    SystemButton(
+                        text = if (entry.pinned) "取消置顶" else "置顶会话",
+                        onClick = {
+                            if (actionBusy) return@SystemButton
+                            scope.launch {
+                                actionBusy = true
+                                val result = if (entry.kind == ConversationKind.PRIVATE) {
+                                    chatRepository.updateConversationPreferences(
+                                        targetUserId = entry.privateChat?.otherUser?.userId.orEmpty(),
+                                        isPinned = !entry.pinned,
+                                    )
+                                } else {
+                                    AppContainer.groupRepository.updateGroupPreferences(
+                                        groupId = entry.group?.group?.groupId.orEmpty(),
+                                        isPinned = !entry.pinned,
+                                    )
+                                }
+                                actionBusy = false
+                                when (result) {
+                                    is ApiResult.Ok -> {
+                                        actionEntry = null
+                                        state.initialLoad(loader)
+                                        reloadGroups()
+                                    }
+                                    is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                        fillMaxWidth = true,
+                        enabled = !actionBusy,
+                    )
+                    Spacer(Modifier.height(Spacing.sm))
+                    SystemButton(
+                        text = if (entry.muted) "取消免打扰" else "消息免打扰",
+                        onClick = {
+                            if (actionBusy) return@SystemButton
+                            scope.launch {
+                                actionBusy = true
+                                val result = if (entry.kind == ConversationKind.PRIVATE) {
+                                    chatRepository.updateConversationPreferences(
+                                        targetUserId = entry.privateChat?.otherUser?.userId.orEmpty(),
+                                        isMuted = !entry.muted,
+                                    )
+                                } else {
+                                    AppContainer.groupRepository.updateGroupPreferences(
+                                        groupId = entry.group?.group?.groupId.orEmpty(),
+                                        isMuted = !entry.muted,
+                                    )
+                                }
+                                actionBusy = false
+                                when (result) {
+                                    is ApiResult.Ok -> {
+                                        actionEntry = null
+                                        state.initialLoad(loader)
+                                        reloadGroups()
+                                    }
+                                    is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        variant = ButtonVariant.SECONDARY,
+                        size = ButtonSize.SM,
+                        fillMaxWidth = true,
+                        enabled = !actionBusy,
+                    )
+                    if (entry.kind == ConversationKind.PRIVATE) {
+                        Spacer(Modifier.height(Spacing.sm))
+                        SystemButton(
+                            text = "删除会话",
+                            onClick = {
+                                if (!actionBusy) {
+                                    actionEntry = null
+                                    deleteEntry = entry
+                                }
+                            },
+                            variant = ButtonVariant.DANGER,
+                            size = ButtonSize.SM,
+                            fillMaxWidth = true,
+                            enabled = !actionBusy,
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!actionBusy) actionEntry = null },
+                    variant = ButtonVariant.GHOST,
+                    size = ButtonSize.SM,
+                    enabled = !actionBusy,
+                )
+            },
+        )
+    }
+
+    deleteEntry?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { if (!actionBusy) deleteEntry = null },
+            title = { Text("删除会话？") },
+            text = { Text("将移除「" + entry.name + "」的会话入口与本地历史，对方视角不受影响。") },
+            confirmButton = {
+                SystemButton(
+                    text = if (actionBusy) "删除中…" else "删除",
+                    onClick = {
+                        if (actionBusy) return@SystemButton
+                        scope.launch {
+                            actionBusy = true
+                            val result = chatRepository.deleteConversation(entry.privateChat?.otherUser?.userId.orEmpty())
+                            actionBusy = false
+                            when (result) {
+                                is ApiResult.Ok -> {
+                                    deleteEntry = null
+                                    state.initialLoad(loader)
+                                }
+                                is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    variant = ButtonVariant.DANGER,
+                    size = ButtonSize.SM,
+                    enabled = !actionBusy,
+                )
+            },
+            dismissButton = {
+                SystemButton(
+                    text = "取消",
+                    onClick = { if (!actionBusy) deleteEntry = null },
+                    variant = ButtonVariant.SECONDARY,
+                    size = ButtonSize.SM,
+                    enabled = !actionBusy,
+                )
+            },
+        )
+    }
+
     if (showNewChat) {
         NewConversationDialog(
             onDismiss = { showNewChat = false },
@@ -250,20 +404,23 @@ fun MessagesScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ConversationRow(
     entry: ConversationEntry,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
     val colors = HotSpotTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-            .clickable(
+            .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
+                onLongClick = onLongClick,
             )
             .padding(start = Spacing.lg, end = Spacing.md, top = Spacing.md2, bottom = Spacing.md2),
         verticalAlignment = Alignment.CenterVertically,
@@ -332,6 +489,10 @@ private fun ConversationRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                if (entry.pinned) {
+                    Spacer(Modifier.width(Spacing.sm))
+                    Badge(text = "置顶", tone = BadgeTone.NEUTRAL, size = BadgeSize.SM)
+                }
                 if (entry.unread > 0) {
                     Spacer(Modifier.width(Spacing.sm))
                     Badge(
@@ -386,6 +547,7 @@ private data class ConversationEntry(
     val timestamp: Long,
     val unread: Int,
     val pinned: Boolean,
+    val muted: Boolean,
     val online: Boolean,
     val privateChat: PrivateChatItem? = null,
     val group: GroupItem? = null,
@@ -411,6 +573,7 @@ private fun buildConversations(
             timestamp = parseIso(chat.lastMessage?.sentAt ?: chat.lastActivityAt),
             unread = chat.unreadCount,
             pinned = chat.isPinned,
+            muted = chat.isMuted,
             online = chat.presenceStatus == "online",
             privateChat = chat,
         )
@@ -426,6 +589,7 @@ private fun buildConversations(
             timestamp = parseIso(item.lastMessage?.sentAt ?: item.lastActivityAt),
             unread = item.viewerState?.unreadCount ?: 0,
             pinned = item.viewerState?.isPinned ?: false,
+            muted = item.viewerState?.isMuted ?: false,
             online = false,
             group = item,
         )
