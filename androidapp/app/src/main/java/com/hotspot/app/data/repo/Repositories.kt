@@ -48,7 +48,12 @@ import com.hotspot.app.data.model.UserDoorResult
 import com.hotspot.app.data.model.UserItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -232,6 +237,26 @@ class AuthRepository(
  * - 为你推荐 = moments/search 热门模式（spec：无输入条件的热门瞬间，承接发现页首屏）
  * - 正在关注 = moments/fetch_following
  */
+/** 搜索建议条目（用户/群组/瞬间；标签暂不进入 App 导航）。 */
+data class SearchSuggestion(
+    val type: String,
+    val id: String,
+    val title: String,
+    val subtitle: String,
+    val avatarUrl: String?,
+)
+
+@Serializable
+private data class SearchSuggestItem(
+    val type: String = "",
+    val payload: JsonObject = JsonObject(emptyMap()),
+)
+
+@Serializable
+private data class SearchSuggestPayload(
+    val items: List<SearchSuggestItem> = emptyList(),
+)
+
 class FeedRepository(private val api: ApiClient) {
     suspend fun recommended(cursor: String?): ApiResult<Page<MomentItem>> = api.post(
         ApiEndpoint.MOMENTS_SEARCH,
@@ -243,6 +268,68 @@ class FeedRepository(private val api: ApiClient) {
         },
         Page.serializer(MomentItem.serializer()),
     )
+
+    /** spec/discovery search/suggest：输入联想（用户/群组/瞬间），标签暂不展示。 */
+    suspend fun suggest(prefix: String, referencePoint: GeoPoint?): ApiResult<List<SearchSuggestion>> {
+        val body = buildJsonObject {
+            put("prefix", prefix)
+            put(
+                "reference_point",
+                referencePoint?.let {
+                    buildJsonObject {
+                        put("latitude", it.latitude)
+                        put("longitude", it.longitude)
+                    }
+                } ?: JsonNull,
+            )
+            put("types", buildJsonArray {
+                add(JsonPrimitive("user"))
+                add(JsonPrimitive("group"))
+                add(JsonPrimitive("moment"))
+            })
+            put("radius", JsonNull)
+        }
+        return when (val result = api.post(ApiEndpoint.SEARCH_SUGGEST, body, SearchSuggestPayload.serializer())) {
+            is ApiResult.Ok -> ApiResult.Ok(result.data.items.mapNotNull { item ->
+                val payload = item.payload
+                when (item.type) {
+                    "user" -> {
+                        val user = payload["user"]?.jsonObject ?: return@mapNotNull null
+                        SearchSuggestion(
+                            type = "用户",
+                            id = user["user_id"]?.jsonPrimitive?.content.orEmpty(),
+                            title = user["nickname"]?.jsonPrimitive?.content.orEmpty().ifBlank { "匿名用户" },
+                            subtitle = payload["bio"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            avatarUrl = user["avatar_url"]?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+                    "group" -> {
+                        val group = payload["group"]?.jsonObject ?: return@mapNotNull null
+                        SearchSuggestion(
+                            type = "群组",
+                            id = group["group_id"]?.jsonPrimitive?.content.orEmpty(),
+                            title = group["name"]?.jsonPrimitive?.content.orEmpty().ifBlank { "未命名群组" },
+                            subtitle = (group["members_count"]?.jsonPrimitive?.contentOrNull ?: "0") + " 成员",
+                            avatarUrl = group["avatar_url"]?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+                    "moment" -> {
+                        val author = payload["author"]?.jsonObject
+                        SearchSuggestion(
+                            type = "瞬间",
+                            id = payload["moment_id"]?.jsonPrimitive?.content.orEmpty(),
+                            title = payload["description_preview"]?.jsonPrimitive?.content.orEmpty().ifBlank { "无描述" },
+                            subtitle = author?.get("nickname")?.jsonPrimitive?.contentOrNull.orEmpty(),
+                            avatarUrl = payload["cover_url"]?.jsonPrimitive?.contentOrNull
+                                ?: author?.get("avatar_url")?.jsonPrimitive?.contentOrNull,
+                        )
+                    }
+                    else -> null
+                }
+            })
+            is ApiResult.Err -> result
+        }
+    }
 
     /** 瞬间详情（登录视角 MomentItem，含 is_favorited 查看者状态）。 */
     suspend fun openMoment(momentId: String): ApiResult<MomentItem> = api.post(
