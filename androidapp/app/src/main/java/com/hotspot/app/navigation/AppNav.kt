@@ -191,7 +191,10 @@ private fun MainScaffold() {
                     RelationshipsScreen(
                         initialTab = entry.arguments?.getInt("tab") ?: 0,
                         onBack = { navController.popBackStack() },
-                        onOpenChat = { userId -> navController.navigate(Routes.chat(userId)) },
+                        onOpenChat = { userId, nickname ->
+                            ChatTarget.select(userId, nickname)
+                            navController.navigate(Routes.chat(userId))
+                        },
                         onOpenUser = { userId -> openUser(userId) },
                     )
                 }
@@ -345,8 +348,8 @@ private fun MainScaffold() {
                         userId = entry.arguments?.getString("userId").orEmpty(),
                         onBack = { navController.popBackStack() },
                         onOpenMoment = { momentId -> navController.navigate(Routes.moment(momentId)) },
-                        onOpenMessage = { userId ->
-                            ChatTarget.select(userId, "")
+                        onOpenMessage = { userId, nickname ->
+                            ChatTarget.select(userId, nickname)
                             navController.navigate(Routes.chat(userId))
                         },
                         onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },

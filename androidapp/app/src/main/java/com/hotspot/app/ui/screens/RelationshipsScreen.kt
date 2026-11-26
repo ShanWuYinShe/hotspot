@@ -78,7 +78,7 @@ private val RELATION_TABS = listOf("好友", "关注", "粉丝", "黑名单")
 fun RelationshipsScreen(
     initialTab: Int,
     onBack: () -> Unit,
-    onOpenChat: (userId: String) -> Unit,
+    onOpenChat: (userId: String, nickname: String) -> Unit,
     onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
@@ -184,7 +184,7 @@ private fun RelationshipTabs(
 private fun RelationshipListContent(
     tabIndex: Int,
     query: String,
-    onOpenChat: (String) -> Unit,
+    onOpenChat: (String, String) -> Unit,
     onOpenUser: (String) -> Unit,
     onError: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
@@ -288,7 +288,7 @@ private fun RelationshipListContent(
                             following = effectiveFollowing(item),
                             followBusy = followBusy[item.user.user.userId] == true,
                             onToggleFollow = { toggleFollow(item) },
-                            onOpenChat = { onOpenChat(item.user.user.userId) },
+                            onOpenChat = { onOpenChat(item.user.user.userId, item.user.user.nickname) },
                             onOpenUser = { onOpenUser(item.user.user.userId) },
                         )
                         if (index != visible.lastIndex) {
