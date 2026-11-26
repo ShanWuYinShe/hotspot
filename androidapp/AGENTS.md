@@ -217,7 +217,7 @@ app/src/main/java/com/hotspot/app/
   （chat_file 分类，100MB 上限 + 扩展名/MIME 双黑名单，PUT 走流式 `putObjectStream` 不整份读内存）→
   `private_messages/send` / `group_messages/send` 的 `type=file` + `file_id`；气泡展示文件名/大小，点击 `ACTION_VIEW` 打开签名 URL。
 - **设置·地图与位置**：展示当前浏览锚点（自定义地点 + 坐标；未设置时回退默认位置）；
-  「去地图选点」跳转 `/map`，选点保存后回到设置并刷新；「恢复默认」清除本地锚点。
+  「去地图选点」跳转 `/map`，选点保存后回到设置并刷新；「恢复默认」清除本地锚点；「同步当前位置」把锚点上报为真实位置（`users/update_location`，影响附近发现与主页大致位置）。
 - **模拟器网络判据（模拟器基线；真机同样走 adb reverse）**：本机 API 36 AVD 上端内请求 `10.0.2.2:8888`
   会连接超时（nginx 无访问日志），而 `adb shell nc 10.0.2.2 8888` 可连通——**shell 连通性不能证明端内可达**。
   验证端内可达看 `docker logs hotspot-nginx-1` 是否有对应 POST；走查流程见 skill `hotspot-android-device-verify`。

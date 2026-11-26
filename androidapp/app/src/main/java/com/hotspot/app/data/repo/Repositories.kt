@@ -977,6 +977,24 @@ class ProfileRepository(private val api: ApiClient) {
         api.post(ApiEndpoint.USERS_ACCOUNT, emptyObject(), AccountData.serializer())
 
     /** spec/users settings：隐私级别与位置共享。 */
+    /** spec/users users/update_location：把坐标上报为真实位置（用于附近发现与主页大致位置）。 */
+    suspend fun updateLocation(
+        latitude: Double,
+        longitude: Double,
+        locationName: String,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.USERS_UPDATE_LOCATION,
+        buildJsonObject {
+            put("location", buildJsonObject {
+                put("point", buildJsonObject {
+                    put("latitude", latitude)
+                    put("longitude", longitude)
+                })
+                put("location_name", locationName)
+            })
+        },
+    )
+
     /** spec/users users/upgrade：访客升级为正式账号（仅 temp；返回最新 AccountData）。 */
     suspend fun upgradeAccount(loginId: String, password: String): ApiResult<AccountData> = api.post(
         ApiEndpoint.USERS_UPGRADE,

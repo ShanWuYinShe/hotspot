@@ -24,6 +24,7 @@ object ApiEndpoint {
     const val AUTH_FETCH_SESSIONS = "/api/v1/auth/fetch_sessions"
     const val AUTH_REVOKE_SESSION = "/api/v1/auth/revoke_session"
     const val AUTH_REVOKE_OTHER_SESSIONS = "/api/v1/auth/revoke_other_sessions"
+    const val USERS_UPDATE_LOCATION = "/api/v1/users/update_location"
     const val USERS_UPGRADE = "/api/v1/users/upgrade"
     const val USERS_DELETE_ACCOUNT = "/api/v1/users/delete_account"
     const val USERS_SETTINGS = "/api/v1/users/settings"
