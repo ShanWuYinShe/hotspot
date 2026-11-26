@@ -359,7 +359,10 @@ private fun MainScaffold() {
                     route = Routes.CHAT,
                     arguments = listOf(navArgument("userId") { type = NavType.StringType }),
                 ) {
-                    ChatScreen(onBack = { navController.popBackStack() })
+                    ChatScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenUser = { userId -> openUser(userId) },
+                    )
                 }
                 composable(
                     route = Routes.GROUP_CHAT,
@@ -370,6 +373,7 @@ private fun MainScaffold() {
                             GroupChatTarget.clear()
                             navController.popBackStack()
                         },
+                        onOpenGroup = { groupId -> navController.navigate(Routes.group(groupId)) },
                     )
                 }
                 composable(Routes.CREATE_GROUP) {

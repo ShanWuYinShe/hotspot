@@ -124,7 +124,10 @@ import kotlinx.coroutines.launch
  * 登记 TODO：富媒体消息。
  */
 @Composable
-fun GroupChatScreen(onBack: () -> Unit) {
+fun GroupChatScreen(
+    onBack: () -> Unit,
+    onOpenGroup: (String) -> Unit,
+) {
     val colors = HotSpotTheme.colors
     val chatRepository = AppContainer.chatRepository
     val myUserId = AppContainer.tokenStore.session.value?.userId
@@ -495,6 +498,11 @@ fun GroupChatScreen(onBack: () -> Unit) {
                 GroupChatTarget.clear()
                 onBack()
             },
+            onTitleClick = if (groupId.isNotBlank()) {
+                { onOpenGroup(groupId) }
+            } else {
+                null
+            },
         )
         Box(Modifier.weight(1f)) {
             when {
@@ -791,6 +799,7 @@ private fun GroupChatHeader(
     onlineCount: Int,
     typingHint: String = "",
     onBack: () -> Unit,
+    onTitleClick: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     Row(
@@ -850,7 +859,11 @@ private fun GroupChatHeader(
             }
         }
         Spacer(Modifier.width(Spacing.sm))
-        Column(Modifier.weight(1f)) {
+        Column(
+            Modifier
+                .weight(1f)
+                .then(if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier),
+        ) {
             Text(
                 text = name,
                 style = MaterialTheme.typography.titleMedium,
