@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -59,6 +60,8 @@ fun MomentCard(
     modifier: Modifier = Modifier,
     aspectRatio: Float = 4f / 5f,
     onAuthorClick: (() -> Unit)? = null,
+    likedByMe: Boolean = false,
+    onToggleLike: (() -> Unit)? = null,
 ) {
     val colors = HotSpotTheme.colors
     val imageUrl = MediaUrls.absolute(moment.images.firstOrNull()?.url)
@@ -189,7 +192,9 @@ fun MomentCard(
                 ActionCount(
                     icon = Icons.Filled.Favorite,
                     count = moment.likeCount,
-                    tint = if (hasImage) colors.contentInverse else colors.textSecondary,
+                    tint = if (likedByMe) colors.accent else if (hasImage) colors.contentInverse else colors.textSecondary,
+                    active = likedByMe,
+                    onClick = onToggleLike,
                 )
                 Spacer(Modifier.width(Spacing.lg))
                 ActionCount(
@@ -213,11 +218,27 @@ private fun ActionCount(
     icon: ImageVector,
     count: Int,
     tint: Color,
+    active: Boolean = false,
+    onClick: (() -> Unit)? = null,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = if (onClick != null) {
+            Modifier
+                .heightIn(min = Dimens.minTouchTarget)
+                .clip(AppShapes.pill)
+                .clickable(onClick = onClick)
+        } else {
+            Modifier
+        },
+    ) {
         Icon(
             imageVector = icon,
-            contentDescription = null,
+            contentDescription = when {
+                onClick == null -> null
+                active -> "取消点赞"
+                else -> "点赞瞬间"
+            },
             modifier = Modifier.size(18.dp),
             tint = tint,
         )

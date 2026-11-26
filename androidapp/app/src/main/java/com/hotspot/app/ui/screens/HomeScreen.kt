@@ -28,7 +28,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import android.widget.Toast
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,6 +68,7 @@ fun HomeScreen(
     onOpenUser: (userId: String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     val feedRepository = AppContainer.feedRepository
     val scope = rememberCoroutineScope()
     var tabIndex by remember { mutableIntStateOf(0) }
@@ -145,6 +148,41 @@ fun HomeScreen(
                             moment = moment,
                             onClick = { onOpenMoment(moment.momentId) },
                             onAuthorClick = { onOpenUser(moment.user.userId) },
+                            likedByMe = moment.reactions.any { it.reactedByMe },
+                            onToggleLike = {
+                                val next = !moment.reactions.any { it.reactedByMe }
+                                val previous = moment
+                                fun withReaction(active: Boolean): MomentItem {
+                                    val updated = if (active) {
+                                        if (previous.reactions.any { it.emoji == "👍" }) {
+                                            previous.reactions.map {
+                                                if (it.emoji == "👍") it.copy(count = it.count + 1, reactedByMe = true) else it
+                                            }
+                                        } else {
+                                            previous.reactions + com.hotspot.app.data.model.Reaction("👍", 1, true)
+                                        }
+                                    } else {
+                                        previous.reactions.mapNotNull {
+                                            when {
+                                                it.emoji != "👍" -> it
+                                                it.count <= 1 -> null
+                                                else -> it.copy(count = it.count - 1, reactedByMe = false)
+                                            }
+                                        }
+                                    }
+                                    return previous.copy(reactions = updated)
+                                }
+                                state.updateItem({ it.momentId == moment.momentId }, { withReaction(next) })
+                                scope.launch {
+                                    when (val result = feedRepository.setMomentReaction(moment.momentId, next)) {
+                                        is ApiResult.Ok -> Unit
+                                        is ApiResult.Err -> {
+                                            state.updateItem({ it.momentId == moment.momentId }, { previous })
+                                            Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
                         )
                     }
                     item(key = "footer") {
