@@ -299,6 +299,17 @@ class FeedRepository(private val api: ApiClient) {
     )
 
     /** 收藏 / 取消收藏（spec/api_spec_moment.md → moments/set_favorite，两态统一端点）。 */
+    /** 瞬间点赞/取消（reactions/set target_type=moment；👍 与服务端白名单同口径）。 */
+    suspend fun setMomentReaction(momentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.REACTIONS_SET,
+        buildJsonObject {
+            put("target_type", "moment")
+            put("target_id", momentId)
+            put("emoji", "👍")
+            put("active", active)
+        },
+    )
+
     suspend fun setFavorite(momentId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.MOMENTS_SET_FAVORITE,
         buildJsonObject {
