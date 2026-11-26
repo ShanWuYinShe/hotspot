@@ -1,6 +1,12 @@
 package com.hotspot.app.ui.screens
 
+import android.content.Context
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -21,6 +28,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
@@ -53,7 +62,7 @@ private val SEARCH_TABS = listOf("用户", "瞬间", "群组")
 
 /**
  * 全局搜索：用户 / 瞬间 / 群组各自独立分页（后端不提供聚合端点，客户端拼装）。
- * 首版只取第一页；关键字为空时展示输入引导。
+ * 首版只取第一页；关键字为空时展示最近搜索与输入引导。
  */
 @Composable
 fun SearchScreen(
@@ -63,10 +72,26 @@ fun SearchScreen(
     onOpenMoment: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("search_history", Context.MODE_PRIVATE) }
+    var recent by remember {
+        mutableStateOf(
+            prefs.getString("queries", "").orEmpty().split('\n').map { it.trim() }.filter { it.isNotBlank() },
+        )
+    }
     var query by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf("") }
     var tabIndex by remember { mutableIntStateOf(0) }
     var suggestions by remember { mutableStateOf<List<SearchSuggestion>>(emptyList()) }
+
+    fun rememberSearch(value: String) {
+        val term = value.trim()
+        if (term.isBlank()) return
+        recent = (listOf(term) + recent.filterNot { it == term }).take(5)
+        prefs.edit().putString("queries", recent.joinToString("\n")).apply()
+        query = term
+        submitted = term
+    }
 
     LaunchedEffect(query) {
         val prefix = query.trim()
@@ -87,13 +112,42 @@ fun SearchScreen(
         Column(Modifier.padding(horizontal = Spacing.lg)) {
             SystemInput(
                 value = query,
-                onValueChange = { query = it },
+                onValueChange = {
+                    query = it
+                    if (it.isBlank()) submitted = ""
+                },
                 placeholder = "搜索用户 / 瞬间 / 群组",
                 label = "关键字",
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { submitted = query.trim() }),
+                keyboardActions = KeyboardActions(onSearch = { rememberSearch(query) }),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (query.isBlank() && recent.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    text = "最近搜索",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(Spacing.xs))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                ) {
+                    recent.forEach { term ->
+                        Text(
+                            text = term,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = colors.textSecondary,
+                            modifier = Modifier
+                                .clip(AppShapes.pill)
+                                .background(colors.subtle)
+                                .clickable { rememberSearch(term) }
+                                .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                        )
+                    }
+                }
+            }
             if (query.isNotBlank() && query.trim() != submitted && suggestions.isNotEmpty()) {
                 Spacer(Modifier.height(Spacing.sm))
                 ListGroup {
@@ -111,7 +165,7 @@ fun SearchScreen(
                             },
                             trailing = { Badge(text = suggestion.type, tone = BadgeTone.NEUTRAL) },
                             onClick = {
-                                submitted = query.trim()
+                                rememberSearch(query)
                                 when (suggestion.type) {
                                     "用户" -> onOpenUser(suggestion.id)
                                     "群组" -> onOpenGroup(suggestion.id)
