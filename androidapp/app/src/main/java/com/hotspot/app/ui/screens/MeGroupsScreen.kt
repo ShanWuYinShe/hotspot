@@ -1,7 +1,11 @@
 package com.hotspot.app.ui.screens
 
+import android.widget.Toast
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,11 +30,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.hotspot.app.AppContainer
 import com.hotspot.app.R
 import com.hotspot.app.data.api.ApiResult
+import com.hotspot.app.data.model.GroupApplicationItem
+import com.hotspot.app.data.model.GroupInviteItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.MessageBrief
 import com.hotspot.app.data.model.Page
@@ -47,6 +55,10 @@ import com.hotspot.app.ui.components.ListRow
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SearchInput
+import com.hotspot.app.ui.components.SystemButton
+import com.hotspot.app.ui.components.SystemCard
+import com.hotspot.app.ui.components.ButtonSize
+import com.hotspot.app.ui.components.ButtonVariant
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTextStyles
 import com.hotspot.app.ui.theme.HotSpotTheme
@@ -69,17 +81,40 @@ fun MeGroupsScreen(
     onOpenGroup: (String) -> Unit,
 ) {
     val colors = HotSpotTheme.colors
+    val context = LocalContext.current
     val profileRepository = AppContainer.profileRepository
     val scope = rememberCoroutineScope()
     val state = remember { PagedListState<GroupItem>() }
     val scrollState = rememberScrollState()
     var query by remember { mutableStateOf("") }
+    var invites by remember { mutableStateOf<List<GroupInviteItem>>(emptyList()) }
+    var applications by remember { mutableStateOf<List<GroupApplicationItem>>(emptyList()) }
+    var inviteBusyId by remember { mutableStateOf<String?>(null) }
+    var cancelBusyId by remember { mutableStateOf<String?>(null) }
 
     val loader: suspend (String?) -> ApiResult<Page<GroupItem>> = { cursor ->
         profileRepository.joinedGroups(cursor)
     }
 
-    LaunchedEffect(Unit) { state.initialLoad(loader) }
+    suspend fun loadInvites() {
+        when (val result = AppContainer.groupRepository.receivedInvites()) {
+            is ApiResult.Ok -> invites = result.data.items
+            is ApiResult.Err -> Unit
+        }
+    }
+
+    suspend fun loadApplications() {
+        when (val result = AppContainer.groupRepository.submittedApplications()) {
+            is ApiResult.Ok -> applications = result.data.items
+            is ApiResult.Err -> Unit
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        state.initialLoad(loader)
+        loadInvites()
+        loadApplications()
+    }
 
     // 触底续载：内容不足一屏（maxValue=0）时也继续补页，直到到底或撑满视口。
     val shouldLoadMore by remember {
@@ -143,6 +178,140 @@ fun MeGroupsScreen(
                 onValueChange = { query = it },
                 placeholder = "搜索我的群组…",
             )
+            if (invites.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.md))
+                SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                    Text(
+                        text = "入群邀请（" + invites.size + "）",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.textPrimary,
+                    )
+                    invites.forEach { invite ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(
+                                name = invite.group.name,
+                                imageUrl = invite.group.avatarUrl,
+                                size = Dimens.avatarSm,
+                            )
+                            Column(Modifier.weight(1f).padding(start = Spacing.sm)) {
+                                Text(
+                                    text = invite.group.name.ifBlank { "未命名群组" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colors.textPrimary,
+                                )
+                                Text(
+                                    text = invite.inviter.nickname.ifBlank { "群主" } + " 邀请你加入",
+                                    style = HotSpotTextStyles.caption,
+                                    color = colors.textSecondary,
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                        ) {
+                            SystemButton(
+                                text = "拒绝",
+                                onClick = {
+                                    if (inviteBusyId != null) return@SystemButton
+                                    scope.launch {
+                                        inviteBusyId = invite.inviteId
+                                        when (val result = AppContainer.groupRepository.rejectInvite(invite.inviteId)) {
+                                            is ApiResult.Ok -> {
+                                                invites = invites.filterNot { it.inviteId == invite.inviteId }
+                                                Toast.makeText(context, "已拒绝邀请", Toast.LENGTH_SHORT).show()
+                                            }
+                                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                        inviteBusyId = null
+                                    }
+                                },
+                                variant = ButtonVariant.SECONDARY,
+                                size = ButtonSize.SM,
+                                enabled = inviteBusyId == null,
+                            )
+                            Spacer(Modifier.size(Spacing.sm))
+                            SystemButton(
+                                text = "接受",
+                                onClick = {
+                                    if (inviteBusyId != null) return@SystemButton
+                                    scope.launch {
+                                        inviteBusyId = invite.inviteId
+                                        when (val result = AppContainer.groupRepository.acceptInvite(invite.inviteId)) {
+                                            is ApiResult.Ok -> {
+                                                invites = invites.filterNot { it.inviteId == invite.inviteId }
+                                                Toast.makeText(context, "已加入群组", Toast.LENGTH_SHORT).show()
+                                                state.initialLoad(loader)
+                                            }
+                                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                        inviteBusyId = null
+                                    }
+                                },
+                                variant = ButtonVariant.PRIMARY,
+                                size = ButtonSize.SM,
+                                enabled = inviteBusyId == null,
+                            )
+                        }
+                    }
+                }
+            }
+            if (applications.isNotEmpty()) {
+                Spacer(Modifier.height(Spacing.md))
+                SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                    Text(
+                        text = "我的入群申请（" + applications.size + "）",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = colors.textPrimary,
+                    )
+                    applications.forEach { application ->
+                        Spacer(Modifier.height(Spacing.sm))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(
+                                name = application.group.name,
+                                imageUrl = application.group.avatarUrl,
+                                size = Dimens.avatarSm,
+                            )
+                            Column(Modifier.weight(1f).padding(start = Spacing.sm)) {
+                                Text(
+                                    text = application.group.name.ifBlank { "未命名群组" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = colors.textPrimary,
+                                )
+                                Text(
+                                    text = "审核中，等待群管理员处理",
+                                    style = HotSpotTextStyles.caption,
+                                    color = colors.textSecondary,
+                                )
+                            }
+                            SystemButton(
+                                text = "撤回",
+                                onClick = {
+                                    if (cancelBusyId != null) return@SystemButton
+                                    scope.launch {
+                                        cancelBusyId = application.applicationId
+                                        when (val result = AppContainer.groupRepository.cancelApplication(
+                                            groupId = application.group.groupId,
+                                            applicationId = application.applicationId,
+                                        )) {
+                                            is ApiResult.Ok -> {
+                                                applications = applications.filterNot { it.applicationId == application.applicationId }
+                                                Toast.makeText(context, "申请已撤回", Toast.LENGTH_SHORT).show()
+                                            }
+                                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                                        }
+                                        cancelBusyId = null
+                                    }
+                                },
+                                variant = ButtonVariant.SECONDARY,
+                                size = ButtonSize.SM,
+                                enabled = cancelBusyId == null,
+                            )
+                        }
+                    }
+                }
+            }
             Spacer(Modifier.height(Spacing.md))
         }
 

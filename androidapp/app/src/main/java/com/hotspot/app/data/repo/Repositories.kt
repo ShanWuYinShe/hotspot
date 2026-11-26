@@ -17,6 +17,7 @@ import com.hotspot.app.data.model.GeoPoint
 import com.hotspot.app.data.model.GroupAnnouncementItem
 import com.hotspot.app.data.model.GroupApplicationItem
 import com.hotspot.app.data.model.GroupAnnouncementList
+import com.hotspot.app.data.model.GroupInviteItem
 import com.hotspot.app.data.model.GroupItem
 import com.hotspot.app.data.model.AdminBannedMemberItem
 import com.hotspot.app.data.model.GroupInvitation
@@ -1147,6 +1148,52 @@ class ProfileRepository(private val api: ApiClient) {
  * 距离/位置由后端计算，客户端只展示；加入/退出结果以服务端 status/错误码为准。
  */
 class GroupRepository(private val api: ApiClient) {
+    /** spec/groups invites/fetch_received：我收到的群邀请（默认 pending）。 */
+    suspend fun receivedInvites(status: String = "pending"): ApiResult<Page<GroupInviteItem>> = api.post(
+        ApiEndpoint.GROUPS_INVITES_FETCH_RECEIVED,
+        buildJsonObject {
+            put("status", status)
+            put("pagination", pagination(null))
+        },
+        Page.serializer(GroupInviteItem.serializer()),
+    )
+
+    /** spec/groups invites/accept：接受邀请，成功后成为群成员。 */
+    suspend fun acceptInvite(inviteId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_INVITES_ACCEPT,
+        buildJsonObject { put("invite_id", inviteId) },
+    )
+
+    /** spec/groups invites/reject：拒绝邀请。 */
+    suspend fun rejectInvite(inviteId: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_INVITES_REJECT,
+        buildJsonObject { put("invite_id", inviteId) },
+    )
+
+    /** spec/groups applications/fetch_submitted：我提交的入群申请（默认 pending）。 */
+    suspend fun submittedApplications(status: String = "pending"): ApiResult<Page<GroupApplicationItem>> = api.post(
+        ApiEndpoint.GROUPS_APPLICATIONS_FETCH_SUBMITTED,
+        buildJsonObject {
+            put("status", status)
+            put("pagination", pagination(null))
+        },
+        Page.serializer(GroupApplicationItem.serializer()),
+    )
+
+    /** spec/groups applications/cancel：撤回我提交的申请。 */
+    suspend fun cancelApplication(
+        groupId: String,
+        applicationId: String,
+        reason: String? = null,
+    ): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUPS_APPLICATIONS_CANCEL,
+        buildJsonObject {
+            put("group_id", groupId)
+            put("application_id", applicationId)
+            put("reason", reason?.let(::JsonPrimitive) ?: JsonNull)
+        },
+    )
+
     /** 创建群组（幂等；owner 为当前用户，返回 GroupItem）。 */
     suspend fun createGroup(
         name: String,
