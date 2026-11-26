@@ -988,6 +988,16 @@ class ProfileRepository(private val api: ApiClient) {
         api.post(ApiEndpoint.USERS_ACCOUNT, emptyObject(), AccountData.serializer())
 
     /** spec/users settings：隐私级别与位置共享。 */
+    /** spec/users users/fetch_groups：指定用户加入的公开群组（最近加入在前）。 */
+    suspend fun userGroups(userId: String, cursor: String? = null): ApiResult<Page<GroupItem>> = api.post(
+        ApiEndpoint.USERS_FETCH_GROUPS,
+        buildJsonObject {
+            put("user_id", userId)
+            put("pagination", pagination(cursor))
+        },
+        Page.serializer(GroupItem.serializer()),
+    )
+
     /** spec/users users/update_location：把坐标上报为真实位置（用于附近发现与主页大致位置）。 */
     suspend fun updateLocation(
         latitude: Double,
