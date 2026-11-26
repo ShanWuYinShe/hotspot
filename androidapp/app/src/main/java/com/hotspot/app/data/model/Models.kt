@@ -775,6 +775,11 @@ data class SharePreview(
 data class UserSettings(
     @SerialName("privacy_level") val privacyLevel: String = "public",
     @SerialName("location_visible") val locationVisible: Boolean = true,
+    @SerialName("presence_visible") val presenceVisible: Boolean = true,
+    @SerialName("social_lists_visible") val socialListsVisible: Boolean = true,
+    @SerialName("groups_visible") val groupsVisible: Boolean = true,
+    @SerialName("reacted_moments_visible") val reactedMomentsVisible: Boolean = true,
+    @SerialName("stats_visible") val statsVisible: Boolean = true,
     @SerialName("nearby_moment_notify") val nearbyMomentNotify: Boolean = false,
     val searchable: Boolean = true,
     @SerialName("allow_private_chat") val allowPrivateChat: Boolean = true,

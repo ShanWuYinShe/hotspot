@@ -1199,6 +1199,11 @@ class ProfileRepository(private val api: ApiClient) {
     suspend fun updateSettings(
         privacyLevel: String? = null,
         locationVisible: Boolean? = null,
+        presenceVisible: Boolean? = null,
+        socialListsVisible: Boolean? = null,
+        groupsVisible: Boolean? = null,
+        reactedMomentsVisible: Boolean? = null,
+        statsVisible: Boolean? = null,
         nearbyMomentNotify: Boolean? = null,
         searchable: Boolean? = null,
         allowPrivateChat: Boolean? = null,
@@ -1211,6 +1216,11 @@ class ProfileRepository(private val api: ApiClient) {
                 buildJsonObject {
                     if (privacyLevel != null) put("privacy_level", privacyLevel)
                     if (locationVisible != null) put("location_visible", locationVisible)
+                    if (presenceVisible != null) put("presence_visible", presenceVisible)
+                    if (socialListsVisible != null) put("social_lists_visible", socialListsVisible)
+                    if (groupsVisible != null) put("groups_visible", groupsVisible)
+                    if (reactedMomentsVisible != null) put("reacted_moments_visible", reactedMomentsVisible)
+                    if (statsVisible != null) put("stats_visible", statsVisible)
                     if (nearbyMomentNotify != null) put("nearby_moment_notify", nearbyMomentNotify)
                     if (searchable != null) put("searchable", searchable)
                     if (allowPrivateChat != null) put("allow_private_chat", allowPrivateChat)

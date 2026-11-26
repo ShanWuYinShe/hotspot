@@ -122,6 +122,11 @@ fun SettingsScreen(
     var searchable by remember { mutableStateOf(true) }
     var allowPrivateChat by remember { mutableStateOf(true) }
     var allowFollow by remember { mutableStateOf(true) }
+    var presenceVisible by remember { mutableStateOf(true) }
+    var socialListsVisible by remember { mutableStateOf(true) }
+    var groupsVisible by remember { mutableStateOf(true) }
+    var reactedMomentsVisible by remember { mutableStateOf(true) }
+    var statsVisible by remember { mutableStateOf(true) }
     var privacyLoaded by remember { mutableStateOf(false) }
     var privacyUpdating by remember { mutableStateOf(false) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -165,6 +170,11 @@ fun SettingsScreen(
                 searchable = settings.data.searchable
                 allowPrivateChat = settings.data.allowPrivateChat
                 allowFollow = settings.data.allowFollow
+                presenceVisible = settings.data.presenceVisible
+                socialListsVisible = settings.data.socialListsVisible
+                groupsVisible = settings.data.groupsVisible
+                reactedMomentsVisible = settings.data.reactedMomentsVisible
+                statsVisible = settings.data.statsVisible
             }
             is ApiResult.Err -> Toast.makeText(context, settings.error.userMessage, Toast.LENGTH_SHORT).show()
         }
@@ -178,6 +188,11 @@ fun SettingsScreen(
         searchableValue: Boolean? = null,
         privateChatValue: Boolean? = null,
         followValue: Boolean? = null,
+        presenceValue: Boolean? = null,
+        socialListsValue: Boolean? = null,
+        groupsValue: Boolean? = null,
+        reactedMomentsValue: Boolean? = null,
+        statsValue: Boolean? = null,
     ) {
         if (!privacyLoaded || privacyUpdating) return
         privacyUpdating = true
@@ -189,6 +204,11 @@ fun SettingsScreen(
                 searchable = searchableValue,
                 allowPrivateChat = privateChatValue,
                 allowFollow = followValue,
+                presenceVisible = presenceValue,
+                socialListsVisible = socialListsValue,
+                groupsVisible = groupsValue,
+                reactedMomentsVisible = reactedMomentsValue,
+                statsVisible = statsValue,
             )) {
                 is ApiResult.Ok -> {
                     if (privacy != null) privacyLevel = privacy
@@ -197,6 +217,11 @@ fun SettingsScreen(
                     if (searchableValue != null) searchable = searchableValue
                     if (privateChatValue != null) allowPrivateChat = privateChatValue
                     if (followValue != null) allowFollow = followValue
+                    if (presenceValue != null) presenceVisible = presenceValue
+                    if (socialListsValue != null) socialListsVisible = socialListsValue
+                    if (groupsValue != null) groupsVisible = groupsValue
+                    if (reactedMomentsValue != null) reactedMomentsVisible = reactedMomentsValue
+                    if (statsValue != null) statsVisible = statsValue
                     Toast.makeText(context, "设置已更新", Toast.LENGTH_SHORT).show()
                 }
                 is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
@@ -450,6 +475,45 @@ fun SettingsScreen(
                     selectedIndex = if (allowPrivateChat) 0 else 1,
                     onSelected = { index -> updatePrivacy(privateChatValue = index == 0) },
                     modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Spacer(Modifier.height(Spacing.xl))
+            SettingsSectionTitle(title = "资料展示", subtitle = "控制个人主页上哪些信息对他人可见")
+            Spacer(Modifier.height(Spacing.sm))
+            SystemCard(contentPadding = PaddingValues(Spacing.md)) {
+                VisibilityToggle(
+                    title = "在线状态",
+                    description = if (presenceVisible) "他人可看到你的在线状态与最近活跃时间" else "你的在线状态与最近活跃时间对他人隐藏",
+                    visible = presenceVisible,
+                    onSelected = { index -> updatePrivacy(presenceValue = index == 0) },
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                VisibilityToggle(
+                    title = "关系列表",
+                    description = if (socialListsVisible) "他人可查看你的好友、关注与粉丝列表" else "你的好友、关注与粉丝列表仅自己可见",
+                    visible = socialListsVisible,
+                    onSelected = { index -> updatePrivacy(socialListsValue = index == 0) },
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                VisibilityToggle(
+                    title = "群组列表",
+                    description = if (groupsVisible) "他人可查看你加入的群组" else "你加入的群组仅自己可见",
+                    visible = groupsVisible,
+                    onSelected = { index -> updatePrivacy(groupsValue = index == 0) },
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                VisibilityToggle(
+                    title = "反应过的瞬间",
+                    description = if (reactedMomentsVisible) "他人可查看你点赞过的瞬间" else "你点赞过的瞬间仅自己可见",
+                    visible = reactedMomentsVisible,
+                    onSelected = { index -> updatePrivacy(reactedMomentsValue = index == 0) },
+                )
+                Spacer(Modifier.height(Spacing.lg))
+                VisibilityToggle(
+                    title = "统计信息",
+                    description = if (statsVisible) "他人可查看你的瞬间/粉丝/关注统计" else "你的统计数据对他人隐藏",
+                    visible = statsVisible,
+                    onSelected = { index -> updatePrivacy(statsValue = index == 0) },
                 )
             }
             Spacer(Modifier.height(Spacing.xl))
@@ -1023,6 +1087,35 @@ private fun SettingsSubtitleChip(text: String) {
             color = colors.textSecondary,
         )
     }
+}
+
+@Composable
+private fun VisibilityToggle(
+    title: String,
+    description: String,
+    visible: Boolean,
+    onSelected: (Int) -> Unit,
+) {
+    val colors = HotSpotTheme.colors
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = colors.textPrimary,
+    )
+    Spacer(Modifier.height(Spacing.xs))
+    Text(
+        text = description,
+        style = MaterialTheme.typography.labelSmall,
+        color = colors.textSecondary,
+    )
+    Spacer(Modifier.height(Spacing.sm))
+    SegmentedTabs(
+        options = listOf("公开", "隐藏"),
+        selectedIndex = if (visible) 0 else 1,
+        onSelected = onSelected,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
