@@ -107,6 +107,7 @@ import com.hotspot.app.util.MentionRules
 import com.hotspot.app.util.MessageAction
 import com.hotspot.app.util.MessageActionRules
 import com.hotspot.app.util.toggleThumbReaction
+import com.hotspot.app.util.applyReactionDelta
 import com.hotspot.app.util.TimeFormat
 import java.time.Instant
 import kotlinx.coroutines.delay
@@ -393,6 +394,33 @@ fun GroupChatScreen(
                             messages = messages.map { message ->
                                 if (message.messageId == event.messageId) {
                                     message.copy(recalledAt = event.recalledAt)
+                                } else {
+                                    message
+                                }
+                            }
+                        }
+                    }
+
+                    // 表情反应实时同步（对齐 Web / 鸿蒙）：事件不带计数，按 ±1 合并
+                    is RealtimeEvent.ReactionAdded -> {
+                        if (event.targetType == "message") {
+                            val mine = event.actor.userId == myUserId
+                            messages = messages.map { message ->
+                                if (message.messageId == event.targetId) {
+                                    message.copy(reactions = applyReactionDelta(message.reactions, event.emoji, true, mine))
+                                } else {
+                                    message
+                                }
+                            }
+                        }
+                    }
+
+                    is RealtimeEvent.ReactionRemoved -> {
+                        if (event.targetType == "message") {
+                            val mine = event.actor.userId == myUserId
+                            messages = messages.map { message ->
+                                if (message.messageId == event.targetId) {
+                                    message.copy(reactions = applyReactionDelta(message.reactions, event.emoji, false, mine))
                                 } else {
                                     message
                                 }
