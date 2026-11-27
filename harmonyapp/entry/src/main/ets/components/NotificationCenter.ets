@@ -3,7 +3,7 @@
  */
 import { NotificationSyncService } from '../core/services/NotificationSyncService';
 import { ApiClient } from '../core/api/ApiClient';
-import { NotifyItem, NotifyPayload, NotifyType } from '../core/types/api';
+import { NotifyItem, NotifyPayload, NotifyType, SystemAnnouncementItem } from '../core/types/api';
 import { SystemIcon, AppIcon } from './SystemIcon';
 import { SystemButton } from './SystemButton';
 import { TabsPillGroup, TabItem } from './TabsPillGroup';
@@ -30,6 +30,10 @@ import { DEFAULT_RESOLVED_THEME_ID, KEY_RESOLVED_THEME_ID } from '../core/theme/
 import { LucideIcon } from '../components/LucideIcon';
 import { MediaUrlUtil } from '../core/utils/MediaUrlUtil';
 import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+
+const DOMAIN_NUMBER: number = 0xFF13;
+const TAG: string = 'NotificationCenter';
 
 // 过滤维度对齐前端 /notify FILTER_TABS（全部/点赞/关注/评论/附近）：
 // 按「语义类型」分栏，而非「业务域」——域分组（互动/群组/举报/系统）是桌面 Rail 的视角，
@@ -43,7 +47,8 @@ type NotificationFilterKey = 'all' | 'unread' | 'reaction' | 'follow' | 'comment
  */
 interface NotificationListEntry {
   key: string;
-  kind: 'header' | 'group';
+  // announcements：平台公告卡区（置顶，仅「全部」档且无搜索词时展示）
+  kind: 'header' | 'group' | 'announcements';
   label: string;
   count: number;
   showBell: boolean;
@@ -66,6 +71,8 @@ export struct NotificationCenter {
   onClose?: () => void;
   @State private visibleNotifications: NotifyItem[] = [];
   @State private selectedFilter: NotificationFilterKey = 'all';
+  /** 平台公告（H-06，对齐 Web #387 AnnouncementCards；/system/announcements/fetch 公开节点） */
+  @State private announcements: SystemAnnouncementItem[] = [];
   @State private isLoading: boolean = false;
   @State private enterOpacity: number = 1;
   @State private enterOffset: number = 0;
@@ -122,6 +129,18 @@ export struct NotificationCenter {
    * 「哪条还没处理」，也读不出「哪些是新消息」。
    * 每个分区输出两条：卡外标题 + 收行的软岛卡。
    */
+  /** 平台公告：公开节点，未登录也能读；失败静默（公告区不阻塞通知流）。 */
+  private async loadAnnouncements(): Promise<void> {
+    try {
+      const res = await ApiClient.getSystemAnnouncements({});
+      if (res.code === 0 && res.data) {
+        this.announcements = res.data.items ?? [];
+      }
+    } catch (error) {
+      hilog.warn(DOMAIN_NUMBER, TAG, '公告加载失败');
+    }
+  }
+
   private buildNotificationListEntries(): NotificationListEntry[] {
     const invites: NotifyItem[] = [];
     const unread: NotifyItem[] = [];
@@ -152,6 +171,17 @@ export struct NotificationCenter {
     if (read.length > 0) {
       pushSection('read', '已读', read, false);
     }
+    // 平台公告置顶：仅「全部」档、且未输入搜索词时展示（分类档聚焦单一来源）
+    if (this.announcements.length > 0 && this.selectedFilter === 'all' && !this.searchKeyword.trim()) {
+      entries.unshift({
+        key: 'announcements',
+        kind: 'announcements',
+        label: '平台公告',
+        count: this.announcements.length,
+        showBell: false,
+        items: []
+      });
+    }
     return entries;
   }
 
@@ -161,6 +191,7 @@ export struct NotificationCenter {
 
   aboutToAppear() {
     this.attachSyncListener();
+    void this.loadAnnouncements();
     this.refreshNotifications();
     this.setupNotificationListener();
   }
@@ -202,6 +233,8 @@ export struct NotificationCenter {
       return;
     }
 
+    // 公告与通知流一起刷新（各自失败互不影响）
+    void this.loadAnnouncements();
     this.isLoading = true;
     this.errorMessage = '';
 
@@ -832,7 +865,11 @@ export struct NotificationCenter {
         Refresh({ refreshing: $$this.isRefreshing, builder: RefreshIndicator }) {
           List({ space: DesignConstants.SPACING.MD, scroller: this.backToTopScroller }) {
             ForEach(this.buildNotificationListEntries(), (entry: NotificationListEntry) => {
-              if (entry.kind === 'header') {
+              if (entry.kind === 'announcements') {
+                ListItem() {
+                  this.buildAnnouncementsSection()
+                }
+              } else if (entry.kind === 'header') {
                 // 分区标题在卡外（页面画布上），与 web SectionHead 位置一致：
                 // 卡外标题 + 卡内行，标题读起来是「分组」而不是「卡片标题」
                 ListItem() {
@@ -913,6 +950,107 @@ export struct NotificationCenter {
     .width('100%')
     .height('100%')
     .backgroundColor(this.getPalette().pageBackground)
+  }
+
+  /** 平台公告严重级文案（对齐 Web AnnouncementCards：info=公告 / warning=提醒 / error=重要）。 */
+  private announcementSeverityLabel(severity: string): string {
+    if (severity === 'warning') return '提醒';
+    if (severity === 'error') return '重要';
+    return '公告';
+  }
+
+  private announcementSeverityColor(severity: string): string {
+    if (severity === 'warning') return this.getPalette().textStatusWarningOnSoft;
+    if (severity === 'error') return this.getPalette().textStatusDangerOnSoft;
+    return this.getPalette().textAccentOnSoft;
+  }
+
+  private announcementSeverityBackground(severity: string): string {
+    if (severity === 'warning') return this.getPalette().warningSoft;
+    if (severity === 'error') return this.getPalette().dangerSoft;
+    return this.getPalette().accentMuted;
+  }
+
+  private formatAnnouncementTime(iso: string): string {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+
+  /**
+   * 平台公告区（H-06，对齐 Web #387 AnnouncementCards）：
+   * 置顶于通知流之前，卡内为「严重级胶囊 + 标题 + 时间 + 两行摘要 + 查看详情」；
+   * 点卡片进入公告页并聚焦对应公告（action_url 由公告页统一处理，这里不直接外跳）。
+   */
+  @Builder
+  private buildAnnouncementsSection() {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      this.buildGroupHeader('平台公告', this.announcements.length, false)
+
+      Column({ space: DesignConstants.SPACING.SM }) {
+        ForEach(this.announcements, (item: SystemAnnouncementItem) => {
+          Column({ space: DesignConstants.SPACING.XS }) {
+            Row({ space: DesignConstants.SPACING.SM }) {
+              Text(this.announcementSeverityLabel(item.severity))
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(this.announcementSeverityColor(item.severity))
+                .padding({
+                  left: DesignConstants.SPACING.SM,
+                  right: DesignConstants.SPACING.SM,
+                  top: DesignConstants.SPACING.HALF,
+                  bottom: DesignConstants.SPACING.HALF
+                })
+                .backgroundColor(this.announcementSeverityBackground(item.severity))
+                .borderRadius(DesignConstants.RADIUS.FULL)
+
+              Text(item.title)
+                .fontSize(DesignConstants.FONT.SIZE.SM)
+                .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+                .fontColor(this.getPalette().textPrimary)
+                .maxLines(1)
+                .textOverflow({ overflow: TextOverflow.Ellipsis })
+                .layoutWeight(1)
+
+              Text(this.formatAnnouncementTime(item.created_at))
+                .fontSize(DesignConstants.FONT.SIZE.XS2)
+                .fontColor(this.getPalette().textTertiary)
+            }
+            .width('100%')
+
+            Text(item.content)
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(lineHeightFor(DesignConstants.FONT.SIZE.XS, DesignConstants.FONT.LINE_RATIO.COPY))
+              .fontColor(this.getPalette().textSecondary)
+              .maxLines(2)
+              .textOverflow({ overflow: TextOverflow.Ellipsis })
+              .width('100%')
+
+            Row() {
+              Text('查看详情')
+                .fontSize(DesignConstants.FONT.SIZE.XS)
+                .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                .fontColor(this.getPalette().accentText)
+            }
+            .width('100%')
+            .justifyContent(FlexAlign.End)
+          }
+          .width('100%')
+          .padding(DesignConstants.SPACING.LG)
+          .backgroundColor(this.getPalette().surfaceIsland)
+          .borderRadius(DesignConstants.SHAPE.CARD)
+          .shadow(this.getPalette().surfaceShadow)
+          .onClick(() => {
+            const params = new AnnouncementsRouteParam();
+            params.focusAnnouncementId = item.announcement_id;
+            AppRouter.push(PageNames.ANNOUNCEMENTS, params);
+          })
+          .accessibilityText(`${this.announcementSeverityLabel(item.severity)}：${item.title}。${item.content}`)
+        }, (item: SystemAnnouncementItem) => item.announcement_id)
+      }
+      .width('100%')
+    }
+    .width('100%')
   }
 
   @Builder
