@@ -102,19 +102,22 @@ func (s *Service) notifyGroupApplicationRejected(ctx context.Context, group Grou
 			notificationID = id
 		}
 	}
-	payload := map[string]any{
-		"notify_id":      notificationID,
-		"application_id": application.ApplicationID,
-		"group": map[string]any{
-			"group_id":      group.Group.GroupID,
-			"name":          group.Group.Name,
-			"avatar_url":    group.Group.AvatarURL,
-			"members_count": group.Group.MembersCount,
-		},
-		"rejected_at": time.Now().UTC().Format(time.RFC3339),
-	}
+	// 空理由统一归一为 null（spec：恒定 nullable），避免下发 "" 与 null 两种无值形态。
+	var reasonPtr *string
 	if reason != nil && *reason != "" {
-		payload["reason"] = *reason
+		reasonPtr = reason
+	}
+	payload := GroupApplicationRejectedPayload{
+		NotifyID:      notificationID,
+		ApplicationID: application.ApplicationID,
+		Group: GroupBriefPayload{
+			GroupID:      group.Group.GroupID,
+			Name:         group.Group.Name,
+			AvatarURL:    group.Group.AvatarURL,
+			MembersCount: group.Group.MembersCount,
+		},
+		RejectedAt: time.Now().UTC().Format(time.RFC3339),
+		Reason:     reasonPtr,
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(application.Applicant.UserID, realtime.Event{Type: realtime.EventTypeGroupApplicationRejected, Payload: payload})
 }
@@ -144,20 +147,23 @@ func (s *Service) notifyGroupInviteReceived(ctx context.Context, group GroupItem
 			notificationID = id
 		}
 	}
-	payload := map[string]any{
-		"notify_id": notificationID,
-		"invite_id": inviteID,
-		"group": map[string]any{
-			"group_id":      group.Group.GroupID,
-			"name":          group.Group.Name,
-			"avatar_url":    group.Group.AvatarURL,
-			"members_count": group.Group.MembersCount,
-		},
-		"actor":      actor, // spec websocket.md：统一 actor 命名（原 inviter）
-		"created_at": time.Now().UTC().Format(time.RFC3339),
-	}
+	// 空附言统一归一为 null（spec：恒定 nullable），此前 map 条件写键会整键缺失。
+	var messagePtr *string
 	if req.Message != nil && *req.Message != "" {
-		payload["message"] = *req.Message
+		messagePtr = req.Message
+	}
+	payload := GroupInviteReceivedPayload{
+		NotifyID: notificationID,
+		InviteID: inviteID,
+		Group: GroupBriefPayload{
+			GroupID:      group.Group.GroupID,
+			Name:         group.Group.Name,
+			AvatarURL:    group.Group.AvatarURL,
+			MembersCount: group.Group.MembersCount,
+		},
+		Actor:     actor, // spec websocket.md：统一 actor 命名（原 inviter）
+		Message:   messagePtr,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, realtime.Event{Type: realtime.EventTypeGroupInviteReceived, Payload: payload})
 }

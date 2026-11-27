@@ -305,3 +305,40 @@ func TestListApplicationsFillsPendingExpiresAtFromTTL(t *testing.T) {
 		t.Fatalf("handled application expires_at must be null per spec: %#v", handled[0])
 	}
 }
+
+// GroupInviteReceived：无附言时 message 必须是显式 null（不能整键缺失）。
+func TestGroupInviteReceivedPayloadJSONShape(t *testing.T) {
+	fields := assertPayloadJSONKeys(t, GroupInviteReceivedPayload{
+		NotifyID:  "n1",
+		InviteID:  "i1",
+		Group:     GroupBriefPayload{GroupID: "g1", Name: "群", AvatarURL: nil, MembersCount: 3},
+		Actor:     types.UserInfo{UserID: "u1", Nickname: "群主"},
+		Message:   nil,
+		CreatedAt: "2026-11-28T00:00:00Z",
+	}, "notify_id", "invite_id", "group", "actor", "message", "created_at")
+	if string(fields["message"]) != "null" {
+		t.Fatalf("message should be null when absent, got %s", fields["message"])
+	}
+}
+
+// GroupApplicationRejected：无理由时 reason 必须是显式 null；有理由时下发字符串。
+func TestGroupApplicationRejectedPayloadJSONShape(t *testing.T) {
+	base := GroupApplicationRejectedPayload{
+		NotifyID:      "n1",
+		ApplicationID: "a1",
+		Group:         GroupBriefPayload{GroupID: "g1", Name: "群", MembersCount: 3},
+		RejectedAt:    "2026-11-28T00:00:00Z",
+	}
+	fields := assertPayloadJSONKeys(t, base, "notify_id", "application_id", "group", "rejected_at", "reason")
+	if string(fields["reason"]) != "null" {
+		t.Fatalf("reason should be null when absent, got %s", fields["reason"])
+	}
+
+	reason := "不符合入群条件"
+	withReason := base
+	withReason.Reason = &reason
+	fields = assertPayloadJSONKeys(t, withReason, "notify_id", "application_id", "group", "rejected_at", "reason")
+	if string(fields["reason"]) != `"不符合入群条件"` {
+		t.Fatalf("reason should be the provided string, got %s", fields["reason"])
+	}
+}

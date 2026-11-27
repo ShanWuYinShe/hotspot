@@ -128,6 +128,26 @@ type GroupApplicationCancelledPayload struct {
 	Reason        *string        `json:"reason"`
 }
 
+// GroupInviteReceivedPayload：邀请附言 message 为 spec 恒定 nullable（null = 无附言），
+// 此前用 map 条件写键，无附言时整键缺失（B08 同族补齐）。
+type GroupInviteReceivedPayload struct {
+	NotifyID  string            `json:"notify_id"`
+	InviteID  string            `json:"invite_id"`
+	Group     GroupBriefPayload `json:"group"`
+	Actor     types.UserInfo    `json:"actor"`
+	Message   *string           `json:"message"`
+	CreatedAt string            `json:"created_at"`
+}
+
+// GroupApplicationRejectedPayload：拒绝理由 reason 为 spec 恒定 nullable。
+type GroupApplicationRejectedPayload struct {
+	NotifyID      string            `json:"notify_id"`
+	ApplicationID string            `json:"application_id"`
+	Group         GroupBriefPayload `json:"group"`
+	RejectedAt    string            `json:"rejected_at"`
+	Reason        *string           `json:"reason"`
+}
+
 // GroupBriefPayload：GroupApplicationResponse 内嵌的群摘要。
 type GroupBriefPayload struct {
 	GroupID      string  `json:"group_id"`
