@@ -10,6 +10,7 @@
  */
 
 import { PageShellContainer } from '../../../components/PageShellContainer';
+import { UnreadCount, KEY_UNREAD_COUNT } from '../../../core/state/GlobalStateManager';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
@@ -50,6 +51,8 @@ export struct HomePage {
   @StorageLink('safeAreaTop') safeAreaTop: number = 0;
   @StorageLink('safeAreaBottom') safeAreaBottom: number = 0;
   @StorageLink(KEY_RESOLVED_THEME_ID) resolvedThemeId: string = DEFAULT_RESOLVED_THEME_ID;
+  // 全局未读总数（spec system/bootstrap unread_summary；与 Web 铃铛角标同口径）
+  @StorageLink(KEY_UNREAD_COUNT) unreadCount: UnreadCount = { total_unread_count: 0 };
   @StorageProp('currentBreakpoint') currentBreakpoint: BreakpointType = 'sm';
 
   /** 发现流（热门，匿名可用） */
@@ -602,13 +605,31 @@ export struct HomePage {
           onPress: () => AppRouter.push(PageNames.SEARCH)
         })
 
-        SurfaceIconButton({
-          icon: AppIcon.NOTIFICATION,
-          accessibilityLabel: '通知',
-          kind: 'neutral',
-          buttonSize: 36,
-          onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
-        })
+        Stack({ alignContent: Alignment.TopEnd }) {
+          SurfaceIconButton({
+            icon: AppIcon.NOTIFICATION,
+            accessibilityLabel: this.unreadCount.total_unread_count > 0
+              ? `通知，${this.unreadCount.total_unread_count} 条未读`
+              : '通知',
+            kind: 'neutral',
+            buttonSize: 36,
+            onPress: () => AppStorage.setOrCreate<boolean>('openNotificationCenter', true)
+          })
+
+          // 未读角标（对齐 Web HomeMobile 铃铛 badge：accent 实心圆 + 白字，最多显示 99+）
+          if (this.unreadCount.total_unread_count > 0) {
+            Text(this.unreadCount.total_unread_count > 99 ? '99+' : `${this.unreadCount.total_unread_count}`)
+              .fontSize(DesignConstants.FONT.SIZE.XS2)
+              .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+              .fontColor(this.getPalette().accentText)
+              .textAlign(TextAlign.Center)
+              .constraintSize({ minWidth: 16, minHeight: 16 })
+              .padding({ left: 4, right: 4 })
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .backgroundColor(this.getPalette().accentBackground)
+              .offset({ x: 2, y: -2 })
+          }
+        }
       }
       .flexShrink(0)
     }

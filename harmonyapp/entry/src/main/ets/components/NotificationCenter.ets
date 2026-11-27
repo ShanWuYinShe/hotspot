@@ -34,7 +34,7 @@ import { ImageUrlUtil } from '../core/utils/ImageUrlUtil';
 // 过滤维度对齐前端 /notify FILTER_TABS（全部/点赞/关注/评论/附近）：
 // 按「语义类型」分栏，而非「业务域」——域分组（互动/群组/举报/系统）是桌面 Rail 的视角，
 // 移动端 TabBar 只给 5 项，两端信息架构必须一致。
-type NotificationFilterKey = 'all' | 'reaction' | 'follow' | 'comment' | 'nearby';
+type NotificationFilterKey = 'all' | 'unread' | 'reaction' | 'follow' | 'comment' | 'nearby';
 
 /**
  * 列表条目：kind='header' 是卡外的分区标题（页面画布上），kind='group' 是收在
@@ -96,6 +96,8 @@ export struct NotificationCenter {
   private smartNotificationService = SmartNotificationService.getInstance();
   private filterOptions: NotificationFilterOption[] = [
     new NotificationFilterOption('all', '全部'),
+    // 未读档对齐 Web /notify（spec FetchNotifyRequest.is_read）：只保留未读通知
+    new NotificationFilterOption('unread', '未读'),
     // 点赞语义 = reaction_added（契约已删 moment_liked），Tab 文案对齐前端「点赞」
     new NotificationFilterOption('reaction', '点赞'),
     new NotificationFilterOption('follow', '关注'),
@@ -299,7 +301,9 @@ export struct NotificationCenter {
     });
     let filtered = deduped;
 
-    if (this.selectedFilter !== 'all') {
+    if (this.selectedFilter === 'unread') {
+      filtered = deduped.filter(item => !item.is_read);
+    } else if (this.selectedFilter !== 'all') {
       filtered = deduped.filter(item => this.mapTypeToCategory(item.type) === this.selectedFilter);
     }
     const keyword = this.searchKeyword.trim();
