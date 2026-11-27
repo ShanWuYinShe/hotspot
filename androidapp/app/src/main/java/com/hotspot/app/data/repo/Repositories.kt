@@ -1891,11 +1891,15 @@ class SystemRepository(private val api: ApiClient) {
 
 /** 通知中心：列表 / 未读摘要 / 全部已读。 */
 class NotifyRepository(private val api: ApiClient) {
-    suspend fun fetch(cursor: String?): ApiResult<Page<NotifyItem>> = api.post(
+    /** 通知列表：type/is_read 由服务端筛选（null = 不过滤），避免客户端只过滤已加载页导致漏项。 */
+    suspend fun fetch(
+        cursor: String?,
+        isRead: Boolean? = null,
+    ): ApiResult<Page<NotifyItem>> = api.post(
         ApiEndpoint.NOTIFY_FETCH,
         buildJsonObject {
             put("type", JsonNull)
-            put("is_read", JsonNull)
+            put("is_read", isRead?.let(::JsonPrimitive) ?: JsonNull)
             put("pagination", pagination(cursor))
         },
         Page.serializer(NotifyItem.serializer()),

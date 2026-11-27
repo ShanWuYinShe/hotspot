@@ -96,7 +96,7 @@ fun NotifyScreen(
     suspend fun load() {
         loading = items.isEmpty()
         error = null
-        when (val result = AppContainer.notifyRepository.fetch(null)) {
+        when (val result = AppContainer.notifyRepository.fetch(null, if (unreadOnly) false else null)) {
             is ApiResult.Ok -> {
                 items = result.data.items
                 cursor = result.data.nextCursor
@@ -106,7 +106,12 @@ fun NotifyScreen(
         loading = false
     }
 
-    LaunchedEffect(retryKey) { load() }
+    LaunchedEffect(retryKey, unreadOnly) {
+        // 筛选条件变化时重置分页，交给服务端按 is_read 返回，避免只在已加载页内过滤。
+        items = emptyList()
+        cursor = null
+        load()
+    }
 
     LaunchedEffect(retryKey) {
         when (val result = AppContainer.systemRepository.announcements()) {
@@ -120,7 +125,7 @@ fun NotifyScreen(
         if (loadingMore || loading) return
         loadingMore = true
         scope.launch {
-            when (val result = AppContainer.notifyRepository.fetch(next)) {
+            when (val result = AppContainer.notifyRepository.fetch(next, if (unreadOnly) false else null)) {
                 is ApiResult.Ok -> {
                     items = (items + result.data.items).distinctBy { it.notifyId }
                     cursor = result.data.nextCursor
@@ -144,7 +149,7 @@ fun NotifyScreen(
         searchLoadingAll = true
         var pages = 0
         while (next != null && pages < 10) {
-            when (val result = AppContainer.notifyRepository.fetch(next)) {
+            when (val result = AppContainer.notifyRepository.fetch(next, if (unreadOnly) false else null)) {
                 is ApiResult.Ok -> {
                     items = (items + result.data.items).distinctBy { it.notifyId }
                     cursor = result.data.nextCursor
@@ -157,10 +162,10 @@ fun NotifyScreen(
         searchLoadingAll = false
     }
 
-    val filteredItems = remember(items, query, unreadOnly) {
+    val filteredItems = remember(items, query) {
         val keyword = query.trim()
         items.filter { item ->
-            (!unreadOnly || !item.isRead) && (
+            (
                 keyword.isBlank() ||
                     item.type.contains(keyword, ignoreCase = true) ||
                     item.notifyId.contains(keyword, ignoreCase = true) ||
@@ -175,8 +180,10 @@ fun NotifyScreen(
             scope.launch {
                 when (val result = AppContainer.notifyRepository.markRead(item.notifyId)) {
                     // 只更新本地已读态：重新拉首屏会丢掉分页/搜索已加载的条目。
-                    is ApiResult.Ok -> items = items.map {
-                        if (it.notifyId == item.notifyId) it.copy(isRead = true) else it
+                    is ApiResult.Ok -> items = if (unreadOnly) {
+                        items.filterNot { it.notifyId == item.notifyId }
+                    } else {
+                        items.map { if (it.notifyId == item.notifyId) it.copy(isRead = true) else it }
                     }
                     is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
                 }
