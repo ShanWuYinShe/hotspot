@@ -16,4 +16,9 @@ object ChatDrafts {
     fun clear(context: Context, key: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(key).apply()
     }
+
+    /** 退出登录时清空本机全部草稿，避免下一位登录用户读到上一账号的未发送内容。 */
+    fun clearAll(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
+    }
 }
