@@ -12,12 +12,15 @@
 	let {
 		notifies,
 		unread,
+		totalUnread,
 		meId,
 		followedBack,
 		onFollowBack
 	}: {
 		notifies: NotifyViewItem[];
 		unread: number;
+		/** 服务端未读总数（未读散落在后续分页时仍准确）。 */
+		totalUnread: number;
 		meId: string;
 		followedBack: Set<string>;
 		onFollowBack: (n: NotifyViewItem) => void;
@@ -37,9 +40,9 @@
 			variant="strip"
 			size="sm"
 			items={[
-				{ value: unread, label: '未读' },
-				{ value: notifies.length - unread, label: '已读' },
-				{ value: notifies.length, label: '全部' }
+				{ value: totalUnread, label: '未读' },
+				{ value: Math.max(0, notifies.length - unread), label: '已读' },
+				{ value: notifies.length, label: '已加载' }
 			]}
 		/>
 		<div class="mt-3 flex flex-col">

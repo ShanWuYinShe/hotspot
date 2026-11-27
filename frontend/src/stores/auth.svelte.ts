@@ -110,10 +110,14 @@ export function initAuth(): () => void {
     }
     const data = res && res.code === 0 ? res.data : null;
     if (data) {
-      // 冷启动未读校准：bootstrap 已携带服务端现算的 unread_summary，零额外请求
-      applyBootstrapUnread(boot?.unread_summary ?? null);
       setKnownAccessExpiry(data.expires_at);
       await refreshUser();
+      // 冷启动未读校准：首次 bootstrap 发生在「认证态未知」时，pick() 走匿名节点且不返回
+      // unread_summary（旧实现据此校准恒为 0，通知铃铛红点在冷启动后缺失）。会话有效时
+      // 补拉一次认证态 bootstrap 再校准；已有摘要则零额外请求。
+      let unreadSummary = boot?.unread_summary ?? null;
+      if (!unreadSummary) unreadSummary = (await refreshBootstrap())?.unread_summary ?? null;
+      applyBootstrapUnread(unreadSummary);
     } else {
       // 重试耗尽仍被限流/服务端异常：先按匿名继续浏览，但保留自愈标记——
       // 网络恢复/切回前台时 recheckAuth 会重试并恢复登录态，而不是永久掉登录。

@@ -23,6 +23,7 @@
 	import { useNotifyData, FILTER_TABS } from './shared/useNotifyData.svelte';
 	import NotifyRow from './shared/NotifyRow.svelte';
 	import InvitesPendingCard from './shared/InvitesPendingCard.svelte';
+	import AnnouncementCards from './shared/AnnouncementCards.svelte';
 	import NotifyRail from './shared/NotifyRail.svelte';
 
 	const data = useNotifyData();
@@ -66,8 +67,8 @@
 	{#snippet header()}
 		<PageHeader
 			title="通知"
-			subtitle={!data.needsAuth && data.unread > 0 ? `${data.unread} 条未读消息` : '暂无新通知'}
-			islandMeta={!data.needsAuth ? (data.unread > 0 ? `${data.unread} 条未读` : '全部已读') : ''}
+			subtitle={!data.needsAuth && data.totalUnread > 0 ? `${data.totalUnread} 条未读消息` : '暂无新通知'}
+			islandMeta={!data.needsAuth ? (data.totalUnread > 0 ? `${data.totalUnread} 条未读` : '全部已读') : ''}
 			titleSize="xl"
 			onBack={() => smartBack()}
 		>
@@ -75,7 +76,7 @@
 				<Bell class="size-3.5 text-accent-default" strokeWidth={1.75} />
 			{/snippet}
 			{#snippet trailing()}
-				{#if !data.needsAuth && data.unread > 0}
+				{#if !data.needsAuth && data.totalUnread > 0}
 					<Button
 						type="button"
 						variant="soft"
@@ -89,7 +90,7 @@
 				{/if}
 			{/snippet}
 			{#snippet islandTrailing()}
-				{#if !data.needsAuth && data.unread > 0}
+				{#if !data.needsAuth && data.totalUnread > 0}
 					<ActionIconButton
 						icon={CheckCheck}
 						label="全部已读"
@@ -105,7 +106,7 @@
 					<div class="flex items-center justify-between text-xs pb-0.5">
 						<span class="font-medium text-text-primary">通知分类</span>
 						<span class="font-mono text-xxs text-accent-default">
-							{!data.needsAuth ? (data.unread > 0 ? `${data.unread} 条未读` : '全部已读') : '请先登录'}
+							{!data.needsAuth ? (data.totalUnread > 0 ? `${data.totalUnread} 条未读` : '全部已读') : '请先登录'}
 						</span>
 					</div>
 					{#if !data.needsAuth}
@@ -116,7 +117,7 @@
 								onChange={(id) => (data.filter = id)}
 							/>
 						</div>
-						{#if data.unread > 0}
+						{#if data.totalUnread > 0}
 							<div class="flex items-center gap-2 pt-0.5">
 								<Button
 									type="button"
@@ -153,7 +154,7 @@
 								onChange={(id) => (data.filter = id)}
 							/>
 						</div>
-						{#if data.unread > 0}
+						{#if data.totalUnread > 0}
 							<Button
 								type="button"
 								variant="soft"
@@ -190,6 +191,8 @@
 				<p class="text-xs text-text-secondary">已加载 {data.searchLoaded} 条 · 匹配 {data.filteredNotifies.length} 条</p>
 			{/if}
 		</div>
+		<AnnouncementCards announcements={data.announcements} />
+
 		<InvitesPendingCard
 			invites={data.invites}
 			invitePending={data.invitePending}
@@ -234,9 +237,14 @@
 				<InfiniteSentinel
 					hasMore={data.nextCursor !== null}
 					loading={data.loadingMore}
-					error={Boolean(data.loadError)}
+					error={Boolean(data.loadError || data.loadMoreError)}
 					onLoadMore={() => void data.loadMoreNotifs()}
 				/>
+				{#if data.loadMoreError}
+					<div class="mt-3">
+						<LoadError message="加载更多通知失败" onRetry={() => void data.retryLoadMore()} />
+					</div>
+				{/if}
 			</div>
 		{:else if data.filteredNotifies.length > 0 && !data.loadError && (data.searching || data.nextCursor === null)}
 			<ListEnd />
@@ -265,12 +273,20 @@
 			pageCentered
 					spotlight
 					iconTone="accent"
-					title={data.searching ? '没有匹配的通知' : data.filter === 'all' ? '暂无通知' : '该分类下暂无通知'}
+					title={data.searching
+						? '没有匹配的通知'
+						: data.filter === 'unread'
+							? '没有未读通知'
+							: data.filter === 'all'
+								? '暂无通知'
+								: '该分类下暂无通知'}
 					description={data.searching
 						? '换个通知内容/用户 ID/类型关键词试试，或清空搜索词。'
-						: data.filter === 'all'
-							? '收到的点赞、评论与关注会出现在这里。'
-							: '换个分类看看，或去附近逛逛。'}
+						: data.filter === 'unread'
+							? '所有通知都已读完，新的互动会第一时间出现在这里。'
+							: data.filter === 'all'
+								? '收到的点赞、评论与关注会出现在这里。'
+								: '换个分类看看，或去附近逛逛。'}
 				>
 					{#snippet icon()}
 						<Bell class="size-7" strokeWidth={1.5} aria-hidden="true" />
@@ -303,6 +319,7 @@
 			<NotifyRail
 				notifies={data.notifies}
 				unread={data.unread}
+				totalUnread={data.totalUnread}
 				meId={data.meId}
 				followedBack={data.followedBack}
 				onFollowBack={(n) => void data.followBack(n)}
