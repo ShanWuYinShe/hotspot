@@ -5,15 +5,15 @@ import org.junit.Test
 
 class MessageActionRulesTest {
     @Test
-    fun ownTextMessageCanCopyAndRecall() {
+    fun ownTextMessageCanCopyEditAndRecall() {
         assertEquals(
-            listOf(MessageAction.LIKE, MessageAction.COPY, MessageAction.RECALL),
+            listOf(MessageAction.LIKE, MessageAction.COPY, MessageAction.EDIT, MessageAction.RECALL),
             MessageActionRules.availableActions(isMine = true, isRecalled = false, type = "text", content = "hi"),
         )
     }
 
     @Test
-    fun otherTextMessageCanCopyAndReport() {
+    fun otherTextMessageCanCopyAndReportButNotEdit() {
         assertEquals(
             listOf(MessageAction.LIKE, MessageAction.COPY, MessageAction.REPORT),
             MessageActionRules.availableActions(isMine = false, isRecalled = false, type = "text", content = "hi"),
@@ -21,7 +21,7 @@ class MessageActionRulesTest {
     }
 
     @Test
-    fun imageMessageHasNoCopyOnlyRecallOrReport() {
+    fun imageMessageHasNoCopyOrEditOnlyRecallOrReport() {
         assertEquals(
             listOf(MessageAction.LIKE, MessageAction.RECALL),
             MessageActionRules.availableActions(isMine = true, isRecalled = false, type = "image", content = null),
@@ -29,6 +29,14 @@ class MessageActionRulesTest {
         assertEquals(
             listOf(MessageAction.LIKE, MessageAction.REPORT),
             MessageActionRules.availableActions(isMine = false, isRecalled = false, type = "image", content = null),
+        )
+    }
+
+    @Test
+    fun blankTextMessageCannotCopyOrEdit() {
+        assertEquals(
+            listOf(MessageAction.LIKE, MessageAction.RECALL),
+            MessageActionRules.availableActions(isMine = true, isRecalled = false, type = "text", content = "  "),
         )
     }
 

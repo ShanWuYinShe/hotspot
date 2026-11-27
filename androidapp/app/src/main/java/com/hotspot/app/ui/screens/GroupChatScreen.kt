@@ -703,6 +703,23 @@ fun GroupChatScreen(
             MessageActionSheet(
                 actions = actions,
                 liked = target.reactions.any { it.reactedByMe },
+                editContent = target.content.orEmpty(),
+                onEditSubmit = { text ->
+                    actionTarget = null
+                    scope.launch {
+                        when (val result = chatRepository.updateGroupMessage(target.messageId, text)) {
+                            is ApiResult.Ok -> messages = messages.map { message ->
+                                if (message.messageId == target.messageId) {
+                                    // 接口只返回成功码，内容以本次提交值与本地时间标记（WS 回环到达后幂等覆盖）
+                                    message.copy(content = text, editedAt = Instant.now().toString())
+                                } else {
+                                    message
+                                }
+                            }
+                            is ApiResult.Err -> Toast.makeText(context, result.error.userMessage, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
                 onDismiss = { actionTarget = null },
                 onAction = { action ->
                     actionTarget = null
@@ -752,6 +769,8 @@ fun GroupChatScreen(
                             }
                         }
                         MessageAction.REPORT -> reportTarget = target
+                        // EDIT 由 MessageActionSheet 内部进入编辑态，经 onEditSubmit 上抛，不会走到这里
+                        MessageAction.EDIT -> Unit
                     }
                 },
             )
@@ -995,12 +1014,24 @@ private fun GroupMessageRow(
             }
             }
             MessageReactionBadge(message.reactions)
-            Text(
-                text = TimeFormat.relative(message.sentAt),
-                style = MaterialTheme.typography.labelSmall,
-                color = colors.textSecondary,
+            Row(
                 modifier = Modifier.padding(top = 2.dp, start = Spacing.xs, end = Spacing.xs),
-            )
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = TimeFormat.relative(message.sentAt),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary,
+                )
+                if (!message.isRecalled && !message.editedAt.isNullOrBlank()) {
+                    Text(
+                        text = "· 已编辑",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
+                }
+            }
         }
     }
 }

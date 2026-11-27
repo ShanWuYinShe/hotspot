@@ -864,7 +864,18 @@ class ChatRepository(private val api: ApiClient) {
         idempotencyKey = UUID.randomUUID().toString(),
     )
 
-    /** 撤回私聊消息（仅作者；时间窗由服务端 AppConfig 控制，超时 10400）。 */
+    /**
+     * 编辑私聊文本消息（仅作者；仅 type=text 且未撤回，spec → private_messages/update）。
+     * 服务端当前返回空 data（与 Web/Harmony 一致只认 code）；内容以本地提交值 + WS 回环为准。
+     */
+    suspend fun updatePrivateMessage(messageId: String, content: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.PRIVATE_MESSAGES_UPDATE,
+        buildJsonObject {
+            put("message_id", messageId)
+            put("content", content)
+        },
+    )
+
     /** 消息点赞/取消（reactions/set target_type=message，👍 白名单）。 */
     suspend fun setMessageReaction(messageId: String, active: Boolean): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.REACTIONS_SET,
@@ -876,9 +887,22 @@ class ChatRepository(private val api: ApiClient) {
         },
     )
 
+    /** 撤回私聊消息（仅作者；时间窗由服务端 AppConfig 控制，超时 10400）。 */
     suspend fun recallPrivateMessage(messageId: String): ApiResult<Unit> = api.postVoid(
         ApiEndpoint.PRIVATE_MESSAGES_RECALL,
         buildJsonObject { put("message_id", messageId) },
+    )
+
+    /**
+     * 编辑群聊文本消息（仅作者；仅 type=text 且未撤回，spec → group_messages/update）。
+     * 服务端当前返回空 data（与 Web/Harmony 一致只认 code）；内容以本地提交值 + WS 回环为准。
+     */
+    suspend fun updateGroupMessage(messageId: String, content: String): ApiResult<Unit> = api.postVoid(
+        ApiEndpoint.GROUP_MESSAGES_UPDATE,
+        buildJsonObject {
+            put("message_id", messageId)
+            put("content", content)
+        },
     )
 
     /** 撤回自己发送的群聊消息（仅作者；管理员撤回走 groups/admin/messages/recall）。 */
