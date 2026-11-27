@@ -4,6 +4,7 @@ import { goto } from '$app/navigation';
 import { getPrivateChats, deletePrivateChat, listMyGroups, markPrivateRead, markGroupRead, updatePrivateChatPreferences, updateGroupPreferences, netError } from '@/api';
 import { showToast } from '@/stores/toast.svelte';
 import { formatChatListTime } from '@/lib/chat.svelte';
+import { chatDraftKey, clearChatDraft } from '@/lib/chat-draft';
 import { compareChatItems, type ChatItem } from '@/lib/chat-list';
 import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 import { setChatUnread } from '@/stores/unread.svelte';
@@ -243,6 +244,8 @@ export function useChatListData() {
 		try {
 			const res = await deletePrivateChat({ target_user_id: chat.peerUserId || String(chat.id) });
 			if (res.code === 0) {
+				// 删除会话同时丢弃该会话未发送草稿（与 Android 一致，避免残留内容在下次建会话时复活）。
+				clearChatDraft(chatDraftKey('private', chat.peerUserId || String(chat.id)));
 				chats = chats.filter((c) => c.id !== chat.id);
 				if (selectedId === chat.id) selectedId = null;
 				showToast('会话已删除', 'success');

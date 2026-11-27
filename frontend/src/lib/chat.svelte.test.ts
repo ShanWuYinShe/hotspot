@@ -1,8 +1,9 @@
 // useChat 状态机契约测试：历史加载、输入、发送成功/失败、发送错误回滚。
 // useChat 内含 $effect，须在组件初始化上下文中实例化（见 __tests__/ChatHost.svelte）。
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render } from '@testing-library/svelte';
 import ChatHost from './__tests__/ChatHost.svelte';
+import { chatTarget } from './__tests__/chat-target.svelte';
 import { formatDateLabel, groupMessagesByDay, type ChatMessage, type ChatMessageUpdate, type UseChatOptions } from './chat.svelte';
 
 let chatRef: ReturnType<typeof import('./chat.svelte').useChat> | null = null;
@@ -190,5 +191,62 @@ describe('useChat', () => {
 		const now = new Date();
 		const past = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate(), 10, 0);
 		expect(formatDateLabel(past.toISOString())).toBe(`${past.getFullYear()}年${past.getMonth() + 1}月${past.getDate()}日`);
+	});
+});
+
+// 输入草稿：与私聊/群聊视图注入的 draftKey 配合，切回会话/刷新恢复未发送文本。
+describe('useChat 输入草稿', () => {
+	beforeEach(() => localStorage.clear());
+
+	it('进入会话恢复该会话草稿', async () => {
+		localStorage.setItem('hotspot.chatDraft.private:p1', '没发完的话');
+		const h = setup({ draftKey: () => 'private:p1' });
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		await vi.waitFor(() => expect(h.chat!.inputVal).toBe('没发完的话'));
+	});
+
+	it('输入即时落盘，发送成功后清除草稿', async () => {
+		const h = setup({ draftKey: () => 'private:p1' });
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		h.chat!.handleInputChange({ target: { value: '草稿内容' } } as unknown as Event);
+		await vi.waitFor(() => expect(localStorage.getItem('hotspot.chatDraft.private:p1')).toBe('草稿内容'));
+		h.sendMessage.mockResolvedValue({ code: 0, message_id: 'm9' });
+		await h.chat!.handleSend();
+		await vi.waitFor(() => expect(localStorage.getItem('hotspot.chatDraft.private:p1')).toBeNull());
+	});
+
+	it('未注入 draftKey 时不写本地草稿（避免无关会话串档）', async () => {
+		const h = setup();
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		h.chat!.handleInputChange({ target: { value: '无 key' } } as unknown as Event);
+		expect(localStorage.length).toBe(0);
+	});
+
+	it('发送失败：未发出正文回写为该会话草稿', async () => {
+		chatTarget.value = 'p1';
+		const h = setup({ targetId: () => chatTarget.value, draftKey: () => `private:${chatTarget.value}` });
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		h.sendMessage.mockResolvedValueOnce({ code: 1, error: '网络错误' });
+		h.chat!.handleInputChange({ target: { value: 'A 的内容' } } as unknown as Event);
+		await h.chat!.handleSend();
+		await vi.waitFor(() => expect(h.chat!.failedSend).not.toBeNull());
+		expect(localStorage.getItem('hotspot.chatDraft.private:p1')).toBe('A 的内容');
+	});
+
+	it('切换会话：草稿按会话隔离，失败重发与错误提示不跨会话（防把 A 的原文发给 B）', async () => {
+		chatTarget.value = 'p1';
+		const h = setup({ targetId: () => chatTarget.value, draftKey: () => `private:${chatTarget.value}` });
+		await vi.waitFor(() => expect(h.chat).not.toBeNull());
+		h.sendMessage.mockResolvedValueOnce({ code: 1, error: '网络错误' });
+		h.chat!.handleInputChange({ target: { value: 'A 的内容' } } as unknown as Event);
+		await h.chat!.handleSend();
+		await vi.waitFor(() => expect(h.chat!.failedSend).not.toBeNull());
+
+		localStorage.setItem('hotspot.chatDraft.private:p2', 'B 的草稿');
+		chatTarget.value = 'p2';
+		await vi.waitFor(() => expect(h.chat!.inputVal).toBe('B 的草稿'));
+		expect(h.chat!.failedSend).toBeNull();
+		expect(h.chat!.sendError).toBe('');
+		expect(localStorage.getItem('hotspot.chatDraft.private:p1')).toBe('A 的内容');
 	});
 });

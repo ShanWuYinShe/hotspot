@@ -19,6 +19,7 @@
 	import { WS_GROUP_MESSAGE_EVENT, WS_GROUP_MESSAGE_UPDATE_EVENT, wsClient } from '@/lib/ws/client';
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
+	import { chatDraftKey } from '@/lib/chat-draft';
 
 	// 服务端推送版输入状态（spec GroupTypingPayload，types.ts 未单独导出）。
 	interface GroupTypingPayload {
@@ -137,6 +138,7 @@
 
 	const chat = useChat({
 		targetId: () => groupId,
+		draftKey: () => chatDraftKey('group', groupId),
 		loadHistory: async (cursor) => {
 			const res = await getGroupMessages({ group_id: groupId, pagination: { limit: 50, cursor } }).catch(
 				() => null

@@ -19,6 +19,7 @@ import { deviceInfo, BusinessError } from '@kit.BasicServicesKit';
 import { ServiceRegistry } from '../core/services/ServiceRegistry';
 import { RdbManager } from '../core/database/RdbManager';
 import { AnchorHistoryUtil } from '../core/utils/AnchorHistoryUtil';
+import { ChatDraftStore } from '../core/utils/ChatDraftStore';
 import { DesignConstants } from '../constants/DesignConstants';
 import { SystemSurfaceStyle, SystemUiThemeStore } from '../core/utils/SystemUiThemeStore';
 import { KEY_IS_LOGGED_IN } from '../core/state/GlobalStateManager';
@@ -76,6 +77,9 @@ export default class EntryAbility extends UIAbility {
 
     // 初始化锚点历史工具
     AnchorHistoryUtil.init(this.context);
+
+    // 初始化聊天草稿工具（与 Web/Android 同语义，按会话持久化未发送文本）
+    ChatDraftStore.init(this.context);
 
     // 初始化智能服务
     this.initializeSmartServices();

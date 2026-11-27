@@ -8,6 +8,7 @@
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { formatDateLabel } from '../../../core/utils/FormatUtil';
+import { ChatDraftStore } from '../../../core/utils/ChatDraftStore';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { ApiError } from '../../../core/network/ApiError';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
@@ -229,6 +230,14 @@ export struct ChatPage {
   private getComposerBottomPadding(): number {
     const stableInset = this.getStableBottomInset();
     return SafeAreaUtils.resolveBottomPadding(stableInset, 0, DesignConstants.SPACING.SM);
+  }
+
+  /** 当前会话的草稿键：私聊按对端 user_id、群聊按 group_id（与 Web/Android 同语义，避免同 id 串档） */
+  private draftKeyForChat(): string {
+    if (this.chatType === 'group_chat') {
+      return ChatDraftStore.key('group', this.chatId);
+    }
+    return ChatDraftStore.key('private', this.targetId ?? '');
   }
 
   /** 本地日期 key：用于判断两条消息是否跨天（对齐前端 groupMessagesByDay） */
@@ -1084,6 +1093,8 @@ export struct ChatPage {
       // 即使 WS 未回显也不会一直停在 pending 态。
       this.confirmPendingMessage(pendingId, sentResult);
       this.inputText = '';
+      // 发送成功：丢弃该会话草稿（与 Web/Android 同语义）
+      ChatDraftStore.remove(this.draftKeyForChat());
     } catch (error) {
       this.lastSendSignature = '';
       this.lastSendAtMs = 0;
@@ -1653,6 +1664,8 @@ export struct ChatPage {
           .padding({ left: DesignConstants.SPACING.MD3, right: DesignConstants.SPACING.MD3 })
           .onChange((value) => {
             this.inputText = value;
+            // 输入即时落盘：切回会话 / 冷启动可恢复（空白等同清除，见 ChatDraftStore.set）
+            ChatDraftStore.set(this.draftKeyForChat(), value);
             this.syncMention(value);
             this.handleTypingInput(value);
           })
@@ -1814,6 +1827,8 @@ export struct ChatPage {
         this.targetPresenceText = String(param.presenceText ?? '');
         this.targetPresenceOnline = this.targetPresenceText === '在线';
         this.initChatData();
+        // 恢复该会话未发送草稿（与 Web lib/chat-draft、Android ChatDrafts 同语义）
+        this.inputText = ChatDraftStore.get(this.draftKeyForChat());
       } else {
         // 缺参兜底（对齐 GroupDetailPage 缺群组ID模式）：直接进错误态，
         // 不调 initChatData，否则 isLoading 恒 true 陷入无限加载。
