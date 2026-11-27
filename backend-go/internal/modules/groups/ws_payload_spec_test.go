@@ -342,3 +342,34 @@ func TestGroupApplicationRejectedPayloadJSONShape(t *testing.T) {
 		t.Fatalf("reason should be the provided string, got %s", fields["reason"])
 	}
 }
+
+// GroupAnnouncementCreated：spec 形状为 { announcement: GroupAnnouncementItem }，
+// 且 item 必须完整（含 content / is_pinned），不得拍平到 payload 顶层（B05）。
+func TestGroupAnnouncementCreatedPayloadJSONShape(t *testing.T) {
+	payload := GroupAnnouncementCreatedPayload{Announcement: GroupAnnouncementItem{
+		AnnouncementID: "a1",
+		GroupID:        "g1",
+		Title:          "周五活动",
+		Content:        "19:00 集合",
+		CreatedBy:      types.UserInfo{UserID: "u1", Nickname: "群主"},
+		CreatedAt:      "2026-11-28T00:00:00Z",
+		IsPinned:       true,
+	}}
+	fields := assertPayloadJSONKeys(t, payload, "announcement")
+	var inner map[string]json.RawMessage
+	if err := json.Unmarshal(fields["announcement"], &inner); err != nil {
+		t.Fatalf("announcement is not an object: %v", err)
+	}
+	want := []string{"announcement_id", "group_id", "title", "content", "created_by", "created_at", "is_pinned"}
+	if len(inner) != len(want) {
+		t.Fatalf("announcement keys = %v, want %v", payloadKeyList(inner), want)
+	}
+	for _, k := range want {
+		if _, ok := inner[k]; !ok {
+			t.Fatalf("announcement missing key %q", k)
+		}
+	}
+	if string(inner["is_pinned"]) != "true" || string(inner["content"]) != "\"19:00 集合\"" {
+		t.Fatalf("unexpected content/is_pinned: %s / %s", inner["content"], inner["is_pinned"])
+	}
+}

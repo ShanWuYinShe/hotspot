@@ -688,7 +688,11 @@ export interface GroupMemberUnmutedEvent {
   payload: GroupMemberUnmutedPayload
 }
 
-export interface GroupAnnouncementCreatedPayload extends GroupAnnouncementItem {}
+// spec api_spec_websocket.md → GroupAnnouncementCreatedPayload：
+// { announcement: GroupAnnouncementItem }（此前误写成拍平的 extends，B05）
+export interface GroupAnnouncementCreatedPayload {
+  announcement: GroupAnnouncementItem
+}
 
 export interface GroupAnnouncementCreatedEvent {
   type: 'GroupAnnouncementCreated'
