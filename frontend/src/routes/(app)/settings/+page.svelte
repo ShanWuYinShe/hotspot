@@ -187,6 +187,14 @@
 						onTogglePrivateProfile={page.togglePrivateProfile}
 						locationSharing={page.locationSharing}
 						onToggleLocationSharing={page.toggleLocationSharing}
+						socialListsVisible={page.socialListsVisible}
+						onToggleSocialListsVisible={page.toggleSocialListsVisible}
+						groupsVisible={page.groupsVisible}
+						onToggleGroupsVisible={page.toggleGroupsVisible}
+						reactedMomentsVisible={page.reactedMomentsVisible}
+						onToggleReactedMomentsVisible={page.toggleReactedMomentsVisible}
+						allowFollow={page.allowFollow}
+						onToggleAllowFollow={page.toggleAllowFollow}
 					/>
 				</div>
 

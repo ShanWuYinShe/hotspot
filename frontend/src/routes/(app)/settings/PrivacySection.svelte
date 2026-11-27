@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Bell, ChevronRight, Flag, Lock, MapPin, Share2 } from '@lucide/svelte';
+	import { Bell, ChevronRight, Flag, Heart, Lock, MapPin, Share2, UserPlus, Users, UsersRound } from '@lucide/svelte';
 	import ListContainer from '@/components/list/ListContainer.svelte';
 	import SettingRow from '@/components/forms/SettingRow.svelte';
 	import Toggle from '@/components/forms/Toggle.svelte';
@@ -17,7 +17,15 @@
 		privateProfile,
 		onTogglePrivateProfile,
 		locationSharing,
-		onToggleLocationSharing
+		onToggleLocationSharing,
+		socialListsVisible,
+		onToggleSocialListsVisible,
+		groupsVisible,
+		onToggleGroupsVisible,
+		reactedMomentsVisible,
+		onToggleReactedMomentsVisible,
+		allowFollow,
+		onToggleAllowFollow
 	}: {
 		notif: boolean;
 		onToggleNotif: () => void;
@@ -28,6 +36,14 @@
 		onTogglePrivateProfile: () => void;
 		locationSharing: boolean;
 		onToggleLocationSharing: () => void;
+		socialListsVisible: boolean;
+		onToggleSocialListsVisible: () => void;
+		groupsVisible: boolean;
+		onToggleGroupsVisible: () => void;
+		reactedMomentsVisible: boolean;
+		onToggleReactedMomentsVisible: () => void;
+		allowFollow: boolean;
+		onToggleAllowFollow: () => void;
 	} = $props();
 </script>
 
@@ -82,6 +98,50 @@
 					<MapPin class="size-4 text-accent-default" strokeWidth={1.5} />
 				{/snippet}
 				<Toggle on={locationSharing} onToggle={onToggleLocationSharing} label="位置共享" />
+			</SettingRow>
+
+			<SettingRow
+				title="社交列表可见"
+				description="关闭后他人无法查看你的好友、关注与粉丝列表"
+				onRowClick={onToggleSocialListsVisible}
+			>
+				{#snippet icon()}
+					<Users class="size-4 text-accent-default" strokeWidth={1.5} />
+				{/snippet}
+				<Toggle on={socialListsVisible} onToggle={onToggleSocialListsVisible} label="社交列表可见" />
+			</SettingRow>
+
+			<SettingRow
+				title="群组列表可见"
+				description="关闭后他人无法查看你加入的群组"
+				onRowClick={onToggleGroupsVisible}
+			>
+				{#snippet icon()}
+					<UsersRound class="size-4 text-accent-default" strokeWidth={1.5} />
+				{/snippet}
+				<Toggle on={groupsVisible} onToggle={onToggleGroupsVisible} label="群组列表可见" />
+			</SettingRow>
+
+			<SettingRow
+				title="反应瞬间可见"
+				description="关闭后他人无法查看你点赞或反应过的瞬间"
+				onRowClick={onToggleReactedMomentsVisible}
+			>
+				{#snippet icon()}
+					<Heart class="size-4 text-accent-default" strokeWidth={1.5} />
+				{/snippet}
+				<Toggle on={reactedMomentsVisible} onToggle={onToggleReactedMomentsVisible} label="反应瞬间可见" />
+			</SettingRow>
+
+			<SettingRow
+				title="允许被关注"
+				description="关闭后他人无法关注你，已有关注关系保留"
+				onRowClick={onToggleAllowFollow}
+			>
+				{#snippet icon()}
+					<UserPlus class="size-4 text-accent-default" strokeWidth={1.5} />
+				{/snippet}
+				<Toggle on={allowFollow} onToggle={onToggleAllowFollow} label="允许被关注" />
 			</SettingRow>
 
 			<SettingRow

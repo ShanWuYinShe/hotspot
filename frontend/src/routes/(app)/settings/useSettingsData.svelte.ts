@@ -25,6 +25,10 @@ export function useSettingsData() {
 	let notif = $state(readLocal(NOTIF_KEY, true));
 	let privateProfile = $state(false);
 	let locationSharing = $state(true);
+	let socialListsVisible = $state(true);
+	let groupsVisible = $state(true);
+	let reactedMomentsVisible = $state(true);
+	let allowFollow = $state(true);
 	let nearbyMomentNotify = $state(false);
 	let accountName = $state('');
 	let accountEmail = $state('');
@@ -87,6 +91,74 @@ export function useSettingsData() {
 			});
 	};
 
+	const toggleSocialListsVisible = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改社交列表可见性设置', run: toggleSocialListsVisible });
+			return;
+		}
+		const next = !socialListsVisible;
+		socialListsVisible = next;
+		void updateSettings({ settings: { social_lists_visible: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				socialListsVisible = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
+	};
+
+	const toggleGroupsVisible = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改群组列表可见性设置', run: toggleGroupsVisible });
+			return;
+		}
+		const next = !groupsVisible;
+		groupsVisible = next;
+		void updateSettings({ settings: { groups_visible: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				groupsVisible = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
+	};
+
+	const toggleReactedMomentsVisible = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改反应瞬间可见性设置', run: toggleReactedMomentsVisible });
+			return;
+		}
+		const next = !reactedMomentsVisible;
+		reactedMomentsVisible = next;
+		void updateSettings({ settings: { reacted_moments_visible: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				reactedMomentsVisible = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
+	};
+
+	const toggleAllowFollow = () => {
+		if (!auth.isAuthenticated) {
+			requireAuth({ action: '修改允许关注设置', run: toggleAllowFollow });
+			return;
+		}
+		const next = !allowFollow;
+		allowFollow = next;
+		void updateSettings({ settings: { allow_follow: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				allowFollow = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
+	};
+
 	const toggleNotif = () => {
 		notif = !notif;
 		writeLocal(NOTIF_KEY, notif);
@@ -127,6 +199,10 @@ export function useSettingsData() {
 					if (settingsData.location_visible !== undefined) locationSharing = settingsData.location_visible;
 					if (settingsData.nearby_moment_notify !== undefined) nearbyMomentNotify = settingsData.nearby_moment_notify;
 					if (settingsData.privacy_level !== undefined) privateProfile = settingsData.privacy_level === 'private';
+					if (settingsData.social_lists_visible !== undefined) socialListsVisible = settingsData.social_lists_visible;
+					if (settingsData.groups_visible !== undefined) groupsVisible = settingsData.groups_visible;
+					if (settingsData.reacted_moments_visible !== undefined) reactedMomentsVisible = settingsData.reacted_moments_visible;
+					if (settingsData.allow_follow !== undefined) allowFollow = settingsData.allow_follow;
 				}
 
 				if (accountRes.code !== 0 && settingsRes.code !== 0 && accountRes.code !== 401) {
@@ -167,6 +243,10 @@ export function useSettingsData() {
 		get notif() { return notif; },
 		get privateProfile() { return privateProfile; },
 		get locationSharing() { return locationSharing; },
+		get socialListsVisible() { return socialListsVisible; },
+		get groupsVisible() { return groupsVisible; },
+		get reactedMomentsVisible() { return reactedMomentsVisible; },
+		get allowFollow() { return allowFollow; },
 		get nearbyMomentNotify() { return nearbyMomentNotify; },
 		get accountName() { return accountName; },
 		get accountEmail() { return accountEmail; },
@@ -179,6 +259,10 @@ export function useSettingsData() {
 		toggleNearbyMomentNotify,
 		toggleLocationSharing,
 		togglePrivateProfile,
+		toggleSocialListsVisible,
+		toggleGroupsVisible,
+		toggleReactedMomentsVisible,
+		toggleAllowFollow,
 		toggleNotif,
 		handleLogout,
 		refresh
