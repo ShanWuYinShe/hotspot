@@ -112,6 +112,9 @@ export function TopBar(props: TopBarProps) {
     .height(DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS)
     .justifyContent(FlexAlign.Center)
     .borderRadius(DesignConstants.RADIUS.FULL)
+    // 纯图标按钮必须有无障碍标签（同页筛选钮有可见文字，读屏可直接读出）
+    .accessibilityGroup(true)
+    .accessibilityText('返回')
     // 与筛选钮统一：surface 底 + 发丝边 + 投影（原 surfaceSubtle 无边框，
     // 同一行两个控件视觉语言不一致）
     .backgroundColor(resolveLocationPickerPalette(props.resolvedThemeId).surfaceBackground)
