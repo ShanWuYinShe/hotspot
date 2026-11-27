@@ -6,6 +6,7 @@ import type {
 	AccountData,
 	RelatedUserItem,
 	MomentItem,
+	GroupItem,
 	PaginatedData,
 	UserProfileBundle,
 	UserSettings,
@@ -55,6 +56,10 @@ export async function listFollowers(params: { user_id: string; pagination?: Pagi
 // Users extended
 export async function listUserMoments(userId: string, pagination?: PaginationParams) {
   return request<PaginatedData<MomentItem>>(pick(Endpoints.Users.ListMoments, Endpoints.Public.Users.ListMoments), { user_id: userId, pagination });
+}
+// spec: api_spec_user.md → users/fetch_groups（受对方 groups_visible 隐私设置控制）
+export async function listUserGroups(userId: string, pagination?: PaginationParams) {
+  return request<PaginatedData<GroupItem>>(pick(Endpoints.Users.ListGroups, Endpoints.Public.Users.ListGroups), { user_id: userId, pagination });
 }
 export async function listUserReactedMoments(userId: string, pagination?: PaginationParams) {
   return request<PaginatedData<MomentItem>>(pick(Endpoints.Users.ListReactedMoments, Endpoints.Public.Users.ListReactedMoments), { user_id: userId, pagination });

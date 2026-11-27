@@ -23,6 +23,7 @@
 	import UserGalleryGrid from './shared/UserGalleryGrid.svelte';
 	import UserRail from './shared/UserRail.svelte';
 	import UserOverlays from './shared/UserOverlays.svelte';
+	import UserCollections from './shared/UserCollections.svelte';
 
 	let { params }: { params: { userId: string } } = $props();
 
@@ -168,6 +169,15 @@
 			userName={user.name}
 			galleryMoments={user.galleryMoments}
 			galleryBspLayouts={page.galleryBspLayouts}
+		/>
+
+		<UserCollections
+			userName={user.name}
+			groups={page.groups}
+			reactedMoments={page.reactedMoments}
+			groupsHidden={page.groupsHidden}
+			reactedHidden={page.reactedHidden}
+			loading={page.collectionsLoading}
 		/>
 	{/if}
 
