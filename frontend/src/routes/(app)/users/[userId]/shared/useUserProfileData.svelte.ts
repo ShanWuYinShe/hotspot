@@ -1,6 +1,6 @@
 import { goto } from '$app/navigation';
-import { openTheDoor, follow, block, setRemark, netError } from '@/api';
-import type { UserPresenceStatus } from '@/api/types';
+import { openTheDoor, follow, block, setRemark, netError, listUserGroups, listUserReactedMoments } from '@/api';
+import type { GroupItem, MomentItem, UserPresenceStatus } from '@/api/types';
 import { auth, requireAuth } from '@/stores/auth.svelte';
 import { showToast } from '@/stores/toast.svelte';
 import { platform } from '@/stores/platform.svelte';
@@ -45,6 +45,13 @@ export function useUserProfileData(userId: () => string) {
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
+	// W06：他人主页的「群组 / 反应过的瞬间」（受对方 groups_visible / reacted_moments_visible 控制；
+	// 10200 privacy_setting = 对方未公开，UI 显示说明而不是空列表）
+	let groups = $state<GroupItem[]>([]);
+	let reactedMoments = $state<MomentItem[]>([]);
+	let groupsHidden = $state(false);
+	let reactedHidden = $state(false);
+	let collectionsLoading = $state(false);
 	let mutualFriends = $state<{ id: string; name: string; sub: string; avatar: string }[]>([]);
 	let followed = $state(false);
 	let moreOpen = $state(false);
@@ -74,6 +81,25 @@ export function useUserProfileData(userId: () => string) {
 		{ label: '关注', value: formatCount(user.following) }
 	]);
 
+	/** 群组 / 反应过的瞬间：10200 = 对方未公开（groups_visible / reacted_moments_visible）。 */
+	async function loadCollections(targetId: string): Promise<void> {
+		collectionsLoading = true;
+		groupsHidden = false;
+		reactedHidden = false;
+		try {
+			const [groupsRes, reactedRes] = await Promise.all([
+				listUserGroups(targetId, { limit: 6 }).catch(() => netError(null)),
+				listUserReactedMoments(targetId, { limit: 6 }).catch(() => netError(null))
+			]);
+			if (groupsRes.code === 0) groups = groupsRes.data?.items ?? [];
+			groupsHidden = groupsRes.code === 10200;
+			if (reactedRes.code === 0) reactedMoments = reactedRes.data?.items ?? [];
+			reactedHidden = reactedRes.code === 10200;
+		} finally {
+			collectionsLoading = false;
+		}
+	}
+
 	$effect(() => {
 		void reloadKey;
 		let cancelled = false;
@@ -90,6 +116,8 @@ export function useUserProfileData(userId: () => string) {
 					return;
 				}
 				if (data) {
+					// 集合类内容与资料并行加载，不阻塞首屏
+					void loadCollections(uid);
 					const u = data.user;
 					const s = u.stats;
 					const r = u.relation;
@@ -262,6 +290,11 @@ export function useUserProfileData(userId: () => string) {
 		get handleLine() { return handleLine; },
 		get metrics() { return metrics; },
 		get galleryBspLayouts() { return galleryBspLayouts; },
+		get groups() { return groups; },
+		get reactedMoments() { return reactedMoments; },
+		get groupsHidden() { return groupsHidden; },
+		get reactedHidden() { return reactedHidden; },
+		get collectionsLoading() { return collectionsLoading; },
 		// 弹窗状态
 		get moreOpen() { return moreOpen; },
 		set moreOpen(v: boolean) { moreOpen = v; },
