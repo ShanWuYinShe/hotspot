@@ -238,25 +238,13 @@ func (s *Service) appendReportNotification(ctx context.Context, reporterUserID, 
 
 // reportHandledWSPayload 构造 ReportResolved/ReportDismissed 的 WS payload
 // （note 为空时省略键；时间键按 resolved/dismissed 区分）。
-func reportHandledWSPayload(notifyID, reportID, targetType, targetID, note string, resolved bool, occurredAt string) map[string]any {
-	payload := map[string]any{
-		"notify_id":   notifyID,
-		"report_id":   reportID,
-		"target_type": targetType,
-		"target_id":   targetID,
-	}
-	if note != "" {
-		payload["note"] = note
-	}
-	if resolved {
-		payload["resolved_at"] = occurredAt
-	} else {
-		payload["dismissed_at"] = occurredAt
-	}
-	return payload
+// reportHandledWSPayload 委托到唯一构造器（note 恒定 nullable，见
+// report_ws_payloads.go）：同步路径与 outbox 补投路径共用同一形状。
+func reportHandledWSPayload(notifyID, reportID, targetType, targetID, note string, resolved bool, occurredAt string) any {
+	return BuildReportHandledWSPayload(notifyID, reportID, targetType, targetID, note, resolved, occurredAt)
 }
 
-func (s *Service) broadcastReportHandled(ctx context.Context, reporterUserID string, payload map[string]any, resolved bool) {
+func (s *Service) broadcastReportHandled(ctx context.Context, reporterUserID string, payload any, resolved bool) {
 	eventType := realtime.EventTypeReportResolved
 	if !resolved {
 		eventType = realtime.EventTypeReportDismissed

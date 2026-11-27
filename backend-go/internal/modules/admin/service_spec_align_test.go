@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	systemmodule "hotspot/backend-go/internal/modules/system"
@@ -123,15 +124,18 @@ func TestHandleReportResolvePushesAndNotifiesReporter(t *testing.T) {
 	if ev.Type != realtime.EventTypeReportResolved {
 		t.Fatalf("expected ReportResolved event, got %s", ev.Type)
 	}
-	payload, ok := ev.Payload.(map[string]any)
+	payload, ok := ev.Payload.(ReportResolvedWSPayload)
 	if !ok {
 		t.Fatalf("unexpected payload type: %T", ev.Payload)
 	}
-	if payload["notify_id"] != "notif_resolved_1" || payload["report_id"] != "report_1" || payload["target_type"] != "user" || payload["target_id"] != "user_target" || payload["note"] != "confirmed violation" {
+	if payload.NotifyID != "notif_resolved_1" || payload.ReportID != "report_1" || payload.TargetType != "user" || payload.TargetID != "user_target" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
-	if _, ok := payload["resolved_at"]; !ok {
-		t.Fatalf("missing resolved_at: %+v", payload)
+	if payload.Note == nil || *payload.Note != "confirmed violation" {
+		t.Fatalf("unexpected note: %+v", payload.Note)
+	}
+	if payload.ResolvedAt == "" {
+		t.Fatal("missing resolved_at")
 	}
 }
 
@@ -169,15 +173,30 @@ func TestHandleReportDismissPushesAndNotifiesReporter(t *testing.T) {
 	if ev.Type != realtime.EventTypeReportDismissed {
 		t.Fatalf("expected ReportDismissed event, got %s", ev.Type)
 	}
-	payload := ev.Payload.(map[string]any)
-	if payload["notify_id"] != "notif_dismissed_1" || payload["report_id"] != "report_2" {
+	payload, ok := ev.Payload.(ReportDismissedWSPayload)
+	if !ok {
+		t.Fatalf("unexpected payload type: %T", ev.Payload)
+	}
+	if payload.NotifyID != "notif_dismissed_1" || payload.ReportID != "report_2" {
 		t.Fatalf("unexpected payload: %+v", payload)
 	}
-	if _, ok := payload["note"]; ok {
-		t.Fatalf("note should be omitted when empty: %+v", payload)
+	// spec 恒定 nullable：无说明时 note 必须是显式 null，不能整键缺失。
+	if payload.Note != nil {
+		t.Fatalf("note should be nil when empty: %+v", payload)
 	}
-	if _, ok := payload["dismissed_at"]; !ok {
-		t.Fatalf("missing dismissed_at: %+v", payload)
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("payload is not an object: %v", err)
+	}
+	if string(fields["note"]) != "null" {
+		t.Fatalf("note should be explicit null: %s", raw)
+	}
+	if payload.DismissedAt == "" {
+		t.Fatal("missing dismissed_at")
 	}
 }
 
