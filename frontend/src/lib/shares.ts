@@ -25,3 +25,27 @@ export function shareAvailabilityLabel(item: Pick<ShareListItem, 'is_revoked'>):
 export function shareLink(share_code: string, origin: string): string {
 	return `${origin.replace(/\/$/, '')}/share/${share_code}`;
 }
+
+
+/**
+ * 「我的分享」本地搜索（W19）：spec api_spec_share.md 的 fetch_created 无 keyword 参数，
+ * 因此只过滤已加载的记录（输入即筛，分页加载更多后自动纳入）。匹配分享类型文案、
+ * 标题、副标题、分享码与可用状态（有效/已失效/已撤销）。
+ */
+export function filterShares(items: ShareListItem[], query: string): ShareListItem[] {
+	const q = query.trim().toLowerCase();
+	if (!q) return items;
+	return items.filter((item) => {
+		const haystack = [
+			SHARE_TYPE_LABELS[item.share_type],
+			item.preview?.title ?? '',
+			item.preview?.subtitle ?? '',
+			item.share_code,
+			shareAvailabilityLabel(item),
+			item.is_revoked ? '已撤销' : ''
+		]
+			.join(' ')
+			.toLowerCase();
+		return haystack.includes(q);
+	});
+}

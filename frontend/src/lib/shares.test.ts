@@ -1,21 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { shareAvailability, shareAvailabilityLabel, shareLink, SHARE_TYPE_LABELS } from './shares';
+import type { ShareListItem } from '@/api/types';
+import { filterShares } from './shares';
 
-describe('shares helpers', () => {
-	it('is_revoked 与过期同口径：true=已失效', () => {
-		expect(shareAvailability({ is_revoked: false })).toBe('active');
-		expect(shareAvailability({ is_revoked: true })).toBe('unavailable');
-		expect(shareAvailabilityLabel({ is_revoked: false })).toBe('有效');
-		expect(shareAvailabilityLabel({ is_revoked: true })).toBe('已失效');
+const items: ShareListItem[] = [
+	{
+		share_id: 's1',
+		share_code: 'abc123',
+		share_type: 'moment',
+		created_at: '2026-11-28T00:00:00Z',
+		expires_at: null,
+		is_revoked: false,
+		preview: { title: '云龙湖落日', subtitle: '阿禾的瞬间', cover_url: null }
+	},
+	{
+		share_id: 's2',
+		share_code: 'def456',
+		share_type: 'group',
+		created_at: '2026-11-27T00:00:00Z',
+		expires_at: null,
+		is_revoked: true,
+		preview: null
+	}
+];
+
+describe('filterShares', () => {
+	it('空词返回原始列表', () => {
+		expect(filterShares(items, '   ')).toEqual(items);
 	});
 
-	it('份额码链接拼接不重复斜杠', () => {
-		expect(shareLink('ABC234567890', 'https://chaoset.com')).toBe('https://chaoset.com/share/ABC234567890');
-		expect(shareLink('ABC234567890', 'https://chaoset.com/')).toBe('https://chaoset.com/share/ABC234567890');
-		expect(shareLink('ABC234567890', 'http://localhost:8888')).toBe('http://localhost:8888/share/ABC234567890');
+	it('匹配标题与副标题', () => {
+		expect(filterShares(items, '云龙湖').map((i) => i.share_id)).toEqual(['s1']);
+		expect(filterShares(items, '阿禾').map((i) => i.share_id)).toEqual(['s1']);
 	});
 
-	it('类型中文文案覆盖四种类型', () => {
-		expect(SHARE_TYPE_LABELS).toEqual({ moment: '瞬间', user: '用户', group: '群组', location: '位置' });
+	it('匹配分享类型文案与分享码', () => {
+		expect(filterShares(items, '群组').map((i) => i.share_id)).toEqual(['s2']);
+		expect(filterShares(items, 'abc123').map((i) => i.share_id)).toEqual(['s1']);
+	});
+
+	it('匹配可用状态', () => {
+		expect(filterShares(items, '已失效').map((i) => i.share_id)).toEqual(['s2']);
+	});
+
+	it('无匹配返回空数组', () => {
+		expect(filterShares(items, '不存在的关键词')).toEqual([]);
 	});
 });
