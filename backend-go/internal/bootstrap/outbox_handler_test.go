@@ -168,14 +168,76 @@ func TestAdminReportHandledOutboxHandlerBroadcasts(t *testing.T) {
 	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeReportResolved {
 		t.Fatalf("unexpected broadcast: %#v", sink.events)
 	}
-	wsPayload, ok := sink.events[0].Payload.(map[string]any)
-	if !ok {
-		t.Fatalf("unexpected payload type %T", sink.events[0].Payload)
+	assertReportHandledPayload(t, sink.events[0].Payload, map[string]string{
+		"notify_id":   "notif_report_1",
+		"report_id":   "report_1",
+		"target_type": "moment",
+		"target_id":   "moment_9",
+		"resolved_at": "2026-11-07T14:00:00Z",
+		"note":        "违规内容已处理",
+	})
+
+	// 无处理说明：note 必须是显式 null（spec 恒定 nullable），不能整键缺失
+	sink.events = nil
+	noNote, err := json.Marshal(admin.ReportHandledBroadcastPayload{
+		NotifyID:       "notif_report_2",
+		ReporterUserID: "user_reporter",
+		ReportID:       "report_2",
+		TargetType:     "moment",
+		TargetID:       "moment_10",
+		Resolved:       true,
+		OccurredAt:     "2026-11-07T15:00:00Z",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
 	}
-	if wsPayload["notify_id"] != "notif_report_1" || wsPayload["report_id"] != "report_1" || wsPayload["note"] != "违规内容已处理" || wsPayload["resolved_at"] != "2026-11-07T14:00:00Z" {
-		t.Fatalf("unexpected ws payload: %#v", wsPayload)
+	if err := handler(context.Background(), noNote); err != nil {
+		t.Fatalf("handler: %v", err)
 	}
+	assertReportHandledPayload(t, sink.events[0].Payload, map[string]string{
+		"notify_id":   "notif_report_2",
+		"report_id":   "report_2",
+		"target_type": "moment",
+		"target_id":   "moment_10",
+		"resolved_at": "2026-11-07T15:00:00Z",
+		"note":        "null",
+	})
 	if err := handler(context.Background(), []byte("{")); err == nil {
 		t.Fatal("invalid payload must return error")
+	}
+}
+
+// assertReportHandledPayload 断言 WS 负载键集合与取值（未列出的键一律视为漂移）。
+func assertReportHandledPayload(t *testing.T, payload any, want map[string]string) {
+	t.Helper()
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal ws payload: %v", err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("ws payload is not an object: %v (%s)", err, raw)
+	}
+	if len(fields) != len(want) {
+		t.Fatalf("ws payload keys = %d, want %d (raw: %s)", len(fields), len(want), raw)
+	}
+	for key, expected := range want {
+		value, ok := fields[key]
+		if !ok {
+			t.Fatalf("ws payload missing key %q (raw: %s)", key, raw)
+		}
+		var actual string
+		if expected == "null" {
+			if string(value) != "null" {
+				t.Fatalf("ws payload %q = %s, want null", key, value)
+			}
+			continue
+		}
+		if err := json.Unmarshal(value, &actual); err != nil {
+			t.Fatalf("ws payload %q is not a string: %s", key, value)
+		}
+		if actual != expected {
+			t.Fatalf("ws payload %q = %q, want %q", key, actual, expected)
+		}
 	}
 }

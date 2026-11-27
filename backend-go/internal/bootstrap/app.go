@@ -263,23 +263,17 @@ func adminReportHandledOutboxHandler(hub *realtime.Hub) outbox.Handler {
 		if event.ReporterUserID == "" || event.ReportID == "" {
 			return fmt.Errorf("bootstrap: invalid admin report outbox payload")
 		}
-		wsPayload := map[string]any{
-			"notify_id":   event.NotifyID,
-			"report_id":   event.ReportID,
-			"target_type": event.TargetType,
-			"target_id":   event.TargetID,
-		}
-		if event.Note != "" {
-			wsPayload["note"] = event.Note
-		}
 		eventType := realtime.EventTypeReportResolved
-		if event.Resolved {
-			wsPayload["resolved_at"] = event.OccurredAt
-		} else {
+		if !event.Resolved {
 			eventType = realtime.EventTypeReportDismissed
-			wsPayload["dismissed_at"] = event.OccurredAt
 		}
-		hub.BroadcastToUser(event.ReporterUserID, realtime.Event{Type: eventType, Payload: wsPayload})
+		// 与同步路径共用唯一构造器：note 恒定 nullable，避免两条投递路径的形状漂移。
+		hub.BroadcastToUser(event.ReporterUserID, realtime.Event{
+			Type: eventType,
+			Payload: adminmodule.BuildReportHandledWSPayload(
+				event.NotifyID, event.ReportID, event.TargetType, event.TargetID, event.Note, event.Resolved, event.OccurredAt,
+			),
+		})
 		return nil
 	}
 }
