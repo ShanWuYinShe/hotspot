@@ -46,7 +46,7 @@ func (h *Handler) OpenTheDoor(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, httpx.Success(bundle))
 }
 
-// BatchGet handles POST /api/v1/users/batch_get. Returns a user_id -> UserItem
+// BatchGet handles POST /api/v1/users/batch_fetch. Returns a user_id -> UserItem
 // map; non-existent ids are omitted. Capped at 100 ids per spec.
 func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 	var req BatchGetUsersRequest
@@ -71,6 +71,20 @@ func (h *Handler) BatchGet(w http.ResponseWriter, r *http.Request) {
 func validateSearchUsersRequest(req SearchUsersRequest) string {
 	if req.Keyword == "" && req.Tag == "" && req.Radius == nil {
 		return "参数错误"
+	}
+	// 契约（api_spec_base.md「搜索与地理约束」）：radius 100-50000 米，越界返回
+	// 10000；此前静默裁剪（50 → 100、1000000 → 50000），与 groups/search 口径
+	// 不一致，调用方无法感知入参被改写（契约审计 B11）。
+	if req.Radius != nil && (*req.Radius < 100 || *req.Radius > 50000) {
+		return "radius 超出范围"
+	}
+	// 契约（api_spec_user.md search / api_spec_public.md 匿名版同口径）：
+	// sort_by ∈ relevance|distance|newest；非法枚举返回 10000（此前被静默当作
+	// relevance 排序，与 groups/search 的 10000 行为不一致）。
+	switch strings.TrimSpace(req.SortBy) {
+	case "", "relevance", "distance", "newest":
+	default:
+		return "sort_by 不支持"
 	}
 	// 契约（api_spec_base.md「搜索与地理约束」）：keyword 1-100 字符、tag 1-30 字符。
 	if n := utf8.RuneCountInString(req.Keyword); n > 100 {

@@ -2,6 +2,7 @@ package search
 
 import (
 	"net/http"
+	"unicode/utf8"
 
 	"hotspot/backend-go/internal/platform/httpx"
 )
@@ -30,7 +31,9 @@ func decodeSuggestRequest(w http.ResponseWriter, r *http.Request) (SearchSuggest
 		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return SearchSuggestRequest{}, false
 	}
-	if body.Prefix == "" || len(body.Prefix) > 50 {
+	// 契约（api_spec_base.md「搜索与地理约束」）：prefix 1-50 字符（非字节）。
+	// 此前用 len() 按字节判长，17 个以上汉字就被误判 10000。
+	if body.Prefix == "" || utf8.RuneCountInString(body.Prefix) > 50 {
 		httpx.WriteCodeError(w, r, httpx.CodeInvalidRequest, "参数错误")
 		return SearchSuggestRequest{}, false
 	}

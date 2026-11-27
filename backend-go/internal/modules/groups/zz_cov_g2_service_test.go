@@ -426,7 +426,7 @@ func TestCovServiceMemberFaultBranches(t *testing.T) {
 		t.Fatal("expected set role load error")
 	}
 	roleMemberErrRepo := covNewRepo(covOwnerGroup())
-	roleMemberErrRepo.isMemberErr = errors.New("probe failed")
+	roleMemberErrRepo.memberRoleErr = errors.New("probe failed")
 	if err := NewServiceWithRepo(roleMemberErrRepo).SetMemberRole(ctx, SetMemberRoleRequest{GroupID: "g1", UserID: "u2", Role: GroupRoleAdmin}); err == nil {
 		t.Fatal("expected set role member probe error")
 	}
@@ -499,7 +499,7 @@ func TestCovServiceMemberFaultBranches(t *testing.T) {
 		t.Fatal("expected transfer load error")
 	}
 	transferMemberErrRepo := covNewRepo(covOwnerGroup())
-	transferMemberErrRepo.isMemberErr = errors.New("probe failed")
+	transferMemberErrRepo.memberRoleErr = errors.New("probe failed")
 	if err := NewServiceWithRepo(transferMemberErrRepo).TransferOwnership(ctx, TransferOwnershipRequest{GroupID: "g1", NewOwnerID: ownerID}); err == nil {
 		t.Fatal("expected transfer member probe error")
 	}

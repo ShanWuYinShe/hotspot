@@ -57,12 +57,12 @@ func TestMediaRepositoryContract(t *testing.T) {
 	file := func(id string) UploadedMedia {
 		return UploadedMedia{
 			FileID:       id,
-			ThumbnailURL: "https://cdn.example.com/" + id + "_thumb.webp",
+			ThumbnailURL: ptrString("https://cdn.example.com/" + id + "_thumb.webp"),
 			FileSize:     2048,
 			MimeType:     "image/webp",
-			Duration:     0,
-			Width:        1080,
-			Height:       1920,
+			Duration:     ptrInt(0),
+			Width:        ptrInt(1080),
+			Height:       ptrInt(1920),
 		}
 	}
 
@@ -126,7 +126,7 @@ func TestMediaRepositoryContract(t *testing.T) {
 				if err != nil || !found {
 					t.Fatalf("get completed: found=%v err=%v", found, err)
 				}
-				if !got.Completed || got.File.FileID != "file_complete" || got.File.Width != 1080 || got.File.Height != 1920 {
+				if !got.Completed || got.File.FileID != "file_complete" || valueInt(got.File.Width) != 1080 || valueInt(got.File.Height) != 1920 {
 					t.Fatalf("completed upload = %#v", got)
 				}
 				// copy-on-complete：完成态 storage_key 必须是发布键（原文可写键换掉）。
@@ -216,10 +216,10 @@ func TestMediaRepositoryContract(t *testing.T) {
 					FileID:       "file_meta",
 					FileSize:     4096,
 					MimeType:     "image/png",
-					ThumbnailURL: "https://cdn.example.com/file_meta_thumb.webp",
-					Width:        720,
-					Height:       1280,
-					Duration:     0,
+					ThumbnailURL: ptrString("https://cdn.example.com/file_meta_thumb.webp"),
+					Width:        ptrInt(720),
+					Height:       ptrInt(1280),
+					Duration:     ptrInt(0),
 				}
 				if err := repo.Save(state.ctx, upload); err != nil {
 					t.Fatalf("save: %v", err)

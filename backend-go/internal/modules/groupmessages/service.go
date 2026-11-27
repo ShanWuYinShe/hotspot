@@ -242,31 +242,33 @@ func (s *Service) Send(ctx context.Context, req SendGroupMessageRequest) (Messag
 		observability.FromContext(ctx).Error("groupmessages.send failed", "error", err, "group_id", req.GroupID)
 		return MessageSentResult{}, err
 	}
-	payload := map[string]any{
-		"message_id": msg.MessageID,
-		"group_id":   req.GroupID,
-		"sender":     s.resolveUserInfo(ctx, userID),
-		"type":       req.Type,
-		"sent_at":    msg.SentAt,
+	// 恒定 nullable / 恒在数组（spec → GroupMessageNewPayload）：无值显式下发
+	// null，无 @ 时下发 []，不再按值条件省略键（契约审计 B07）。
+	mentions := req.Mentions
+	if mentions == nil {
+		mentions = []string{}
+	}
+	payload := GroupMessageSentPayload{
+		MessageID: msg.MessageID,
+		GroupID:   req.GroupID,
+		Sender:    s.resolveUserInfo(ctx, userID),
+		Type:      req.Type,
+		Mentions:  mentions,
+		SentAt:    msg.SentAt,
 	}
 	if req.Content != "" {
-		payload["content"] = req.Content
+		content := req.Content
+		payload.Content = &content
 	}
 	if req.ShareCode != "" {
-		payload["share_code"] = req.ShareCode
-	}
-	if len(req.Mentions) > 0 {
-		payload["mentions"] = req.Mentions
+		shareCode := req.ShareCode
+		payload.ShareCode = &shareCode
 	}
 	if req.ReplyToMessageID != "" {
-		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID); replyTo != nil {
-			payload["reply_to"] = replyTo
-		}
+		payload.ReplyTo = s.buildReplyTo(ctx, req.ReplyToMessageID)
 	}
 	if req.FileID != "" {
-		if media := s.buildMedia(ctx, req.FileID, userID); media != nil {
-			payload["media"] = media
-		}
+		payload.Media = s.buildMedia(ctx, req.FileID, userID)
 	}
 	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{Type: realtime.EventTypeGroupMessageNew, Payload: payload})
 	// 群聊 @ 通知（spec api_spec_chat.md「群聊 @ 通知」）：对被 @ 的每个成员分别落库+推送

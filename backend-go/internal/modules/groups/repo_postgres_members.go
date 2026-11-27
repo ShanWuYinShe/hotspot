@@ -174,7 +174,12 @@ func (r *PostgresRepository) MuteMember(ctx context.Context, userID string, req 
 	if !ok {
 		return persistence.ErrNotImplemented
 	}
-	mutedUntil := time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
+	// 截止时间由 Service 计算并随请求传入：同一值既落库又进 WS payload，
+	// 保证与 HTTP GroupViewerState.muted_until 同口径；未提供时按 now+时长兜底。
+	mutedUntil := req.MutedUntil
+	if mutedUntil.IsZero() {
+		mutedUntil = time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
+	}
 	return queryable.Exec(ctx, queryMuteGroupMember, req.GroupID, req.UserID, mutedUntil)
 }
 

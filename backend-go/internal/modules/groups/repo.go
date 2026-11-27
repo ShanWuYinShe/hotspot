@@ -19,7 +19,11 @@ type Repository interface {
 	ListMembers(context.Context, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
 	ListAdminMembers(context.Context, string, *GroupRole, int, string) ([]AdminGroupMemberItem, string, error)
 	SearchMembers(context.Context, string, string, *GroupRole, int, string) ([]GroupMemberItem, string, error)
+	// IsMember 判定成员资格；MemberRole 读取成员在该群的角色（非成员 found=false）。
+	// 角色变更事件（spec GroupMemberRoleChangedPayload.old_role）需要在写入前读取旧角色，
+	// 单读 role 列比拉成员列表扫描更可靠（列表会分页截断）。
 	IsMember(context.Context, string, string) (bool, error)
+	MemberRole(context.Context, string, string) (GroupRole, bool, error)
 	// AreMembers 批量判定 userID 是否为各群成员（单次往返）。WS 订阅鉴权
 	// 消费：订阅消息最坏携带 100 个群 ID，逐条 IsMember 会把读循环阻塞成
 	// 串行 DB 往返。缺失的 group_id 不在返回 map 中（非成员）。

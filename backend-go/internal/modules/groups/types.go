@@ -1,6 +1,8 @@
 package groups
 
 import (
+	"time"
+
 	"hotspot/backend-go/internal/platform/cursor"
 	"hotspot/backend-go/internal/platform/types"
 )
@@ -305,6 +307,10 @@ type MuteMemberRequest struct {
 	UserID          string `json:"user_id"`
 	Active          bool   `json:"active"`
 	DurationMinutes int    `json:"duration_minutes"`
+	// MutedUntil 由 Service 计算一次并同时用于落库与 WS 事件（spec
+	// GroupMemberMutedPayload.muted_until 必须与 HTTP GroupViewerState.muted_until
+	// 同口径），repo 不再各自取 now 导致两处时间不一致。json:"-" 不外泄。
+	MutedUntil time.Time `json:"-"`
 }
 
 type UnmuteMemberRequest struct {
@@ -366,7 +372,11 @@ type GroupApplicationItem struct {
 	Message       *string           `json:"message"`
 	Status        ApplicationStatus `json:"status"`
 	CreatedAt     string            `json:"created_at"`
-	HandledAt     *string           `json:"handled_at"`
+	// ExpiresAt 申请有效期截止（spec api_spec_types.md GroupApplicationItem，
+	// 恒定 nullable）：pending 项 = created_at + appconfig TTL；已处理项为 null。
+	// 不落库列（TTL 可算），由 Service 按与惰性过期判定同口径填充。
+	ExpiresAt *string `json:"expires_at"`
+	HandledAt *string `json:"handled_at"`
 }
 
 // ApproveGroupApplicationRequest approves a group application. GroupID is the

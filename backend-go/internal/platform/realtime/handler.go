@@ -19,6 +19,7 @@ import (
 	"hotspot/backend-go/internal/platform/idgen"
 	"hotspot/backend-go/internal/platform/observability"
 	"hotspot/backend-go/internal/platform/ratelimit"
+	platformtypes "hotspot/backend-go/internal/platform/types"
 	"hotspot/backend-go/internal/platform/worker"
 
 	"github.com/gorilla/websocket"
@@ -660,8 +661,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ack.FailedIDs = append(ack.FailedIDs, failed...)
 			if len(ack.FailedIDs) > 0 {
 				ack.Code = 20100
-				if ack.Message == "" {
-					ack.Message = "订阅部分失败"
+				if ack.Message == nil {
+					ack.Message = platformtypes.StrPtr("订阅部分失败")
 				}
 			}
 			_ = sink.Send(Event{Type: EventTypeSubscribeAck, Payload: ack})
@@ -720,7 +721,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID string, payload SetSubscriptionsPayload, subs *subscriptions, sink FanoutSink) (SubscribeAckPayload, SubscriptionsSnapshotPayload) {
-	ack := SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Code: 0, Accepted: []SubscriptionItem{}}
+	ack := SubscribeAckPayload{ClientRequestID: payload.ClientRequestID, Operation: payload.Operation, Code: 0, Accepted: []SubscriptionItem{}, FailedIDs: []FailedSubscription{}}
 	// allowedByType 汇总同类型多 item 的通过 ID（订阅项可按 type 分多条提交）。
 	// 鉴权结果按 type 预计算（批量优先）：user 走 settingsBatchReader 一次往返、
 	// group 走 membershipBatchReader 一次往返；能力未接线或批量查询失败时回退
@@ -800,7 +801,7 @@ func (h *Handler) applyAuthorizedSubscriptions(ctx context.Context, viewerUserID
 	}
 	if len(ack.FailedIDs) > 0 {
 		ack.Code = 20100
-		ack.Message = "订阅权限不足"
+		ack.Message = platformtypes.StrPtr("订阅权限不足")
 	}
 	for _, item := range payload.Items {
 		subs.apply(payload.Operation, item.Type, allowedByType[item.Type])

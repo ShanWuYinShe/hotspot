@@ -503,9 +503,17 @@ func TestFollowMutualFollowAddsNotificationsAndRealtime(t *testing.T) {
 	if !ok || aliceMutualPayload["notify_id"] != aliceNotifications.Items[0].NotifyID {
 		t.Fatalf("unexpected alice mutual payload: %#v stored=%q", aliceSink.events[0].Payload, aliceNotifications.Items[0].NotifyID)
 	}
-	bobFollowerPayload, ok := bobSink.events[0].Payload.(map[string]any)
-	if !ok || bobFollowerPayload["notify_id"] != bobByType["new_follower"].NotifyID {
+	bobFollowerPayload, ok := bobSink.events[0].Payload.(NewFollowerPayload)
+	if !ok || bobFollowerPayload.NotifyID != bobByType["new_follower"].NotifyID {
 		t.Fatalf("unexpected bob follower payload: %#v stored=%q", bobSink.events[0].Payload, bobByType["new_follower"].NotifyID)
+	}
+	// spec api_spec_websocket.md：source/source_moment_id 恒定 nullable。
+	// 本用例来源为 profile 且非瞬间，故 source 有值、source_moment_id 为 null。
+	if bobFollowerPayload.Source == nil || *bobFollowerPayload.Source != string(FollowSourceProfile) {
+		t.Fatalf("source must carry %q: %#v", FollowSourceProfile, bobFollowerPayload)
+	}
+	if bobFollowerPayload.SourceMomentID != nil {
+		t.Fatalf("non-moment source must carry null source_moment_id: %#v", bobFollowerPayload)
 	}
 	bobMutualPayload, ok := bobSink.events[1].Payload.(map[string]any)
 	if !ok || bobMutualPayload["notify_id"] != bobByType["mutual_follow"].NotifyID {
@@ -552,15 +560,16 @@ func TestFollowCarriesSourceIntoNotificationAndRealtime(t *testing.T) {
 	if len(bobSink.events) != 1 || bobSink.events[0].Type != "NewFollower" {
 		t.Fatalf("unexpected realtime events: %#v", bobSink.events)
 	}
-	eventPayload, ok := bobSink.events[0].Payload.(map[string]any)
+	eventPayload, ok := bobSink.events[0].Payload.(NewFollowerPayload)
 	if !ok {
 		t.Fatalf("unexpected realtime payload type: %#v", bobSink.events[0].Payload)
 	}
-	if eventPayload["source"] != string(FollowSourceMoment) || eventPayload["source_moment_id"] != "moment_123" {
+	if eventPayload.Source == nil || *eventPayload.Source != string(FollowSourceMoment) ||
+		eventPayload.SourceMomentID == nil || *eventPayload.SourceMomentID != "moment_123" {
 		t.Fatalf("unexpected realtime payload: %#v", eventPayload)
 	}
-	if eventPayload["notify_id"] != notificationsPage.Items[0].NotifyID {
-		t.Fatalf("expected event notification_id to match stored item, got event=%v stored=%q", eventPayload["notify_id"], notificationsPage.Items[0].NotifyID)
+	if eventPayload.NotifyID != notificationsPage.Items[0].NotifyID {
+		t.Fatalf("expected event notification_id to match stored item, got event=%v stored=%q", eventPayload.NotifyID, notificationsPage.Items[0].NotifyID)
 	}
 }
 

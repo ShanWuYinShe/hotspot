@@ -52,6 +52,8 @@ type groupErrorRepo struct {
 	removeMemberErr       error
 	isMemberResult        bool
 	isMemberErr           error
+	memberRole            GroupRole
+	memberRoleErr         error
 	isBannedResult        bool
 	isBannedErr           error
 }
@@ -76,6 +78,15 @@ func (r *groupErrorRepo) ListMembers(context.Context, string, *GroupRole, int, s
 }
 func (r *groupErrorRepo) IsMember(context.Context, string, string) (bool, error) {
 	return r.isMemberResult, r.isMemberErr
+}
+func (r *groupErrorRepo) MemberRole(context.Context, string, string) (GroupRole, bool, error) {
+	if r.memberRoleErr != nil {
+		return "", false, r.memberRoleErr
+	}
+	if r.memberRole != "" {
+		return r.memberRole, true, nil
+	}
+	return GroupRoleMember, r.isMemberResult, nil
 }
 func (r *groupErrorRepo) IsBanned(context.Context, string, string) (bool, error) {
 	return r.isBannedResult, r.isBannedErr

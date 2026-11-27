@@ -25,6 +25,20 @@ const (
 	NotifyCategoryNearby      NotifyCategory = "nearby"
 )
 
+// NearbyNewMomentPayload 是 NearbyNewMoment WS 事件负载（spec
+// api_spec_websocket.md → NearbyNewMomentPayload）：notify_id / moment_id /
+// moment_summary / actor / distance / created_at。注意 WS 形状不含 type 判别键
+// （type 属于落库通知 payload，见 api_spec_notify.md 的 nearby_new_moment 联合），
+// 两者形状不同，故落库与推送分别构造。
+type NearbyNewMomentPayload struct {
+	NotifyID      string              `json:"notify_id"`
+	MomentID      string              `json:"moment_id"`
+	MomentSummary types.MomentSummary `json:"moment_summary"`
+	Actor         types.UserInfo      `json:"actor"`
+	Distance      int                 `json:"distance"`
+	CreatedAt     string              `json:"created_at"`
+}
+
 // NotifyItem is the notify/fetch item. The primary key is exposed as notify_id
 // (spec api_spec_notify.md): it is shared with the realtime WS event payload of
 // the same business event, so clients can deduplicate across the two paths.

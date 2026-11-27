@@ -30,6 +30,39 @@ func TestSuggestReturnsItems(t *testing.T) {
 	}
 }
 
+// TestSuggestPrefixCountsRunesNotBytes：spec 约束 prefix 1-50 字符（非字节），
+// 40 个汉字（120 字节）必须通过；51 个字符才拒绝（契约审计 B12）。
+func TestSuggestPrefixCountsRunesNotBytes(t *testing.T) {
+	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
+	accepted := `{"prefix":"` + strings.Repeat("鹿", 40) + `"}`
+	acceptedReq := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(accepted))
+	acceptedRR := httptest.NewRecorder()
+	handler.Suggest(acceptedRR, acceptedReq)
+	var acceptedResp struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.NewDecoder(acceptedRR.Body).Decode(&acceptedResp); err != nil {
+		t.Fatalf("decode accepted response: %v", err)
+	}
+	if acceptedResp.Code != 0 {
+		t.Fatalf("40 个汉字前缀应通过（按字符判长），got code=%d", acceptedResp.Code)
+	}
+
+	rejected := `{"prefix":"` + strings.Repeat("鹿", 51) + `"}`
+	rejectedReq := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(rejected))
+	rejectedRR := httptest.NewRecorder()
+	handler.Suggest(rejectedRR, rejectedReq)
+	var rejectedResp struct {
+		Code httpx.Code `json:"code"`
+	}
+	if err := json.NewDecoder(rejectedRR.Body).Decode(&rejectedResp); err != nil {
+		t.Fatalf("decode rejected response: %v", err)
+	}
+	if rejectedResp.Code != httpx.CodeInvalidRequest {
+		t.Fatalf("51 个字符前缀应返回 10000, got code=%d", rejectedResp.Code)
+	}
+}
+
 func TestSuggestRejectsInvalidJSON(t *testing.T) {
 	handler := NewHandler(NewServiceWithRepo(&stubRepository{}))
 	req := httptest.NewRequest(http.MethodPost, "/suggest", strings.NewReader(`{"prefix":`))

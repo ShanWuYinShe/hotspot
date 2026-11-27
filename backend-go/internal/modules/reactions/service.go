@@ -283,15 +283,19 @@ func (s *Service) notifyOwner(ctx context.Context, req SetReactionRequest, actor
 			notificationID = id
 		}
 	}
-	eventPayload := map[string]any{
-		"target_type": string(req.TargetType),
-		"target_id":   req.TargetID,
-		"emoji":       req.Emoji,
-		"actor":       actor,
-		"reacted_at":  reactedAt,
-	}
+	// notify_id 恒定 nullable（null = 自反应不落通知）：无通知时显式下发 null，
+	// 不再条件写键（契约审计 B08）。
+	var notifyID *string
 	if notificationID != "" {
-		eventPayload["notify_id"] = notificationID
+		notifyID = &notificationID
+	}
+	eventPayload := ReactionAddedPayload{
+		NotifyID:   notifyID,
+		TargetType: string(req.TargetType),
+		TargetID:   req.TargetID,
+		Emoji:      req.Emoji,
+		Actor:      actor,
+		ReactedAt:  reactedAt,
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(ownerID, realtime.Event{
 		Type:    EventTypeReactionAdded,

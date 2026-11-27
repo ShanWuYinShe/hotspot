@@ -133,8 +133,10 @@ type ConnectionEstablishedPayload struct {
 	UserID       string `json:"user_id"`
 	ServerTime   string `json:"server_time"`
 	// ResumeToken 用于断线重连增量恢复（spec L155-156）：客户端在重连 Auth 中
-	// 原样带回。Redis 不可用时为空（omitempty），客户端回退全量重放（spec L161）。
-	ResumeToken string `json:"resume_token,omitempty"`
+	// 原样带回。spec 定义为恒在 string——Redis 不可用时 token 仍下发，但服务端
+	// LoadState 恒空、客户端回退全量重放（spec L161）；恒在而非 omitempty，
+	// 避免客户端在无恢复能力时读到 undefined（契约审计 B09）。
+	ResumeToken string `json:"resume_token"`
 	// ServerSeq 是当前该 user 事件流的最新序列号（spec L133：CE 含 server_seq，
 	// 即使为 0 也下发，故不加 omitempty）；客户端据此判断 resume 起点。
 	// `,string`：与 Event.ServerSeq 同因——int64 跨端统一序列化为字符串（spec L330）。
@@ -191,12 +193,16 @@ type SessionRevokedPayload struct {
 // SubscribeAckPayload）：accepted 按 type 分组回传已接受项；只要 failed_ids 非空
 // code 必须为 20100。
 type SubscribeAckPayload struct {
-	ClientRequestID string               `json:"client_request_id"`
-	Operation       string               `json:"operation"`
-	Accepted        []SubscriptionItem   `json:"accepted"`
-	Code            int                  `json:"code"`
-	Message         string               `json:"message,omitempty"`
-	FailedIDs       []FailedSubscription `json:"failed_ids,omitempty"`
+	ClientRequestID string             `json:"client_request_id"`
+	Operation       string             `json:"operation"`
+	Accepted        []SubscriptionItem `json:"accepted"`
+	Code            int                `json:"code"`
+	// Message 恒在：spec 定义为 string | null，成功时必须显式下发 null
+	// （故用指针、不加 omitempty），客户端按「非 null 才展示」处理。
+	Message *string `json:"message"`
+	// FailedIDs 恒在：spec 定义为数组，空数组 = 全部成功（非 null）。
+	// 构造方必须初始化为空切片，序列化才是 [] 而不是 null。
+	FailedIDs []FailedSubscription `json:"failed_ids"`
 }
 
 // FailedSubscription 对应 spec FailedSubscriptionId（含 type：批量请求需明确

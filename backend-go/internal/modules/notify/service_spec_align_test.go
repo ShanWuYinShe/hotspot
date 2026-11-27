@@ -5,6 +5,7 @@ package notify
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -323,14 +324,42 @@ func TestPublishNearbyNewMomentNoProviderAppendsAndPushes(t *testing.T) {
 	if len(sink.events) != 1 || sink.events[0].Type != realtime.EventTypeNearbyNewMoment {
 		t.Fatalf("unexpected events: %#v", sink.events)
 	}
-	eventPayload, ok := sink.events[0].Payload.(map[string]any)
-	if !ok || eventPayload["moment_id"] != "moment_42" || eventPayload["distance"] != 350 {
+	eventPayload, ok := sink.events[0].Payload.(NearbyNewMomentPayload)
+	if !ok || eventPayload.MomentID != "moment_42" || eventPayload.Distance != 350 {
 		t.Fatalf("unexpected event payload: %#v", sink.events[0].Payload)
 	}
 	// WS payload 携带与落库记录一致的 notify_id（spec api_spec_websocket.md，
 	// 客户端去重 + 对齐 HTTP 侧通知）。
-	if eventPayload["notify_id"] != item.NotifyID || item.NotifyID == "" {
-		t.Fatalf("expected event notify_id to match persisted record, event=%v item=%#v", eventPayload["notify_id"], item)
+	if eventPayload.NotifyID != item.NotifyID || item.NotifyID == "" {
+		t.Fatalf("expected event notify_id to match persisted record, event=%v item=%#v", eventPayload.NotifyID, item)
+	}
+	// spec → NearbyNewMomentPayload：created_at 必填（此前 WS 帧缺该字段），
+	// 且 WS 形状不含 type 判别键（type 仅属落库通知 payload）。
+	if eventPayload.CreatedAt == "" {
+		t.Fatalf("nearby WS payload must carry created_at: %#v", eventPayload)
+	}
+	if _, leaked := item.Payload["created_at"]; leaked {
+		t.Fatalf("notify record payload shape must stay unchanged (no created_at): %#v", item.Payload)
+	}
+	raw, err := json.Marshal(eventPayload)
+	if err != nil {
+		t.Fatalf("marshal event payload: %v", err)
+	}
+	var eventFields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &eventFields); err != nil {
+		t.Fatalf("event payload is not an object: %v (%s)", err, raw)
+	}
+	wantKeys := []string{"notify_id", "moment_id", "moment_summary", "actor", "distance", "created_at"}
+	if len(eventFields) != len(wantKeys) {
+		t.Fatalf("event payload keys = %#v, want %v (raw: %s)", eventFields, wantKeys, raw)
+	}
+	for _, key := range wantKeys {
+		if _, ok := eventFields[key]; !ok {
+			t.Fatalf("event payload missing key %q: %s", key, raw)
+		}
+	}
+	if _, leaked := eventFields["type"]; leaked {
+		t.Fatalf("NearbyNewMoment WS payload must not carry type: %s", raw)
 	}
 }
 

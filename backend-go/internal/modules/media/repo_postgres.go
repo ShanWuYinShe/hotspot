@@ -36,10 +36,10 @@ func (r *PostgresRepository) Save(ctx context.Context, upload pendingUpload) err
 		nullableString(upload.File.FileID),
 		nullableInt(upload.File.FileSize),
 		nullableString(upload.File.MimeType),
-		nullableString(upload.File.ThumbnailURL),
-		nullableInt(upload.File.Duration),
-		nullableInt(upload.File.Width),
-		nullableInt(upload.File.Height),
+		nullableString(valueString(upload.File.ThumbnailURL)),
+		nullableInt(valueInt(upload.File.Duration)),
+		nullableInt(valueInt(upload.File.Width)),
+		nullableInt(valueInt(upload.File.Height)),
 		nullableString(upload.CompletedIdempotencyKey),
 		parseRFC3339OrNow(upload.CreatedAt),
 		nullableTime(upload.CompletedAt),
@@ -92,7 +92,7 @@ func (r *PostgresRepository) Get(ctx context.Context, uploadID string) (pendingU
 		return pendingUpload{}, false, err
 	}
 	result.Completed = status == "completed"
-	result.File = UploadedMedia{FileID: fileID, FileSize: finalFileSize, MimeType: finalMimeType, ThumbnailURL: thumbnailURL, Duration: duration, Width: width, Height: height}
+	result.File = UploadedMedia{FileID: fileID, FileSize: finalFileSize, MimeType: finalMimeType, ThumbnailURL: ptrString(thumbnailURL), Duration: ptrInt(duration), Width: ptrInt(width), Height: ptrInt(height)}
 	result.CompletedIdempotencyKey = completedKey
 	result.CreatedAt = createdAt.UTC().Format(time.RFC3339)
 	if completedAt != nil {
@@ -114,10 +114,10 @@ func (r *PostgresRepository) Complete(ctx context.Context, uploadID string, file
 		file.FileID,
 		file.FileSize,
 		file.MimeType,
-		nullableString(file.ThumbnailURL),
-		nullableInt(file.Duration),
-		nullableInt(file.Width),
-		nullableInt(file.Height),
+		nullableString(valueString(file.ThumbnailURL)),
+		nullableInt(valueInt(file.Duration)),
+		nullableInt(valueInt(file.Width)),
+		nullableInt(valueInt(file.Height)),
 		idempotencyKey,
 		completedAt,
 		storageKey,

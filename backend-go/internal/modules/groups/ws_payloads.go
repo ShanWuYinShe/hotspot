@@ -31,20 +31,31 @@ type GroupMemberLeftPayload struct {
 	GroupID string         `json:"group_id"`
 	User    types.UserInfo `json:"user"`
 	LeftAt  string         `json:"left_at"`
+	// MemberCount 退群后的剩余成员总数（spec 必填）：客户端据此刷新群徽标，
+	// 缺键会读到 undefined（契约审计 B03）。
+	MemberCount int `json:"member_count"`
 }
 
+// GroupMemberRoleChangedPayload 角色变更事件（spec → GroupMemberRoleChangedPayload）：
+// 恒在 old_role/new_role 两个字段，客户端据此判断升/降级并渲染提示文案。
+// 改动前只发单值 role，无法区分升级还是降级（契约审计 B02）。
 type GroupMemberRoleChangedPayload struct {
 	GroupID   string         `json:"group_id"`
 	User      types.UserInfo `json:"user"`
-	Role      string         `json:"role"`
+	OldRole   string         `json:"old_role"`
+	NewRole   string         `json:"new_role"`
 	ChangedBy types.UserInfo `json:"changed_by"`
 	ChangedAt string         `json:"changed_at"`
 }
 
+// GroupMemberMutedPayload 禁言事件（spec → GroupMemberMutedPayload）：
+// muted_until 必须与 HTTP GroupViewerState.muted_until 同口径（同一截止时间），
+// 客户端无需再用 duration_minutes 自行推算（契约审计 B04）。
 type GroupMemberMutedPayload struct {
 	GroupID         string         `json:"group_id"`
 	User            types.UserInfo `json:"user"`
 	MutedBy         types.UserInfo `json:"muted_by"`
+	MutedUntil      string         `json:"muted_until"`
 	DurationMinutes int            `json:"duration_minutes"`
 	MutedAt         string         `json:"muted_at"`
 }
@@ -56,15 +67,17 @@ type GroupMemberUnmutedPayload struct {
 	UnmutedAt string         `json:"unmuted_at"`
 }
 
-// GroupMemberRemovedPayload：user/removed_by 在「本人退群/禁用触发」路径
-// 缺省（原 map 未写键），故为指针 + omitempty。
+// GroupMemberRemovedPayload 成员被移除事件（spec → GroupMemberRemovedPayload）：
+// user/removed_by 均为必填 UserInfo（仅 reason 可空）。此前本人动作路径不写键，
+// 客户端读 user/removed_by 得到 undefined（契约审计 B15）；管理员操作时
+// removed_by 即操作者，本人动作路径由调用方显式填同一 UserInfo。
 type GroupMemberRemovedPayload struct {
-	GroupID     string          `json:"group_id"`
-	User        *types.UserInfo `json:"user,omitempty"`
-	RemovedBy   *types.UserInfo `json:"removed_by,omitempty"`
-	Reason      string          `json:"reason"`
-	RemovedAt   string          `json:"removed_at"`
-	MemberCount int             `json:"member_count"`
+	GroupID     string         `json:"group_id"`
+	User        types.UserInfo `json:"user"`
+	RemovedBy   types.UserInfo `json:"removed_by"`
+	Reason      string         `json:"reason"`
+	RemovedAt   string         `json:"removed_at"`
+	MemberCount int            `json:"member_count"`
 }
 
 type GroupDismissedPayload struct {
@@ -93,15 +106,26 @@ type GroupApplicationExpiredPayload struct {
 	ExpiredAt     string         `json:"expired_at"`
 }
 
-// GroupApplicationReceivedPayload：application_id 为 *string（可 nil，键恒在
-// 对齐原 map）；message 原逻辑「非空才写键」，字段赋值侧保证空串置 nil。
+// GroupApplicationReceivedPayload：message 为 spec 恒定 nullable（string | null），
+// 无附言时必须显式下发 null（去掉 omitempty，赋值侧已保证空串置 nil）。
 type GroupApplicationReceivedPayload struct {
 	NotifyID      string         `json:"notify_id"`
 	ApplicationID *string        `json:"application_id"`
 	GroupID       string         `json:"group_id"`
 	Applicant     types.UserInfo `json:"applicant"`
 	CreatedAt     string         `json:"created_at"`
-	Message       *string        `json:"message,omitempty"`
+	Message       *string        `json:"message"`
+}
+
+// GroupApplicationCancelledPayload 申请被申请人取消事件（spec →
+// GroupApplicationCancelledPayload）：reason 为恒定 nullable（null = 无理由），
+// 无理由时必须显式下发 null（契约审计 B08）。
+type GroupApplicationCancelledPayload struct {
+	ApplicationID string         `json:"application_id"`
+	GroupID       string         `json:"group_id"`
+	Applicant     types.UserInfo `json:"applicant"`
+	CancelledAt   string         `json:"cancelled_at"`
+	Reason        *string        `json:"reason"`
 }
 
 // GroupBriefPayload：GroupApplicationResponse 内嵌的群摘要。
@@ -111,10 +135,6 @@ type GroupBriefPayload struct {
 	AvatarURL    *string `json:"avatar_url"`
 	MembersCount int     `json:"members_count"`
 }
-
-// userInfoPtr 把值语义的 UserInfo 转为指针（GroupMemberRemovedPayload 的
-// user/removed_by 在本人动作路径缺省，需要指针 + omitempty 才能省略键）。
-func userInfoPtr(u types.UserInfo) *types.UserInfo { return &u }
 
 type GroupApplicationResponsePayload struct {
 	NotifyID      string            `json:"notify_id"`
@@ -139,5 +159,5 @@ type GroupInviteRevokedPayload struct {
 	GroupID   string         `json:"group_id"`
 	RevokedBy types.UserInfo `json:"revoked_by"`
 	RevokedAt string         `json:"revoked_at"`
-	Reason    *string        `json:"reason,omitempty"` // 原逻辑：非空才写键
+	Reason    *string        `json:"reason"` // spec 恒定 nullable（null = 无理由）
 }

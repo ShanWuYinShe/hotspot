@@ -25,7 +25,12 @@ func (s *Service) ListApplications(ctx context.Context, req GroupApplicationsReq
 		return nil, "", ErrAccessRestricted
 	}
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
-	return s.repo.ListApplications(ctx, req.GroupID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
+	items, cursor, err := s.repo.ListApplications(ctx, req.GroupID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
+	if err != nil {
+		return nil, "", err
+	}
+	s.fillApplicationExpiry(ctx, items)
+	return items, cursor, nil
 }
 
 func (s *Service) ApproveApplication(ctx context.Context, req ApproveGroupApplicationRequest) error {
@@ -110,36 +115,34 @@ func (s *Service) SetMemberRole(ctx context.Context, req SetMemberRoleRequest) e
 		return ErrBusinessConflict
 	}
 	// 目标必须是群成员：repo 的 UPDATE 对 0 行命中不报错，此前对非成员调用会
-	// 静默成功并广播对非成员的角色变更事件。
-	if member, err := s.repo.IsMember(ctx, req.GroupID, req.UserID); err != nil {
+	// 静默成功并广播对非成员的角色变更事件。旧角色必须在写入前读取
+	// （spec GroupMemberRoleChangedPayload.old_role 必填）。
+	oldRole, member, err := s.repo.MemberRole(ctx, req.GroupID, req.UserID)
+	if err != nil {
 		return err
-	} else if !member {
+	}
+	if !member {
 		return ErrTargetNotMember
 	}
 	if err := s.repo.SetMemberRole(ctx, principal.UserID, req); err != nil {
 		return err
 	}
-	// 推送（spec group.md → set_role）：向群内广播 GroupMemberRoleChanged
-	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
+	// 推送（spec group.md → set_role）：向群内广播 GroupMemberRoleChanged，
+	// 同时定向推送给被操作者（其本人可能未订阅该群频道）。
+	event := realtime.Event{
 		Type: realtime.EventTypeGroupMemberRoleChanged,
 		Payload: GroupMemberRoleChangedPayload{
 			GroupID:   req.GroupID,
 			User:      s.resolveUserInfo(ctx, req.UserID),
-			Role:      string(req.Role),
+			OldRole:   string(oldRole),
+			NewRole:   string(req.Role),
 			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
 			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},
-	})
-	realtime.HubFromContext(ctx).BroadcastToUser(req.UserID, realtime.Event{
-		Type: realtime.EventTypeGroupMemberRoleChanged,
-		Payload: GroupMemberRoleChangedPayload{
-			GroupID:   req.GroupID,
-			User:      s.resolveUserInfo(ctx, req.UserID),
-			Role:      string(req.Role),
-			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
-			ChangedAt: time.Now().UTC().Format(time.RFC3339),
-		},
-	})
+	}
+	hub := realtime.HubFromContext(ctx)
+	hub.BroadcastToGroup(req.GroupID, event)
+	hub.BroadcastToUser(req.UserID, event)
 	return nil
 }
 
@@ -170,6 +173,11 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 	} else if !member {
 		return ErrTargetNotMember
 	}
+	// 截止时间只计算一次：同一值既落库（repo 消费 req.MutedUntil）又下发 WS
+	// payload，保证与 HTTP GroupViewerState.muted_until 同口径（spec：
+	// GroupMemberMutedPayload.muted_until 为禁言截止时间）。
+	mutedAt := time.Now().UTC()
+	req.MutedUntil = mutedAt.Add(time.Duration(req.DurationMinutes) * time.Minute)
 	if err := s.repo.MuteMember(ctx, principal.UserID, req); err != nil {
 		return err
 	}
@@ -179,8 +187,9 @@ func (s *Service) MuteMember(ctx context.Context, req MuteMemberRequest) error {
 			GroupID:         req.GroupID,
 			User:            s.resolveUserInfo(ctx, req.UserID),
 			MutedBy:         s.resolveUserInfo(ctx, principal.UserID),
+			MutedUntil:      req.MutedUntil.Format(time.RFC3339),
 			DurationMinutes: req.DurationMinutes,
-			MutedAt:         time.Now().UTC().Format(time.RFC3339),
+			MutedAt:         mutedAt.Format(time.RFC3339),
 		},
 	}
 	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, event)
@@ -266,8 +275,8 @@ func (s *Service) SetMemberBan(ctx context.Context, req SetMemberBanRequest) err
 			Type: realtime.EventTypeGroupMemberRemoved,
 			Payload: GroupMemberRemovedPayload{
 				GroupID:     req.GroupID,
-				User:        userInfoPtr(s.resolveUserInfo(ctx, req.UserID)),
-				RemovedBy:   userInfoPtr(s.resolveUserInfo(ctx, principal.UserID)),
+				User:        s.resolveUserInfo(ctx, req.UserID),
+				RemovedBy:   s.resolveUserInfo(ctx, principal.UserID),
 				Reason:      "banned",
 				RemovedAt:   time.Now().UTC().Format(time.RFC3339),
 				MemberCount: s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount),
@@ -334,14 +343,19 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 	}
 	// 移除后重读权威计数（spec：RemovedPayload.member_count 为剩余成员总数）。
 	remaining := s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount)
+	// user/removed_by 为 spec 必填 UserInfo（契约审计 B15）：向被移除者单独
+	// 推送的那条事件也必须带齐两个字段（操作者即当前管理员）。
+	removedUser := s.resolveUserInfo(ctx, req.UserID)
+	removedBy := s.resolveUserInfo(ctx, principal.UserID)
+	removedAt := time.Now().UTC().Format(time.RFC3339)
 	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: GroupMemberRemovedPayload{
 			GroupID:     req.GroupID,
-			User:        userInfoPtr(s.resolveUserInfo(ctx, req.UserID)),
-			RemovedBy:   userInfoPtr(s.resolveUserInfo(ctx, principal.UserID)),
+			User:        removedUser,
+			RemovedBy:   removedBy,
 			Reason:      "kicked",
-			RemovedAt:   time.Now().UTC().Format(time.RFC3339),
+			RemovedAt:   removedAt,
 			MemberCount: remaining,
 		},
 	})
@@ -349,8 +363,10 @@ func (s *Service) RemoveMember(ctx context.Context, req RemoveMemberRequest) err
 		Type: realtime.EventTypeGroupMemberRemoved,
 		Payload: GroupMemberRemovedPayload{
 			GroupID:     req.GroupID,
+			User:        removedUser,
+			RemovedBy:   removedBy,
 			Reason:      "kicked",
-			RemovedAt:   time.Now().UTC().Format(time.RFC3339),
+			RemovedAt:   removedAt,
 			MemberCount: remaining,
 		},
 	})
@@ -377,9 +393,10 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		return ErrAccessRestricted
 	}
 
-	// Direct membership probe instead of paging up to 1000 members and linear
-	// scanning for the target user.
-	isMember, err := s.repo.IsMember(ctx, req.GroupID, req.NewOwnerID)
+	// Direct membership+role probe instead of paging up to 1000 members and
+	// linear scanning for the target user. 旧角色必须在写入前读取（spec →
+	// GroupMemberRoleChangedPayload.old_role：admin/member → owner）。
+	oldRole, isMember, err := s.repo.MemberRole(ctx, req.GroupID, req.NewOwnerID)
 	if err != nil {
 		return err
 	}
@@ -396,7 +413,8 @@ func (s *Service) TransferOwnership(ctx context.Context, req TransferOwnershipRe
 		Payload: GroupMemberRoleChangedPayload{
 			GroupID:   req.GroupID,
 			User:      s.resolveUserInfo(ctx, req.NewOwnerID),
-			Role:      string(GroupRoleOwner),
+			OldRole:   string(oldRole),
+			NewRole:   string(GroupRoleOwner),
 			ChangedBy: s.resolveUserInfo(ctx, principal.UserID),
 			ChangedAt: time.Now().UTC().Format(time.RFC3339),
 		},

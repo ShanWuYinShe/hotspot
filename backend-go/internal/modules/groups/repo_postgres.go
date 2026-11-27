@@ -213,6 +213,23 @@ func (r *PostgresRepository) IsMember(ctx context.Context, groupID, userID strin
 	return true, nil
 }
 
+// MemberRole 读取成员在该群的角色（非成员返回 found=false）。复用
+// queryGetGroupMembership 单行查询，只取 role 列。
+func (r *PostgresRepository) MemberRole(ctx context.Context, groupID, userID string) (GroupRole, bool, error) {
+	queryable, ok := persistence.RepoQueryable(ctx, r.factory)
+	if !ok {
+		return "", false, persistence.ErrNotImplemented
+	}
+	var role string
+	if err := queryable.QueryRow(ctx, queryGetGroupMembership, groupID, userID).Scan(&role, new(time.Time), new(bool), new(*time.Time)); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return GroupRole(role), true, nil
+}
+
 // AreMembers 批量判定成员资格（单次往返，queryGetGroupMemberships 现成 SQL）。
 func (r *PostgresRepository) AreMembers(ctx context.Context, groupIDs []string, userID string) (map[string]bool, error) {
 	result := make(map[string]bool, len(groupIDs))
