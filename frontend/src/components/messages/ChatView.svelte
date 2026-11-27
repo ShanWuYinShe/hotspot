@@ -92,7 +92,8 @@
 				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at),
-				sentAt: m.sent_at
+				sentAt: m.sent_at,
+				reactions: m.reactions ?? []
 			}));
 			// 首屏加载且调用方未传 contact 时，从最新一条非自己消息的 sender 推导。
 			if (!cursor && !contactProp && !derivedContact) {
@@ -136,6 +137,7 @@
 		},
 		wsNewMessageEvent: WS_PRIVATE_MESSAGE_EVENT,
 		wsMessageUpdateEvent: WS_PRIVATE_MESSAGE_UPDATE_EVENT,
+		selfUserId: () => meId,
 		wsNewMessage: (e) => {
 			const payload = (e as CustomEvent<PrivateMessageNewPayload>).detail;
 			if (!payload || payload.target_user_id !== peerUserId) return null;

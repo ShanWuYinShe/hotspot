@@ -2,6 +2,8 @@
 	import { CheckCheck, MoreHorizontal, Check, Flag } from '@lucide/svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { enterOnce } from '@/lib/motion';
+	import type { Reaction } from '@/api/types';
+	import { DEFAULT_REACTION_EMOJIS, hasMyReaction } from '@/lib/message-reactions';
 
 	// MessageBubble — 聊天气泡单元（私聊 ChatView / 群聊 GroupChatView 共用）。
 	// 发送方向由 sent 决定；recalled 渲染为中性斜体「消息已撤回」；自己发出的非撤回消息
@@ -32,7 +34,10 @@
 		onRecall,
 		onEdit,
 		onReport,
-		onImageClick
+		onImageClick,
+		reactions = [],
+		emojis = DEFAULT_REACTION_EMOJIS,
+		onReact
 	}: {
 		text: string;
 		/** 图片消息读 URL：存在时渲染图片（圆角、按比例），时间/已读沉到图下，不套气泡底色 */
@@ -54,6 +59,12 @@
 		onReport?: (id: string) => void;
 		/** 图片消息点击查看大图（聊天页接入 ImageViewer；未注入时图片不可点） */
 		onImageClick?: (url: string) => void;
+		/** 表情反应（spec types.md → Reaction[]）；为空时不渲染反应条 */
+		reactions?: Reaction[];
+		/** 可投递的 emoji 白名单（spec limits.reaction_emojis，默认值与服务端默认一致） */
+		emojis?: string[];
+		/** 表情反应切换；未注入时不显示表情入口（W05 消息点赞） */
+		onReact?: (emoji: string, active: boolean) => void;
 	} = $props();
 
 	let menuEl = $state<HTMLElement | null>(null);
@@ -63,8 +74,11 @@
 
 	// $derived：keyed each 复用实例时 props（recalled/canRecall/canEdit）会变化，需响应式重算
 	const hasMenu = $derived(
-		!recalled && ((sent && (canRecall || canEdit)) || (!sent && canReport))
+		!recalled && (Boolean(onReact) || (sent && (canRecall || canEdit)) || (!sent && canReport))
 	);
+
+	// 反应条只展示计数 > 0 的项（本地增量合并后可能出现 0 计数，避免渲染空胶囊）
+	const reactionList = $derived((reactions ?? []).filter((r) => r.count > 0));
 
 	// 气泡外皮：撤回 = 中性底（两个方向统一，低对比问题归零）；
 	// 自己 = accent 实底（无投影，实底自带层级）；对方 = 白色气泡 + 极轻投影
@@ -203,6 +217,21 @@
 						</button>
 					</div>
 					<DropdownMenu.Content customAnchor={menuEl}>
+						{#if onReact && emojis.length > 0}
+							<div class="flex items-center gap-0.5 border-b border-border-subtle px-1.5 py-1" role="group" aria-label="表情反应">
+								{#each emojis as emoji (emoji)}
+									<button
+										type="button"
+										class="flex h-7 w-7 items-center justify-center rounded-sm text-md outline-none hover:bg-interactive-hover focus-visible:ring-2 focus-visible:ring-accent-default"
+										aria-label={'反应 ' + emoji}
+										onclick={() => {
+											menuOpen = false;
+											onReact?.(emoji, !hasMyReaction(reactions, emoji));
+										}}
+									>{emoji}</button>
+								{/each}
+							</div>
+						{/if}
 						{#if canEdit}
 							<DropdownMenu.Item onSelect={startEdit}>编辑</DropdownMenu.Item>
 						{/if}
@@ -220,4 +249,21 @@
 				</DropdownMenu.Root>
 			{/if}
 		</div>
+		{#if reactionList.length > 0 && !recalled}
+			<div class="mt-1 flex flex-wrap gap-1 {sent ? 'justify-end' : 'justify-start'}" data-message-reactions>
+				{#each reactionList as r (r.emoji)}
+					<button
+						type="button"
+						class="flex h-6 items-center gap-1 rounded-full border px-2 text-xs tabular-nums outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent-default {r.reacted_by_me
+							? 'border-accent-border bg-accent-soft text-text-accent-on-soft'
+							: 'border-border-subtle bg-surface-primary text-text-secondary hover:bg-interactive-hover'}"
+						aria-label="表情反应 {r.emoji}，{r.count} 个"
+						aria-pressed={r.reacted_by_me}
+						onclick={() => onReact?.(r.emoji, !r.reacted_by_me)}
+					>
+						<span>{r.emoji}</span><span>{r.count}</span>
+					</button>
+				{/each}
+			</div>
+		{/if}
 	</div>

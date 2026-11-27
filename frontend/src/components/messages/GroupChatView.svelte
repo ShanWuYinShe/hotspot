@@ -172,7 +172,8 @@
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at),
 				sentAt: m.sent_at,
-				senderName: m.sender?.nickname ?? ''
+				senderName: m.sender?.nickname ?? '',
+				reactions: m.reactions ?? []
 			}));
 			return { messages: mapped, next_cursor: res.data.next_cursor ?? null };
 		},

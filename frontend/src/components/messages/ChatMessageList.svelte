@@ -163,6 +163,8 @@
 								onEdit={(id, content) => void chat.handleEdit(id, content)}
 								onReport={(id) => onReport?.(id)}
 								onImageClick={onImageClick}
+								reactions={msg.reactions}
+								onReact={(emoji, active) => void chat.react(msg.id, emoji, active)}
 							/>
 						{/each}
 					</div>
