@@ -1,4 +1,12 @@
 import { goto } from '$app/navigation';
+import { page as appPage } from '$app/state';
+import {
+	groupTabQuery,
+	parseGroupTab,
+	parseMemberTab,
+	type GroupTab,
+	type MemberSubTab
+} from '@/lib/group-tabs';
 import { ROUTES } from '@/lib/routes';
 import { showToast } from '@/stores/toast.svelte';
 import { useGroupDetail } from '@/lib/group-data.svelte';
@@ -9,16 +17,27 @@ import { copyShareLink } from '@/lib/share';
 import type { MemberAction } from '@/components/groups/MemberActionSheet.svelte';
 import type { UpdateGroupRequest } from '@/api/types';
 
-export type GroupTab = 'overview' | 'members' | 'announcements';
-export type MemberSubTab = 'members' | 'applications' | 'invites' | 'banned';
+export type { GroupTab, MemberSubTab } from '@/lib/group-tabs';
 
 export interface UseGroupPageDataOptions {
 	groupId: () => string;
 }
 
 export function useGroupPageData(options: UseGroupPageDataOptions) {
-	let tab = $state<GroupTab>('overview');
-	let memberTab = $state<MemberSubTab>('members');
+	// tab / memberTab 写入 URL（?tab=&memberTab=，与 /me/shares 等页约定一致）：
+	// 刷新/从成员主页返回保持当前位置，也支持直达「成员→申请」链接（W20）。
+	let tab = $state<GroupTab>(parseGroupTab(appPage.url.searchParams.get('tab')));
+	let memberTab = $state<MemberSubTab>(parseMemberTab(appPage.url.searchParams.get('memberTab')));
+
+	function syncUrl(): void {
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		for (const [key, value] of Object.entries(groupTabQuery(tab, memberTab))) {
+			if (value === null) url.searchParams.delete(key);
+			else url.searchParams.set(key, value);
+		}
+		window.history.replaceState(window.history.state, '', url.toString());
+	}
 
 	// 解散跳转防重入：HTTP 成功与 WS GroupDismissed 都可能触发 onDismissed
 	let dismissedHandled = false;
@@ -256,9 +275,9 @@ export function useGroupPageData(options: UseGroupPageDataOptions) {
 	return {
 		gd,
 		get tab() { return tab; },
-		set tab(v: GroupTab) { tab = v; },
+		set tab(v: GroupTab) { tab = v; syncUrl(); },
 		get memberTab() { return memberTab; },
-		set memberTab(v: MemberSubTab) { memberTab = v; },
+		set memberTab(v: MemberSubTab) { memberTab = v; syncUrl(); },
 		// 公告
 		get announceOpen() { return announceOpen; },
 		set announceOpen(v: boolean) { announceOpen = v; },

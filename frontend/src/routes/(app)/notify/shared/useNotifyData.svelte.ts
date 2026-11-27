@@ -56,13 +56,25 @@ export function useNotifyData() {
 	let followedBack = $state<Set<string>>(new Set());
 	let invitePending = $state(new Set<string>());
 
-	// WS 实时通知推送监听
+	// WS 实时通知推送监听：250ms 合并（连续点赞/评论会连着推多条事件，
+	// 每条都触发一次「通知+未读+邀请+关注」四请求全量重拉会成倍放大，W15）。
+	let reloadTimer: ReturnType<typeof setTimeout> | null = null;
 	$effect(() => {
 		const onNotify = () => {
-			reloadKey++;
+			if (reloadTimer) clearTimeout(reloadTimer);
+			reloadTimer = setTimeout(() => {
+				reloadTimer = null;
+				reloadKey++;
+			}, 250);
 		};
 		window.addEventListener(WS_NOTIFY_EVENT, onNotify);
-		return () => window.removeEventListener(WS_NOTIFY_EVENT, onNotify);
+		return () => {
+			window.removeEventListener(WS_NOTIFY_EVENT, onNotify);
+			if (reloadTimer) {
+				clearTimeout(reloadTimer);
+				reloadTimer = null;
+			}
+		};
 	});
 
 	function toViewItems(raw: NotifyItem[], offset: number): NotifyViewItem[] {

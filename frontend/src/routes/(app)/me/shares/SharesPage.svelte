@@ -67,7 +67,12 @@
 		void goto(tab === 'all' ? ROUTES.meShares : `${ROUTES.meShares}?tab=${tab}`);
 	}
 
+	// 请求序号：切 tab（或快速重复触发拉取）时丢弃过期响应，避免旧类型数据覆盖新 tab、
+	// 旧请求的 finally 提前结束 loading（W12）。
+	let loadSeq = 0;
+
 	async function loadPage(reset: boolean) {
+		const seq = ++loadSeq;
 		if (reset) {
 			loading = true;
 			loadError = null;
@@ -80,6 +85,7 @@
 				share_type: typeParam,
 				pagination: { limit: 20, cursor: reset ? undefined : (nextCursor ?? undefined) }
 			});
+			if (seq !== loadSeq) return;
 			if (res.code === 10100) {
 				needsAuth = true;
 				items = [];
@@ -94,11 +100,14 @@
 			items = reset ? res.data.items : [...items, ...res.data.items];
 			nextCursor = res.data.next_cursor;
 		} catch {
+			if (seq !== loadSeq) return;
 			loadError = '加载失败，请稍后重试';
 			if (reset) items = [];
 		} finally {
-			loading = false;
-			loadingMore = false;
+			if (seq === loadSeq) {
+				loading = false;
+				loadingMore = false;
+			}
 		}
 	}
 

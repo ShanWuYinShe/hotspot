@@ -87,4 +87,16 @@ describe('ChatMessageList', () => {
 		await fireEvent.click(container.querySelector('button[aria-label="查看大图"]') as HTMLButtonElement);
 		expect(clicked).toEqual(['https://cdn.example.com/a.jpg']);
 	});
+
+	// W11：图片消息没有可编辑的文本，自己的图片消息不应出现「消息操作」菜单
+	// （此前 canEdit 只看 sent，展开后「编辑」点不开任何编辑态，形成死入口）。
+	it('自己的图片消息不渲染消息操作菜单，文字消息仍有', () => {
+		const messages: ChatMessage[] = [
+			{ id: 'img-1', text: '', sent: true, time: '12:00', sentAt: '2026-08-10T12:00:00Z', imageUrl: 'https://cdn.example.com/a.jpg' },
+			{ id: 'txt-1', text: '文字消息', sent: true, time: '12:01', sentAt: '2026-08-10T12:01:00Z' }
+		];
+		const chat = makeChat({ messages, dateGroups: [{ label: '今天', messages }] });
+		const { container } = render(ChatMessageList, { props: { chat, canRecall: () => false } });
+		expect(container.querySelectorAll('button[aria-label="消息操作"]')).toHaveLength(1);
+	});
 });

@@ -40,11 +40,17 @@ export function useSettingsData() {
 			requireAuth({ action: '修改附近新瞬间通知设置', run: toggleNearbyMomentNotify });
 			return;
 		}
-		nearbyMomentNotify = !nearbyMomentNotify;
-		void updateSettings({ settings: { nearby_moment_notify: nearbyMomentNotify } }).catch(() => {
-			nearbyMomentNotify = !nearbyMomentNotify;
-			showToast('设置失败，请重试', 'danger');
-		});
+		const next = !nearbyMomentNotify;
+		nearbyMomentNotify = next;
+		// 与另两个开关同口径：业务码非 0 也要回滚（只 catch 传输异常会留下错误状态）
+		void updateSettings({ settings: { nearby_moment_notify: next } })
+			.then((res) => {
+				if (res.code !== 0) throw new Error(res.message ?? '设置失败');
+			})
+			.catch(() => {
+				nearbyMomentNotify = !next;
+				showToast('设置失败，请稍后重试', 'danger');
+			});
 	};
 
 	const toggleLocationSharing = () => {
