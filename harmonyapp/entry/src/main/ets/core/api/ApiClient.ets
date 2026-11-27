@@ -629,6 +629,12 @@ export class ApiClient {
     return HttpUtil.post<ApiResponse<void>, SetReactionRequest>(ApiEndpoints.REACTIONS.SET, req);
   }
 
+  /** 消息表情反应（spec api_spec_reaction.md → target_type='message'，H-03）。 */
+  static async setMessageReaction(messageId: string, emoji: string, active: boolean): Promise<ApiResponse<void>> {
+    const req: SetReactionRequest = { target_type: 'message', target_id: messageId, emoji: emoji, active: active };
+    return HttpUtil.post<ApiResponse<void>, SetReactionRequest>(ApiEndpoints.REACTIONS.SET, req);
+  }
+
   // ==================== 私聊管理 API ====================
 
   static async getPrivateChats(params: FetchPrivateChatsRequest): Promise<ApiResponse<PaginatedData<PrivateChatItem>>> {

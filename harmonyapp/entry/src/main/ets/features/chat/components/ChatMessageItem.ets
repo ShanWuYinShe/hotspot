@@ -18,6 +18,7 @@ import { AppThemePalette, DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/
 import { ChatThemeColors, ChatThemeManager } from '../../../core/theme/ChatTheme';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
+import { Reaction } from '../../../core/types/api';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
@@ -29,6 +30,8 @@ export interface ChatMessageView extends ChatMessageListItem, TypingMessageSourc
   senderAvatar?: string;
   /** 已编辑（时间行追加「· 已编辑」标记，对齐前端 editedAt） */
   edited?: boolean;
+  /** 表情反应（spec types.md → Reaction[]；H-03 消息点赞） */
+  reactions?: Reaction[];
   rawData?: Object;
 }
 
@@ -44,6 +47,8 @@ export struct ChatMessageItem {
 
   /** 气泡是否可唤起操作面板（编辑/撤回；由页面按权限计算） */
   @Prop hasActions: boolean = false;
+  /** 表情反应切换（emoji + active）；未注入时不渲染反应条（H-03） */
+  onToggleReaction?: (emoji: string, active: boolean) => void;
   /** 气泡点击上抛（唤起消息操作面板） */
   onMessageClick?: (msg: ChatMessageView) => void = undefined;
 
@@ -322,6 +327,30 @@ export struct ChatMessageItem {
                 this.onMessageClick(this.msg);
               }
             })
+          }
+          if (!this.msg.recalled) {
+            ForEach((this.msg.reactions ?? []).filter((r: Reaction) => r.count > 0), (r: Reaction) => {
+              Row({ space: DesignConstants.SPACING.HALF }) {
+                Text(r.emoji).fontSize(DesignConstants.FONT.SIZE.XS)
+                Text(`${r.count}`)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .fontColor(r.reacted_by_me ? this.palette.textAccentOnSoft : this.palette.textSecondary)
+              }
+              .padding({
+                left: DesignConstants.SPACING.SM,
+                right: DesignConstants.SPACING.SM,
+                top: DesignConstants.SPACING.HALF,
+                bottom: DesignConstants.SPACING.HALF
+              })
+              .backgroundColor(r.reacted_by_me ? this.palette.accentMuted : this.palette.surfaceBackground)
+              .border({ width: 1, color: r.reacted_by_me ? this.palette.accentBackground : this.palette.borderColor })
+              .borderRadius(DesignConstants.RADIUS.FULL)
+              .margin({ top: DesignConstants.SPACING.XS, right: DesignConstants.SPACING.XS })
+              .onClick(() => {
+                if (this.onToggleReaction) this.onToggleReaction(r.emoji, !r.reacted_by_me);
+              })
+              .accessibilityText(`表情反应 ${r.emoji}，${r.count} 个`)
+            }, (r: Reaction) => `${r.emoji}_${r.count}_${r.reacted_by_me ? 1 : 0}`)
           }
         }
         .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
