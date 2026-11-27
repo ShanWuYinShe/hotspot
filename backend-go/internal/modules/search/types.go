@@ -16,30 +16,6 @@ type SearchSuggestRequest struct {
 	Radius         int       `json:"radius,omitempty"`
 }
 
-type UserSuggestItem struct {
-	UserID    string `json:"user_id"`
-	Nickname  string `json:"nickname"`
-	AvatarURL string `json:"avatar_url,omitempty"`
-	Bio       string `json:"bio,omitempty"`
-}
-
-type GroupSuggestItem struct {
-	GroupID      string `json:"group_id"`
-	Name         string `json:"name"`
-	AvatarURL    string `json:"avatar_url,omitempty"`
-	Description  string `json:"description,omitempty"`
-	MembersCount int    `json:"members_count"`
-}
-
-type MomentSuggestItem struct {
-	MomentID           string `json:"moment_id"`
-	DescriptionPreview string `json:"description_preview"`
-	Author             struct {
-		UserID   string `json:"user_id"`
-		Nickname string `json:"nickname"`
-	} `json:"author"`
-}
-
 // 建议项 payload 判别联合：Type 决定 Payload 的具体类型。
 // 登录版使用 *Payload（含 relation/social_context/viewer_state 等查看者字段）；
 // /public/v1 使用 Public*Payload（spec api_spec_public.md 类型体系）。
