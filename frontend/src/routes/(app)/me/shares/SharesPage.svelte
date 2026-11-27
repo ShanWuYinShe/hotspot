@@ -15,12 +15,13 @@
 	import ListEnd from '@/components/data-display/ListEnd.svelte';
 	import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	import ConfirmDialog from '@/components/overlays/ConfirmDialog.svelte';
+	import SearchInput from '@/components/forms/SearchInput.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { fetchCreatedShares, revokeShare } from '@/api/client';
 	import type { ShareListItem, ShareType } from '@/api/types';
 	import { copyText } from '@/lib/clipboard';
 	import { formatMomentTime } from '@/lib/utils';
-	import { shareAvailability, shareAvailabilityLabel, shareLink, SHARE_TYPE_LABELS } from '@/lib/shares';
+	import { shareAvailability, shareAvailabilityLabel, shareLink, filterShares, SHARE_TYPE_LABELS } from '@/lib/shares';
 	import { showToast } from '@/stores/toast.svelte';
 	import { smartBack } from '@/lib/smart-back';
 	import { ROUTES } from '@/lib/routes';
@@ -49,6 +50,8 @@
 	);
 	const typeParam = $derived(activeTab === 'all' ? null : (activeTab as ShareType));
 
+	// W19：本地搜索（契约无 keyword，见 lib/shares.filterShares）；词写入 ?q= 便于刷新/返回保持
+	let q = $state(page.url.searchParams.get('q') ?? '');
 	let items = $state<ShareListItem[]>([]);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
@@ -56,6 +59,17 @@
 	let nextCursor = $state<string | null>(null);
 	let loadingMore = $state(false);
 	let reloadKey = $state(0);
+
+	const filteredItems = $derived(filterShares(items, q));
+
+	function onSearch(value: string): void {
+		q = value;
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (value.trim()) url.searchParams.set('q', value);
+		else url.searchParams.delete('q');
+		window.history.replaceState({}, '', url);
+	}
 
 	let revokeTarget = $state<ShareListItem | null>(null);
 	let revokeLoading = $state(false);
@@ -169,6 +183,17 @@
 		</PageHeader>
 	{/snippet}
 
+	{#if !needsAuth && !loading && (items.length > 0 || q)}
+		<div class="pb-3">
+			<SearchInput
+				value={q}
+				onChange={onSearch}
+				placeholder="搜索分享标题、类型或分享码"
+				ariaLabel="搜索我的分享"
+			/>
+		</div>
+	{/if}
+
 	{#if needsAuth}
 		<NeedsAuthNotice spotlight title="登录后查看" description="登录后即可管理你创建的分享链接。" />
 	{:else if loading}
@@ -189,9 +214,21 @@
 				<Share2 class="size-7" strokeWidth={1.5} />
 			{/snippet}
 		</EmptyState>
+	{:else if filteredItems.length === 0}
+		<EmptyState
+			pageCentered
+			spotlight
+			iconTone="accent"
+			title="没有匹配的分享"
+			description="只搜索已加载的分享记录，换个关键词试试。"
+		>
+			{#snippet icon()}
+				<Share2 class="size-7" strokeWidth={1.5} />
+			{/snippet}
+		</EmptyState>
 	{:else}
 		<ListContainer bordered class="overflow-hidden" ariaLabel="分享记录列表">
-			{#each items as item (item.share_id)}
+			{#each filteredItems as item (item.share_id)}
 				{@const availability = shareAvailability(item)}
 				<ListItem
 					class="px-3 py-3"
