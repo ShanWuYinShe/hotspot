@@ -72,6 +72,7 @@ import com.hotspot.app.ui.theme.AppShapes
 import com.hotspot.app.ui.theme.Dimens
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
+import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.util.TimeFormat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -369,6 +370,10 @@ fun MessagesScreen(
                             actionBusy = false
                             when (result) {
                                 is ApiResult.Ok -> {
+                                    ChatDrafts.clear(
+                                        context,
+                                        "private_" + entry.privateChat?.otherUser?.userId.orEmpty(),
+                                    )
                                     deleteEntry = null
                                     state.initialLoad(loader)
                                 }
