@@ -157,7 +157,7 @@
 								recalled={msg.recalled}
 								editedAt={msg.editedAt}
 								canRecall={canRecall(msg)}
-								canEdit={msg.sent}
+								canEdit={msg.sent && !msg.imageUrl}
 								canReport={!msg.sent && Boolean(onReport)}
 								onRecall={(id) => void chat.handleRecall(id)}
 								onEdit={(id, content) => void chat.handleEdit(id, content)}
