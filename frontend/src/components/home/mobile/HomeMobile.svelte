@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Bell, Search, Compass, ArrowRight, Sparkles, Users, LogIn } from '@lucide/svelte';
 	import { auth } from '@/stores/auth.svelte';
+	import { unread } from '@/stores/unread.svelte';
 	import { ROUTES } from '@/lib/routes';
 	import { contentFade } from '@/lib/motion';
 	import ActionIconButton from '@/components/navigation/ActionIconButton.svelte';
@@ -31,7 +32,7 @@
 			<h1 class="sr-only">首页</h1>
 			<div class="flex items-center gap-3">
 				<ActionIconButton icon={Search} label="搜索" onClick={() => void goto(ROUTES.search)} variant="ghost" size={36} />
-				<ActionIconButton icon={Bell} label="通知" onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
+				<ActionIconButton icon={Bell} label="通知" badge={unread.notify} onClick={() => void goto(ROUTES.notify)} variant="ghost" size={36} />
 			</div>
 		</div>
 		<div class="flex justify-center px-4">

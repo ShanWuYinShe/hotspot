@@ -1,6 +1,8 @@
 import { untrack } from 'svelte';
+import { page } from '$app/state';
 import {
 	listNotifies,
+	listSystemAnnouncements,
 	getUnreadCount,
 	markRead,
 	listMyInvites,
@@ -15,7 +17,7 @@ import { auth } from '@/stores/auth.svelte';
 import { WS_NOTIFY_EVENT } from '@/lib/ws/client';
 import { formatMomentTime } from '@/lib/utils';
 import { showToast } from '@/stores/toast.svelte';
-import type { GroupInviteItem, NotifyItem } from '@/api/types';
+import type { GroupInviteItem, NotifyItem, SystemAnnouncementItem } from '@/api/types';
 import {
 	normalizeNotifType,
 	resolveNotifHref,
@@ -24,26 +26,49 @@ import {
 
 export const FILTER_TABS = [
 	{ id: 'all', label: '全部' },
+	{ id: 'unread', label: '未读' },
 	{ id: 'reaction', label: '点赞' },
 	{ id: 'follow', label: '关注' },
 	{ id: 'comment', label: '评论' },
 	{ id: 'nearby', label: '附近' }
 ];
 
+const FILTER_IDS = new Set(FILTER_TABS.map((t) => t.id));
+
 const NOTIFY_PAGE_SIZE = 30;
+
+/** 分类筛选（点赞/关注/…）是语义分组，契约只支持单 type，仍在已加载页内过滤；
+ * 「未读」走服务端 is_read 筛选，切档需重新拉第一页。 */
+function readFilterOf(filter: string): boolean | null {
+	return filter === 'unread' ? false : null;
+}
+
+function initialFilter(): string {
+	const fromUrl = page.url.searchParams.get('filter') ?? '';
+	return FILTER_IDS.has(fromUrl) ? fromUrl : 'all';
+}
 
 export function useNotifyData() {
 	let notifies = $state<NotifyViewItem[]>([]);
 	let invites = $state<GroupInviteItem[]>([]);
 	let invitesLoaded = false;
-	let filter = $state('all');
+	/** 平台公告（公开端点，游客也可见；与通知列表相互独立）。 */
+	let announcements = $state<SystemAnnouncementItem[]>([]);
+	let filter = $state(initialFilter());
+	/** 仅「未读」档需要服务端筛选，其余档位在已加载页内过滤。 */
+	const serverReadFilter = $derived(readFilterOf(filter));
 	let nextCursor = $state<string | null>(null);
 	let loadingMore = $state(false);
+	/** 续页失败：停止哨兵自动重试并给出手动重试入口（与首屏 loadError 区分）。 */
+	let loadMoreError = $state(false);
 
 	let needsAuth = $state(false);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 	let reloadKey = $state(0);
+
+	/** 上一次服务端已读筛选值：切档时清空旧列表（旧数据在新筛选条件下不可信）。 */
+	let lastReadFilter: boolean | null = null;
 
 	let query = $state('');
 	let searchReloadKey = $state(0);
@@ -126,9 +151,16 @@ export function useNotifyData() {
 		return items.map((n) => (n.inviteId ? { ...n, inviteId: undefined } : n));
 	}
 
-	// 拉取通知与未读
+	// 拉取通知与未读；「未读」档随筛选切换重新拉第一页（服务端 is_read）
 	$effect(() => {
 		void reloadKey;
+		const readFilter = serverReadFilter;
+		if (readFilter !== lastReadFilter) {
+			lastReadFilter = readFilter;
+			notifies = [];
+			nextCursor = null;
+			loading = true;
+		}
 		let cancelled = false;
 
 		async function fetchNotifs() {
@@ -137,11 +169,12 @@ export function useNotifyData() {
 				if (untrack(() => !notifies.length)) loading = true;
 				loadError = null;
 
-				const [notifRes, unreadRes, invitesRes, followingRes] = await Promise.all([
-					listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),
+				const [notifRes, unreadRes, invitesRes, followingRes, announcementsRes] = await Promise.all([
+					listNotifies({ is_read: readFilter, pagination: { limit: NOTIFY_PAGE_SIZE } }).catch(() => netError({ items: [], next_cursor: null })),
 					getUnreadCount().catch(() => netError({ total: 0 })),
 					listMyInvites().catch(() => netError({ items: [] })),
-					listFollowing({ user_id: auth.user?.user_id ?? '', pagination: { limit: 100 } }).catch(() => netError({ items: [], next_cursor: null }))
+					listFollowing({ user_id: auth.user?.user_id ?? '', pagination: { limit: 100 } }).catch(() => netError({ items: [], next_cursor: null })),
+					listSystemAnnouncements().catch(() => null)
 				]);
 				if (cancelled) return;
 
@@ -174,6 +207,11 @@ export function useNotifyData() {
 					notifies = stripInviteRowActions(toViewItems(notifData.items || [], 0));
 				}
 
+				// 公告失败不阻塞通知主流程（游客也能看到公告，无需登录态）
+				if (announcementsRes?.code === 0 && announcementsRes.data) {
+					announcements = announcementsRes.data.items ?? [];
+				}
+
 				if (unreadRes.code === 0 && unreadRes.data) {
 					setNotifyUnread(unreadRes.data.total);
 				}
@@ -196,15 +234,24 @@ export function useNotifyData() {
 	async function loadMoreNotifs() {
 		if (nextCursor === null || loadingMore) return;
 		loadingMore = true;
+		loadMoreError = false;
 		try {
-			const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor: nextCursor } }).catch(() => netError({ items: [], next_cursor: null }));
-			if (res.code === 0 && res.data) {
-				notifies = stripInviteRowActions([...notifies, ...toViewItems(res.data.items || [], notifies.length)]);
-				nextCursor = res.data.next_cursor ?? null;
+			const res = await listNotifies({ is_read: serverReadFilter, pagination: { limit: NOTIFY_PAGE_SIZE, cursor: nextCursor } }).catch(() => null);
+			if (!res || res.code !== 0 || !res.data) {
+				loadMoreError = true;
+				return;
 			}
+			notifies = stripInviteRowActions([...notifies, ...toViewItems(res.data.items || [], notifies.length)]);
+			nextCursor = res.data.next_cursor ?? null;
 		} finally {
 			loadingMore = false;
 		}
+	}
+
+	/** 续页失败后手动重试（哨兵在 error=true 时不自动重试）。 */
+	async function retryLoadMore() {
+		loadMoreError = false;
+		await loadMoreNotifs();
 	}
 
 	const followBack = async (n: NotifyViewItem) => {
@@ -223,6 +270,11 @@ export function useNotifyData() {
 		const snapshot = notifies;
 		notifies = notifies.map((n) => ({ ...n, read: true }));
 		setNotifyUnread(0);
+		// 「未读」档下全部已读后列表应清空（加载态/到底态同步复位）
+		if (serverReadFilter === false) {
+			notifies = [];
+			nextCursor = null;
+		}
 		void markRead({ scope: 'all' }).catch(() => {
 			notifies = snapshot;
 			void getUnreadCount().then((r) => {
@@ -292,8 +344,9 @@ export function useNotifyData() {
 		reloadKey++;
 	};
 
-	// 通知契约（notify/fetch）无 keyword 参数：搜索时先自动加载完全部分页（最多 10 页），
+	// 通知契约（notify/fetch）无 keyword 参数：搜索时先自动加载已加载分页（最多 10 页），
 	// 再按通知内容/用户 ID/类型/跳转目标本地匹配；清空后回到常规分页。
+	// 输入 300ms 防抖：此前每按一键都触发一轮最多 10 次串行 notify/fetch（W07）。
 	$effect(() => {
 		const q = query.trim();
 		void searchReloadKey;
@@ -307,10 +360,11 @@ export function useNotifyData() {
 		let cancelled = false;
 		searchLoading = true;
 		searchError = null;
-		void (async () => {
+
+		async function runSearch() {
 			const all: NotifyItem[] = [];
 			let cursor: string | undefined;
-			for (let page = 0; page < 10; page++) {
+			for (let pageIndex = 0; pageIndex < 10; pageIndex++) {
 				const res = await listNotifies({ pagination: { limit: NOTIFY_PAGE_SIZE, cursor } }).catch(() => null);
 				if (cancelled) return;
 				if (!res || res.code !== 0 || !res.data) {
@@ -327,18 +381,36 @@ export function useNotifyData() {
 				[n.user.name, n.user.id, n.text, n.type, n.href ?? '', n.id].join(' ').toLowerCase().includes(q.toLowerCase())
 			);
 			searchLoading = false;
-		})();
+		}
+
+		const timer = setTimeout(() => void runSearch(), 300);
 		return () => {
 			cancelled = true;
+			clearTimeout(timer);
 		};
 	});
 
 	// 派生计算
 	const unread = $derived(notifies.filter((n) => !n.read).length);
+	/** 服务端未读总数（页头/「全部已读」按钮口径；未读散落在后续分页时也不失真）。 */
+	const totalUnread = $derived(globalUnread.notify);
 	const meId = $derived(auth.user?.user_id ?? '');
 	const filteredNotifies = $derived(
-		(searching ? searchItems : notifies).filter((n) => filter === 'all' || n.type === filter)
+		(searching ? searchItems : notifies).filter((n) =>
+			// 「未读」档：服务端已只返回未读，单条标记已读后也要即时从当前列表消失
+			filter === 'unread' ? !n.read : filter === 'all' || n.type === filter
+		)
 	);
+
+	/** 筛选档写入 URL（刷新/返回保持；与 /me/shares 等页 ?tab= 约定一致）。 */
+	function setFilter(v: string) {
+		filter = v;
+		if (typeof window === 'undefined') return;
+		const url = new URL(window.location.href);
+		if (v === 'all') url.searchParams.delete('filter');
+		else url.searchParams.set('filter', v);
+		window.history.replaceState(window.history.state, '', url.toString());
+	}
 
 	const reactionCount = $derived(notifies.filter((n) => n.type === 'reaction').length);
 	const followCount = $derived(notifies.filter((n) => n.type === 'follow').length);
@@ -369,14 +441,18 @@ export function useNotifyData() {
 		retrySearch: () => { searchReloadKey++; },
 		get filteredNotifies() { return filteredNotifies; },
 		get invites() { return invites; },
+		get announcements() { return announcements; },
 		get filter() { return filter; },
-		set filter(v: string) { filter = v; },
+		set filter(v: string) { setFilter(v); },
 		get nextCursor() { return nextCursor; },
 		get loadingMore() { return loadingMore; },
+		get loadMoreError() { return loadMoreError; },
+		retryLoadMore,
 		get needsAuth() { return needsAuth; },
 		get loading() { return loading; },
 		get loadError() { return loadError; },
 		get unread() { return unread; },
+		get totalUnread() { return totalUnread; },
 		get meId() { return meId; },
 		get followedBack() { return followedBack; },
 		get invitePending() { return invitePending; },
