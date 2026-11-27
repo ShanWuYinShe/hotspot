@@ -9,6 +9,8 @@
 // 生命周期绑定组件实例，卸载自动清理。
 
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
+import type { Reaction } from '@/api/types';
+import { applyMyReaction, applyReactionDelta, setMessageReaction } from '@/lib/message-reactions';
 import { wsClient } from '@/lib/ws/client';
 import { prefersReducedMotion } from '@/lib/motion';
 import { loadChatDraft, saveChatDraft } from '@/lib/chat-draft';
@@ -31,6 +33,8 @@ export interface ChatMessage {
 	sentAt?: string;
 	recalled?: boolean;
 	editedAt?: string;
+	/** 表情反应（spec types.md → Reaction[]；W05 消息点赞） */
+	reactions?: Reaction[];
 }
 
 export interface ChatMessageUpdate {
@@ -74,6 +78,8 @@ export interface UseChatOptions {
 	wsNewMessage: (e: Event) => ChatMessage | null;
 	/** 从 WS 更新事件提取编辑/撤回；返回 null 表示忽略（非本会话/无关类型）。 */
 	wsMessageUpdate: (e: Event) => ChatMessageUpdate | null;
+	/** 当前用户 ID：用于判定 WS 反应事件是否为自己（Reaction* 事件按 actor 区分）。 */
+	selfUserId?: () => string;
 	/** 撤回消息（spec：发送者窗口内 / 群管理员豁免）；返回 code，非 0 失败。可选，未注入则不提供撤回。 */
 	recallMessage?: (id: string) => Promise<{ code: number; error?: string }>;
 	/** 编辑消息（spec：仅本人 + type=text + 未撤回）；返回 code，非 0 失败。可选，未注入则不提供编辑。 */
@@ -309,11 +315,30 @@ export function useChat(opts: UseChatOptions) {
 			}
 		};
 
+		// 消息表情反应（spec websocket → ReactionAdded/ReactionRemoved）：事件只带
+		// target/emoji/actor，不带计数，本地按增量合并；自己的反应按 actor 标注
+		// reacted_by_me，便于气泡反应条高亮。
+		const onReaction = (active: boolean) => (e: Event) => {
+			const p = (e as CustomEvent<{ target_type?: string; target_id?: string; emoji?: string; actor?: { user_id?: string } }>).detail;
+			if (!p || p.target_type !== 'message' || !p.target_id || !p.emoji) return;
+			const selfId = opts.selfUserId?.();
+			const mine = Boolean(selfId && p.actor?.user_id === selfId);
+			messages = messages.map((m) =>
+				m.id === p.target_id ? { ...m, reactions: applyReactionDelta(m.reactions, p.emoji as string, active, mine) } : m
+			);
+		};
+		const onReactionAdded = onReaction(true);
+		const onReactionRemoved = onReaction(false);
+
 		window.addEventListener(opts.wsNewMessageEvent, onNewMessage as EventListener);
 		window.addEventListener(opts.wsMessageUpdateEvent, onMessageUpdate as EventListener);
+		window.addEventListener('ReactionAdded', onReactionAdded as EventListener);
+		window.addEventListener('ReactionRemoved', onReactionRemoved as EventListener);
 		return () => {
 			window.removeEventListener(opts.wsNewMessageEvent, onNewMessage as EventListener);
 			window.removeEventListener(opts.wsMessageUpdateEvent, onMessageUpdate as EventListener);
+			window.removeEventListener('ReactionAdded', onReactionAdded as EventListener);
+			window.removeEventListener('ReactionRemoved', onReactionRemoved as EventListener);
 			// 会话切换时清理发送侧 typing 定时器
 			if (typingStopTimer) {
 				clearTimeout(typingStopTimer);
@@ -584,6 +609,15 @@ export function useChat(opts: UseChatOptions) {
 	);
 	const dateGroups = $derived(groupMessagesByDay(messages));
 
+	/** 切换消息表情反应（乐观更新 + 失败回滚；服务端语义：同一消息只保留一个 emoji）。 */
+	async function react(messageId: string, emoji: string, active: boolean): Promise<void> {
+		const before = messages.find((m) => m.id === messageId)?.reactions ?? [];
+		const optimistic = applyMyReaction(before, emoji, active);
+		messages = messages.map((m) => (m.id === messageId ? { ...m, reactions: optimistic } : m));
+		const ok = await setMessageReaction(messageId, emoji, active);
+		if (!ok) messages = messages.map((m) => (m.id === messageId ? { ...m, reactions: before } : m));
+	}
+
 	return {
 		get messages() {
 			return messages;
@@ -659,6 +693,7 @@ export function useChat(opts: UseChatOptions) {
 		retrySend,
 		handleRecall,
 		handleEdit,
+		react,
 		cancelTyping
 	};
 }
