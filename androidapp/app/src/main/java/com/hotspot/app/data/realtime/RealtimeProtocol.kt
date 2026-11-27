@@ -79,6 +79,25 @@ sealed interface RealtimeEvent {
         val isTyping: Boolean,
     ) : RealtimeEvent
 
+    /**
+     * 表情反应新增/移除（spec api_spec_websocket.md → ReactionAdded / ReactionRemoved）。
+     * 事件只带 target_type/target_id/emoji/actor，不带最新计数：聊天页按 ±1 本地合并，
+     * actor 用于判定「是不是我发的反应」（对齐 Web / 鸿蒙实现）。
+     */
+    data class ReactionAdded(
+        val targetType: String,
+        val targetId: String,
+        val emoji: String,
+        val actor: UserInfo,
+    ) : RealtimeEvent
+
+    data class ReactionRemoved(
+        val targetType: String,
+        val targetId: String,
+        val emoji: String,
+        val actor: UserInfo,
+    ) : RealtimeEvent
+
     data class SessionRevoked(val reason: String) : RealtimeEvent
 
     data class AccountBanned(val reason: String) : RealtimeEvent
@@ -201,6 +220,20 @@ object RealtimeProtocol {
             groupId = payload.stringOrNull("group_id") ?: return null,
             actor = payload["actor"]?.let { decodeUser(it) } ?: UserInfo(),
             isTyping = payload.booleanOrNull("is_typing") ?: false,
+        )
+
+        "ReactionAdded" -> RealtimeEvent.ReactionAdded(
+            targetType = payload.stringOrNull("target_type") ?: return null,
+            targetId = payload.stringOrNull("target_id") ?: return null,
+            emoji = payload.stringOrNull("emoji") ?: return null,
+            actor = payload["actor"]?.let { decodeUser(it) } ?: UserInfo(),
+        )
+
+        "ReactionRemoved" -> RealtimeEvent.ReactionRemoved(
+            targetType = payload.stringOrNull("target_type") ?: return null,
+            targetId = payload.stringOrNull("target_id") ?: return null,
+            emoji = payload.stringOrNull("emoji") ?: return null,
+            actor = payload["actor"]?.let { decodeUser(it) } ?: UserInfo(),
         )
 
         else -> null
