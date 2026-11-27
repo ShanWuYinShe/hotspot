@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hotspot.app.AppContainer
 import com.hotspot.app.BuildConfig
+import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.data.update.AppUpdateInfo
 import com.hotspot.app.data.update.UpdateChecker
 import com.hotspot.app.R
@@ -1031,6 +1032,7 @@ fun SettingsScreen(
                         scope.launch {
                             loggingOut = true
                             AppContainer.authRepository.signout()
+                            ChatDrafts.clearAll(context)
                             loggingOut = false
                             showLogoutConfirm = false
                         }
