@@ -210,7 +210,9 @@ app/src/main/java/com/hotspot/app/
   目标评论不在首屏时自动续页查找，直到命中或评论到底）；
   `nearby_new_moment` → 瞬间详情；`group_mentioned` → 群聊；群邀请/入群申请 → 群详情；举报处理 → 我的举报；
   无可跳转目标（系统公告等）只标记已读。
-- **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 点赞/取消点赞（`reactions/set target_type=message`，👍，乐观更新 + 失败回滚；气泡下展示反应胶囊）/ 复制（文本）/ 撤回（自己的消息）/
+- **消息操作**：长按消息（私聊/群聊共用 `MessageActionSheet`）→ 点赞/取消点赞（`reactions/set target_type=message`，👍，乐观更新 + 失败回滚；气泡下展示反应胶囊）/ 复制（文本）/ 编辑（自己的文本消息：
+  面板内切换 TextArea + 完成/取消，对齐鸿蒙 `MessageActionsSheet`；走 `private_messages/update` / `group_messages/update`，
+  成功后本地覆盖 content/editedAt，气泡时间行追加「· 已编辑」）/ 撤回（自己的消息）/
   举报（他人的消息，复用 `ReportDialog`）；撤回走 `private_messages/recall` / `group_messages/recall`，
   服务端时间窗超时返回 10400 时 toast 提示；操作可用性由 `util/MessageActionRules.kt` 统一计算。
 - **聊天文件**：输入条相册右侧文件按钮 → 系统 DocumentsUI → `data/media/ChatFileUploader`
@@ -256,7 +258,7 @@ app/src/main/java/com/hotspot/app/
    群管理已接入（owner/admin）：群信息编辑、群设置、公告管理、成员管理（角色/禁言/移除/封禁）、
    转让群主、入群申请审批与邀请成员；
    举报已覆盖用户/瞬间/评论/群组/消息（群组举报在群详情更多菜单，消息举报走长按操作面板）；
-   消息长按操作面板已接入：复制文本 / 撤回自己未超时消息 / 举报他人消息；
+   消息长按操作面板已接入：复制文本 / 编辑自己的文本消息（已编辑标记）/ 撤回自己未超时消息 / 举报他人消息；
    评论已补：删除自己的评论（comments/delete 软删，仅作者；确认后展示「该评论已删除」占位）、
    查看全部回复（comments/fetch_replies 展开 top_replies 预览之外的回复）、
    举报评论（reports/create target_type=comment，复用 ReportDialog）与楼中楼回复点赞。
