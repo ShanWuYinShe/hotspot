@@ -858,6 +858,9 @@ fun SettingsScreen(
                             when (val result = AppContainer.authRepository.deleteAccount(deleteConfirmation)) {
                                 is ApiResult.Ok -> {
                                     showDeleteAccount = false
+                                    ChatDrafts.clearAll(context)
+                                    context.getSharedPreferences("search_history", Context.MODE_PRIVATE)
+                                        .edit().clear().apply()
                                     AppContainer.tokenStore.clear()
                                     Toast.makeText(context, "账号已注销", Toast.LENGTH_SHORT).show()
                                 }
