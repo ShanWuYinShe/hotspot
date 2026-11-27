@@ -147,11 +147,16 @@ export class InteractionStateStore {
     return InteractionStateStore.instance;
   }
 
-  /** 清空内存状态与监听器（登出/会话失效时调用，防止跨账号残留） */
-  clearAll(): void {
+  /** 仅清空内存互动态、保留事件订阅：切号时调用（页面订阅不随账号切换失效） */
+  clearState(): void {
     AppStorage.setOrCreate(KEY_MOMENT_STATE, {} as MomentStateMap);
     AppStorage.setOrCreate(KEY_USER_STATE, {} as UserStateMap);
     AppStorage.setOrCreate(KEY_GROUP_STATE, {} as GroupStateMap);
+  }
+
+  /** 清空内存状态与监听器（登出/会话失效时调用，防止跨账号残留） */
+  clearAll(): void {
+    this.clearState();
     this.eventHub.clear();
   }
 

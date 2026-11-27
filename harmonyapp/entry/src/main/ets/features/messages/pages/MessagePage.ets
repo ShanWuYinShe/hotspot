@@ -7,6 +7,7 @@
  */
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
+import { interactionEventHub } from '../../../core/state/InteractionStateStore';
 import { formatCardTime } from '../../../core/utils/FormatUtil';
 import { ChatDraftStore } from '../../../core/utils/ChatDraftStore';
 import { PageShellContainer } from '../../../components/PageShellContainer';
@@ -143,8 +144,19 @@ export struct MessagePage {
     this.filteredChatDataSource.setData(this.filteredChatItems);
   }
 
+  /** 切号/登出：会话列表属于上一个账号，清空后强制重拉（缓存也在切号时清过） */
+  private authUserChangedListener: (payload: Object) => void = (): void => {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.chatItems = [];
+    this.filteredChatItems = [];
+    this.loadData(true);
+  };
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    interactionEventHub.on('auth_user_changed', this.authUserChangedListener);
     // 先从缓存加载（避免白屏），再强制调接口刷新
     await this.loadFromCache();
     await this.loadData(true);
@@ -152,6 +164,7 @@ export struct MessagePage {
 
   aboutToDisappear(): void {
     this.isDestroyed = true;
+    interactionEventHub.off('auth_user_changed', this.authUserChangedListener);
   }
 
   onMessageSync() {

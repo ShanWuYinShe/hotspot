@@ -14,6 +14,7 @@ import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
+import { interactionEventHub } from '../../../core/state/InteractionStateStore';
 import { MomentItem, SearchMomentsRequest, FetchFollowingMomentsRequest } from '../../../core/types/api';
 import { SurfaceIconButton } from '../../../components/SurfaceIconButton';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
@@ -147,8 +148,21 @@ export struct HomePage {
     return AppThemeManager.getPaletteById(this.resolvedThemeId);
   }
 
+  /** 切号/登出：两段流都清空后按新身份重载，避免 B 账号看到 A 的推荐/关注流 */
+  private authUserChangedListener: (payload: Object) => void = (): void => {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.moments = [];
+    this.followingMoments = [];
+    this.momentsError = '';
+    this.followingError = '';
+    this.reloadFeed();
+  };
+
   async aboutToAppear() {
     SystemUiController.syncWithCurrentTheme();
+    interactionEventHub.on('auth_user_changed', this.authUserChangedListener);
     this.onMomentsChanged();
     // 一条流 = 关系流 + 发现流：两者并行加载，渲染时关系流在前、发现流去重续后
     this.loadDiscoverMoments();
@@ -159,6 +173,7 @@ export struct HomePage {
 
   aboutToDisappear() {
     this.isDestroyed = true;
+    interactionEventHub.off('auth_user_changed', this.authUserChangedListener);
   }
 
   // ==================== 数据加载 ====================

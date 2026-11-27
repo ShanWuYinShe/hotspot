@@ -11,6 +11,9 @@ import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { InteractionStateStore } from '../../../core/state/InteractionStateStore';
+import { PreferencesUtil } from '../../../core/storage/PreferencesUtil';
+import { StorageKeys } from '../../../constants/AppConstants';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { MessageCacheService } from '../../../core/database/MessageCacheService';
 import { MomentCacheService } from '../../../core/database/MomentCacheService';
@@ -144,9 +147,12 @@ export struct AccountsPage {
     if (this.isDestroyed || this.switchingUserId.length > 0) return;
     this.switchingUserId = auth.user_id;
     try {
-      // 1) 清空缓存（避免串数据）
+      // 1) 清空缓存与跨账号内存状态（避免 B 账号沿用 A 的点赞/关注/入群状态），
+      //    并清本机最近搜索；clearState 保留事件订阅，切号后常驻 Tab 仍能收到刷新事件。
       await this.cache.clearAll();
       await MomentCacheService.getInstance().clearAll();
+      InteractionStateStore.getInstance().clearState();
+      await PreferencesUtil.remove(StorageKeys.SEARCH_RECENT);
 
       // 2) 切换 token
       const next = await AuthAccountManager.switchTo(auth.user_id);
