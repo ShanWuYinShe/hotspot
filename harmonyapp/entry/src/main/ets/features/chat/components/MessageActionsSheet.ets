@@ -12,6 +12,9 @@ import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
 
 const MESSAGE_EDIT_MAX: number = 5000;
 
+/** 消息表情反应默认白名单（与 Web DEFAULT_REACTION_EMOJIS、服务端默认配置一致）。 */
+const MESSAGE_REACTION_EMOJIS: string[] = ['👍', '❤️', '😂', '🎉', '👏', '🔥'];
+
 @Component
 export struct MessageActionsSheet {
   /** 待操作消息内容（编辑态回填初值） */
@@ -25,6 +28,8 @@ export struct MessageActionsSheet {
   surfaceBorder: string | Resource = '';
   onEdit: (content: string) => void = () => {};
   onRecall: () => void = () => {};
+  /** 表情反应（H-03）：传入 emoji，由页面负责乐观更新与失败回滚 */
+  onReact: (emoji: string) => void = () => {};
   onClose: () => void = () => {};
 
   /** 面板内编辑态（点「编辑」进入，完成/取消退出） */
@@ -94,6 +99,24 @@ export struct MessageActionsSheet {
           .width('100%')
 
         SoftDivider({ color: this.surfaceBorder })
+
+        // 表情反应入口（对齐 Web「消息操作」菜单顶部 emoji 行）：默认白名单，
+        // 服务端 AppConfig.limits.reaction_emojis 覆盖时由页面传入。
+        Row({ space: DesignConstants.SPACING.SM }) {
+          ForEach(MESSAGE_REACTION_EMOJIS, (emoji: string) => {
+            Text(emoji)
+              .fontSize(DesignConstants.FONT.SIZE.XL)
+              .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+              .height(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
+              .textAlign(TextAlign.Center)
+              .borderRadius(DesignConstants.SHAPE.BUTTON)
+              .backgroundColor(this.surfaceBackground)
+              .onClick(() => { this.onReact(emoji); })
+              .accessibilityText(`表情反应 ${emoji}`)
+          }, (emoji: string) => emoji)
+        }
+        .width('100%')
+        .justifyContent(FlexAlign.SpaceBetween)
 
         if (this.canEdit) {
           SystemButton({

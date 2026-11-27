@@ -12,7 +12,7 @@ import { ChatDraftStore } from '../../../core/utils/ChatDraftStore';
 import { WebSocketService } from '../../../core/network/WebSocketService';
 import { ApiError } from '../../../core/network/ApiError';
 import { MessageSyncManager } from '../../../core/state/MessageSyncManager';
-import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, GroupMemberItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory, MessageSentResult } from '../../../core/types/api';
+import { AccountInfo, MessageType, PrivateMessageItem, GroupMessageItem, GroupMemberItem, SendPrivateMessageRequest, SendGroupMessageRequest, FetchPrivateMessagesRequest, FetchGroupMessagesRequest, MarkPrivateReadRequest, MarkGroupReadRequest, OpenUserDoorRequest, CreateReportRequest, MediaCategory, MessageSentResult, Reaction } from '../../../core/types/api';
 import type {
   ServerEvent,
   PrivateMessageNewEvent,
@@ -22,7 +22,11 @@ import type {
   GroupMessageEditedEvent,
   GroupMessageRecalledEvent,
   PrivateTypingEvent,
-  GroupTypingEvent
+  GroupTypingEvent,
+  ReactionAddedEvent,
+  ReactionRemovedEvent,
+  ReactionAddedPayload,
+  ReactionRemovedPayload
 } from '../../../core/types/WebSocketTypes';
 import { PageNames } from '../../../constants/AppConstants';
 import { Pressable } from '../../../components/Pressable';
@@ -714,6 +718,8 @@ export struct ChatPage {
       edited: typeof item.edited_at === 'string'
         ? item.edited_at.length > 0
         : item.edited_at !== null && item.edited_at !== undefined,
+      // 消息表情反应（H-03）：服务端随消息下发 reactions，气泡据此渲染胶囊行
+      reactions: item.reactions ?? [],
       rawData: item
     };
   }
@@ -777,6 +783,8 @@ export struct ChatPage {
     this.webSocketService.on('GroupMessageRecalled', this.onGroupMessageRecalled);
     this.webSocketService.on('PrivateTyping', this.onPrivateTyping);
     this.webSocketService.on('GroupTyping', this.onGroupTyping);
+    this.webSocketService.on('ReactionAdded', this.onReactionAdded);
+    this.webSocketService.on('ReactionRemoved', this.onReactionRemoved);
     this.webSocketService.on('ConnectionEstablished', this.onConnectionEstablished);
   }
 
@@ -789,7 +797,103 @@ export struct ChatPage {
     this.webSocketService.off('GroupMessageRecalled', this.onGroupMessageRecalled);
     this.webSocketService.off('PrivateTyping', this.onPrivateTyping);
     this.webSocketService.off('GroupTyping', this.onGroupTyping);
+    this.webSocketService.off('ReactionAdded', this.onReactionAdded);
+    this.webSocketService.off('ReactionRemoved', this.onReactionRemoved);
     this.webSocketService.off('ConnectionEstablished', this.onConnectionEstablished);
+  }
+
+  // ==================== 消息表情反应（H-03） ====================
+
+  private onReactionAdded = (event: ServerEvent): void => {
+    if (event.type !== 'ReactionAdded') return;
+    this.applyReactionEvent((event as ReactionAddedEvent).payload, true);
+  };
+
+  private onReactionRemoved = (event: ServerEvent): void => {
+    if (event.type !== 'ReactionRemoved') return;
+    this.applyReactionEvent((event as ReactionRemovedEvent).payload, false);
+  };
+
+  /** WS 反应事件只带 target/emoji/actor，不带计数：本地按增量合并。 */
+  private applyReactionEvent(payload: ReactionAddedPayload | ReactionRemovedPayload, active: boolean): void {
+    if (payload.target_type !== 'message' || !payload.target_id || !payload.emoji) return;
+    const mine = payload.actor != null && payload.actor.user_id === this.currentUser?.user_id;
+    this.messages = this.messages.map((m: ChatMessage) => {
+      if (m.id !== payload.target_id) return m;
+      return this.withReactionDelta(m, payload.emoji, active, mine);
+    });
+  }
+
+  /** 切换消息表情反应：乐观更新 + 失败回滚（服务端同一消息只保留一个 emoji）。 */
+  private async toggleMessageReaction(messageId: string, emoji: string, active: boolean): Promise<void> {
+    const target = this.messages.find((m: ChatMessage) => m.id === messageId);
+    if (!target) return;
+    const before: Reaction[] = (target.reactions ?? []).concat();
+    this.messages = this.messages.map((m: ChatMessage) => (m.id === messageId ? this.withMyReaction(m, emoji, active) : m));
+    try {
+      const res = await ApiClient.setMessageReaction(messageId, emoji, active);
+      if (res.code !== 0) throw new Error(res.message || '操作失败');
+    } catch (err) {
+      this.messages = this.messages.map((m: ChatMessage) => (m.id === messageId ? this.withReactions(m, before) : m));
+      SystemToast.showError(err instanceof Error ? err.message : '操作失败，请重试', this.getUIContext());
+    }
+  }
+
+  private withReactions(msg: ChatMessage, reactions: Reaction[]): ChatMessage {
+    const next: ChatMessage = {
+      id: msg.id,
+      senderId: msg.senderId,
+      type: msg.type,
+      sentAt: msg.sentAt,
+      content: msg.content,
+      isSelf: msg.isSelf,
+      isSystem: msg.isSystem,
+      recalled: msg.recalled,
+      pending: msg.pending,
+      edited: msg.edited,
+      senderAvatar: msg.senderAvatar,
+      senderName: msg.senderName,
+      reactions: reactions,
+      rawData: msg.rawData
+    };
+    return next;
+  }
+
+  private withReactionDelta(msg: ChatMessage, emoji: string, active: boolean, mine: boolean): ChatMessage {
+    const reactions: Reaction[] = [];
+    let found = false;
+    for (const r of msg.reactions ?? []) {
+      if (r.emoji !== emoji) {
+        reactions.push(r);
+        continue;
+      }
+      found = true;
+      const count = active ? r.count + 1 : Math.max(0, r.count - 1);
+      if (count > 0) {
+        const nextMine = active ? (r.reacted_by_me || mine) : (mine ? false : r.reacted_by_me);
+        reactions.push({ emoji: r.emoji, count: count, reacted_by_me: nextMine } as Reaction);
+      }
+    }
+    if (active && !found) reactions.push({ emoji: emoji, count: 1, reacted_by_me: mine } as Reaction);
+    return this.withReactions(msg, reactions);
+  }
+
+  private withMyReaction(msg: ChatMessage, emoji: string, active: boolean): ChatMessage {
+    const reactions: Reaction[] = [];
+    for (const r of msg.reactions ?? []) {
+      const count = r.reacted_by_me ? Math.max(0, r.count - 1) : r.count;
+      if (count > 0) reactions.push({ emoji: r.emoji, count: count, reacted_by_me: false } as Reaction);
+    }
+    if (active) {
+      const existing = reactions.find((r: Reaction) => r.emoji === emoji);
+      if (existing) {
+        existing.count = existing.count + 1;
+        existing.reacted_by_me = true;
+      } else {
+        reactions.push({ emoji: emoji, count: 1, reacted_by_me: true } as Reaction);
+      }
+    }
+    return this.withReactions(msg, reactions);
   }
 
   private scrollToBottom() {
@@ -1480,6 +1584,7 @@ export struct ChatPage {
                     isLastSent: msg.isSelf && msg.id === this.lastSentMessageId,
                     timeText: formatMessageTime(msg.sentAt),
                     hasActions: hasMessageActions(msg, this.isAdminRecallContext()),
+                    onToggleReaction: (emoji: string, active: boolean) => { void this.toggleMessageReaction(msg.id, emoji, active); },
                     onMessageClick: (view: ChatMessageView) => { this.openMessageActions(view); },
                     palette: this.getCurrentThemePalette(),
                     chatTheme: this.getChatTheme()
@@ -1487,7 +1592,7 @@ export struct ChatPage {
                 }
                 .width('100%')
               }
-            }, (msg: ChatMessage) => `${msg.id}_${msg.content}_${msg.edited ? 1 : 0}_${msg.recalled ? 1 : 0}_${msg.pending ? 1 : 0}`)
+            }, (msg: ChatMessage) => `${msg.id}_${msg.content}_${msg.edited ? 1 : 0}_${msg.recalled ? 1 : 0}_${msg.pending ? 1 : 0}_${(msg.reactions ?? []).map((r: Reaction) => `${r.emoji}${r.count}${r.reacted_by_me ? 1 : 0}`).join('')}`)
 
       }
       .scrollBar(BarState.Off)
@@ -2086,6 +2191,13 @@ export struct ChatPage {
       surfaceBorder: this.getSurfaceBorder(),
       onEdit: (content: string) => { this.handleEditMessageSubmit(content); },
       onRecall: () => { this.handleRecallMessage(); },
+      onReact: (emoji: string) => {
+        const target = this.actionMessage;
+        if (!target) return;
+        const mine = (target.reactions ?? []).some((r: Reaction) => r.emoji === emoji && r.reacted_by_me);
+        this.showMessageActionsSheet = false;
+        void this.toggleMessageReaction(target.id, emoji, !mine);
+      },
       onClose: () => {
         this.showMessageActionsSheet = false;
         this.actionMessage = null;
