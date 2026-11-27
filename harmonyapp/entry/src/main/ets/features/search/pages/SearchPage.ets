@@ -12,6 +12,7 @@ import {
   SearchUsersRequest, SearchGroupsRequest, SearchMomentsRequest
 } from '../../../core/types/api';
 import { interactionActions } from '../../../core/state/InteractionActions';
+import { interactionEventHub } from '../../../core/state/InteractionStateStore';
 import { UserRelationState, sumReactionCounts } from '../../../core/state/InteractionStateStore';
 import { SystemAvatar } from '../../../components/SystemAvatar';
 import { Pressable } from '../../../components/Pressable';
@@ -111,14 +112,28 @@ export struct SearchPage {
   @State userActionPendingIds: string[] = [];
   private isDestroyed: boolean = false;
 
+  /** 切号/登出：最近搜索与发现数据属于上一个账号，清空后按新身份重载 */
+  private authUserChangedListener: (payload: Object) => void = (): void => {
+    if (this.isDestroyed) {
+      return;
+    }
+    this.recentSearches = [];
+    this.hasSearched = false;
+    this.searchError = '';
+    this.loadRecentSearches();
+    this.loadDiscovery();
+  };
+
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
+    interactionEventHub.on('auth_user_changed', this.authUserChangedListener);
     this.loadRecentSearches();
     this.loadDiscovery();
   }
 
   aboutToDisappear(): void {
     this.isDestroyed = true;
+    interactionEventHub.off('auth_user_changed', this.authUserChangedListener);
     KeyboardDismissManager.getInstance().dismiss();
     if (this.suggestTimerId) {
       TimerManager.clearTimeout(this.suggestTimerId);
