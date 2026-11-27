@@ -722,12 +722,16 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 	}
 	// 退群后立刻失效成员缓存：否则 TTL 内仍可发消息（发消息会走 ensureMember 缓存）。
 	s.invalidateMemberCache(ctx, req.GroupID, principal.UserID)
+	// 剩余成员总数必须取退群后的权威计数（spec GroupMemberLeftPayload.member_count
+	// 必填，客户端据此刷新群徽标）；重读失败时回退退群前快照 -1。
+	memberCount := s.memberCountAfterMutation(ctx, req.GroupID, group.Group.MembersCount-1)
 	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
 		Type: realtime.EventTypeGroupMemberLeft,
 		Payload: GroupMemberLeftPayload{
-			GroupID: req.GroupID,
-			User:    s.resolveUserInfo(ctx, principal.UserID),
-			LeftAt:  time.Now().UTC().Format(time.RFC3339),
+			GroupID:     req.GroupID,
+			User:        s.resolveUserInfo(ctx, principal.UserID),
+			LeftAt:      time.Now().UTC().Format(time.RFC3339),
+			MemberCount: memberCount,
 		},
 	})
 	// 退群即摘除本人对该群的订阅（与踢出/封禁同一口径）。
@@ -738,7 +742,12 @@ func (s *Service) LeaveGroup(ctx context.Context, req LeaveGroupRequest) error {
 func (s *Service) ListMyApplications(ctx context.Context, req MyApplicationsRequest) ([]GroupApplicationItem, string, error) {
 	principal, _ := platformauth.PrincipalFromContext(ctx)
 	limit := types.PaginationLimitWith(req.Pagination, 20, 100)
-	return s.repo.ListMyApplications(ctx, principal.UserID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
+	items, cursor, err := s.repo.ListMyApplications(ctx, principal.UserID, defaultPendingStatus(req.Status), limit, types.PaginationCursor(req.Pagination))
+	if err != nil {
+		return nil, "", err
+	}
+	s.fillApplicationExpiry(ctx, items)
+	return items, cursor, nil
 }
 
 func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRequest) error {
@@ -772,17 +781,42 @@ func (s *Service) CancelApplication(ctx context.Context, req CancelApplicationRe
 // notifyGroupApplicationCancelled pushes GroupApplicationCancelled events to
 // the group admins. 纯实时事件（spec api_spec_websocket.md：不落库通知）。
 func (s *Service) applicationExpired(ctx context.Context, item GroupApplicationItem) bool {
+	createdAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
+	if err != nil {
+		return false
+	}
+	return time.Now().UTC().After(createdAt.Add(s.groupApplicationTTL(ctx)))
+}
+
+// groupApplicationTTL 返回群申请有效期（appconfig.limits.group_application_ttl_hours，
+// 缺省 72h）：惰性过期判定与响应 expires_at 共用同一口径，避免两处漂移。
+func (s *Service) groupApplicationTTL(ctx context.Context) time.Duration {
 	ttl := 72 * time.Hour
 	if s.appConfig != nil {
 		if ttlHours := s.appConfig.Get(ctx).Limits.GroupApplicationTTLHours; ttlHours > 0 {
 			ttl = time.Duration(ttlHours) * time.Hour
 		}
 	}
-	createdAt, err := time.Parse(time.RFC3339Nano, item.CreatedAt)
-	if err != nil {
-		return false
+	return ttl
+}
+
+// fillApplicationExpiry 填充 GroupApplicationItem.expires_at（spec 恒定
+// nullable）：pending 项 = created_at + TTL；已进入终态（非 pending）为 null
+// （不再有有效期）。TTL 可算故不加迁移列。
+func (s *Service) fillApplicationExpiry(ctx context.Context, items []GroupApplicationItem) {
+	ttl := s.groupApplicationTTL(ctx)
+	for i := range items {
+		items[i].ExpiresAt = nil
+		if items[i].Status != ApplicationStatusPending {
+			continue
+		}
+		createdAt, err := time.Parse(time.RFC3339Nano, items[i].CreatedAt)
+		if err != nil {
+			continue
+		}
+		expiresAt := createdAt.Add(ttl).UTC().Format(time.RFC3339)
+		items[i].ExpiresAt = &expiresAt
 	}
-	return time.Now().UTC().After(createdAt.Add(ttl))
 }
 
 // ListGroupsByUser returns a user's visible groups (searchable, not deleted)

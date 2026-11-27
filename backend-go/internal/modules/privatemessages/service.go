@@ -289,18 +289,21 @@ func (s *Service) Send(ctx context.Context, req SendPrivateMessageRequest) (Mess
 		Sender:       s.resolveUserInfo(ctx, principal.UserID),
 		Type:         req.Type,
 		SentAt:       msg.SentAt,
-		Content:      req.Content,
-		ShareCode:    req.ShareCode,
+	}
+	// 恒定 nullable（spec → PrivateMessageNewPayload）：空值显式下发 null。
+	if req.Content != "" {
+		content := req.Content
+		payload.Content = &content
+	}
+	if req.ShareCode != "" {
+		shareCode := req.ShareCode
+		payload.ShareCode = &shareCode
 	}
 	if req.ReplyToMessageID != "" {
-		if replyTo := s.buildReplyTo(ctx, req.ReplyToMessageID, principal.UserID); replyTo != nil {
-			payload.ReplyTo = replyTo
-		}
+		payload.ReplyTo = s.buildReplyTo(ctx, req.ReplyToMessageID, principal.UserID)
 	}
 	if req.FileID != "" {
-		if media := s.buildMedia(ctx, req.FileID, principal.UserID); media != nil {
-			payload.Media = media
-		}
+		payload.Media = s.buildMedia(ctx, req.FileID, principal.UserID)
 	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageNew, Payload: payload}
 	// 收发双方各一次 BroadcastToUser（每次内部 record+publish 两次 Redis 往返），
@@ -490,9 +493,7 @@ func (s *Service) MarkAsRead(ctx context.Context, req MarkPrivateMessagesReadReq
 		return nil
 	}
 	event := realtime.Event{Type: realtime.EventTypePrivateMessageRead, Payload: PrivateMessageReadPayload{
-		TargetUserID:  meta.TargetUserID,
 		UpToMessageID: meta.MessageID,
-		ReaderID:      principal.UserID,
 		ReadAt:        time.Now().UTC().Format(time.RFC3339Nano),
 	}}
 	// 契约(api_spec_websocket.md):PrivateMessageRead 仅推给私聊对端（让对方得知已读）。

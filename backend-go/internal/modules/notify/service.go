@@ -523,30 +523,40 @@ func (s *Service) publishNearbyNewMoment(ctx context.Context, targetUserID, acto
 			return nil
 		}
 	}
-	payload := map[string]any{
+	// notify_id 先生成后共用（对齐 AppendGroupMentioned 等模式）：落库记录与
+	// NearbyNewMoment WS payload 携带同一 id，客户端可去重并对齐 HTTP 侧通知
+	//（spec api_spec_websocket.md）。
+	id := newNotifyID()
+	// 落库通知 payload 按 spec api_spec_notify.md 的 nearby_new_moment 判别联合
+	// 保存（含 type 键）；WS 事件按 api_spec_websocket.md 的
+	// NearbyNewMomentPayload 构造（无 type，补 created_at），两者形状不同。
+	notifyPayload := map[string]any{
 		"type":           "nearby_new_moment",
+		"notify_id":      id,
 		"actor":          actorPayload,
 		"moment_id":      momentID,
 		"moment_summary": momentSummaryPayload,
 		"distance":       distance,
 	}
-	// notify_id 先生成后共用（对齐 AppendGroupMentioned 等模式）：落库记录与
-	// NearbyNewMoment WS payload 携带同一 id，客户端可去重并对齐 HTTP 侧通知
-	//（spec api_spec_websocket.md）。
-	id := newNotifyID()
-	payload["notify_id"] = id
 	if err := s.repo.Append(ctx, targetUserID, NotifyItem{
 		NotifyID: id,
 		Type:     "nearby_new_moment",
 		IsRead:   false,
-		Payload:  payload,
+		Payload:  notifyPayload,
 	}); err != nil {
 		observability.FromContext(ctx).Error("notifys.publish_nearby_new_moment append failed", "error", err)
 		return err
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{
-		Type:    realtime.EventTypeNearbyNewMoment,
-		Payload: payload,
+		Type: realtime.EventTypeNearbyNewMoment,
+		Payload: NearbyNewMomentPayload{
+			NotifyID:      id,
+			MomentID:      momentID,
+			MomentSummary: momentSummaryPayload,
+			Actor:         actorPayload,
+			Distance:      distance,
+			CreatedAt:     time.Now().UTC().Format(time.RFC3339),
+		},
 	})
 	return nil
 }

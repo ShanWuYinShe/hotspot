@@ -233,7 +233,9 @@ func (s *Service) UpdateMyProfile(ctx context.Context, req UpdateAccountRequest)
 	event := realtime.Event{
 		Type: realtime.EventTypeUserProfileUpdated,
 		Payload: UserProfileUpdatedPayload{
-			UserID:    principal.UserID,
+			// spec 要求事件携带「更新后的用户基础信息」，客户端据此刷新缓存；
+			// 改动前只发 user_id，事件失去语义（契约审计 B01）。
+			User:      s.buildUserInfo(ctx, principal.UserID),
 			UpdatedAt: now,
 		},
 	}
@@ -443,7 +445,9 @@ func (s *Service) UpdateLocation(ctx context.Context, req UpdateLocationRequest)
 	event := realtime.Event{
 		Type: realtime.EventTypeUserProfileUpdated,
 		Payload: UserProfileUpdatedPayload{
-			UserID:    principal.UserID,
+			// spec 要求事件携带「更新后的用户基础信息」，客户端据此刷新缓存；
+			// 改动前只发 user_id，事件失去语义（契约审计 B01）。
+			User:      s.buildUserInfo(ctx, principal.UserID),
 			UpdatedAt: now,
 		},
 	}

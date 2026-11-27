@@ -135,6 +135,21 @@ func (r *InMemoryRepository) IsMember(_ context.Context, groupID, userID string)
 	return false, nil
 }
 
+// MemberRole 读取成员角色（角色变更事件 old_role 消费；非成员 found=false）。
+func (r *InMemoryRepository) MemberRole(_ context.Context, groupID, userID string) (GroupRole, bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	members, ok := r.members[groupID]
+	if !ok {
+		return "", false, nil
+	}
+	membership, ok := members[userID]
+	if !ok {
+		return "", false, nil
+	}
+	return membership.Role, true, nil
+}
+
 // AreMembers 批量判定成员资格（内存实现为一次锁下逐 key 查 map，无 IO）。
 func (r *InMemoryRepository) AreMembers(_ context.Context, groupIDs []string, userID string) (map[string]bool, error) {
 	r.mu.RLock()
@@ -228,8 +243,13 @@ func (r *InMemoryRepository) MuteMember(_ context.Context, userID string, req Mu
 		return ErrNotMember
 	}
 	membership.IsMuted = true
-	mutedUntil := time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
-	membership.MutedUntil = mutedUntil.Format(time.RFC3339)
+	// 与 PG 同口径：截止时间由 Service 计算后随请求传入（WS payload 与落库同源）；
+	// 未提供时按当前时刻 + 时长兜底（直接调用 repo 的测试路径）。
+	mutedUntil := req.MutedUntil
+	if mutedUntil.IsZero() {
+		mutedUntil = time.Now().UTC().Add(time.Duration(req.DurationMinutes) * time.Minute)
+	}
+	membership.MutedUntil = mutedUntil.UTC().Format(time.RFC3339)
 	members[req.UserID] = membership
 	_ = userID
 	return nil

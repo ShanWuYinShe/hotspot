@@ -36,16 +36,20 @@ func (s *Service) notifyGroupApplicationCancelled(ctx context.Context, applicati
 		observability.FromContext(ctx).Warn("groups.notify: list admin members failed", "group_id", group.Group.GroupID, "error", err)
 		return
 	}
+	// reason 为 spec 恒定 nullable：无理由时必须显式下发 null（此前条件写键会
+	// 让帧缺键，客户端读 undefined，契约审计 B08）。
+	var reasonPtr *string
+	if reason != "" {
+		reasonPtr = &reason
+	}
+	payload := GroupApplicationCancelledPayload{
+		ApplicationID: application.ApplicationID,
+		GroupID:       group.Group.GroupID,
+		Applicant:     applicant,
+		CancelledAt:   now,
+		Reason:        reasonPtr,
+	}
 	for _, member := range append(ownerMembers, adminMembers...) {
-		payload := map[string]any{
-			"application_id": application.ApplicationID,
-			"group_id":       group.Group.GroupID,
-			"applicant":      applicant,
-			"cancelled_at":   now,
-		}
-		if reason != "" {
-			payload["reason"] = reason
-		}
 		realtime.HubFromContext(ctx).BroadcastToUser(member.User.UserID, realtime.Event{
 			Type:    realtime.EventTypeGroupApplicationCancelled,
 			Payload: payload,

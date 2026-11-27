@@ -20,6 +20,8 @@ import (
 type stubGroupsRepo struct {
 	isBanned        map[string]bool
 	isMemberResult  bool
+	memberRole      GroupRole
+	memberRoleErr   error
 	adminMembers    []AdminGroupMemberItem
 	adminMembersCur string
 	adminMembersErr error
@@ -158,6 +160,28 @@ func (r *stubGroupsRepo) IsMember(_ context.Context, _ string, userID string) (b
 	}
 	return false, nil
 }
+func (r *stubGroupsRepo) MemberRole(_ context.Context, _ string, userID string) (GroupRole, bool, error) {
+	if r.memberRoleErr != nil {
+		return "", false, r.memberRoleErr
+	}
+	if r.memberRole != "" {
+		return r.memberRole, true, nil
+	}
+	for _, m := range r.members {
+		if m.User.UserID != userID {
+			continue
+		}
+		if m.Role == "" {
+			return GroupRoleMember, true, nil
+		}
+		return m.Role, true, nil
+	}
+	if r.isMemberResult {
+		return GroupRoleMember, true, nil
+	}
+	return "", false, nil
+}
+
 func (r *stubGroupsRepo) AreMembers(_ context.Context, groupIDs []string, userID string) (map[string]bool, error) {
 	result := make(map[string]bool, len(groupIDs))
 	for _, groupID := range groupIDs {

@@ -78,9 +78,9 @@ func (r *InMemoryRepository) ResolveByFileIDs(_ context.Context, fileIDs []strin
 		assets[upload.File.FileID] = MediaAsset{
 			FileID:       upload.File.FileID,
 			StorageKey:   upload.StorageKey,
-			ThumbnailURL: upload.File.ThumbnailURL,
-			Width:        upload.File.Width,
-			Height:       upload.File.Height,
+			ThumbnailURL: valueString(upload.File.ThumbnailURL),
+			Width:        valueInt(upload.File.Width),
+			Height:       valueInt(upload.File.Height),
 			MimeType:     upload.File.MimeType,
 		}
 	}
@@ -101,13 +101,13 @@ func (r *InMemoryRepository) CompletedFileMetaByID(_ context.Context, fileID str
 		return FileMeta{
 			Category:     upload.Category,
 			StorageKey:   upload.StorageKey,
-			ThumbnailURL: upload.File.ThumbnailURL,
-			Width:        upload.File.Width,
-			Height:       upload.File.Height,
+			ThumbnailURL: valueString(upload.File.ThumbnailURL),
+			Width:        valueInt(upload.File.Width),
+			Height:       valueInt(upload.File.Height),
 			MimeType:     upload.File.MimeType,
 			FileName:     upload.FileName,
 			FileSize:     upload.File.FileSize,
-			Duration:     upload.File.Duration,
+			Duration:     valueInt(upload.File.Duration),
 		}, true, nil
 	}
 	return FileMeta{}, false, nil

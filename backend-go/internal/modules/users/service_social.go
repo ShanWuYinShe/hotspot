@@ -72,12 +72,14 @@ func (s *Service) Follow(ctx context.Context, targetUserID string, source Follow
 			notificationID = id
 		}
 	}
-	newFollowerPayload := map[string]any{"notify_id": notificationID, "actor": actor, "followed_at": followedAt}
-	if sourceValue != "" {
-		newFollowerPayload["source"] = sourceValue
-	}
-	if sourceMomentID != "" {
-		newFollowerPayload["source_moment_id"] = sourceMomentID
+	// 恒定 nullable（spec → NewFollowerPayload）：source/source_moment_id 必须
+	// 恒在，无值下发 null——此前条件写键会让纯自然关注帧缺键（契约审计 B08）。
+	newFollowerPayload := NewFollowerPayload{
+		NotifyID:       notificationID,
+		Actor:          actor,
+		FollowedAt:     followedAt,
+		Source:         types.StrPtr(sourceValue),
+		SourceMomentID: types.StrPtr(sourceMomentID),
 	}
 	realtime.HubFromContext(ctx).BroadcastToUser(targetUserID, realtime.Event{Type: realtime.EventTypeNewFollower, Payload: newFollowerPayload})
 	relation, err := s.repo.Relationship(ctx, targetUserID, principal.UserID)
@@ -424,7 +426,14 @@ func ensureSocialListsVisible(ctx context.Context, repo Repository, userID strin
 	return nil
 }
 
+// buildFollowActor 构造通知/事件里的 actor（spec UserInfo）。
 func (s *Service) buildFollowActor(ctx context.Context, userID string) types.UserInfo {
+	return s.buildUserInfo(ctx, userID)
+}
+
+// buildUserInfo 构造 spec UserInfo（WS payload 与通知 actor 共用）：
+// 画像读取失败时降级为「user_id 即昵称」，与 buildFollowActor 历史行为一致。
+func (s *Service) buildUserInfo(ctx context.Context, userID string) types.UserInfo {
 	profile, ok, err := s.repo.GetProfile(ctx, userID)
 	if err != nil || !ok {
 		return types.UserInfo{UserID: userID, Nickname: userID}
