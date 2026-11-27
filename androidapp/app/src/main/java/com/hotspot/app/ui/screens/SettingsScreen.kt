@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hotspot.app.AppContainer
+import android.content.Context
 import com.hotspot.app.BuildConfig
 import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.data.update.AppUpdateInfo
@@ -1033,6 +1034,8 @@ fun SettingsScreen(
                             loggingOut = true
                             AppContainer.authRepository.signout()
                             ChatDrafts.clearAll(context)
+                            context.getSharedPreferences("search_history", Context.MODE_PRIVATE)
+                                .edit().clear().apply()
                             loggingOut = false
                             showLogoutConfirm = false
                         }
