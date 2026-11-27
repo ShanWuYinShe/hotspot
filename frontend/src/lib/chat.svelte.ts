@@ -11,6 +11,7 @@
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
 import { wsClient } from '@/lib/ws/client';
 import { prefersReducedMotion } from '@/lib/motion';
+import { loadChatDraft, saveChatDraft } from '@/lib/chat-draft';
 
 // 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动拉取历史（private_messages/fetch / group_messages/fetch）
 // 首页补拉（HTTP 与 WS 推送重复按主键去重，spec L169）；未超阈值直接依赖
@@ -53,6 +54,8 @@ export interface SendResult {
 export interface UseChatOptions {
 	/** 会话标识（私聊=peerUserId，群聊=groupId）；变化时自动重载历史并重绑 WS 监听。 */
 	targetId: () => string;
+	/** 输入草稿键（如 private:<user_id> / group:<group_id>，见 lib/chat-draft）；不传则不持久化。 */
+	draftKey?: () => string;
 	/** 加载历史（游标分页）；失败返回 null。实现方负责把 API items 映射为 ChatMessage。 */
 	loadHistory: (cursor?: string) => Promise<LoadHistoryResult | null>;
 	/** 标记会话已读（幂等语义，失败静默）。加载成功后调用。 */
@@ -149,6 +152,8 @@ function sortBySentAt(list: ChatMessage[]): ChatMessage[] {
 export function useChat(opts: UseChatOptions) {
 	let messages = $state<ChatMessage[]>([]);
 	let inputVal = $state('');
+	// 当前输入框内容归属的草稿键（会话切换时把旧文本写回旧键，见下方 $effect）。
+	let draftOwner = '';
 	let loading = $state(true);
 	// 历史加载失败（网络/服务端错误）。加载失败时必须显式呈现错误态，
 	// 不能把失败渲染成"空会话"误导用户（尤其桌面分栏切换会话后）。
@@ -213,16 +218,34 @@ export function useChat(opts: UseChatOptions) {
 		opts.markRead();
 	}
 
-	// 初始加载 + 会话切换重载（依赖 targetId 变化）。
+	// 初始加载 + 会话切换重载（依赖 targetId / draftKey 变化）。
 	$effect(() => {
 		const id = opts.targetId();
+		const key = opts.draftKey?.() ?? '';
 		if (!id) {
 			messages = [];
 			loading = false;
 			loadError = false;
+			draftOwner = '';
+			inputVal = '';
 			return;
 		}
+		// 会话切换：草稿已由下方 inputVal 落盘 effect 逐键写入，这里只切键并载入新会话草稿。
+		if (draftOwner !== key) {
+			// P0：旧会话的失败重发内容/错误提示不能带到新会话——retrySend 用的是当前注入的
+			// sendMessage，带过去就会把 A 的原文发给 B。切换即视为全新会话状态。
+			failedSend = null;
+			sendError = '';
+		}
+		draftOwner = key;
+		inputVal = key ? loadChatDraft(key) : '';
 		void loadInitial();
+	});
+
+	// 输入即时落盘（含清空）：刷新页面 / 切回会话时恢复；发送成功清空输入即清除草稿。
+	$effect(() => {
+		const text = inputVal;
+		if (draftOwner) saveChatDraft(draftOwner, text);
 	});
 
 	// 滚动策略（Round 10）：仅在「尾部消息 id 变化」时决策，loadMore 往顶部插入旧消息
@@ -500,7 +523,11 @@ export function useChat(opts: UseChatOptions) {
 				messages = messages.filter((m) => m.id !== tempId);
 				sendError = res.error ?? '消息发送失败';
 				failedSend = { text, mentions, error: sendError };
+				// 未发出的正文回写为该会话草稿：切走再回来仍能恢复（失败重发状态本身会被切会话清空）。
+				if (draftOwner) saveChatDraft(draftOwner, text);
 			} else if (res.message_id) {
+				// 成功（含重试路径）：丢弃该会话草稿，避免下次进入又出现已发出的文本。
+				if (draftOwner) saveChatDraft(draftOwner, '');
 				// 成功：用服务端 message_id 替换临时 id，后续 WS 推送按 id 去重跳过。
 				// WS 回显可能先于 HTTP 响应到达并已按真实 id 入列，替换前先去掉同 id 回显，避免重复气泡。
 				messages = messages
@@ -511,6 +538,7 @@ export function useChat(opts: UseChatOptions) {
 			messages = messages.filter((m) => m.id !== tempId);
 			sendError = '消息发送失败,请稍后重试';
 			failedSend = { text, mentions, error: sendError };
+			if (draftOwner) saveChatDraft(draftOwner, text);
 		} finally {
 			sending = false;
 			// 发送完成（无论成败）立即结束输入状态，避免对端残留"正在输入"

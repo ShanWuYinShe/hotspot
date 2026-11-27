@@ -42,6 +42,7 @@ export interface StorageKeysType {
   DEVICE_ID: string;
   SWITCH_TAB_REQUEST: string;
   MAIN_TAB_INDEX: string;
+  SEARCH_RECENT: string;
 }
 
 export const StorageKeys: StorageKeysType = {
@@ -57,6 +58,8 @@ export const StorageKeys: StorageKeysType = {
   AUTH_ACCOUNTS: 'auth_accounts',
   THEME_MODE: 'theme_mode',
   DARK_MODE_PREFERENCE: 'dark_mode_preference',
+  // 搜索页最近搜索（本机、按账号隔离，登出时清除）
+  SEARCH_RECENT: 'search_recent',
   // spec: 持久化 device_id（UUID v4），驱动单设备单会话踢人语义
   DEVICE_ID: 'device_id',
   // 路由页请求切底部 tab 的一次性信号（如设置页「个人资料」→ 我的 tab）；
@@ -79,11 +82,13 @@ export const StorageKeys: StorageKeysType = {
 export interface PreferenceStoresType {
   GEOTALK: string;
   ANCHOR_HISTORY: string;
+  CHAT_DRAFTS: string;
 }
 
 export const PreferenceStores: PreferenceStoresType = {
   GEOTALK: 'geotalk',
-  ANCHOR_HISTORY: 'anchor_history'
+  ANCHOR_HISTORY: 'anchor_history',
+  CHAT_DRAFTS: 'chat_drafts'
 };
 
 // 页面名称

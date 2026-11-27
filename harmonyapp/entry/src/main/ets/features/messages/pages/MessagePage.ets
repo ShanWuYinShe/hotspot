@@ -8,6 +8,7 @@
 
 import { GlobalStateManager, KEY_CURRENT_USER, KEY_LAST_MESSAGE_SYNC_TIME } from '../../../core/state/GlobalStateManager';
 import { formatCardTime } from '../../../core/utils/FormatUtil';
+import { ChatDraftStore } from '../../../core/utils/ChatDraftStore';
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import type { BreakpointType } from '../../../core/responsive/Breakpoint';
 import { ApiClient } from '../../../core/api/ApiClient';
@@ -520,6 +521,13 @@ export struct MessagePage {
         await ApiClient.leaveGroup(request);
         InteractionStateStore.getInstance().updateGroupMembership(groupId, { is_member: false });
       }
+
+      // 删除会话 / 退出群组后丢弃该会话未发送草稿（与 Web/Android 同语义）
+      const draftScope: string = item.type === 'private' ? 'private' : 'group';
+      const draftId: string = item.type === 'private'
+        ? ((item.data as PrivateChatItem).other_user?.user_id ?? item.id)
+        : ((item.data as GroupItem).group?.group_id ?? item.id);
+      ChatDraftStore.remove(ChatDraftStore.key(draftScope, draftId));
 
       const index = this.chatListDataSource.getDataIndex(item);
       if (index >= 0) {

@@ -14,6 +14,7 @@ import {
 } from '@/api';
 
 import { loadBootstrap, refreshBootstrap } from '@/lib/bootstrap-cache';
+import { clearAllChatDrafts } from '@/lib/chat-draft';
 import { resetAdmin } from "@/stores/admin.svelte";
 import { resetPresence } from "@/stores/presence.svelte";
 import { applyBootstrapUnread, resetUnread } from "@/stores/unread.svelte";
@@ -270,6 +271,14 @@ export async function logout(): Promise<void> {
   resetAdmin();
   resetPresence();
   resetUnread();
+  // 本机聊天草稿属于上一个账号的未发送内容：退出登录即清空，避免下一位登录用户读到。
+  clearAllChatDrafts();
+  // 最近搜索是同账号的搜索痕迹：退出登录一并清空（与 Android 登出清场一致）。
+  try {
+    localStorage.removeItem('search_recent');
+  } catch {
+    // 隐私模式 / 存储不可用：忽略
+  }
   setAuthenticated(false);
 }
 

@@ -22,6 +22,7 @@
 	import type { PrivateMessageNewPayload, PrivateTypingPayload } from '@/lib/ws/types';
 	import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
+	import { chatDraftKey } from '@/lib/chat-draft';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
 	// 历史来自 private_messages/fetch；发送走 private_messages/send。
@@ -69,6 +70,7 @@
 
 	const chat = useChat({
 		targetId: () => peerUserId,
+		draftKey: () => chatDraftKey('private', peerUserId),
 		loadHistory: async (cursor) => {
 			const res = await getPrivateMessages({
 				target_user_id: peerUserId,

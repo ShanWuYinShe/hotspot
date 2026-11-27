@@ -2,7 +2,7 @@ import { KEY_CURRENT_LOCATION, KEY_BROWSE_ANCHOR, KEY_IS_LOGGED_IN, KEY_CLIENT_C
 import { PageShellContainer } from '../../../components/PageShellContainer';
 import { ApiClient } from '../../../core/api/ApiClient';
 import { LocationInfo, LocationUtil } from '../../../core/location/LocationUtil';
-import { PageNames } from '../../../constants/AppConstants';
+import { PageNames, StorageKeys } from '../../../constants/AppConstants';
 import { AppRouter, ChatRouteParam, GroupDetailRouteParam, LoginRouteParam, MomentDetailRouteParam, ProfileRouteParam, SearchRouteParam } from '../../../core/router/AppRouter';
 import {
   UserItem, GroupItem, MomentItem, GeoPoint,
@@ -101,7 +101,8 @@ export struct SearchPage {
   @State loadedImageUrls: string[] = [];
   @State failedImageUrls: string[] = [];
 
-  private readonly RECENT_SEARCHES_KEY: string = 'search_recent';
+  // 键名收敛到 StorageKeys（登出清理需要从设置页引用同一键）
+  private readonly RECENT_SEARCHES_KEY: string = StorageKeys.SEARCH_RECENT;
   @State hasSearched: boolean = false;
   /** 搜索失败内联错误态（P2-4）：结果区展示 EmptyState + 重试，替代纯 toast */
   @State searchError: string = '';

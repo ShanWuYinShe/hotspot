@@ -4,13 +4,11 @@ import { ApiClient } from '../../../core/api/ApiClient';
 import { SystemToast } from '../../../components/SystemToast';
 import { DesignConstants, lineHeightFor, textLineHeight } from '../../../constants/DesignConstants';
 import { AccountInfo, ApiVersionMeta, ClientConfig, SystemAnnouncementItem } from '../../../core/types/api';
-import { AuthAccountManager } from '../../../core/state/AuthAccountManager';
-import { MessageCacheService } from '../../../core/database/MessageCacheService';
-import { MomentCacheService } from '../../../core/database/MomentCacheService';
 import { AppRouter, LoginRouteParam, AnnouncementsRouteParam } from '../../../core/router/AppRouter';
 import { PageNames, StorageKeys } from '../../../constants/AppConstants';
 import { SystemUiController } from '../../../core/utils/SystemUiController';
 import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
+import { ChatDraftStore } from '../../../core/utils/ChatDraftStore';
 import { AmbientBackdrop } from '../../../components/layout/AmbientBackdrop';
 import { SystemPageHeader } from '../../../components/SystemPageHeader';
 import { SystemAvatar } from '../../../components/SystemAvatar';
@@ -348,12 +346,27 @@ export struct SettingsPage {
 
   private async logout(): Promise<void> {
     try {
+      // 1. 先通知服务端撤销当前会话（失败不阻塞本地清理）。
+      //    此前只断本地连接、不调 auth/signout，服务端会话残留（登录设备列表仍显示在线）。
+      try {
+        await ApiClient.logout();
+      } catch (error) {
+        hilog.warn(DOMAIN_NUMBER, TAG, `服务端登出失败: ${JSON.stringify(error)}`);
+      }
+
+      // 2. 断开实时通道
       this.webSocketService.disconnect();
-      await MessageCacheService.getInstance().clearAll();
-      await MomentCacheService.getInstance().clearAll();
-      await AuthAccountManager.lockCurrent();
-      await HttpUtil.clearToken();
-      this.stateManager.updateUser(null);
+
+      // 3. 清本机会话级数据：聊天草稿与最近搜索属于上一个账号的未发送内容 / 搜索痕迹，
+      //    换号后不能读到（与 Android 登出清场一致）。
+      ChatDraftStore.clearAll();
+      await PreferencesUtil.remove(StorageKeys.SEARCH_RECENT);
+
+      // 4. 清 token 并重置全局状态（clearAuthData 内部执行 lockCurrent + GlobalStateManager.clear()：
+      //    互动态、未读角标、浏览锚点、消息/瞬间缓存一并归零；device_id/主题/服务器地址不受影响）
+      await HttpUtil.clearAuthData();
+
+      // 5. 回根页
       AppRouter.clear();
       SystemToast.show('已退出登录', this.getUIContext());
     } catch (_) {
