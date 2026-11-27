@@ -36,14 +36,8 @@ func (s *Service) CreateAnnouncement(ctx context.Context, req CreateGroupAnnounc
 	// 路径）不回查 users 表，此前响应里 Nickname 恒为裸 user_id。
 	item.CreatedBy = s.resolveUserInfo(ctx, principal.UserID)
 	realtime.HubFromContext(ctx).BroadcastToGroup(req.GroupID, realtime.Event{
-		Type: realtime.EventTypeGroupAnnouncementCreated,
-		Payload: GroupAnnouncementCreatedPayload{
-			GroupID:        req.GroupID,
-			AnnouncementID: item.AnnouncementID,
-			Title:          item.Title,
-			CreatedBy:      s.resolveUserInfo(ctx, principal.UserID),
-			CreatedAt:      item.CreatedAt,
-		},
+		Type:    realtime.EventTypeGroupAnnouncementCreated,
+		Payload: GroupAnnouncementCreatedPayload{Announcement: item},
 	})
 	op.Complete()
 	return item, nil

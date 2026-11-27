@@ -1,6 +1,8 @@
 // WebSocket 契约事件类型（spec/api_spec_websocket.md，只读权威）。
 // 统一 envelope：所有服务端推送与客户端发送均使用 { type, payload } 结构。
 
+import type { GroupAnnouncementItem } from '@/api/types';
+
 /** 统一事件 Envelope。 */
 export interface WsEvent<T extends string = string, P = unknown> {
   type: T;
@@ -401,7 +403,8 @@ export interface ServerEventPayloadMap {
   GroupApplicationExpired: Record<string, unknown>;
   GroupApplicationRejected: Record<string, unknown>;
   GroupApplicationResponse: Record<string, unknown>;
-  GroupAnnouncementCreated: Record<string, unknown>;
+  // spec api_spec_websocket.md → GroupAnnouncementCreatedPayload：嵌套完整公告项（B05）
+  GroupAnnouncementCreated: { announcement: GroupAnnouncementItem };
   GroupUpdated: Record<string, unknown>;
   GroupDismissed: Record<string, unknown>;
   ReportDismissed: Record<string, unknown>;

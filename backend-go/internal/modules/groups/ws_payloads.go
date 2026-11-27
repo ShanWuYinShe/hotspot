@@ -11,12 +11,11 @@ import (
 // omitempty 与原 map 的「条件写入键」行为一一对应（条件注入的键带
 // omitempty，恒在键不带），序列化结果与改造前完全一致。
 
+// GroupAnnouncementCreatedPayload 群公告发布事件（spec api_spec_websocket.md:
+// `{ announcement: GroupAnnouncementItem }`）：此前实现把 GroupAnnouncementItem
+// 的字段拍平到 payload 顶层且缺 content/is_pinned，与 spec 形状不一致（契约审计 B05）。
 type GroupAnnouncementCreatedPayload struct {
-	GroupID        string         `json:"group_id"`
-	AnnouncementID string         `json:"announcement_id"`
-	Title          string         `json:"title"`
-	CreatedBy      types.UserInfo `json:"created_by"`
-	CreatedAt      string         `json:"created_at"`
+	Announcement GroupAnnouncementItem `json:"announcement"`
 }
 
 type GroupMemberJoinedPayload struct {

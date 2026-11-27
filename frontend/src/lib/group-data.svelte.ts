@@ -472,7 +472,9 @@ export function useGroupDetail(opts: UseGroupDetailOptions) {
 				if (isForThisGroup(p)) void loadDetail(gid);
 			}),
 			wsClient.on('GroupAnnouncementCreated', (p) => {
-				if (isForThisGroup(p)) void loadAnnouncements(gid);
+				// spec 形状为 { announcement: GroupAnnouncementItem }，群 ID 在嵌套对象里（B05）
+				const announcement = (p as { announcement?: { group_id?: string } } | null)?.announcement;
+				if (announcement?.group_id === gid) void loadAnnouncements(gid);
 			}),
 			// 受邀人接受/拒绝 → 推给邀请发起方（管理员），刷新已发邀请列表
 			wsClient.on('GroupInviteResponse', (p) => {
