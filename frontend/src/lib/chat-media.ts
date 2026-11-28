@@ -84,7 +84,7 @@ export function formatFileSize(bytes: number | null | undefined): string {
 export type ChatUploadKind = 'image' | 'video' | 'audio' | 'file';
 
 /** 契约允许的 chat_audio MIME（spec api_spec_media.md 分类表）。 */
-export const CHAT_AUDIO_MIMES = ['audio/mpeg', 'audio/aac', 'audio/ogg'] as const;
+export const CHAT_AUDIO_MIMES = ['audio/mpeg', 'audio/aac', 'audio/ogg', 'audio/webm'] as const;
 
 /** 扩展名 → 契约 MIME（浏览器给 m4a 常报 audio/x-m4a、audio/mp4，需要归一）。 */
 const AUDIO_EXT_MIME: Record<string, string> = {
@@ -92,7 +92,8 @@ const AUDIO_EXT_MIME: Record<string, string> = {
 	m4a: 'audio/aac',
 	aac: 'audio/aac',
 	ogg: 'audio/ogg',
-	oga: 'audio/ogg'
+	oga: 'audio/ogg',
+	webm: 'audio/webm'
 };
 
 export function normalizeChatAudioMime(file: { name: string; type: string }): string | null {

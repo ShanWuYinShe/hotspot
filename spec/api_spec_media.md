@@ -48,7 +48,7 @@
 | `moment_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 生活瞬间图片 |
 | `chat_image` | image/jpeg, image/png, image/webp, image/gif | 10MB | 聊天图片 |
 | `chat_video` | video/mp4, video/quicktime | 100MB | 聊天视频 |
-| `chat_audio` | audio/mpeg, audio/aac, audio/ogg | 20MB | 聊天语音 |
+| `chat_audio` | audio/mpeg, audio/aac, audio/ogg, audio/webm | 20MB | 聊天语音（`audio/webm` 供 Web 端 `MediaRecorder` 录制直传，Opus 编码） |
 | `chat_file` | 见下方黑名单约束 | 100MB | 聊天文件 |
 
 > **限制优先级（契约级）**：上表的大小上限与 MIME 白名单为契约硬上限/权威白名单。管理员经 `AppConfig.upload`（见 `api_spec_admin.md`）配置的大小上限**只能收紧、不能放宽**——实际生效大小上限 = min(AppConfig.upload 对应档位值, 上表该分类上限)。档位对应关系：`avatar`/`group_avatar` → `avatar_max_size`；`chat_file` → `chat_file_max_size`；其余分类按 image/video/audio/file 四档。MIME 白名单不因平台配置而放宽。
