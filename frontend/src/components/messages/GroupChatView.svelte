@@ -209,6 +209,11 @@
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			return { code: res.code, error: res.message || '文件发送失败' };
 		},
+		sendAudio: async (fileId) => {
+			const res = await sendGroupMessage({ group_id: groupId, type: 'audio', file_id: fileId });
+			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
+			return { code: res.code, error: res.message || '语音发送失败' };
+		},
 		sendTypingSignal: (isTyping) => {
 			// 未连接静默丢弃。
 			if (!groupId || !wsClient.isConnected) return;
