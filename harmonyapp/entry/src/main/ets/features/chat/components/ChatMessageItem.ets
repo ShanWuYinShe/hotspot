@@ -23,6 +23,8 @@ import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { ChatMessageListItem, TypingMessageSource } from './ChatMessageListUtils';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { AppRouter, PhotoPreviewRouteParam } from '../../../core/router/AppRouter';
+import { SystemToast } from '../../../components/SystemToast';
+import { common } from '@kit.AbilityKit';
 import { PageNames } from '../../../constants/AppConstants';
 
 /** 消息展示视图模型（extends 列表项最小集 + 页面共享扩展，替代三处重复字段声明） */
@@ -32,6 +34,10 @@ export interface ChatMessageView extends ChatMessageListItem, TypingMessageSourc
   edited?: boolean;
   /** 表情反应（spec types.md → Reaction[]；H-03 消息点赞） */
   reactions?: Reaction[];
+  /** 媒体消息元信息（type=audio/file 的卡片文案；来自服务端 MessageMedia） */
+  mediaFileName?: string;
+  mediaFileSize?: number;
+  mediaDuration?: number;
   rawData?: Object;
 }
 
@@ -271,6 +277,135 @@ export struct ChatMessageItem {
     .margin({ top: DesignConstants.SPACING.HALF })
   }
 
+  /** 语音时长（秒 → m:ss）；缺失时返回「语音消息」兜底。 */
+  private formatDuration(seconds?: number): string {
+    if (seconds === undefined || seconds === null || seconds <= 0) {
+      return '语音消息';
+    }
+    const total = Math.round(seconds);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  /** 文件大小（B → KB/MB）。 */
+  private formatFileSize(bytes?: number): string {
+    if (bytes === undefined || bytes === null || bytes <= 0) {
+      return '';
+    }
+    if (bytes < 1024) {
+      return bytes + ' B';
+    }
+    if (bytes < 1024 * 1024) {
+      return (bytes / 1024).toFixed(1) + ' KB';
+    }
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  /** 打开语音/文件的外链（系统浏览器/播放器）；失败给可读提示，不静默。 */
+  private openMediaUrl(): void {
+    const url = MediaUrlUtil.normalize(this.msg.content);
+    if (!url) {
+      return;
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    if (!context) {
+      return;
+    }
+    context.openLink(url).catch(() => {
+      SystemToast.showWarning('打开失败，请在系统浏览器重试', this.getUIContext());
+    });
+  }
+
+  /** 语音消息：中性卡 + 播放图标 + 时长；点击交给系统播放器（对齐 Web <audio> / Android 语音气泡）。 */
+  @Builder
+  private buildAudioMessage(): void {
+    Column() {
+      Row({ space: DesignConstants.SPACING.SM }) {
+        Stack({ alignContent: Alignment.Center }) {
+          LucideIcon({
+            icon: AppIcon.PLAY,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.palette.textPrimary
+          })
+        }
+        .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .borderRadius(DesignConstants.RADIUS.FULL)
+        .backgroundColor(this.palette.surfaceElevated)
+
+        Column({ space: DesignConstants.SPACING.XS }) {
+          Text('语音消息')
+            .fontSize(DesignConstants.FONT.SIZE.MD)
+            .fontColor(this.palette.textPrimary)
+          Text(this.formatDuration(this.msg.mediaDuration))
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.palette.textSecondary)
+        }
+        .alignItems(HorizontalAlign.Start)
+      }
+      .padding({
+        left: DesignConstants.SPACING.SM,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM2,
+        bottom: DesignConstants.SPACING.SM2
+      })
+      .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
+      .backgroundColor(this.palette.surfaceSubtle)
+      .onClick(() => this.openMediaUrl())
+      .accessibilityText('语音消息，点击播放')
+
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(this.timeText)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.palette.textSecondary)
+      }
+      .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+      .margin({ top: DesignConstants.SPACING.XS })
+    }
+    .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+    .margin({ top: DesignConstants.SPACING.HALF })
+  }
+
+  /** 文件消息：中性卡 + 文件名 + 大小；点击 openLink 交系统处理（对齐 Web 文件卡）。 */
+  @Builder
+  private buildFileMessage(): void {
+    Column() {
+      Column({ space: DesignConstants.SPACING.XS }) {
+        Text(this.msg.mediaFileName ?? '文件')
+          .fontSize(DesignConstants.FONT.SIZE.MD)
+          .fontColor(this.palette.textPrimary)
+          .maxLines(1)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
+        Text(this.formatFileSize(this.msg.mediaFileSize) || '点击打开')
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.palette.textSecondary)
+      }
+      .alignItems(HorizontalAlign.Start)
+      .constraintSize({ maxWidth: DesignConstants.CHAT.IMAGE_MAX_WIDTH })
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
+      })
+      .borderRadius(DesignConstants.CHAT.BUBBLE_RADIUS)
+      .backgroundColor(this.palette.surfaceSubtle)
+      .onClick(() => this.openMediaUrl())
+      .accessibilityText('文件消息，点击打开')
+
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(this.timeText)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.palette.textSecondary)
+      }
+      .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+      .margin({ top: DesignConstants.SPACING.XS })
+    }
+    .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+    .margin({ top: DesignConstants.SPACING.HALF })
+  }
+
   build() {
     if (this.msg.isSystem) {
       Row() {
@@ -310,6 +445,10 @@ export struct ChatMessageItem {
             this.buildImageMessage()
           } else if (this.msg.type === 'video') {
             this.buildVideoMessage()
+          } else if (this.msg.type === 'audio') {
+            this.buildAudioMessage()
+          } else if (this.msg.type === 'file') {
+            this.buildFileMessage()
           } else {
             Column() {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）

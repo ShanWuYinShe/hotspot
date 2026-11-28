@@ -720,6 +720,10 @@ export struct ChatPage {
         : item.edited_at !== null && item.edited_at !== undefined,
       // 消息表情反应（H-03）：服务端随消息下发 reactions，气泡据此渲染胶囊行
       reactions: item.reactions ?? [],
+      // 语音/文件气泡需要文件名、大小与时长（图片/视频气泡只用到 content 里的 url）
+      mediaFileName: item.media?.file_name ?? undefined,
+      mediaFileSize: item.media?.file_size ?? undefined,
+      mediaDuration: item.media?.duration ?? undefined,
       rawData: item
     };
   }
