@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { Image as ImageIcon, Send } from '@lucide/svelte';
+	import { Image as ImageIcon, Send, Mic } from '@lucide/svelte';
 	import ChatColumn from '@/components/messages/ChatColumn.svelte';
+	import Button from '@/components/ui/button.svelte';
 	import { uploadMediaFile } from '@/lib/upload';
 	import { chatUploadPlanOfFile, normalizeChatUploadFile } from '@/lib/chat-media';
+	import { canRecordAudio, formatRecordDuration, startAudioRecording, type AudioRecording } from '@/lib/chat-recorder';
 	import type { ChatController } from '@/lib/chat.svelte';
 
 	// ChatInputBar —— 私聊/群聊共享的输入栏（发送错误提示 + 输入框 + 发送钮）。
@@ -28,6 +30,69 @@
 	let imageFileEl = $state<HTMLInputElement | null>(null);
 	let imageUploading = $state(false);
 	let imageError = $state('');
+	/** 录音态：录音中显示计时条，点击发送=停止并上传 chat_audio */
+	const canRecord = canRecordAudio();
+	let recording = $state<AudioRecording | null>(null);
+	let recordElapsed = $state(0);
+	let recordBusy = $state(false);
+	let recordTimer: ReturnType<typeof setInterval> | null = null;
+
+	const clearRecordTimer = () => {
+		if (recordTimer !== null) {
+			clearInterval(recordTimer);
+			recordTimer = null;
+		}
+	};
+
+	const startRecording = async () => {
+		if (recording || recordBusy || imageUploading) return;
+		recordBusy = true;
+		imageError = '';
+		try {
+			recording = await startAudioRecording();
+			recordElapsed = 0;
+			const startedAt = Date.now();
+			clearRecordTimer();
+			recordTimer = setInterval(() => {
+				recordElapsed = Date.now() - startedAt;
+			}, 250);
+		} catch (err) {
+			imageError = err instanceof Error ? err.message : '无法开始录音，请检查麦克风权限';
+		} finally {
+			recordBusy = false;
+		}
+	};
+
+	const stopRecording = async () => {
+		const active = recording;
+		if (!active) return;
+		recording = null;
+		clearRecordTimer();
+		recordBusy = true;
+		try {
+			const file = await active.stop();
+			const previewUrl = URL.createObjectURL(file);
+			const fileId = await uploadMediaFile(file, 'chat_audio');
+			await chat.handleSendAudio(fileId, previewUrl);
+		} catch (err) {
+			imageError = err instanceof Error ? err.message : '语音发送失败，请重试';
+		} finally {
+			recordBusy = false;
+			recordElapsed = 0;
+		}
+	};
+
+	const cancelRecording = () => {
+		recording?.cancel();
+		recording = null;
+		clearRecordTimer();
+		recordElapsed = 0;
+	};
+
+	$effect(() => () => {
+		clearRecordTimer();
+		recording?.cancel();
+	});
 
 	const pickImage = () => {
 		if ((!chat.sendImage && !chat.sendVideo && !chat.sendFile && !chat.sendAudio) || imageUploading) return;
@@ -157,7 +222,45 @@
 		{#if imageError}
 			<p class="pb-1.5 text-status-danger text-xs">{imageError}</p>
 		{/if}
+		{#if recording}
+			<!-- 录音态：计时 + 取消 + 发送（停止并上传 chat_audio，契约白名单含 audio/webm） -->
+			<div
+				class="mb-1.5 flex items-center gap-3 rounded-md bg-accent-soft px-3 py-2 text-sm text-text-accent-on-soft"
+				role="status"
+				aria-live="polite"
+			>
+				<span class="size-2 animate-pulse rounded-full bg-status-danger" aria-hidden="true"></span>
+				<span class="tabular-nums">录音中 {formatRecordDuration(recordElapsed)}</span>
+				<button
+					type="button"
+					class="link-btn ml-auto focus-ring"
+					onclick={cancelRecording}>取消</button
+				>
+				<Button
+					type="button"
+					size="sm"
+					variant="primary"
+					shape="pill"
+					loading={recordBusy}
+					onclick={() => void stopRecording()}>
+					<Send class="size-3.5" strokeWidth={2} />发送
+				</Button>
+			</div>
+		{/if}
 		<div class="flex items-center gap-2.5">
+			{#if chat.sendAudio && canRecord}
+				<!-- 录音入口：MediaRecorder 采集 → chat_audio 上传 → type=audio 消息 -->
+				<button
+					type="button"
+					class="hover-btn hit-slop scale-btn flex size-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm transition-colors duration-standard focus-ring disabled:opacity-50"
+					onclick={() => void startRecording()}
+					aria-label="录制语音"
+					aria-busy={recordBusy || undefined}
+					disabled={recordBusy || Boolean(recording) || imageUploading || chat.sending}
+				>
+					<Mic class="size-4" strokeWidth={2} />
+				</button>
+			{/if}
 			{#if chat.sendImage || chat.sendVideo || chat.sendFile || chat.sendAudio}
 				<!-- 媒体入口：与 Android 对齐（图片 chat_image / 视频 chat_video 上传 → type=image/video 消息） -->
 				<button
