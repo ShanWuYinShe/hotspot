@@ -56,7 +56,10 @@
 			.map((group) => ({
 				...group,
 				messages: group.messages.filter(
-					(msg) => msg.recalled || (msg.text ?? '').trim().length > 0 || Boolean(msg.imageUrl)
+					(msg) =>
+						msg.recalled ||
+						(msg.text ?? '').trim().length > 0 ||
+						Boolean(msg.imageUrl || msg.videoUrl || msg.audioUrl || msg.fileUrl)
 				)
 			}))
 			.filter((group) => group.messages.length > 0)
@@ -148,6 +151,10 @@
 							<MessageBubble
 								text={msg.text}
 								imageUrl={msg.imageUrl}
+								videoUrl={msg.videoUrl}
+								audioUrl={msg.audioUrl}
+								fileUrl={msg.fileUrl}
+								fileName={msg.fileName}
 								sent={msg.sent}
 								time={msg.time}
 								senderName={showSenderNames ? msg.senderName : ''}
@@ -157,7 +164,7 @@
 								recalled={msg.recalled}
 								editedAt={msg.editedAt}
 								canRecall={canRecall(msg)}
-								canEdit={msg.sent && !msg.imageUrl}
+								canEdit={msg.sent && !msg.imageUrl && !msg.videoUrl && !msg.audioUrl && !msg.fileUrl}
 								canReport={!msg.sent && Boolean(onReport)}
 								onRecall={(id) => void chat.handleRecall(id)}
 								onEdit={(id, content) => void chat.handleEdit(id, content)}

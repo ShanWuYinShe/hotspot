@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { CheckCheck, MoreHorizontal, Check, Flag } from '@lucide/svelte';
+	import { CheckCheck, MoreHorizontal, Check, Flag, Paperclip } from '@lucide/svelte';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { enterOnce } from '@/lib/motion';
 	import type { Reaction } from '@/api/types';
@@ -19,6 +19,10 @@
 	let {
 		text,
 		imageUrl = '',
+		videoUrl = '',
+		audioUrl = '',
+		fileUrl = '',
+		fileName = '',
 		sent,
 		time,
 		senderName = '',
@@ -42,6 +46,10 @@
 		text: string;
 		/** 图片消息读 URL：存在时渲染图片（圆角、按比例），时间/已读沉到图下，不套气泡底色 */
 		imageUrl?: string;
+		videoUrl?: string;
+		audioUrl?: string;
+		fileUrl?: string;
+		fileName?: string;
 		sent: boolean;
 		time: string;
 		senderName?: string;
@@ -66,6 +74,9 @@
 		/** 表情反应切换；未注入时不显示表情入口（W05 消息点赞） */
 		onReact?: (emoji: string, active: boolean) => void;
 	} = $props();
+
+	// 任一媒体字段存在即为媒体气泡（去掉文本内边距；此前只认 image，视频/语音/文件会渲染成空泡）
+	const hasMedia = $derived(Boolean(imageUrl || videoUrl || audioUrl || fileUrl));
 
 	let menuEl = $state<HTMLElement | null>(null);
 	let menuOpen = $state(false);
@@ -115,8 +126,42 @@
 	{#if !sent && senderName}
 		<p class="mb-1 px-1 text-sm font-medium text-text-secondary">{senderName}</p>
 	{/if}
-	<div class="relative max-w-chat-bubble rounded-md {imageUrl && !recalled ? '' : 'px-3 py-1.5 ' + bubbleClass}">
-		{#if imageUrl && !recalled}
+	<div class="relative max-w-chat-bubble rounded-md {hasMedia && !recalled ? '' : 'px-3 py-1.5 ' + bubbleClass}">
+		{#if videoUrl && !recalled}
+			<!-- 视频消息（对齐 Android 播放器：原生 controls，不自动播放） -->
+			<video
+				src={videoUrl}
+				controls
+				preload="metadata"
+				aria-label="视频消息"
+				class="max-h-[320px] w-auto max-w-full rounded-md bg-black object-contain"
+			>
+				<!-- 用户上传视频无字幕轨：保留空 captions 轨满足 a11y 规则，读屏走 aria-label -->
+				<track kind="captions" />
+			</video>
+			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
+				{time}
+			</p>
+		{:else if audioUrl && !recalled}
+			<audio src={audioUrl} controls aria-label="语音消息" class="w-56 max-w-full"></audio>
+			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
+				{time}
+			</p>
+		{:else if fileUrl && !recalled}
+			<a
+				href={fileUrl}
+				download={fileName}
+				target="_blank"
+				rel="noopener"
+				class="flex max-w-chat-bubble items-center gap-2 rounded-md bg-surface-subtle px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+			>
+				<Paperclip class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
+				<span class="truncate">{fileName || '附件'}</span>
+			</a>
+			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
+				{time}
+			</p>
+		{:else if imageUrl && !recalled}
 			<!-- 图片消息：不套气泡（与鸿蒙端一致），圆角图 + 图下时间/已读；按钮承载键盘可达的「查看大图」 -->
 			<button
 				type="button"
