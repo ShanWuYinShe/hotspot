@@ -30,6 +30,11 @@ function fetchBootstrap(): Promise<BootstrapData | null> {
 	return inflight;
 }
 
+/** 同步读取已缓存的 bootstrap（未请求过/失败时 null；不发请求，供常量兜底场景同步取值）。 */
+export function peekBootstrap(): BootstrapData | null {
+	return cached;
+}
+
 /** 取冷启动 bootstrap 数据（首次发请求，之后复用缓存 / 在途请求）。失败返回 null，不抛错。 */
 export function loadBootstrap(): Promise<BootstrapData | null> {
 	if (cached) return Promise.resolve(cached);

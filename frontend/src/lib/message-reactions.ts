@@ -1,4 +1,5 @@
 import { setReaction } from '@/api';
+import { peekBootstrap } from '@/lib/bootstrap-cache';
 import type { Reaction } from '@/api/types';
 import { showToast } from '@/stores/toast.svelte';
 
@@ -7,10 +8,18 @@ import { showToast } from '@/stores/toast.svelte';
 // 不带计数，因此客户端按增量合并（与服务端最终值一致）。
 
 /**
- * 反应白名单兜底：spec AppConfig.limits.reaction_emojis 可配置，默认值与
- * 后端 seed/默认配置一致；调用方可通过参数注入服务端下发的白名单。
+ * 反应白名单兜底：spec AppConfig.limits.reaction_emojis 可配置。
+ * 取值优先走服务端下发的 client_config（bootstrap 已缓存时同步可取），
+ * 兜底常量必须与后端默认白名单一致（platform/appconfig/source.go），
+ * 否则会出现「界面可选、服务端回 10000」的坏路径。
  */
-export const DEFAULT_REACTION_EMOJIS: string[] = ['👍', '❤️', '😂', '🎉', '👏', '🔥'];
+export const DEFAULT_REACTION_EMOJIS: string[] = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+/** 解析可投递的 emoji 白名单（空数组/未加载时回退到默认值）。 */
+export function resolveReactionEmojis(injected?: string[] | null): string[] {
+	const fromConfig = injected ?? peekBootstrap()?.client_config?.limits?.reaction_emojis ?? null;
+	return fromConfig && fromConfig.length > 0 ? fromConfig : DEFAULT_REACTION_EMOJIS;
+}
 
 /** 合并一条他人/实时反应事件到反应列表（active=true 新增/计数 +1，false 移除/计数 -1）。 */
 export function applyReactionDelta(

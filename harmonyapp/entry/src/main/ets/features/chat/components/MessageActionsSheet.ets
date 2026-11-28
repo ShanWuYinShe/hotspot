@@ -9,11 +9,21 @@ import { SoftDivider } from '../../../components/SoftDivider';
 import { SystemButton } from '../../../components/SystemButton';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { AppThemePalette } from '../../../core/theme/AppThemeTypes';
+import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 
 const MESSAGE_EDIT_MAX: number = 5000;
 
-/** 消息表情反应默认白名单（与 Web DEFAULT_REACTION_EMOJIS、服务端默认配置一致）。 */
-const MESSAGE_REACTION_EMOJIS: string[] = ['👍', '❤️', '😂', '🎉', '👏', '🔥'];
+/**
+ * 消息表情反应白名单：优先用服务端下发的 AppConfig.limits.reaction_emojis（与 Web
+ * resolveReactionEmojis 同口径），兜底常量必须与后端默认白名单逐项一致
+ * （platform/appconfig/source.go），否则会出现「界面可选、服务端回 10000」。
+ */
+const FALLBACK_REACTION_EMOJIS: string[] = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+
+function resolveReactionEmojis(): string[] {
+  const configured: string[] = GlobalStateManager.getInstance().getLimits()?.reaction_emojis ?? [];
+  return configured.length > 0 ? configured : FALLBACK_REACTION_EMOJIS;
+}
 
 @Component
 export struct MessageActionsSheet {
@@ -103,7 +113,7 @@ export struct MessageActionsSheet {
         // 表情反应入口（对齐 Web「消息操作」菜单顶部 emoji 行）：默认白名单，
         // 服务端 AppConfig.limits.reaction_emojis 覆盖时由页面传入。
         Row({ space: DesignConstants.SPACING.SM }) {
-          ForEach(MESSAGE_REACTION_EMOJIS, (emoji: string) => {
+          ForEach(resolveReactionEmojis(), (emoji: string) => {
             Text(emoji)
               .fontSize(DesignConstants.FONT.SIZE.XL)
               .width(DesignConstants.LAYOUT.ICON_BUTTON_SIZE)
