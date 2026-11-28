@@ -38,6 +38,8 @@ import com.hotspot.app.ui.components.EmptyState
 import com.hotspot.app.ui.components.ErrorState
 import com.hotspot.app.ui.components.InlineLoading
 import com.hotspot.app.ui.components.ListEnd
+import com.hotspot.app.ui.components.SearchInput
+import com.hotspot.app.util.filterShares
 import com.hotspot.app.ui.components.LoadingState
 import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SystemButton
@@ -63,6 +65,8 @@ fun MySharesScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     val repository = AppContainer.profileRepository
     var tabIndex by remember { mutableStateOf(0) }
+    // W19：本地搜索（契约 fetch_created 无 keyword，见 util/ShareFilter.filterShares）
+    var query by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<ShareListItem>>(emptyList()) }
     var cursor by remember { mutableStateOf<String?>(null) }
     var endReached by remember { mutableStateOf(false) }
@@ -110,6 +114,8 @@ fun MySharesScreen(onBack: () -> Unit) {
         Toast.makeText(context, "分享链接已复制", Toast.LENGTH_SHORT).show()
     }
 
+    val visibleItems = remember(items, query) { filterShares(items, query) }
+
     Column(Modifier.fillMaxSize()) {
         PageHeader(title = "我的分享", onBack = onBack)
         TabPills(
@@ -118,7 +124,13 @@ fun MySharesScreen(onBack: () -> Unit) {
             onSelected = { tabIndex = it },
             modifier = Modifier.padding(horizontal = Spacing.lg),
         )
-        Spacer(Modifier.height(Spacing.md))
+        SearchInput(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = "搜索分享标题、类型或分享码",
+            modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm2),
+        )
+        Spacer(Modifier.height(Spacing.sm))
         when {
             loading -> LoadingState(Modifier.weight(1f))
             error != null -> ErrorState(error.orEmpty(), onRetry = { load(true) }, modifier = Modifier.weight(1f))
@@ -127,12 +139,17 @@ fun MySharesScreen(onBack: () -> Unit) {
                 description = if (tabIndex == 0) "在瞬间、群组或个人主页分享后，链接会集中显示在这里。" else "换个类型看看。",
                 modifier = Modifier.weight(1f),
             )
+            visibleItems.isEmpty() -> EmptyState(
+                title = "没有匹配的分享",
+                description = "只搜索已加载的分享记录，换个关键词试试。",
+                modifier = Modifier.weight(1f),
+            )
             else -> LazyColumn(
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = Spacing.lg, vertical = Spacing.xs),
                 verticalArrangement = Arrangement.spacedBy(Spacing.sm),
             ) {
-                items(items, key = { it.shareId }) { item ->
+                items(visibleItems, key = { it.shareId }) { item ->
                     ShareCard(
                         item = item,
                         onCopy = { copyLink(item) },
