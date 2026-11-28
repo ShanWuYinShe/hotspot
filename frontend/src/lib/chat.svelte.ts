@@ -14,6 +14,7 @@ import { applyMyReaction, applyReactionDelta, setMessageReaction } from '@/lib/m
 import { wsClient } from '@/lib/ws/client';
 import { prefersReducedMotion } from '@/lib/motion';
 import { loadChatDraft, saveChatDraft } from '@/lib/chat-draft';
+import { peekBootstrap } from '@/lib/bootstrap-cache';
 
 // 断线补拉阈值（spec L163-165）：WS 断开超过该时长后，重连时主动拉取历史（private_messages/fetch / group_messages/fetch）
 // 首页补拉（HTTP 与 WS 推送重复按主键去重，spec L169）；未超阈值直接依赖
@@ -698,13 +699,24 @@ export function useChat(opts: UseChatOptions) {
 	};
 }
 
-// 撤回时间窗（spec message_recall_window_seconds，默认 300s；服务端 10400
-// 兜底，ClientConfig 接入留后续）。私聊/群聊共用。
-export const RECALL_WINDOW_MS = 300_000;
+// 撤回时间窗（spec message_recall_window_seconds，AppConfig 可配；0 = 不允许撤回）。
+// 权威来源 client_config.limits（bootstrap 已缓存时同步可取），兜底常量必须与
+// 后端默认一致（platform/appconfig/source.go，120s），否则会出现「这里能撤回、
+// 服务端回 10400」。私聊/群聊共用。
+export const DEFAULT_RECALL_WINDOW_MS = 120_000;
 
-export function inRecallWindow(sentAt?: string): boolean {
+export function resolveRecallWindowMs(injected?: number | null): number {
+	const configured =
+		injected ?? peekBootstrap()?.client_config?.limits?.message_recall_window_seconds ?? null;
+	if (configured === null || configured === undefined) return DEFAULT_RECALL_WINDOW_MS;
+	return configured * 1000;
+}
+
+export function inRecallWindow(sentAt?: string, windowMs?: number): boolean {
+	const window = windowMs ?? resolveRecallWindowMs();
+	if (window <= 0) return false;
 	if (!sentAt) return true;
-	return Date.now() - new Date(sentAt).getTime() < RECALL_WINDOW_MS;
+	return Date.now() - new Date(sentAt).getTime() < window;
 }
 
 // createTypingIndicator —— 私聊/群聊共用的「正在输入」状态机：
