@@ -17,3 +17,11 @@ export function resolveMomentTextLimit(injected?: number | null): number {
 export function clampMomentText(text: string, injected?: number | null): string {
 	return text.slice(0, resolveMomentTextLimit(injected));
 }
+
+/** 评论长度上限：spec AppConfig.limits.comment_max_length（后端默认 500）。 */
+export const FALLBACK_COMMENT_LIMIT = 500;
+
+export function resolveCommentLimit(injected?: number | null): number {
+	const configured = injected ?? peekBootstrap()?.client_config?.limits?.comment_max_length ?? null;
+	return configured && configured > 0 ? configured : FALLBACK_COMMENT_LIMIT;
+}

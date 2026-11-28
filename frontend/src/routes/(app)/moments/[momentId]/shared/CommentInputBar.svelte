@@ -3,6 +3,7 @@
 	import Avatar from '@/components/shared/Avatar.svelte';
 	import { auth } from '@/stores/auth.svelte';
 	import { cn } from '@/lib/utils';
+	import { resolveCommentLimit } from '@/lib/publish-limits';
 
 	// CommentInputBar —— 瞬间详情的评论输入器（Enter/按钮发送均走 onSend）。
 	// 视觉契约：全端 docked（由 SplitPageLayout footer 承载，桌面 sticky bottom-0 /
@@ -36,6 +37,7 @@
 				if (e.key === 'Enter' && !e.isComposing) onSend();
 			}}
 			placeholder="写下你的评论…"
+			maxlength={resolveCommentLimit()}
 			class="flex-1 bg-transparent text-sm sm:text-md text-text-primary placeholder:text-text-secondary focus:outline-none"
 		/>
 	</div>
