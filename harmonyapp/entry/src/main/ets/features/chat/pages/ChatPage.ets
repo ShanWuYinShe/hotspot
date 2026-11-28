@@ -65,6 +65,7 @@ import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManag
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { MediaServiceManager } from '../../../core/media/MediaServiceManager';
 import { common } from '@kit.AbilityKit';
+import { picker } from '@kit.CoreFileKit';
 import { curves } from '@kit.ArkUI';
 import { KeyboardAvoidMode as UIContextKeyboardAvoidMode } from '@ohos.arkui.UIContext';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
@@ -1273,8 +1274,52 @@ export struct ChatPage {
     }
   }
 
-  /** 发送媒体消息（图片/视频，file_id 已在 complete_upload 完成后拿到）；成功后拉历史拿 media.url 渲染气泡 */
-  private async sendMediaMessage(fileId: string, kind: 'image' | 'video'): Promise<void> {
+
+  /**
+   * 系统文件选择器 → 上传 chat_file → 发送 type=file。
+   * 黑名单约束由服务端校验（spec media.md chat_file 安全约束），端上只做 100MB 契约上限提示。
+   */
+  private async pickAndSendFile(): Promise<void> {
+    if (this.isSending || this.isUploadingImage) {
+      return;
+    }
+    if (!this.currentUser) {
+      SystemToast.showWarning('请先登录后再发送消息', this.getUIContext());
+      return;
+    }
+    if (this.isGroupServerMuted) {
+      return;
+    }
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    if (!context) {
+      return;
+    }
+    let uris: string[] = [];
+    try {
+      const documentPicker = new picker.DocumentViewPicker(context);
+      uris = await documentPicker.select({ maxSelectNumber: 1 });
+    } catch (error) {
+      // 取消选择也走 catch：静默返回
+      return;
+    }
+    if (!uris || uris.length === 0) {
+      return;
+    }
+    this.isUploadingImage = true;
+    this.sendErrorText = '';
+    try {
+      const media = await ApiClient.uploadFile(context, uris[0], 'chat_file');
+      await this.sendMediaMessage(media.file_id, 'file');
+    } catch (error) {
+      this.sendErrorText = '文件发送失败，请重试';
+      SystemToast.showWarning('文件发送失败，请重试', this.getUIContext());
+    } finally {
+      this.isUploadingImage = false;
+    }
+  }
+
+  /** 发送媒体消息（图片/视频/文件，file_id 已在 complete_upload 完成后拿到）；成功后拉历史拿 media.url 渲染气泡 */
+  private async sendMediaMessage(fileId: string, kind: 'image' | 'video' | 'file'): Promise<void> {
     this.isSending = true;
     this.sendErrorText = '';
     try {
@@ -1290,7 +1335,7 @@ export struct ChatPage {
         };
         const response = await ApiClient.sendPrivateMessage(request);
         if (response.code !== 0) {
-          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : '发送图片失败'));
+          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : kind === 'file' ? '发送文件失败' : '发送图片失败'));
         }
       } else {
         const request: SendGroupMessageRequest = {
@@ -1300,7 +1345,7 @@ export struct ChatPage {
         };
         const response = await ApiClient.sendGroupMessage(request);
         if (response.code !== 0) {
-          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : '发送图片失败'));
+          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : kind === 'file' ? '发送文件失败' : '发送图片失败'));
         }
       }
       // 图片气泡渲染依赖服务端 media.url（WS 回显可能未及时到），主动刷新一次历史
@@ -1754,6 +1799,24 @@ export struct ChatPage {
         .enabled(!this.isSending && !this.isUploadingImage)
         .margin({ right: DesignConstants.SPACING.MD2 })
         .onClick(() => { void this.pickAndSendImage(); })
+
+        // 文件入口：系统文件选择器 → chat_file（与 Web #429 的 type=file 同契约）
+        Button() {
+          Text('文件')
+            .fontSize(DesignConstants.FONT.SIZE.XS)
+            .fontColor(this.getCurrentThemePalette().textSecondary)
+        }
+        .type(ButtonType.Capsule)
+        .stateEffect(false)
+        .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
+        .padding({ left: DesignConstants.SPACING.MD, right: DesignConstants.SPACING.MD })
+        .backgroundColor(this.getCurrentThemePalette().surfaceBackground)
+        .border({ width: DesignConstants.BORDER_WIDTH.HAIRLINE, color: this.getChatTheme().inputBorder })
+        .shadow(DesignConstants.SHADOW.SMALL)
+        .enabled(!this.isSending && !this.isUploadingImage)
+        .margin({ right: DesignConstants.SPACING.MD2 })
+        .accessibilityText('发送文件')
+        .onClick(() => { void this.pickAndSendFile(); })
 
         TextInput({ text: this.inputText, placeholder: '发送消息…' })
           .layoutWeight(1)
