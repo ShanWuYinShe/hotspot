@@ -156,6 +156,8 @@
 								fileUrl={msg.fileUrl}
 								fileName={msg.fileName}
 								fileSize={msg.fileSize}
+								replyTo={msg.replyTo}
+								onReply={() => chat.startReply(msg)}
 								sent={msg.sent}
 								time={msg.time}
 								senderName={showSenderNames ? msg.senderName : ''}

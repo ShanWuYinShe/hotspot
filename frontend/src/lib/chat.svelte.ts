@@ -10,6 +10,7 @@
 
 import type { PrivateMessageNewPayload } from '@/lib/ws/types';
 import type { Reaction } from '@/api/types';
+import type { ReplyPreview } from '@/lib/chat-reply';
 import { applyMyReaction, applyReactionDelta, setMessageReaction } from '@/lib/message-reactions';
 import { wsClient } from '@/lib/ws/client';
 import { prefersReducedMotion } from '@/lib/motion';
@@ -43,6 +44,8 @@ export interface ChatMessage {
 	editedAt?: string;
 	/** 表情反应（spec types.md → Reaction[]；W05 消息点赞） */
 	reactions?: Reaction[];
+	/** 引用回复的原文预览（服务端 reply_to: MessageBrief 归一，见 lib/chat-reply） */
+	replyTo?: ReplyPreview | null;
 }
 
 export interface ChatMessageUpdate {
@@ -73,7 +76,8 @@ export interface UseChatOptions {
 	/** 标记会话已读（幂等语义，失败静默）。加载成功后调用。 */
 	markRead: () => void;
 	/** 发送文本消息；失败返回非 0 code（可携带 error 文案），成功返回服务端 message_id 替换 temp id。 */
-	sendMessage: (text: string, mentions?: string[]) => Promise<SendResult>;
+	/** replyToId 对应 spec private_messages.send → reply_to_message_id（群聊同名字段）。 */
+	sendMessage: (text: string, mentions?: string[], replyToId?: string) => Promise<SendResult>;
 	/** 发送图片消息（file_id 来自 chat_image 上传）；未注入时输入栏不显示媒体入口。 */
 	sendImage?: (fileId: string) => Promise<SendResult>;
 	/** 发送视频消息（file_id 来自 chat_video 上传）；与 Android 端同一 send(type=video) 语义。 */
@@ -181,7 +185,9 @@ export function useChat(opts: UseChatOptions) {
 	let sending = $state(false);
 	let sendError = $state('');
 	// 发送失败保留原文与 mentions，供输入栏「重试」一键重发（R21 遗留）。
-	let failedSend = $state<{ text: string; mentions?: string[]; error: string } | null>(null);
+	let failedSend = $state<{ text: string; mentions?: string[]; replyTo?: string; error: string } | null>(null);
+	/** 引用回复目标：非 null 时输入栏显示引用条，发送带 reply_to_message_id。 */
+	let replyingTo = $state<ChatMessage | null>(null);
 	let scrollEl = $state<HTMLDivElement | null>(null);
 	// 滚动位置状态（Round 10）：距底 ≤120px 视为「在底部」；上滑超过 200px 才显示回底按钮；
 	// 不在底部时收到的新消息只累加计数，不打断阅读。
@@ -256,6 +262,7 @@ export function useChat(opts: UseChatOptions) {
 			// sendMessage，带过去就会把 A 的原文发给 B。切换即视为全新会话状态。
 			failedSend = null;
 			sendError = '';
+			replyingTo = null;
 		}
 		draftOwner = key;
 		inputVal = key ? loadChatDraft(key) : '';
@@ -619,6 +626,16 @@ export function useChat(opts: UseChatOptions) {
 		}
 	};
 
+	/** 开始引用回复（空/已撤回消息不进入引用态）。 */
+	const startReply = (message: ChatMessage) => {
+		if (message.recalled) return;
+		replyingTo = message;
+	};
+
+	const cancelReply = () => {
+		replyingTo = null;
+	};
+
 	/** 重试上一次失败的发送（保留原文与 mentions；成功/再次失败都会更新 failedSend）。 */
 	const retrySend = async () => {
 		const pending = failedSend;
@@ -630,19 +647,25 @@ export function useChat(opts: UseChatOptions) {
 
 	const dispatchSend = async (text: string, mentions?: string[]) => {
 		sending = true;
+		// 引用回复：乐观气泡带原文预览（发送成功后才清空引用态，失败保留便于重试）。
+		const reply = replyingTo;
+		const replyPreview = reply
+			? { id: reply.id, senderName: reply.senderName || (reply.sent ? '我' : '对方'), preview: reply.text.slice(0, 40) || '[消息]' }
+			: null;
 		// Optimistic append so the user sees their message instantly.
 		const tempId = `temp-${Date.now()}`;
 		messages = [
 			...messages,
-			{ id: tempId, text, sent: true, time: formatTime(new Date().toISOString()), sentAt: new Date().toISOString() }
+			{ id: tempId, text, sent: true, time: formatTime(new Date().toISOString()), sentAt: new Date().toISOString(), replyTo: replyPreview }
 		];
 		try {
-			const res = await opts.sendMessage(text, mentions);
+			// 无引用时保持两参调用（既有注入方/单测断言按参数个数匹配）
+			const res = reply ? await opts.sendMessage(text, mentions, reply.id) : await opts.sendMessage(text, mentions);
 			if (res.code !== 0) {
 				// Roll back the optimistic message on failure, keep text for retry.
 				messages = messages.filter((m) => m.id !== tempId);
 				sendError = res.error ?? '消息发送失败';
-				failedSend = { text, mentions, error: sendError };
+				failedSend = { text, mentions, replyTo: reply?.id, error: sendError };
 				// 未发出的正文回写为该会话草稿：切走再回来仍能恢复（失败重发状态本身会被切会话清空）。
 				if (draftOwner) saveChatDraft(draftOwner, text);
 			} else if (res.message_id) {
@@ -653,6 +676,8 @@ export function useChat(opts: UseChatOptions) {
 				messages = messages
 					.filter((m) => m.id !== res.message_id)
 					.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
+				// 引用已随消息发出：清空引用态（WS 回显会带回服务端 reply_to，本地预览对齐）
+				if (reply && replyingTo?.id === reply.id) replyingTo = null;
 			}
 		} catch {
 			messages = messages.filter((m) => m.id !== tempId);
@@ -791,6 +816,12 @@ export function useChat(opts: UseChatOptions) {
 		handleSendVideo,
 		handleSendFile,
 		handleSendAudio,
+		// getter：返回对象若直接复制 $state 值会变成快照，输入栏无法响应绑定
+		get replyingTo() {
+			return replyingTo;
+		},
+		startReply,
+		cancelReply,
 		retrySend,
 		handleRecall,
 		handleEdit,
