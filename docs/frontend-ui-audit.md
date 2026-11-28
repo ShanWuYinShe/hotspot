@@ -1239,3 +1239,15 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 **最近一次**：11 条断言 PASS（`permission-20261125-101325`）。
 
 **五步串联最近一次**：`bun run audit:ui` PASS——browser-qa / audit:a11y / audit:touch / audit:keyboard / audit:permission 退出码均为 0；子报告：`qa-20261125-102047`、`a11y-20261125-102211`、`touch-20261125-102525`、`keyboard-20261125-102812`、`permission-20261125-102835`。
+
+## 浏览器回归：近三轮 Web 改动的线上验证（1280×900，浅色，qa@hotspot.local）
+
+在**主开发环境**（localhost:8888，main = 37f1cb177）逐项验证，均为真实后端数据：
+
+| 交互 | 断言 | 结果 |
+|---|---|---|
+| 通知中心搜索 | 输入 zzz 后「平台公告」区不再渲染（#421） | 通过 |
+| 我的分享搜索 | /me/shares 存在搜索框；输入「群组」→ ?q=群组、空态「没有匹配的分享」（#403/#417） | 通过 |
+| 他人主页集合 | /users/user_seed_sophia 出现 [data-user-collections]，群组链接 3 个（#404） | 通过 |
+
+截图见 PR 附件（搜索态通知页 / 分享搜索空态 / 他人主页集合区）；均为功能验证，非视觉基线变更。
