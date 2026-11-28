@@ -22,6 +22,7 @@
 	import type { PrivateMessageNewPayload, PrivateTypingPayload } from '@/lib/ws/types';
 	import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
+	import { mapChatMediaFields } from '@/lib/chat-media';
 	import { chatDraftKey } from '@/lib/chat-draft';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
@@ -87,7 +88,7 @@
 			const mapped: ChatMessage[] = items.map((m) => ({
 				id: m.message_id,
 				text: m.recalled_at ? '消息已撤回' : (m.content ?? ''),
-				imageUrl: !m.recalled_at && m.type === 'image' ? (m.media?.url ?? '') : undefined,
+				...mapChatMediaFields(m.type, m.media, Boolean(m.recalled_at)),
 				recalled: Boolean(m.recalled_at),
 				editedAt: m.edited_at,
 				sent: m.sender.user_id === meId,
@@ -153,8 +154,8 @@
 			const media = payload.media as { url?: string } | undefined;
 			return {
 				id,
-				text: payload.type === 'image' ? '' : (payload.content ?? ''),
-				imageUrl: payload.type === 'image' ? media?.url : undefined,
+				text: payload.type === 'image' || payload.type === 'video' || payload.type === 'audio' || payload.type === 'file' ? '' : (payload.content ?? ''),
+				...mapChatMediaFields(payload.type, media),
 				sent,
 				time: formatTime(payload.sent_at),
 				sentAt: payload.sent_at

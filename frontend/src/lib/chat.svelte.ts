@@ -30,6 +30,11 @@ export interface ChatMessage {
 	senderName?: string;
 	/** 图片消息读 URL（type=image）：存在时气泡渲染图片而非文本，text 仅作失败/撤回兜底 */
 	imageUrl?: string;
+	/** 视频/语音/文件消息（type=video/audio/file），由 lib/chat-media 统一映射 */
+	videoUrl?: string;
+	audioUrl?: string;
+	fileUrl?: string;
+	fileName?: string;
 	/** 原始发送时间（ISO）；用于按本地日期分组。 */
 	sentAt?: string;
 	recalled?: boolean;
