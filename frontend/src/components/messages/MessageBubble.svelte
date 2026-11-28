@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { CheckCheck, MoreHorizontal, Check, Flag, Paperclip } from '@lucide/svelte';
+	import { formatFileSize } from '@/lib/chat-media';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { enterOnce } from '@/lib/motion';
 	import type { Reaction } from '@/api/types';
@@ -23,6 +24,7 @@
 		audioUrl = '',
 		fileUrl = '',
 		fileName = '',
+		fileSize = 0,
 		sent,
 		time,
 		senderName = '',
@@ -50,6 +52,7 @@
 		audioUrl?: string;
 		fileUrl?: string;
 		fileName?: string;
+		fileSize?: number;
 		sent: boolean;
 		time: string;
 		senderName?: string;
@@ -156,7 +159,12 @@
 				class="inline-flex max-w-[220px] min-w-0 items-center gap-2 rounded-md bg-surface-subtle px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 			>
 				<Paperclip class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
-				<span class="min-w-0 truncate">{fileName || '附件'}</span>
+				<span class="min-w-0 flex flex-col gap-0.5">
+					<span class="truncate">{fileName || '附件'}</span>
+					{#if formatFileSize(fileSize)}
+						<span class="text-xs text-text-secondary">{formatFileSize(fileSize)}</span>
+					{/if}
+				</span>
 			</a>
 			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
 				{time}

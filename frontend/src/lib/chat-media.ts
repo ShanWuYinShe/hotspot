@@ -51,3 +51,30 @@ export function chatMediaKindOfFile(file: { type: string }): ChatMediaKind | nul
 	if (file.type.startsWith('video/')) return 'video';
 	return null;
 }
+
+
+/** 聊天上传计划：按 MIME 决定分类与契约上限（spec api_spec_media.md 分类表）。 */
+export type ChatUploadKind = 'image' | 'video' | 'file';
+
+export interface ChatUploadPlan {
+	kind: ChatUploadKind;
+	category: 'chat_image' | 'chat_video' | 'chat_file';
+	maxBytes: number;
+}
+
+const MB = 1024 * 1024;
+
+export function chatUploadPlanOfFile(file: { type: string }): ChatUploadPlan {
+	if (file.type.startsWith('image/')) return { kind: 'image', category: 'chat_image', maxBytes: 10 * MB };
+	if (file.type.startsWith('video/')) return { kind: 'video', category: 'chat_video', maxBytes: 100 * MB };
+	// 其余一律走 chat_file（服务端有黑名单约束，前端只做契约上限的 100MB 提示）
+	return { kind: 'file', category: 'chat_file', maxBytes: 100 * MB };
+}
+
+/** 文件大小展示（B/KB/MB，1 位小数；与鸿蒙 formatFileSize 同口径）。 */
+export function formatFileSize(bytes: number | null | undefined): string {
+	if (!bytes || bytes <= 0) return '';
+	if (bytes < 1024) return bytes + ' B';
+	if (bytes < MB) return (bytes / 1024).toFixed(1) + ' KB';
+	return (bytes / MB).toFixed(1) + ' MB';
+}
