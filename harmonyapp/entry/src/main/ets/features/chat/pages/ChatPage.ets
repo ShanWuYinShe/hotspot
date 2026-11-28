@@ -1245,7 +1245,8 @@ export struct ChatPage {
     }
     let selected: string[] = [];
     try {
-      selected = await MediaServiceManager.selectImages(context, 1);
+      // 与 Android/Web 对齐：同一入口可选图片或视频（chat_image / chat_video）
+      selected = await MediaServiceManager.selectMedia(context, 1);
     } catch (error) {
       // 取消选图也走 catch：静默返回，不打扰用户
       return;
@@ -1256,18 +1257,20 @@ export struct ChatPage {
     this.isUploadingImage = true;
     this.sendErrorText = '';
     try {
-      const media = await ApiClient.uploadFile(context, selected[0], 'chat_image');
-      await this.sendImageMessage(media.file_id);
+      const uri = selected[0];
+      const isVideo = /\.(mp4|mov|m4v|webm|mkv)$/i.test(uri);
+      const media = await ApiClient.uploadFile(context, uri, isVideo ? 'chat_video' : 'chat_image');
+      await this.sendMediaMessage(media.file_id, isVideo ? 'video' : 'image');
     } catch (error) {
-      this.sendErrorText = '图片发送失败，请重试';
-      SystemToast.showWarning('图片发送失败，请重试', this.getUIContext());
+      this.sendErrorText = '媒体发送失败，请重试';
+      SystemToast.showWarning('媒体发送失败，请重试', this.getUIContext());
     } finally {
       this.isUploadingImage = false;
     }
   }
 
-  /** 发送图片消息（file_id 已在 complete_upload 完成后拿到）；成功后拉取历史以拿到 media.url 渲染气泡 */
-  private async sendImageMessage(fileId: string): Promise<void> {
+  /** 发送媒体消息（图片/视频，file_id 已在 complete_upload 完成后拿到）；成功后拉历史拿 media.url 渲染气泡 */
+  private async sendMediaMessage(fileId: string, kind: 'image' | 'video'): Promise<void> {
     this.isSending = true;
     this.sendErrorText = '';
     try {
@@ -1278,22 +1281,22 @@ export struct ChatPage {
         }
         const request: SendPrivateMessageRequest = {
           target_user_id: targetUserId,
-          type: 'image',
+          type: kind,
           file_id: fileId
         };
         const response = await ApiClient.sendPrivateMessage(request);
         if (response.code !== 0) {
-          throw new Error(response.message || '发送图片失败');
+          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : '发送图片失败'));
         }
       } else {
         const request: SendGroupMessageRequest = {
           group_id: this.chatId,
-          type: 'image',
+          type: kind,
           file_id: fileId
         };
         const response = await ApiClient.sendGroupMessage(request);
         if (response.code !== 0) {
-          throw new Error(response.message || '发送图片失败');
+          throw new Error(response.message || (kind === 'video' ? '发送视频失败' : '发送图片失败'));
         }
       }
       // 图片气泡渲染依赖服务端 media.url（WS 回显可能未及时到），主动刷新一次历史
@@ -1712,8 +1715,8 @@ export struct ChatPage {
         this.mentionPanel()
       }
 
-      // 输入条：图片入口 + 输入框 + 发送钮。Web 输入栏无图片入口（只能展示图片消息），
-      // app 端补齐发送能力：相册选图 → chat_image 上传 → type=image（与 Android 对等）。
+      // 输入条：媒体入口（图片/视频）+ 输入框 + 发送钮。相册选中后按扩展名分流
+      // chat_image / chat_video 上传并以 type=image/video 发送（与 Android/Web 对等）。
       Row() {
         // 图片入口：圆形次级钮（与发送钮同档 40、热区 44）；上传中显示 LoadingProgress
         Button() {
@@ -1731,7 +1734,7 @@ export struct ChatPage {
           }
         }
         .type(ButtonType.Circle)
-        .accessibilityText(this.isUploadingImage ? '图片上传中' : '发送图片')
+        .accessibilityText(this.isUploadingImage ? '媒体上传中' : '发送图片或视频')
         .stateEffect(false)
         .width(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
         .height(DesignConstants.COMPONENT.ACTION_BUTTON_HEIGHT_MD)
