@@ -517,10 +517,11 @@ func (s *Service) PrepareComplete(ctx context.Context, uploadID string) (prepare
 			return preparedComplete{}, err
 		}
 	}
-	// 语音时长：WebM（MediaRecorder）容器不带客户端可用的 duration，MP4 也可能缺失；
-	// complete 阶段解析对象前缀写库，三端读取 media.duration 即可正确展示（#434 的根治）。
+	// 媒体时长：WebM（MediaRecorder）容器不带客户端可用的 duration，MP4 也可能缺失；
+	// complete 阶段解析对象头/尾写库，三端读取 media.duration 即可正确展示（#434 的根治）。
+	// 视频（mp4/mov）的 moov 常在文件尾，probeUploadDuration 会用尾部 range 重试。
 	var duration *int
-	if upload.Category == CategoryChatAudio {
+	if upload.Category == CategoryChatAudio || upload.Category == CategoryChatVideo {
 		if seconds, ok := s.probeUploadDuration(ctx, upload.StorageKey, normalizeMimeType(meta.MimeType)); ok {
 			duration = &seconds
 		}
@@ -925,19 +926,32 @@ func normalizeMimeType(value string) string {
 // magicSniffLen 魔数嗅探读取长度（覆盖 PNG/WebP 文件头 + RIFF 头部）。
 const magicSniffLen = 512
 
-// probeUploadDuration 读取对象前缀并解析语音时长；失败返回 ok=false（duration 置 null），
-// 不阻塞 complete——客户端的时长探测/占位逻辑会兜底。
+// probeUploadDuration 解析媒体时长：先读头部（faststart MP4 / WebM），未命中且
+// provider 支持尾部读取时再读末尾（moov 在文件尾的 MP4/MOV）。失败返回 ok=false
+// （duration 置 null），不阻塞 complete——客户端的时长探测/占位逻辑会兜底。
 func (s *Service) probeUploadDuration(ctx context.Context, storageKey, mimeType string) (int, bool) {
 	head, err := s.provider.ReadPrefix(ctx, storageKey, audioProbeHeadBytes)
 	if err != nil {
 		observability.FromContext(ctx).Warn("media.complete duration probe read failed", "error", err, "storage_key", storageKey)
 		return 0, false
 	}
-	seconds, ok := probeAudioDurationSeconds(mimeType, head)
-	if !ok {
-		observability.FromContext(ctx).Info("media.complete duration probe unsupported", "mime_type", mimeType, "storage_key", storageKey)
+	if seconds, ok := probeAudioDurationSeconds(mimeType, head); ok {
+		return seconds, true
 	}
-	return seconds, ok
+	// 尾部兜底：仅当 provider 支持 suffix range（对象存储实现）时启用，
+	// 便于测试 stub 保持最小实现。
+	if reader, ok := s.provider.(interface {
+		ReadTail(context.Context, string, int64) ([]byte, error)
+	}); ok {
+		tail, tailErr := reader.ReadTail(ctx, storageKey, audioProbeTailBytes)
+		if tailErr == nil {
+			if seconds, found := probeDurationFromHeadAndTail(mimeType, nil, tail); found {
+				return seconds, true
+			}
+		}
+	}
+	observability.FromContext(ctx).Info("media.complete duration probe unsupported", "mime_type", mimeType, "storage_key", storageKey)
+	return 0, false
 }
 
 // sniffImageMagic 读取对象前 magicSniffLen 字节，校验魔数与完成的 MIME 一致；

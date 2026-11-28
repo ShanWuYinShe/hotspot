@@ -187,6 +187,43 @@ func (p *ObjectStorageProvider) ReadPrefix(ctx context.Context, storageKey strin
 	return io.ReadAll(io.LimitReader(resp.Body, n))
 }
 
+// ReadTail 读取对象末尾 n 字节（S3 suffix range：bytes=-n）。
+// 用于 MP4/MOV 的 moov 位于文件尾（非 faststart）时解析时长；服务端忽略 Range
+// 返回 200 全量时由 LimitReader 只保留末尾 n 字节。
+func (p *ObjectStorageProvider) ReadTail(ctx context.Context, storageKey string, n int64) ([]byte, error) {
+	if n <= 0 {
+		return nil, nil
+	}
+	signedURL, err := p.presignInternalURL(ctx, http.MethodGet, storageKey, 5*time.Minute)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Range", fmt.Sprintf("bytes=-%d", n))
+	resp, err := p.client.Do(req) // #nosec G704 -- signedURL 由受信 S3_ENDPOINT 配置与服务端对象键签名，host 不受请求方控制
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrUploadNotReady
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, fmt.Errorf("media object storage read tail failed: status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > n {
+		body = body[int64(len(body))-n:]
+	}
+	return body, nil
+}
+
 // GetObject 读取完整对象（EXIF 清洗链路）。
 func (p *ObjectStorageProvider) GetObject(ctx context.Context, storageKey string) ([]byte, error) {
 	signedURL, err := p.presignInternalURL(ctx, http.MethodGet, storageKey, 5*time.Minute)
