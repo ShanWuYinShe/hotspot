@@ -259,7 +259,8 @@ fun NotifyScreen(
             )
             Spacer(Modifier.height(Spacing.sm))
         }
-        if (announcements.isNotEmpty()) {
+        // 平台公告：搜索态隐藏（公告不是通知，不参与关键词匹配），分类档仍展示
+        if (announcements.isNotEmpty() && query.isBlank()) {
             Column(Modifier.padding(horizontal = Spacing.lg)) {
                 Text(
                     text = "平台公告",
