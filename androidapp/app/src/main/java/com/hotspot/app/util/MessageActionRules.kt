@@ -16,13 +16,15 @@ object MessageActionRules {
         isRecalled: Boolean,
         type: String,
         content: String?,
+        /** 是否仍在撤回时间窗内（调用方按 limits.message_recall_window_seconds 计算）。 */
+        withinRecallWindow: Boolean = true,
     ): List<MessageAction> = buildList {
         if (isRecalled || type == "system") return@buildList
         add(MessageAction.LIKE)
         if (type == "text" && !content.isNullOrBlank()) add(MessageAction.COPY)
         if (isMine) {
             if (type == "text" && !content.isNullOrBlank()) add(MessageAction.EDIT)
-            add(MessageAction.RECALL)
+            if (withinRecallWindow) add(MessageAction.RECALL)
         } else {
             add(MessageAction.REPORT)
         }

@@ -89,6 +89,7 @@ import com.hotspot.app.util.ChatDrafts
 import com.hotspot.app.util.ChatTypingRules
 import com.hotspot.app.util.MessageAction
 import com.hotspot.app.util.MessageActionRules
+import com.hotspot.app.util.RecallWindowRules
 import com.hotspot.app.util.toggleThumbReaction
 import com.hotspot.app.util.applyReactionDelta
 import com.hotspot.app.util.TimeFormat
@@ -122,6 +123,8 @@ fun ChatScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var sending by remember { mutableStateOf(false) }
+    // 撤回时间窗：spec limits.message_recall_window_seconds（默认 120s，0=禁止）
+    var recallWindowSeconds by remember { mutableIntStateOf(RecallWindowRules.FALLBACK_WINDOW_SECONDS) }
     var uploading by remember { mutableStateOf(false) }
     var fileUploading by remember { mutableStateOf(false) }
     val draftContext = LocalContext.current
@@ -146,6 +149,9 @@ fun ChatScreen(
     }
 
     LaunchedEffect(targetUserId) { reload() }
+    LaunchedEffect(targetUserId) {
+        runCatching { AppContainer.limits() }.getOrNull()?.let { recallWindowSeconds = it.messageRecallWindowSeconds }
+    }
 
     // 发送图片/视频：系统 Photo Picker（ImageAndVideo）→ 按 MIME 分流 chat_image / chat_video 三步上传。
     val context = LocalContext.current
@@ -619,6 +625,7 @@ fun ChatScreen(
             isRecalled = target.isRecalled,
             type = target.type,
             content = target.content,
+            withinRecallWindow = RecallWindowRules.isWithin(target.sentAt, recallWindowSeconds),
         )
         if (actions.isNotEmpty()) {
             MessageActionSheet(
