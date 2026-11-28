@@ -191,7 +191,11 @@
 				<p class="text-xs text-text-secondary">已加载 {data.searchLoaded} 条 · 匹配 {data.filteredNotifies.length} 条</p>
 			{/if}
 		</div>
-		<AnnouncementCards announcements={data.announcements} />
+		<!-- 平台公告不是通知，不参与关键词搜索：搜索态隐藏，避免「搜不到也一直挂着」；
+		     分类档（点赞/关注/…）仍展示，作为平台置顶信息不被筛掉。 -->
+		{#if !data.searching}
+			<AnnouncementCards announcements={data.announcements} />
+		{/if}
 
 		<InvitesPendingCard
 			invites={data.invites}

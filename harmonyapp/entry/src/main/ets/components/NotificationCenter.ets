@@ -171,8 +171,8 @@ export struct NotificationCenter {
     if (read.length > 0) {
       pushSection('read', '已读', read, false);
     }
-    // 平台公告置顶：仅「全部」档、且未输入搜索词时展示（分类档聚焦单一来源）
-    if (this.announcements.length > 0 && this.selectedFilter === 'all' && !this.searchKeyword.trim()) {
+    // 平台公告置顶：搜索态隐藏（公告不是通知，不参与关键词匹配），分类档仍展示
+    if (this.announcements.length > 0 && !this.searchKeyword.trim()) {
       entries.unshift({
         key: 'announcements',
         kind: 'announcements',
