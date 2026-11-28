@@ -155,6 +155,7 @@
 								audioUrl={msg.audioUrl}
 								fileUrl={msg.fileUrl}
 								fileName={msg.fileName}
+								fileSize={msg.fileSize}
 								sent={msg.sent}
 								time={msg.time}
 								senderName={showSenderNames ? msg.senderName : ''}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chatMediaKindOfFile, hasChatMedia, mapChatMediaFields } from './chat-media';
+import { chatMediaKindOfFile, chatUploadPlanOfFile, formatFileSize, hasChatMedia, mapChatMediaFields } from './chat-media';
 
 describe('mapChatMediaFields', () => {
 	it('图片 → imageUrl', () => {
@@ -45,5 +45,28 @@ describe('chatMediaKindOfFile', () => {
 	it('其它类型返回 null', () => {
 		expect(chatMediaKindOfFile({ type: 'application/pdf' })).toBeNull();
 		expect(chatMediaKindOfFile({ type: '' })).toBeNull();
+	});
+});
+
+describe('chatUploadPlanOfFile', () => {
+	it('图片/视频走 chat_image/chat_video，其余走 chat_file', () => {
+		expect(chatUploadPlanOfFile({ type: 'image/png' })).toEqual({ kind: 'image', category: 'chat_image', maxBytes: 10 * 1024 * 1024 });
+		expect(chatUploadPlanOfFile({ type: 'video/mp4' })).toEqual({ kind: 'video', category: 'chat_video', maxBytes: 100 * 1024 * 1024 });
+		expect(chatUploadPlanOfFile({ type: 'application/pdf' })).toEqual({ kind: 'file', category: 'chat_file', maxBytes: 100 * 1024 * 1024 });
+		expect(chatUploadPlanOfFile({ type: '' })).toEqual({ kind: 'file', category: 'chat_file', maxBytes: 100 * 1024 * 1024 });
+	});
+});
+
+describe('formatFileSize', () => {
+	it('B/KB/MB 三档', () => {
+		expect(formatFileSize(900)).toBe('900 B');
+		expect(formatFileSize(3421)).toBe('3.3 KB');
+		expect(formatFileSize(2.4 * 1024 * 1024)).toBe('2.4 MB');
+	});
+
+	it('空值/0 返回空串', () => {
+		expect(formatFileSize(0)).toBe('');
+		expect(formatFileSize(null)).toBe('');
+		expect(formatFileSize(undefined)).toBe('');
 	});
 });
