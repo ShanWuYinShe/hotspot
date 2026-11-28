@@ -126,6 +126,9 @@ fun UserProfileScreen(
     val gallery = remember { mutableStateListOf<MomentItem>() }
     var groups by remember { mutableStateOf<List<GroupItem>>(emptyList()) }
     var reactedMoments by remember { mutableStateOf<List<MomentItem>>(emptyList()) }
+    // 隐私位（10200 privacy_setting = 对方未公开）：显式提示，不把「未公开」渲染成空列表
+    var groupsHidden by remember { mutableStateOf(false) }
+    var reactedHidden by remember { mutableStateOf(false) }
     var nextCursor by remember { mutableStateOf<String?>(null) }
     var loadingMore by remember { mutableStateOf(false) }
     var endReached by remember { mutableStateOf(false) }
@@ -146,13 +149,21 @@ fun UserProfileScreen(
                 gallery.addAll(page?.items.orEmpty().filter { it.images.isNotEmpty() })
                 nextCursor = page?.nextCursor
                 endReached = page?.nextCursor == null
+                groupsHidden = false
+                reactedHidden = false
                 groups = when (val groupResult = AppContainer.profileRepository.userGroups(userId)) {
                     is ApiResult.Ok -> groupResult.data.items
-                    is ApiResult.Err -> emptyList()
+                    is ApiResult.Err -> {
+                        groupsHidden = isPrivacyDenied(groupResult.error)
+                        emptyList()
+                    }
                 }
                 reactedMoments = when (val reactedResult = AppContainer.profileRepository.userReactedMoments(userId)) {
                     is ApiResult.Ok -> reactedResult.data.items.filter { it.images.isNotEmpty() }
-                    is ApiResult.Err -> emptyList()
+                    is ApiResult.Err -> {
+                        reactedHidden = isPrivacyDenied(reactedResult.error)
+                        emptyList()
+                    }
                 }
                 loading = false
             }
@@ -280,6 +291,9 @@ fun UserProfileScreen(
                             )
                         }
                     }
+                    if (groupsHidden) {
+                        item { CollectionNote("对方未公开群组列表。") }
+                    }
                     if (reactedMoments.isNotEmpty()) {
                         item {
                             Spacer(Modifier.height(Spacing.xl))
@@ -318,6 +332,9 @@ fun UserProfileScreen(
                             }
                             Spacer(Modifier.height(Spacing.sm))
                         }
+                    }
+                    if (reactedHidden) {
+                        item { CollectionNote("对方未公开反应记录。") }
                     }
                     item {
                         Spacer(Modifier.height(Spacing.xl))
@@ -853,4 +870,24 @@ private fun shareProfile(context: Context, scope: CoroutineScope, nickname: Stri
         }
         context.startActivity(Intent.createChooser(intent, "分享资料"))
     }
+}
+
+
+/** 10200 privacy_setting：对方未公开该集合（与 Web/Harmony 同口径）。 */
+private fun isPrivacyDenied(error: com.hotspot.app.data.api.ApiError): Boolean =
+    error is com.hotspot.app.data.api.ApiError.Business && error.code == 10200
+
+@Composable
+private fun CollectionNote(text: String) {
+    val colors = HotSpotTheme.colors
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.textSecondary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(AppShapes.card)
+            .padding(horizontal = Spacing.md, vertical = Spacing.sm)
+            .background(colors.subtle),
+    )
 }
