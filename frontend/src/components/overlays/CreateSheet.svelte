@@ -11,6 +11,7 @@
 	import TabBar from '@/components/navigation/TabBar.svelte';
 	import { startDefaultLocation } from '@/lib/start-default-location';
 	import { readLastLocation, LOCATION_ANCHOR_UPDATED_EVENT, type MapPoint } from '@/lib/map-auto-locate';
+import { clampMomentText, resolveMomentTextLimit } from '@/lib/publish-limits';
 	import {
 		resolvePublishLocation,
 		type PublishFallbackLocation
@@ -78,7 +79,7 @@
 	const appendText = (snippet: string) => {
 		if (draft.text.includes(snippet)) return;
 		const separator = draft.text.trim().length ? '\n' : '';
-		draft.text = `${draft.text}${separator}${snippet}`.slice(0, 280);
+		draft.text = clampMomentText(`${draft.text}${separator}${snippet}`);
 	};
 
 	const toggleTopic = () => {
@@ -187,7 +188,7 @@
 			<!-- 正文 + 壳内工具条：正文统一走 forms/Textarea（壳 px-3.5 py-3），工具条与计数走 footer -->
 			<Textarea
 				value={draft.text}
-				onChange={(v) => (draft.text = v.slice(0, 280))}
+				onChange={(v) => (draft.text = clampMomentText(v))}
 				placeholder="写下此刻发生的事，或分享一个想被附近的人看见的瞬间…"
 				ariaLabel="瞬间内容"
 				inputClass="min-h-30.5"
@@ -215,8 +216,8 @@
 								<Hash size={16} strokeWidth={topicActive ? 2 : 1.5} />
 							</button>
 						</div>
-						<span class="text-xs tabular-nums {draft.text.length >= 260 ? 'text-status-danger' : 'text-text-secondary'}">
-							{draft.text.length}/280
+						<span class="text-xs tabular-nums {draft.text.length >= resolveMomentTextLimit() - 20 ? 'text-status-danger' : 'text-text-secondary'}">
+							{draft.text.length}/{resolveMomentTextLimit()}
 						</span>
 					</div>
 				{/snippet}
