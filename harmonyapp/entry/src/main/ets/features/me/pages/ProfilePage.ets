@@ -28,7 +28,7 @@ import { SystemInput } from '../../../components/SystemInput';
 import { SystemTextArea } from '../../../components/SystemTextArea';
 import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { LoginPromptView } from '../../../components/LoginPromptView';
-import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem, UserSharePayload } from '../../../core/types/api';
+import { AccountInfo, UpdateLocationRequest, UpgradeAccountRequest, UserItem, OpenUserDoorRequest, MomentItem, UserSharePayload, GroupItem, FetchUserGroupsRequest, FetchUserReactedMomentsRequest } from '../../../core/types/api';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { common } from '@kit.AbilityKit';
 import { DesignConstants, textLineHeight } from '../../../constants/DesignConstants';
@@ -111,6 +111,13 @@ export struct ProfilePage {
   @State viewedUserRelation: UserRelationState | undefined = undefined;
   @State viewedFollowPending: boolean = false;
   @State viewedUserMoments: MomentItem[] = [];
+  // H-11：他人主页「群组 / 反应过的瞬间」（受对方 groups_visible / reacted_moments_visible 控制，
+  // 10200 privacy_setting = 对方未公开，UI 显示说明而不是空列表）
+  @State private viewedUserGroups: GroupItem[] = [];
+  @State private viewedUserReactedMoments: MomentItem[] = [];
+  @State private viewedUserGroupsHidden: boolean = false;
+  @State private viewedUserReactedHidden: boolean = false;
+  @State private viewedUserCollectionsLoading: boolean = false;
   @State viewedUserLoading: boolean = false;
   @State viewedUserError: string = '';
   // 设置备注（对齐前端 users/[userId] 备注名称；仅已关注可保存）
@@ -160,6 +167,10 @@ export struct ProfilePage {
     this.viewedUserError = '';
     this.viewedUserProfile = null;
     this.viewedUserMoments = [];
+    this.viewedUserGroups = [];
+    this.viewedUserReactedMoments = [];
+    this.viewedUserGroupsHidden = false;
+    this.viewedUserReactedHidden = false;
     try {
       const response = await LoadingUtil.withMinimumTime(() =>
         ApiClient.getUserProfile({ user_id: this.viewedUserId, include_recent_moments: true } as OpenUserDoorRequest),
@@ -170,6 +181,8 @@ export struct ProfilePage {
         // web 他人主页「最近瞬间」只展示带图瞬间；文字瞬间不计入画廊
         this.viewedUserMoments = (response.data.recent_moments?.items ?? [])
           .filter((moment: MomentItem) => (moment.images?.length ?? 0) > 0);
+        // 集合内容与资料并行加载，不阻塞首屏
+        void this.loadViewedUserCollections();
         InteractionStateStore.getInstance().patchUserFromItem(this.viewedUserProfile);
         // 播种：patch 已写入 store，读取快照恢复本页关系态
         const existing = interactionEventHub.getUserState(this.viewedUserProfile.user?.user_id ?? '');
@@ -183,6 +196,38 @@ export struct ProfilePage {
       this.viewedUserError = '加载用户资料失败';
     } finally {
       this.viewedUserLoading = false;
+    }
+  }
+
+  /** H-11：他人主页的群组 / 反应过的瞬间（各 6 条；10200 表示对方未公开）。 */
+  private async loadViewedUserCollections(): Promise<void> {
+    const uid = this.viewedUserId;
+    if (!uid) {
+      return;
+    }
+    this.viewedUserCollectionsLoading = true;
+    try {
+      const results = await Promise.all([
+        ApiClient.getUserGroups({ user_id: uid, pagination: { limit: 6 } } as FetchUserGroupsRequest),
+        ApiClient.getUserReactedMoments({ user_id: uid, pagination: { limit: 6 } } as FetchUserReactedMomentsRequest)
+      ]);
+      const groupsRes = results[0];
+      const reactedRes = results[1];
+      if (this.isDestroyed || this.viewedUserId !== uid) {
+        return;
+      }
+      if (groupsRes.code === 0) {
+        this.viewedUserGroups = groupsRes.data?.items ?? [];
+      }
+      this.viewedUserGroupsHidden = groupsRes.code === 10200;
+      if (reactedRes.code === 0) {
+        this.viewedUserReactedMoments = reactedRes.data?.items ?? [];
+      }
+      this.viewedUserReactedHidden = reactedRes.code === 10200;
+    } catch {
+      // 集合区加载失败静默：不打断资料主流程
+    } finally {
+      this.viewedUserCollectionsLoading = false;
     }
   }
 
@@ -1080,6 +1125,11 @@ export struct ProfilePage {
       followersCount: `${this.viewedUserProfile?.stats?.followers_count ?? 0}`,
       followingCount: `${this.viewedUserProfile?.stats?.following_count ?? 0}`,
       moments: this.viewedUserMoments,
+      groups: this.viewedUserGroups,
+      reactedMoments: this.viewedUserReactedMoments,
+      groupsHidden: this.viewedUserGroupsHidden,
+      reactedHidden: this.viewedUserReactedHidden,
+      collectionsLoading: this.viewedUserCollectionsLoading,
       isFollowing: this.isViewedUserFollowing(),
       followPending: this.viewedFollowPending,
       safeAreaBottom: this.safeAreaBottom,

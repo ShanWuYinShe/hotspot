@@ -17,13 +17,13 @@ import { SystemLoadingView } from '../../../components/SystemLoadingView';
 import { BackToTopButton } from '../../../components/BackToTopButton';
 import { EmptyState } from '../../../components/EmptyState';
 import { AppThemeManager } from '../../../core/theme/AppThemeManager';
-import { MomentItem } from '../../../core/types/api';
+import { GroupItem, MomentItem } from '../../../core/types/api';
 import { DEFAULT_RESOLVED_THEME_ID } from '../../../core/theme/AppThemeTypes';
 import { MotionUtil } from '../../../core/accessibility/MotionUtil';
 import { ImageUrlUtil } from '../../../core/utils/ImageUrlUtil';
 import { MediaUrlUtil } from '../../../core/utils/MediaUrlUtil';
 import { cleanPlainText } from '../../../core/utils/FormatUtil';
-import { AppRouter, MomentDetailRouteParam } from '../../../core/router/AppRouter';
+import { AppRouter, GroupDetailRouteParam, MomentDetailRouteParam } from '../../../core/router/AppRouter';
 import { PageNames } from '../../../constants/AppConstants';
 
 @Component
@@ -52,6 +52,12 @@ export struct ExternalProfileView {
   @Prop followersCount: string = '0';
   @Prop followingCount: string = '0';
   @Prop moments: MomentItem[] = [];
+  // H-11：群组 / 反应过的瞬间（父级并行加载；hidden=10200 对方未公开）
+  @Prop groups: GroupItem[] = [];
+  @Prop reactedMoments: MomentItem[] = [];
+  @Prop groupsHidden: boolean = false;
+  @Prop reactedHidden: boolean = false;
+  @Prop collectionsLoading: boolean = false;
   @Prop isFollowing: boolean = false;
   @Prop followPending: boolean = false;
   @Prop safeAreaBottom: number = 0;
@@ -113,6 +119,21 @@ export struct ExternalProfileView {
       rows.push(this.moments.slice(i, i + 2));
     }
     return rows;
+  }
+
+  private chunkReacted(): MomentItem[][] {
+    const rows: MomentItem[][] = [];
+    for (let i = 0; i < this.reactedMoments.length; i += 2) {
+      rows.push(this.reactedMoments.slice(i, i + 2));
+    }
+    return rows;
+  }
+
+  private openGroup(group: GroupItem): void {
+    if (!group.group?.group_id) return;
+    const params = new GroupDetailRouteParam();
+    params.groupId = group.group.group_id;
+    AppRouter.push(PageNames.GROUP_DETAIL, params);
   }
 
   private openMoment(moment: MomentItem): void {
@@ -474,6 +495,145 @@ export struct ExternalProfileView {
     .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
   }
 
+
+  @Builder
+  private buildSectionHeader(icon: AppIcon, title: string, count: number, showCount: boolean) {
+    Row({ space: DesignConstants.SPACING.SM2 }) {
+      LucideIcon({
+        icon: icon,
+        iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+        color: this.getPalette().accentBackground
+      })
+      Text(title)
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getPalette().textPrimary)
+      if (showCount && count > 0) {
+        Text(`${count}`)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+          .fontColor(this.getPalette().textSecondary)
+      }
+    }
+    .width('100%')
+    .alignItems(VerticalAlign.Center)
+  }
+
+  @Builder
+  private buildPrivacyNote(message: string) {
+    Text(message)
+      .fontSize(DesignConstants.FONT.SIZE.SM)
+      .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+      .fontColor(this.getPalette().textSecondary)
+      .width('100%')
+      .padding({
+        left: DesignConstants.SPACING.MD,
+        right: DesignConstants.SPACING.MD,
+        top: DesignConstants.SPACING.SM,
+        bottom: DesignConstants.SPACING.SM
+      })
+      .backgroundColor(this.getPalette().surfaceSubtle)
+      .borderRadius(DesignConstants.RADIUS.MD)
+  }
+
+  /**
+   * H-11：他人主页「群组 / 反应过的瞬间」两个分区（对齐 Web W06 UserCollections）。
+   * 群组为单列软岛行；反应瞬间复用「最近瞬间」的 2 列 3:4 图墙与详情跳转。
+   */
+  @Builder
+  private buildCollectionsSections() {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      this.buildSectionHeader(AppIcon.GROUP, '群组', this.groups.length, !this.groupsHidden && !this.collectionsLoading)
+      if (this.collectionsLoading) {
+        SystemLoadingView({ message: '加载群组…' })
+          .width('100%')
+          .height(120)
+      } else if (this.groupsHidden) {
+        this.buildPrivacyNote('对方未公开群组列表。')
+      } else if (this.groups.length === 0) {
+        this.buildPrivacyNote(`${this.nickname || 'TA'} 还没有加入群组。`)
+      } else {
+        Column({ space: DesignConstants.SPACING.SM }) {
+          ForEach(this.groups, (group: GroupItem) => {
+            Row({ space: DesignConstants.SPACING.MD }) {
+              SystemAvatar({
+                avatarUrl: group.group?.avatar_url ?? '',
+                name: group.group?.name ?? '',
+                avatarSize: DesignConstants.COMPONENT.AVATAR_SIZE.SMALL_PLUS,
+                shape: 'circle'
+              })
+              Column({ space: DesignConstants.SPACING.HALF }) {
+                Text(group.group?.name ?? '')
+                  .fontSize(DesignConstants.FONT.SIZE.SM)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.SM))
+                  .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+                  .fontColor(this.getPalette().textPrimary)
+                  .maxLines(1)
+                  .textOverflow({ overflow: TextOverflow.Ellipsis })
+                Text(`${group.group?.members_count ?? 0} 名成员`)
+                  .fontSize(DesignConstants.FONT.SIZE.XS)
+                  .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+                  .fontColor(this.getPalette().textSecondary)
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+            }
+            .width('100%')
+            .padding({
+              left: DesignConstants.SPACING.MD,
+              right: DesignConstants.SPACING.MD,
+              top: DesignConstants.SPACING.SM,
+              bottom: DesignConstants.SPACING.SM
+            })
+            .borderRadius(DesignConstants.RADIUS.MD)
+            .backgroundColor(this.getPalette().surfaceIsland)
+            .accessibilityText(`群组：${group.group?.name ?? ''}，${group.group?.members_count ?? 0} 名成员`)
+            .onClick(() => { this.openGroup(group); })
+          }, (group: GroupItem) => `profile-group-${group.group?.group_id ?? ''}`)
+        }
+        .width('100%')
+      }
+    }
+    .width('100%')
+    .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
+
+    Column({ space: DesignConstants.SPACING.SM }) {
+      this.buildSectionHeader(AppIcon.HEART, '反应过的瞬间', this.reactedMoments.length, !this.reactedHidden && !this.collectionsLoading)
+      if (this.collectionsLoading) {
+        SystemLoadingView({ message: '加载瞬间…' })
+          .width('100%')
+          .height(120)
+      } else if (this.reactedHidden) {
+        this.buildPrivacyNote('对方未公开反应记录。')
+      } else if (this.reactedMoments.length === 0) {
+        this.buildPrivacyNote(`${this.nickname || 'TA'} 还没有反应过的瞬间。`)
+      } else {
+        Column({ space: DesignConstants.SPACING.SM }) {
+          ForEach(this.chunkReacted(), (row: MomentItem[], rowIndex: number) => {
+            Row({ space: DesignConstants.SPACING.SM }) {
+              ForEach(row, (moment: MomentItem) => {
+                Column() {
+                  this.buildGalleryItem(moment)
+                }
+                .layoutWeight(1)
+              }, (moment: MomentItem) => `reacted-${moment.moment_id}`)
+              if (row.length === 1) {
+                Blank()
+                  .layoutWeight(1)
+              }
+            }
+            .width('100%')
+            .alignItems(VerticalAlign.Top)
+          }, (row: MomentItem[], rowIndex: number) => `reacted-row-${rowIndex}`)
+        }
+        .width('100%')
+      }
+    }
+    .width('100%')
+    .margin({ top: DesignConstants.PAGE_SHELL.SECTION_GAP })
+  }
+
   // ── 他人主页长内容回顶（身份卡 + 瞬间画廊，6 个瞬间时约 1.5 屏）──
   @State private showBackToTop: boolean = false;
   private backToTopScroller: Scroller = new Scroller();
@@ -535,6 +695,7 @@ export struct ExternalProfileView {
           Column() {
             this.buildIdentityCard()
             this.buildGallerySection()
+            this.buildCollectionsSections()
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
