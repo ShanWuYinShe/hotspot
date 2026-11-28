@@ -262,7 +262,7 @@
 			return { code: res.code, error: res.code !== 0 ? '编辑失败' : undefined };
 		}
 	});
-	// 撤回时间窗仅作者适用（spec message_recall_window_seconds，默认 300s）；
+	// 撤回时间窗仅作者适用（spec message_recall_window_seconds，取自 client_config.limits，兜底 120s）；
 	// 群主/群管理员无时间窗。
 	const canRecallMessage = (msg: ChatMessage) =>
 		(msg.sent && inRecallWindow(msg.sentAt)) || myRole === 'admin' || myRole === 'owner';

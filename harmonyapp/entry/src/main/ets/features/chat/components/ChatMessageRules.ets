@@ -1,4 +1,5 @@
 import { MessageType } from '../../../core/types/api';
+import { GlobalStateManager } from '../../../core/state/GlobalStateManager';
 
 /**
  * ChatMessageRules —— 聊天消息操作规则（撤回/编辑/可操作判定）的纯函数模块。
@@ -6,8 +7,20 @@ import { MessageType } from '../../../core/types/api';
  * 与前端 MessageBubble 的 canRecall/canEdit 口径逐条对齐。
  */
 
-/** 撤回时间窗（spec message_recall_window_seconds 默认 300s；无时间戳放行，服务端兜底） */
-const RECALL_WINDOW_MS: number = 300000;
+/**
+ * 撤回时间窗：spec message_recall_window_seconds（AppConfig 可配，0 = 不允许撤回）。
+ * 权威来源 client_config.limits（GlobalStateManager），兜底必须与后端默认一致
+ * （platform/appconfig/source.go，120s）；无时间戳放行，服务端 10400 兜底。
+ */
+const FALLBACK_RECALL_WINDOW_MS: number = 120000;
+
+function resolveRecallWindowMs(): number {
+  const seconds = GlobalStateManager.getInstance().getLimits()?.message_recall_window_seconds;
+  if (seconds === undefined || seconds === null) {
+    return FALLBACK_RECALL_WINDOW_MS;
+  }
+  return seconds * 1000;
+}
 
 /** 规则输入：消息展示模型的最小字段集（ChatMessage / ChatMessageView 均满足） */
 export interface ChatActionRulesInput {
@@ -27,7 +40,11 @@ export function isInRecallWindow(sentAt: string): boolean {
   if (Number.isNaN(sentAtMs)) {
     return true;
   }
-  return Date.now() - sentAtMs < RECALL_WINDOW_MS;
+  const windowMs = resolveRecallWindowMs();
+  if (windowMs <= 0) {
+    return false;
+  }
+  return Date.now() - sentAtMs < windowMs;
 }
 
 /** 自己的消息：时限内可撤回（对齐前端 canRecall = sent && inRecallWindow） */
