@@ -1268,3 +1268,19 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 
 结论：#423（渲染）与 #424（发送）在主环境真实媒体链路上验证通过；截图见 PR 附件（收到/发出两条视频气泡）。
 
+## 服务端语音时长解析：端到端验证（#435 合并后）
+
+主环境（localhost:8888，main = a0e343f14），真实上传链路：
+
+1. `POST /public/v1/auth/signin`（阿禾，client_type=app）取 Bearer Token；
+2. `presign_upload`（chat_audio，audio/aac）→ `PUT` 13,389B 的 m4a → `complete_upload`；
+3. 返回 `duration: 2`（before #435：`duration: null`）；
+4. `private_messages/send`（type=audio）发给鹿鸣，Web 登录鹿鸣查看。
+
+| 断言 | 结果 |
+|---|---|
+| complete_upload 返回 duration | `2`（服务端解析成功，落库） |
+| Web 语音气泡 | `<audio> readyState=4`，`duration=2.229116`，控件显示 `0:00 / 0:02` |
+
+结论：服务端时长解析对客户端可见；WebM（MediaRecorder）在真实设备录制后同样走该解析（本地无音频设备未能造出合法 webm，见 #434 说明）。
+
