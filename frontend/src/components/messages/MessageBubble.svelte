@@ -3,7 +3,7 @@
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { enterOnce } from '@/lib/motion';
 	import type { Reaction } from '@/api/types';
-	import { DEFAULT_REACTION_EMOJIS, hasMyReaction } from '@/lib/message-reactions';
+	import { hasMyReaction, resolveReactionEmojis } from '@/lib/message-reactions';
 
 	// MessageBubble — 聊天气泡单元（私聊 ChatView / 群聊 GroupChatView 共用）。
 	// 发送方向由 sent 决定；recalled 渲染为中性斜体「消息已撤回」；自己发出的非撤回消息
@@ -36,7 +36,7 @@
 		onReport,
 		onImageClick,
 		reactions = [],
-		emojis = DEFAULT_REACTION_EMOJIS,
+		emojis = resolveReactionEmojis(),
 		onReact
 	}: {
 		text: string;

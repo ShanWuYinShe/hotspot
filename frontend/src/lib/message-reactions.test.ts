@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyMyReaction, applyReactionDelta, hasMyReaction } from './message-reactions';
+import { DEFAULT_REACTION_EMOJIS, applyMyReaction, applyReactionDelta, hasMyReaction, resolveReactionEmojis } from './message-reactions';
 import type { Reaction } from '@/api/types';
 
 const base: Reaction[] = [
@@ -38,5 +38,23 @@ describe('message-reactions', () => {
 	it('hasMyReaction 判定', () => {
 		expect(hasMyReaction(base, '❤️')).toBe(true);
 		expect(hasMyReaction(base, '👍')).toBe(false);
+	});
+});
+
+describe('resolveReactionEmojis', () => {
+	it('未注入且无 bootstrap 缓存时回退到服务端默认白名单', () => {
+		expect(resolveReactionEmojis()).toEqual(DEFAULT_REACTION_EMOJIS);
+	});
+
+	it('优先使用服务端下发的白名单', () => {
+		expect(resolveReactionEmojis(['👍'])).toEqual(['👍']);
+	});
+
+	it('下发了空数组时仍回退默认值（避免渲染空面板）', () => {
+		expect(resolveReactionEmojis([])).toEqual(DEFAULT_REACTION_EMOJIS);
+	});
+
+	it('默认白名单与后端默认配置逐项一致', () => {
+		expect(DEFAULT_REACTION_EMOJIS).toEqual(['👍', '❤️', '😂', '😮', '😢', '🙏']);
 	});
 });
