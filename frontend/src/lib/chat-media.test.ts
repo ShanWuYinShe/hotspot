@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasChatMedia, mapChatMediaFields } from './chat-media';
+import { chatMediaKindOfFile, hasChatMedia, mapChatMediaFields } from './chat-media';
 
 describe('mapChatMediaFields', () => {
 	it('图片 → imageUrl', () => {
@@ -33,5 +33,17 @@ describe('hasChatMedia', () => {
 		expect(hasChatMedia({ audioUrl: 'c' })).toBe(true);
 		expect(hasChatMedia({ fileUrl: 'd' })).toBe(true);
 		expect(hasChatMedia({})).toBe(false);
+	});
+});
+
+describe('chatMediaKindOfFile', () => {
+	it('按 MIME 分流图片/视频', () => {
+		expect(chatMediaKindOfFile({ type: 'image/png' })).toBe('image');
+		expect(chatMediaKindOfFile({ type: 'video/mp4' })).toBe('video');
+	});
+
+	it('其它类型返回 null', () => {
+		expect(chatMediaKindOfFile({ type: 'application/pdf' })).toBeNull();
+		expect(chatMediaKindOfFile({ type: '' })).toBeNull();
 	});
 });

@@ -72,8 +72,10 @@ export interface UseChatOptions {
 	markRead: () => void;
 	/** 发送文本消息；失败返回非 0 code（可携带 error 文案），成功返回服务端 message_id 替换 temp id。 */
 	sendMessage: (text: string, mentions?: string[]) => Promise<SendResult>;
-	/** 发送图片消息（file_id 来自 chat_image 上传）；未注入时输入栏不显示图片入口。 */
+	/** 发送图片消息（file_id 来自 chat_image 上传）；未注入时输入栏不显示媒体入口。 */
 	sendImage?: (fileId: string) => Promise<SendResult>;
+	/** 发送视频消息（file_id 来自 chat_video 上传）；与 Android 端同一 send(type=video) 语义。 */
+	sendVideo?: (fileId: string) => Promise<SendResult>;
 	/** 发送侧 typing 信号（未连接时实现方静默丢弃）。 */
 	sendTypingSignal: (isTyping: boolean) => void;
 	/** WS 新消息事件名（window event）。 */
@@ -530,6 +532,33 @@ export function useChat(opts: UseChatOptions) {
 		}
 	};
 
+	/** 发视频：与 handleSendImage 同构（乐观气泡 + 失败回滚；file_id 已消耗故不入 failedSend）。 */
+	const handleSendVideo = async (fileId: string, previewUrl: string) => {
+		if (sending || !opts.targetId() || !opts.sendVideo) return;
+		sending = true;
+		sendError = '';
+		const tempId = `temp-video-${Date.now()}`;
+		const sentAt = new Date().toISOString();
+		messages = [...messages, { id: tempId, text: '', sent: true, time: formatTime(sentAt), sentAt, videoUrl: previewUrl }];
+		try {
+			const res = await opts.sendVideo(fileId);
+			if (res.code !== 0) {
+				messages = messages.filter((m) => m.id !== tempId);
+				sendError = res.error ?? '视频发送失败';
+			} else if (res.message_id) {
+				messages = messages
+					.filter((m) => m.id !== res.message_id)
+					.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
+			}
+		} catch {
+			messages = messages.filter((m) => m.id !== tempId);
+			sendError = '视频发送失败,请稍后重试';
+		} finally {
+			sending = false;
+			cancelTyping();
+		}
+	};
+
 	/** 重试上一次失败的发送（保留原文与 mentions；成功/再次失败都会更新 failedSend）。 */
 	const retrySend = async () => {
 		const pending = failedSend;
@@ -694,8 +723,10 @@ export function useChat(opts: UseChatOptions) {
 		handleInputChange,
 		/** 发送图片能力（未注入时为 undefined，输入栏据此隐藏图片入口） */
 		sendImage: opts.sendImage,
+		sendVideo: opts.sendVideo,
 		handleSend,
 		handleSendImage,
+		handleSendVideo,
 		retrySend,
 		handleRecall,
 		handleEdit,
