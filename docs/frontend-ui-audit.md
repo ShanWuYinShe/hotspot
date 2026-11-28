@@ -1251,3 +1251,20 @@ worktree 独立环境（`http://localhost:8889`，端口重映射 + 独立 seed�
 | 他人主页集合 | /users/user_seed_sophia 出现 [data-user-collections]，群组链接 3 个（#404） | 通过 |
 
 截图见 PR 附件（搜索态通知页 / 分享搜索空态 / 他人主页集合区）；均为功能验证，非视觉基线变更。
+
+## 浏览器回归：聊天媒体消息（视频）端到端验证
+
+浏览器 1280×900、浅色、主环境真实后端（qa@hotspot.local ↔ 阿禾）。真实媒体文件为 574,823 字节的 640×360 MP4（演示视频），通过正式链路造数与发送：
+
+1. `POST /public/v1/auth/signin`（阿禾，client_type=app）拿到 Bearer Token；
+2. `POST /api/v1/media/presign_upload`（category=chat_video）→ `PUT` 直传 → `POST /api/v1/media/complete_upload` 得到 file_id；
+3. `POST /api/v1/private_messages/send`（type=video，带 Idempotency-Key）→ 鹿鸣会话收到视频消息；
+4. Web 端在输入栏用 `input[type=file]` 注入同一视频（`accept=image/*,video/*`）→ 走 Web 自身 `chat_video` 上传与 `type=video` 发送。
+
+| 断言 | 结果 |
+|---|---|
+| 收到视频气泡：`<video>` 元素存在、`videoWidth×videoHeight = 640×360`、原生 controls 显示 0:13 | 通过 |
+| 发送视频：输入栏 `accept=image/*,video/*`，注入后会话新增右侧视频气泡且无错误条 | 通过 |
+
+结论：#423（渲染）与 #424（发送）在主环境真实媒体链路上验证通过；截图见 PR 附件（收到/发出两条视频气泡）。
+
