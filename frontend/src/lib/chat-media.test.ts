@@ -91,3 +91,10 @@ describe('normalizeChatAudioMime', () => {
 		expect(normalizeChatAudioMime({ name: 'a.wav', type: 'audio/wav' })).toBeNull();
 	});
 });
+
+describe('audio/webm（MediaRecorder 录制）', () => {
+	it('webm 已在契约白名单内，MIME 原样保留', () => {
+		expect(normalizeChatAudioMime({ name: 'voice.webm', type: 'audio/webm' })).toBe('audio/webm');
+		expect(normalizeChatAudioMime({ name: 'voice.webm', type: '' })).toBe('audio/webm');
+	});
+});

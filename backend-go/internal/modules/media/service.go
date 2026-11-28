@@ -715,7 +715,9 @@ func isMimeAllowed(category MediaCategory, mime string) bool {
 	case CategoryChatVideo:
 		return mime == "video/mp4" || mime == "video/quicktime"
 	case CategoryChatAudio:
-		return mime == "audio/mpeg" || mime == "audio/aac" || mime == "audio/ogg"
+		// audio/webm：Web 端 MediaRecorder 录制语音的默认容器（Opus），
+		// 契约见 spec/api_spec_media.md 分类表；服务端只按 MIME 判定，不转码。
+		return mime == "audio/mpeg" || mime == "audio/aac" || mime == "audio/ogg" || mime == "audio/webm"
 	case CategoryChatFile:
 		// chat_file 是开放类别，但必须黑名单 active content：预签名 GET 按对象
 		// Content-Type 原样回给浏览器，text/html、SVG 等在存储域名上可直接
@@ -780,6 +782,7 @@ var mimeTypeByUploadExtension = map[string]string{
 	".m4a":  "audio/aac",
 	".ogg":  "audio/ogg",
 	".oga":  "audio/ogg",
+	".webm": "audio/webm",
 	".wav":  "audio/wav",
 	".pdf":  "application/pdf",
 	".zip":  "application/zip",
