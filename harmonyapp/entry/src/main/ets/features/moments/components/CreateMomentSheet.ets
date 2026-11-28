@@ -25,7 +25,17 @@ const TAG: string = 'CreateMomentSheet';
 /** 此刻氛围预设（对齐前端 CreateSheet TagPill 六枚） */
 const MOOD_PRESETS: string[] = ['松弛', '漫游', '咖啡', '展览', '自然', '夜色'];
 /** 正文字数上限（对齐前端 CreateSheet 280 字契约） */
-const DESCRIPTION_MAX_LENGTH: number = 280;
+const FALLBACK_DESCRIPTION_MAX_LENGTH: number = 2000;
+
+/**
+ * 瞬间正文上限：spec AppConfig.limits.moment_description_max_length（可配置）。
+ * 权威来源 client_config（GlobalStateManager），兜底与后端默认一致（2000）；
+ * 此前硬编码 280 与 Android/Web/后端不一致（同一段文字在鸿蒙被截断）。
+ */
+function resolveDescriptionMaxLength(): number {
+  const configured = GlobalStateManager.getInstance().getLimits()?.moment_description_max_length;
+  return configured && configured > 0 ? configured : FALLBACK_DESCRIPTION_MAX_LENGTH;
+}
 
 /**
  * 发瞬间底部 Sheet（对齐前端 CreateSheet）：拖拽把手 + eyebrow「附近瞬间」+
@@ -310,11 +320,11 @@ export struct CreateMomentSheet {
     Column() {
       TextArea({ text: this.description, placeholder: '写下此刻发生的事，或分享一个想被附近的人看见的瞬间…' })
         .onChange((value: string) => {
-          this.description = value.length > DESCRIPTION_MAX_LENGTH ?
-            value.substring(0, DESCRIPTION_MAX_LENGTH) : value;
+          this.description = value.length > resolveDescriptionMaxLength() ?
+            value.substring(0, resolveDescriptionMaxLength()) : value;
           this.persistDraft();
         })
-        .maxLength(DESCRIPTION_MAX_LENGTH)
+        .maxLength(resolveDescriptionMaxLength())
         .fontSize(DesignConstants.FONT.SIZE.MD)
         .fontColor(this.getPalette().textPrimary)
         .placeholderColor(this.getPalette().textSecondary)
@@ -340,9 +350,9 @@ export struct CreateMomentSheet {
             .fontColor(this.getPalette().textSecondary)
         }
         Blank()
-        Text(`${this.description.length}/${DESCRIPTION_MAX_LENGTH}`)
+        Text(`${this.description.length}/${resolveDescriptionMaxLength()}`)
           .fontSize(DesignConstants.FONT.SIZE.XS2)
-          .fontColor(this.description.length >= DESCRIPTION_MAX_LENGTH - 20 ?
+          .fontColor(this.description.length >= resolveDescriptionMaxLength() - 20 ?
             this.getPalette().error :
             this.getPalette().textSecondary)
       }

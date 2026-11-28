@@ -12,7 +12,7 @@
 export class MomentDraftStore {
   private static instance: MomentDraftStore | null = null;
 
-  /** 正文（与组件内 DESCRIPTION_MAX_LENGTH 截断后的值一致） */
+  /** 正文（按 client_config.limits.moment_description_max_length 截断后的值） */
   description: string = '';
   /** 已选图片的本地路径 */
   imageUrls: string[] = [];
