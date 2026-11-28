@@ -20,6 +20,7 @@
 	import type { UserInfo } from '@/lib/ws/types';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
 	import { mapChatMediaFields } from '@/lib/chat-media';
+	import { buildReplyPreview } from '@/lib/chat-reply';
 	import { chatDraftKey } from '@/lib/chat-draft';
 
 	// 服务端推送版输入状态（spec GroupTypingPayload，types.ts 未单独导出）。
@@ -174,7 +175,8 @@
 				time: formatTime(m.sent_at),
 				sentAt: m.sent_at,
 				senderName: m.sender?.nickname ?? '',
-				reactions: m.reactions ?? []
+				reactions: m.reactions ?? [],
+				replyTo: buildReplyPreview(m.reply_to)
 			}));
 			return { messages: mapped, next_cursor: res.data.next_cursor ?? null };
 		},
@@ -182,13 +184,14 @@
 			// spec: group_messages/mark_read (scope='group') 标记该群全部已读;幂等语义,失败静默。
 			void markGroupRead({ scope: 'group', group_id: groupId }).catch(() => {});
 		},
-		sendMessage: async (text, mentions) => {
+		sendMessage: async (text, mentions, replyToId) => {
 			// mentions 仅非空时下发（spec: 未传字段保持语义；空数组会显式表达「无提及」）
 			const res = await sendGroupMessage({
 				group_id: groupId,
 				type: 'text',
 				content: text,
-				...(mentions?.length ? { mentions } : {})
+				...(mentions?.length ? { mentions } : {}),
+				...(replyToId ? { reply_to_message_id: replyToId } : {})
 			});
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			// 后端 message 已是面向用户的 curated 文案（如禁言/封禁原因），优先直显。
@@ -244,6 +247,7 @@
 				id,
 				text: payload.type === 'image' ? '' : (payload.content ?? ''),
 				...mapChatMediaFields(payload.type, media),
+				replyTo: buildReplyPreview((payload as { reply_to?: unknown }).reply_to as never),
 				sent,
 				time: formatTime(payload.sent_at),
 				sentAt: payload.sent_at,

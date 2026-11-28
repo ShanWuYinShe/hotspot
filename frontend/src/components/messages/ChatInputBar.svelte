@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Image as ImageIcon, Send, Mic } from '@lucide/svelte';
+	import { Image as ImageIcon, Send, Mic, X } from '@lucide/svelte';
 	import ChatColumn from '@/components/messages/ChatColumn.svelte';
 	import Button from '@/components/ui/button.svelte';
 	import { uploadMediaFile } from '@/lib/upload';
@@ -221,6 +221,21 @@
 		{/if}
 		{#if imageError}
 			<p class="pb-1.5 text-status-danger text-xs">{imageError}</p>
+		{/if}
+		{#if chat.replyingTo}
+			<!-- 引用回复：显示原消息发送者与预览，× 取消（发送后由控制器清空） -->
+			<div class="mb-1.5 flex items-center gap-2 rounded-md bg-surface-subtle/60 px-2.5 py-1.5 text-xs text-text-secondary">
+				<span class="shrink-0 font-medium text-text-primary">回复 {chat.replyingTo.senderName || '消息'}</span>
+				<span class="min-w-0 truncate">{chat.replyingTo.text || '[消息]'}</span>
+				<button
+					type="button"
+					class="ml-auto flex size-6 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-interactive-hover focus-ring"
+					aria-label="取消回复"
+					onclick={() => chat.cancelReply()}
+				>
+					<X class="size-3.5" strokeWidth={2} />
+				</button>
+			</div>
 		{/if}
 		{#if recording}
 			<!-- 录音态：计时 + 取消 + 发送（停止并上传 chat_audio，契约白名单含 audio/webm） -->

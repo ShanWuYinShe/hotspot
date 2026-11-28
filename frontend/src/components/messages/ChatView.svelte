@@ -23,6 +23,7 @@
 	import { presence, watchPresence, seedOnline } from '@/stores/presence.svelte';
 	import { useChat, formatTime, createTypingIndicator, inRecallWindow, type ChatMessage } from '@/lib/chat.svelte';
 	import { mapChatMediaFields } from '@/lib/chat-media';
+	import { buildReplyPreview } from '@/lib/chat-reply';
 	import { chatDraftKey } from '@/lib/chat-draft';
 
 	// ChatView — 私聊窗口（spec: 以对端 user_id 寻址）。
@@ -94,7 +95,10 @@
 				sent: m.sender.user_id === meId,
 				time: formatTime(m.sent_at),
 				sentAt: m.sent_at,
-				reactions: m.reactions ?? []
+				reactions: m.reactions ?? [],
+				// 私聊不在气泡上显示昵称，但引用预览要用到发送者名
+				senderName: m.sender?.nickname ?? '',
+				replyTo: buildReplyPreview(m.reply_to)
 			}));
 			// 首屏加载且调用方未传 contact 时，从最新一条非自己消息的 sender 推导。
 			if (!cursor && !contactProp && !derivedContact) {
@@ -110,8 +114,9 @@
 			// 幂等语义,失败静默不打扰会话浏览。
 			void markPrivateRead({ scope: 'session', target_user_id: peerUserId }).catch(() => {});
 		},
-		sendMessage: async (text) => {
-			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'text', content: text });
+		sendMessage: async (text, _mentions, replyToId) => {
+			// 引用回复（spec private_messages.send → reply_to_message_id）
+			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'text', content: text, reply_to_message_id: replyToId });
 			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
 			// spec: 10200 时 data = { forbidden_reason: ForbiddenReason }。
 			// 后端 message 方向敏感（如拉黑方/被拉黑方两套文案），优先直显；
@@ -183,6 +188,8 @@
 				id,
 				text: payload.type === 'image' || payload.type === 'video' || payload.type === 'audio' || payload.type === 'file' ? '' : (payload.content ?? ''),
 				...mapChatMediaFields(payload.type, media),
+				replyTo: buildReplyPreview((payload as { reply_to?: unknown }).reply_to as never),
+				senderName: payload.sender?.nickname ?? '',
 				sent,
 				time: formatTime(payload.sent_at),
 				sentAt: payload.sent_at

@@ -26,6 +26,7 @@
 		fileUrl = '',
 		fileName = '',
 		fileSize = 0,
+		replyTo = null,
 		sent,
 		time,
 		senderName = '',
@@ -41,6 +42,7 @@
 		onRecall,
 		onEdit,
 		onReport,
+		onReply,
 		onImageClick,
 		reactions = [],
 		emojis = resolveReactionEmojis(),
@@ -64,6 +66,10 @@
 		editedAt?: string;
 		canRecall?: boolean;
 		canEdit?: boolean;
+		/** 引用回复的原文预览（服务端 reply_to 归一） */
+		replyTo?: { id: string; senderName: string; preview: string } | null;
+		/** 回复入口（menu ⋮ → 回复）；缺省不渲染 */
+		onReply?: () => void;
 		/** 收到的消息可举报（own messages 服务端 10400，不展示入口） */
 		canReport?: boolean;
 		onRecall?: (id: string) => void;
@@ -129,6 +135,16 @@
 <div class="group flex flex-col {sent ? 'items-end' : 'items-start'}" use:enterOnce={enter}>
 	{#if !sent && senderName}
 		<p class="mb-1 px-1 text-sm font-medium text-text-secondary">{senderName}</p>
+	{/if}
+	{#if replyTo && !recalled}
+		<!-- 引用原文：小号次色条，贴在气泡上方（自己/对方同款，避免在 accent 底上叠低对比文字） -->
+		<div
+			class="mb-1 max-w-chat-bubble rounded-sm bg-surface-subtle/60 px-2 py-1 text-xs text-text-secondary"
+			aria-label="引用消息"
+		>
+			<span class="font-medium text-text-primary">{replyTo.senderName || '消息'}</span>
+			<span class="ml-1">{replyTo.preview}</span>
+		</div>
 	{/if}
 	<div class="relative max-w-chat-bubble rounded-md {hasMedia && !recalled ? '' : 'px-3 py-1.5 ' + bubbleClass}">
 		{#if videoUrl && !recalled}
@@ -292,6 +308,9 @@
 									>{emoji}</button>
 								{/each}
 							</div>
+						{/if}
+						{#if onReply}
+							<DropdownMenu.Item onSelect={() => { menuOpen = false; onReply?.(); }}>回复</DropdownMenu.Item>
 						{/if}
 						{#if canEdit}
 							<DropdownMenu.Item onSelect={startEdit}>编辑</DropdownMenu.Item>
