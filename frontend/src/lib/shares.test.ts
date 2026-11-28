@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ShareListItem } from '@/api/types';
-import { filterShares } from './shares';
+import { filterShares, shareLink, shareAvailability, shareAvailabilityLabel } from './shares';
 
 const items: ShareListItem[] = [
 	{
@@ -44,5 +44,25 @@ describe('filterShares', () => {
 
 	it('无匹配返回空数组', () => {
 		expect(filterShares(items, '不存在的关键词')).toEqual([]);
+	});
+});
+
+describe('shareLink / shareAvailability', () => {
+	it('shareLink 拼接绝对地址并去尾斜杠', () => {
+		expect(shareLink('abc123', 'https://chaoset.com')).toBe('https://chaoset.com/share/abc123');
+		expect(shareLink('abc123', 'https://chaoset.com/')).toBe('https://chaoset.com/share/abc123');
+	});
+
+	it('is_revoked 决定可用状态与文案（与 spec 同口径，不看 expires_at）', () => {
+		const expired = { is_revoked: true } as unknown as ShareListItem;
+		const active = { is_revoked: false } as unknown as ShareListItem;
+		expect(shareAvailability(expired)).toBe('unavailable');
+		expect(shareAvailabilityLabel(expired)).toBe('已失效');
+		expect(shareAvailability(active)).toBe('active');
+		expect(shareAvailabilityLabel(active)).toBe('有效');
+	});
+
+	it('空分享码也能拼出 URL（不抛错，由调用方校验）', () => {
+		expect(shareLink('', 'https://chaoset.com')).toBe('https://chaoset.com/share/');
 	});
 });
