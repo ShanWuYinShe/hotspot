@@ -29,6 +29,8 @@ import { SafeAreaUtils } from '../../../core/utils/SafeAreaUtils';
 import { AppIcon } from '../../../components/SystemIcon';
 import { LucideIcon } from '../../../components/LucideIcon';
 import { GlobalStateManager, KEY_CURRENT_USER } from '../../../core/state/GlobalStateManager';
+import { HttpUtil } from '../../../core/network/HttpUtil';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { AccountInfo, Gender } from '../../../core/types/api';
 import { KeyboardDismissManager } from '../../../core/utils/KeyboardDismissManager';
 import { validateField, FieldRule } from '../../../core/util/FormValidator';
@@ -85,6 +87,10 @@ export struct ProfileEditPage {
   @State nicknameTouched: boolean = false;
   @State bioTouched: boolean = false;
   @State isAvatarUploading: boolean = false;
+  // H-02 注销账号：危险区展开态 + 二次确认输入（对齐 Web /me/edit：须手输 DELETE_MY_ACCOUNT）
+  @State deletePanelOpen: boolean = false;
+  @State deleteConfirmText: string = '';
+  @State isDeleting: boolean = false;
 
   aboutToAppear(): void {
     SystemUiController.syncWithCurrentTheme();
@@ -244,6 +250,113 @@ export struct ProfileEditPage {
   }
 
   /** 分区头（web SectionHead）：标题 14/600 + 说明 11 次色，位于卡外 */
+  /** H-02：注销账号（spec users/delete_account；confirmation 必须是 DELETE_MY_ACCOUNT）。 */
+  private async handleDeleteAccount(): Promise<void> {
+    if (this.deleteConfirmText !== 'DELETE_MY_ACCOUNT' || this.isDeleting) {
+      return;
+    }
+    this.isDeleting = true;
+    try {
+      const response = await ApiClient.deleteAccount({ confirmation: this.deleteConfirmText });
+      if (response.code !== 0) {
+        SystemToast.showError(getErrorMessage(response, '注销失败，请重试'), this.getUIContext());
+        return;
+      }
+      this.deletePanelOpen = false;
+      // 账号已注销：服务端会话随之失效，这里只做本地收尾（清 token/状态 → 回首页）
+      try {
+        await ApiClient.logout();
+      } catch (e) {
+        hilog.warn(0x0000, 'ProfileEditPage', '登出接口在注销后失败（可忽略）');
+      }
+      await HttpUtil.clearAuthData();
+      GlobalStateManager.getInstance().clear();
+      AppRouter.clear();
+      SystemToast.show('账号已注销', this.getUIContext());
+    } catch (error) {
+      SystemToast.showError('注销失败，请重试', this.getUIContext());
+    } finally {
+      this.isDeleting = false;
+    }
+  }
+
+  @Builder
+  private buildDeleteAccountSection() {
+    Column({ space: DesignConstants.SPACING.SM }) {
+      Text('账号')
+        .fontSize(DesignConstants.FONT.SIZE.MD)
+        .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+        .fontWeight(DesignConstants.FONT.WEIGHT.SEMIBOLD)
+        .fontColor(this.getCurrentThemePalette().textPrimary)
+      Column({ space: DesignConstants.SPACING.MD }) {
+        Row({ space: DesignConstants.SPACING.SM }) {
+          Column({ space: DesignConstants.SPACING.HALF }) {
+            Text('注销账号')
+              .fontSize(DesignConstants.FONT.SIZE.MD)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.MD))
+              .fontWeight(DesignConstants.FONT.WEIGHT.MEDIUM)
+              .fontColor(this.getCurrentThemePalette().textStatusDangerOnSoft)
+            Text('永久删除账号与全部内容，操作不可恢复。')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
+          LucideIcon({
+            icon: AppIcon.ARROW_DOWN,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_XS,
+            color: this.getCurrentThemePalette().textTertiary
+          })
+        }
+        .width('100%')
+        .alignItems(VerticalAlign.Center)
+        .accessibilityText('注销账号：永久删除账号与全部内容，点击展开确认')
+        .onClick(() => {
+          this.deletePanelOpen = !this.deletePanelOpen;
+        })
+
+        if (this.deletePanelOpen) {
+          Column({ space: DesignConstants.SPACING.SM }) {
+            Text('请输入 DELETE_MY_ACCOUNT 以确认：')
+              .fontSize(DesignConstants.FONT.SIZE.XS)
+              .lineHeight(textLineHeight(DesignConstants.FONT.SIZE.XS))
+              .fontColor(this.getCurrentThemePalette().textSecondary)
+            SystemInput({
+              value: this.deleteConfirmText,
+              placeholder: 'DELETE_MY_ACCOUNT',
+              inputHeight: DesignConstants.COMPONENT.BUTTON_HEIGHT_LG,
+              fontSize: DesignConstants.FONT.SIZE.MD,
+              onChange: (value: string) => {
+                this.deleteConfirmText = value;
+              }
+            })
+              .width('100%')
+            SystemButton({
+              label: this.isDeleting ? '正在注销…' : '确认注销',
+              variant: 'danger',
+              buttonSize: 'large',
+              fullWidth: true,
+              loading: this.isDeleting,
+              disabled: this.isDeleting || this.deleteConfirmText !== 'DELETE_MY_ACCOUNT',
+              onPress: () => { this.handleDeleteAccount(); }
+            })
+          }
+          .width('100%')
+          .alignItems(HorizontalAlign.Start)
+        }
+      }
+      .width('100%')
+      .alignItems(HorizontalAlign.Start)
+      .padding(DesignConstants.SPACING.LG)
+      .borderRadius(DesignConstants.SHAPE.CARD)
+      .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
+      .shadow(this.getCurrentThemePalette().surfaceShadow)
+    }
+    .width('100%')
+    .alignItems(HorizontalAlign.Start)
+  }
+
   @Builder
   private buildSectionHead(title: string, description: string) {
     Column({ space: DesignConstants.SPACING.HALF }) {
@@ -546,6 +659,8 @@ export struct ProfileEditPage {
               .borderRadius(DesignConstants.SHAPE.CARD)
               .backgroundColor(this.getCurrentThemePalette().surfaceIsland)
               .shadow(this.getCurrentThemePalette().surfaceShadow)
+
+              this.buildDeleteAccountSection()
             }
             .width('100%')
             .padding({
