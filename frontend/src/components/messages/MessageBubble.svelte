@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { CheckCheck, MoreHorizontal, Check, Flag, Paperclip } from '@lucide/svelte';
 	import { formatFileSize } from '@/lib/chat-media';
+	import { probeAudioDuration } from '@/lib/audio-duration';
 	import * as DropdownMenu from '@/components/ui/dropdown-menu';
 	import { enterOnce } from '@/lib/motion';
 	import type { Reaction } from '@/api/types';
@@ -146,7 +147,14 @@
 				{time}
 			</p>
 		{:else if audioUrl && !recalled}
-			<audio src={audioUrl} controls aria-label="语音消息" class="w-56 max-w-full"></audio>
+			<audio
+				src={audioUrl}
+				controls
+				preload="metadata"
+				aria-label="语音消息"
+				class="w-56 max-w-full"
+				use:probeAudioDuration
+			></audio>
 			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
 				{time}
 			</p>
