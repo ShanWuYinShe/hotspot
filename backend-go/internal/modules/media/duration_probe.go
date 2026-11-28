@@ -10,6 +10,10 @@ import (
 // 读不到就按「无时长」处理，不阻塞上传。
 const audioProbeHeadBytes int64 = 64 * 1024
 
+// audioProbeTailBytes：moov（MP4/MOV 时长索引）可能位于文件尾（非 faststart），
+// 头部分解析失败时再读末尾这段重试；覆盖手机拍摄/剪辑导出的常见布局。
+const audioProbeTailBytes int64 = 256 * 1024
+
 // probeAudioDurationSeconds 从对象前缀解析媒体时长（秒，四舍五入）。
 // 支持 WebM（MediaRecorder 录制语音）与 MP4/M4A（mvhd）；解析失败返回 ok=false，
 // 由调用方保持 duration=null，客户端自行兜底（Web 端已有 seek 探测）。
@@ -22,6 +26,17 @@ func probeAudioDurationSeconds(mimeType string, head []byte) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+// probeDurationFromHeadAndTail 先按头部解析，失败再解析尾部（moov 在文件尾的 MP4）。
+func probeDurationFromHeadAndTail(mimeType string, head, tail []byte) (int, bool) {
+	if seconds, ok := probeAudioDurationSeconds(mimeType, head); ok {
+		return seconds, true
+	}
+	if len(tail) == 0 {
+		return 0, false
+	}
+	return probeAudioDurationSeconds(mimeType, tail)
 }
 
 // probeWebMDuration 解析 EBML：段信息里的 TimecodeScale（纳秒/单位，默认 1e6）

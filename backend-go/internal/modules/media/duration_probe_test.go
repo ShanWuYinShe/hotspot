@@ -63,3 +63,17 @@ func TestProbeAudioDurationUnsupported(t *testing.T) {
 		t.Fatal("空数据应返回 false")
 	}
 }
+
+func TestProbeDurationFromHeadAndTail(t *testing.T) {
+	headWithoutMoov := []byte{0x00, 0x00, 0x00, 0x18, 'f', 't', 'y', 'p', 'i', 's', 'o', 'm'}
+	tailWithMoov := mp4Fixture(1000, 13000)
+	seconds, ok := probeDurationFromHeadAndTail("video/mp4", headWithoutMoov, tailWithMoov)
+	if !ok || seconds != 13 {
+		t.Fatalf("moov 在尾部时应解析出 13s，got %d ok=%v", seconds, ok)
+	}
+	// 头部已有 moov（faststart）时直接命中，无需尾部
+	seconds, ok = probeDurationFromHeadAndTail("video/mp4", mp4Fixture(1000, 5000), nil)
+	if !ok || seconds != 5 {
+		t.Fatalf("faststart 应解析出 5s，got %d ok=%v", seconds, ok)
+	}
+}
