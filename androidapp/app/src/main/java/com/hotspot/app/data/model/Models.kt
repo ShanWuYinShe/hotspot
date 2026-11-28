@@ -32,9 +32,12 @@ data class ClientDefaults(
 /** 业务限额（spec/api_spec_types.md → AppLimits；只取发布器用到的最小集合）。 */
 @Serializable
 data class AppLimits(
-    @SerialName("max_moment_tags") val maxMomentTags: Int = 9,
+    // 默认值必须与后端默认配置一致（platform/appconfig/source.go）：
+    // tags 10 / images 9 / 正文 2000 / 评论 500；配置未加载时用这些兜底，避免旧值（9/9/280）静默截断。
+    @SerialName("max_moment_tags") val maxMomentTags: Int = 10,
     @SerialName("max_moment_images") val maxMomentImages: Int = 9,
-    @SerialName("moment_description_max_length") val momentDescriptionMaxLength: Int = 280,
+    @SerialName("moment_description_max_length") val momentDescriptionMaxLength: Int = 2000,
+    @SerialName("comment_max_length") val commentMaxLength: Int = 500,
 )
 
 /** 客户端公开配置（spec/api_spec_public.md → POST /public/v1/system/client_config，仅取用途所需字段）。 */

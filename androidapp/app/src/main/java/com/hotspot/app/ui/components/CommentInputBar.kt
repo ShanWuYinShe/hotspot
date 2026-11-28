@@ -81,6 +81,8 @@ fun CommentInputBar(
     modifier: Modifier = Modifier,
     sending: Boolean = false,
     focusRequester: FocusRequester = remember { FocusRequester() },
+    /** 评论长度上限（spec limits.comment_max_length，默认 500；超出直接不接收，避免提交后才报错）。 */
+    maxLength: Int = Int.MAX_VALUE,
 ) {
     val colors = HotSpotTheme.colors
     var focused by remember { mutableStateOf(false) }
@@ -165,7 +167,7 @@ fun CommentInputBar(
                 }
                 BasicTextField(
                     value = value,
-                    onValueChange = onValueChange,
+                    onValueChange = { next -> if (next.length <= maxLength) onValueChange(next) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)

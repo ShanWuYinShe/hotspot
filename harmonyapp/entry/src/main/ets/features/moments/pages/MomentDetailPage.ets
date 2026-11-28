@@ -55,6 +55,18 @@ import { LucideIcon } from '../../../components/LucideIcon';
 const DOMAIN_NUMBER: number = 0xFF1A;
 const TAG: string = 'MomentDetailPage';
 
+/**
+ * 评论长度上限：spec AppConfig.limits.comment_max_length（可配置，后端默认 500）。
+ * 与 Web CommentInputBar.maxlength / Android CommentInputBar.maxLength 同口径，
+ * 超出直接不接收，避免提交后才被服务端拒绝。
+ */
+const FALLBACK_COMMENT_MAX_LENGTH: number = 500;
+
+function resolveCommentMaxLength(): number {
+  const configured = GlobalStateManager.getInstance().getLimits()?.comment_max_length;
+  return configured && configured > 0 ? configured : FALLBACK_COMMENT_MAX_LENGTH;
+}
+
 interface MomentDetailParams {
   momentId?: string;
   moment_id?: string;
@@ -1728,8 +1740,10 @@ export struct MomentDetailPage {
             showPrefixIcon: false,
             inputHeight: DesignConstants.COMPONENT.SEARCH_INPUT_HEIGHT,
             fontSize: DesignConstants.FONT.SIZE.MD,
+            maxLength: resolveCommentMaxLength(),
             onChange: (value: string) => {
-              this.commentText = value;
+              const limit = resolveCommentMaxLength();
+              this.commentText = value.length > limit ? value.substring(0, limit) : value;
             }
           })
             .layoutWeight(1)

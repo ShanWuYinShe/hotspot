@@ -162,6 +162,8 @@ fun MomentDetailScreen(
 
     // 发送态：输入 / 回复目标 / 幂等键（成功后清理，失败保留供同一次提交重试）/ 动作错误
     var input by remember { mutableStateOf("") }
+    // 评论长度上限：spec limits.comment_max_length（后端默认 500），与 Web/鸿蒙同口径
+    var commentMaxLength by remember { mutableIntStateOf(500) }
     var replyTarget by remember { mutableStateOf<CommentReplyTarget?>(null) }
     var sending by remember { mutableStateOf(false) }
     var actionError by remember { mutableStateOf<String?>(null) }
@@ -484,7 +486,10 @@ fun MomentDetailScreen(
 
     LaunchedEffect(momentId) {
         loadMoment()
-        runCatching { AppContainer.limits() }.getOrNull()?.let { maxMomentTags = it.maxMomentTags.coerceAtLeast(1) }
+        runCatching { AppContainer.limits() }.getOrNull()?.let {
+            maxMomentTags = it.maxMomentTags.coerceAtLeast(1)
+            commentMaxLength = it.commentMaxLength.coerceAtLeast(1)
+        }
     }
     LaunchedEffect(momentId) { loadComments() }
     LaunchedEffect(loggedIn) {
@@ -672,6 +677,7 @@ fun MomentDetailScreen(
                         onCancelReply = { replyTarget = null },
                         sending = sending,
                         focusRequester = inputFocusRequester,
+                        maxLength = commentMaxLength,
                     )
                 }
             }
