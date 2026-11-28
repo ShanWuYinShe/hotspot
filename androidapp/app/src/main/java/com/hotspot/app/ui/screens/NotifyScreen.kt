@@ -83,6 +83,15 @@ fun NotifyScreen(
     val context = LocalContext.current
     var items by remember { mutableStateOf<List<NotifyItem>>(emptyList()) }
     var announcements by remember { mutableStateOf<List<SystemAnnouncementItem>>(emptyList()) }
+    // (filterId, 文案) 顺序与 Web FILTER_TABS 一致
+    val notifyTabs: List<Pair<String, String>> = listOf(
+        "all" to "全部",
+        "unread" to "未读",
+        "reaction" to "点赞",
+        "follow" to "关注",
+        "comment" to "评论",
+        "nearby" to "附近",
+    )
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var marking by remember { mutableStateOf(false) }
@@ -91,7 +100,10 @@ fun NotifyScreen(
     var cursor by remember { mutableStateOf<String?>(null) }
     var loadingMore by remember { mutableStateOf(false) }
     var searchLoadingAll by remember { mutableStateOf(false) }
-    var unreadOnly by remember { mutableStateOf(false) }
+    // 分类档对齐 Web /notify FILTER_TABS（全部/未读/点赞/关注/评论/附近）：
+    // 「未读」走服务端 is_read=false；其余分类在已加载页内按 type 过滤（契约单 type 筛选）。
+    var filterId by remember { mutableStateOf("all") }
+    val unreadOnly = filterId == "unread"
 
     suspend fun load() {
         loading = items.isEmpty()
@@ -162,10 +174,11 @@ fun NotifyScreen(
         searchLoadingAll = false
     }
 
-    val filteredItems = remember(items, query) {
+    val filteredItems = remember(items, query, filterId) {
         val keyword = query.trim()
         items.filter { item ->
-            (
+            val categoryMatch = filterId == "all" || filterId == "unread" || item.type == filterId
+            categoryMatch && (
                 keyword.isBlank() ||
                     item.type.contains(keyword, ignoreCase = true) ||
                     item.notifyId.contains(keyword, ignoreCase = true) ||
@@ -249,9 +262,9 @@ fun NotifyScreen(
             )
             Spacer(Modifier.height(Spacing.sm))
             TabPills(
-                options = listOf("全部", "未读"),
-                selectedIndex = if (unreadOnly) 1 else 0,
-                onSelected = { unreadOnly = it == 1 },
+                options = notifyTabs.map { it.second },
+                selectedIndex = notifyTabs.indexOfFirst { it.first == filterId }.coerceAtLeast(0),
+                onSelected = { index -> filterId = notifyTabs.getOrNull(index)?.first ?: "all" },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(Spacing.sm))
@@ -285,8 +298,16 @@ fun NotifyScreen(
             }
             searchLoadingAll && filteredItems.isEmpty() -> LoadingState(message = "正在加载全部通知用于搜索…")
             filteredItems.isEmpty() -> EmptyState(
-                title = if (unreadOnly && query.isBlank()) "没有未读通知" else "没有匹配的通知",
-                description = if (unreadOnly && query.isBlank()) "全部通知都已读，切回「全部」查看历史" else "换个通知内容、用户 ID 或类型关键词试试",
+                title = when {
+                    unreadOnly && query.isBlank() -> "没有未读通知"
+                    filterId != "all" && query.isBlank() -> "该分类下没有通知"
+                    else -> "没有匹配的通知"
+                },
+                description = when {
+                    unreadOnly && query.isBlank() -> "全部通知都已读，切回「全部」查看历史"
+                    filterId != "all" && query.isBlank() -> "换个分类看看，或切回「全部」"
+                    else -> "换个通知内容、用户 ID 或类型关键词试试"
+                },
             )
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
