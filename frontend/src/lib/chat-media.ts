@@ -42,3 +42,12 @@ export function mapChatMediaFields(
 export function hasChatMedia(fields: ChatMediaFields): boolean {
 	return Boolean(fields.imageUrl || fields.videoUrl || fields.audioUrl || fields.fileUrl);
 }
+
+export type ChatMediaKind = 'image' | 'video';
+
+/** 输入栏选文件后的媒体类型判定（其它类型不进入聊天媒体发送）。 */
+export function chatMediaKindOfFile(file: { type: string }): ChatMediaKind | null {
+	if (file.type.startsWith('image/')) return 'image';
+	if (file.type.startsWith('video/')) return 'video';
+	return null;
+}

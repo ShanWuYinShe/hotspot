@@ -2,6 +2,7 @@
 	import { Image as ImageIcon, Send } from '@lucide/svelte';
 	import ChatColumn from '@/components/messages/ChatColumn.svelte';
 	import { uploadMediaFile } from '@/lib/upload';
+	import { chatMediaKindOfFile } from '@/lib/chat-media';
 	import type { ChatController } from '@/lib/chat.svelte';
 
 	// ChatInputBar —— 私聊/群聊共享的输入栏（发送错误提示 + 输入框 + 发送钮）。
@@ -29,7 +30,7 @@
 	let imageError = $state('');
 
 	const pickImage = () => {
-		if (!chat.sendImage || imageUploading) return;
+		if ((!chat.sendImage && !chat.sendVideo) || imageUploading) return;
 		imageError = '';
 		imageFileEl?.click();
 	};
@@ -39,20 +40,34 @@
 		const file = input.files?.[0];
 		// 允许重复选择同一文件（否则 change 不再触发）
 		input.value = '';
-		if (!file || !chat.sendImage) return;
-		if (!file.type.startsWith('image/')) {
-			imageError = '请选择图片文件';
+		if (!file) return;
+		const kind = chatMediaKindOfFile(file);
+		if (!kind) {
+			imageError = '请选择图片或视频文件';
+			return;
+		}
+		if (kind === 'image' && !chat.sendImage) {
+			imageError = '当前会话不支持发送图片';
+			return;
+		}
+		if (kind === 'video' && !chat.sendVideo) {
+			imageError = '当前会话不支持发送视频';
 			return;
 		}
 		const previewUrl = URL.createObjectURL(file);
 		imageUploading = true;
 		imageError = '';
 		try {
-			const fileId = await uploadMediaFile(file, 'chat_image');
-			await chat.handleSendImage(fileId, previewUrl);
+			if (kind === 'video') {
+				const fileId = await uploadMediaFile(file, 'chat_video');
+				await chat.handleSendVideo(fileId, previewUrl);
+			} else {
+				const fileId = await uploadMediaFile(file, 'chat_image');
+				await chat.handleSendImage(fileId, previewUrl);
+			}
 			imageFileEl?.blur();
 		} catch (err) {
-			imageError = err instanceof Error ? err.message : '图片发送失败，请重试';
+			imageError = err instanceof Error ? err.message : (kind === 'video' ? '视频发送失败，请重试' : '图片发送失败，请重试');
 		} finally {
 			imageUploading = false;
 		}
@@ -137,13 +152,13 @@
 			<p class="pb-1.5 text-status-danger text-xs">{imageError}</p>
 		{/if}
 		<div class="flex items-center gap-2.5">
-			{#if chat.sendImage}
-				<!-- 图片入口：与鸿蒙/Android 对齐（chat_image 上传 → type=image 消息） -->
+			{#if chat.sendImage || chat.sendVideo}
+				<!-- 媒体入口：与 Android 对齐（图片 chat_image / 视频 chat_video 上传 → type=image/video 消息） -->
 				<button
 					type="button"
 					class="hover-btn hit-slop scale-btn flex size-10 shrink-0 items-center justify-center rounded-full border border-border-default bg-surface-primary text-text-secondary shadow-raised-sm transition-colors duration-standard focus-ring disabled:opacity-50"
 					onclick={pickImage}
-					aria-label="发送图片"
+					aria-label={chat.sendVideo ? '发送图片或视频' : '发送图片'}
 					aria-busy={imageUploading || undefined}
 					disabled={imageUploading || chat.sending}
 				>
@@ -156,7 +171,7 @@
 				<input
 					bind:this={imageFileEl}
 					type="file"
-					accept="image/*"
+					accept={chat.sendVideo ? 'image/*,video/*' : 'image/*'}
 					class="hidden"
 					aria-hidden="true"
 					tabindex="-1"
