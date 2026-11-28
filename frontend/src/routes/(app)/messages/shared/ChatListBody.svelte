@@ -46,12 +46,16 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	// 会话列表 ↑↓ 键盘导航（对齐 /notify 列表）：焦点在行内时逐项移动，两端收敛；
 	// 焦点不在行内时仅 ↓ 进入首行。行覆盖按钮由 ListItem 渲染，
 	// 这里用 DOM 查询拿到当前行位置（与列表视觉结构解耦）。
-	let listWrapEl: HTMLDivElement;
+	// 用 action 绑定 keydown：容器是 display:contents 手势/键盘包装，不应为它加 role
+	// （会破坏 role=list 的子节点语义），也不能用 bind:this 保存节点（非响应式告警）。
+	function listKeyNav(node: HTMLElement) {
+		const handler = (event: KeyboardEvent) => handleListKeydown(node, event);
+		node.addEventListener('keydown', handler);
+		return { destroy: () => node.removeEventListener('keydown', handler) };
+	}
 
-	function handleListKeydown(event: KeyboardEvent) {
+	function handleListKeydown(wrap: HTMLElement, event: KeyboardEvent) {
 		if (!isChatListNavKey(event.key)) return;
-		const wrap = listWrapEl;
-		if (!wrap) return;
 		const rows = Array.from(wrap.querySelectorAll<HTMLButtonElement>('[data-list-item] button[data-cover]'));
 		if (rows.length === 0) return;
 		const active = document.activeElement as HTMLElement | null;
@@ -117,8 +121,7 @@ import NeedsAuthNotice from '@/components/auth/NeedsAuthNotice.svelte';
 	     因此 role=list 的直接子节点仍是 listitem（axe aria-required-children 不回归）。 -->
 	<div
 		class="contents"
-		bind:this={listWrapEl}
-		onkeydown={handleListKeydown}
+		use:listKeyNav
 		use:rowLongPress={{ count: chats.length, onMore: (idx) => { const chat = chats[idx]; if (chat) onMore?.(chat); } }}
 	>
 		<ListContainer

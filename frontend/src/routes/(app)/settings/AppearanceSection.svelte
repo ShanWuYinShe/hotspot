@@ -64,7 +64,7 @@
 				<Palette class="size-4 text-accent-default" strokeWidth={1.5} />
 			{/snippet}
 			{#snippet control()}
-				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="选择全局视觉色彩风格"
+				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" tabindex="-1" aria-label="选择全局视觉色彩风格"
 				onkeydown={(e) => handleRadioGroupKeydown(e, (i) => setTheme(THEME_OPTIONS[i].id as AppTheme))}>
 					{#each THEME_OPTIONS as opt}
 						{@const isSelected = theme.theme === opt.id}
@@ -123,7 +123,7 @@
 				{/if}
 			{/snippet}
 			{#snippet control()}
-				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" aria-label="外观模式"
+				<div class="grid grid-cols-3 gap-2 sm:gap-3" role="radiogroup" tabindex="-1" aria-label="外观模式"
 					onkeydown={(e) => handleRadioGroupKeydown(e, (i) => setColorScheme(COLOR_SCHEME_OPTIONS[i].id as ColorSchemeMode))}>
 					{#each COLOR_SCHEME_OPTIONS as opt}
 						{@const isSelected = theme.colorScheme === opt.id}
