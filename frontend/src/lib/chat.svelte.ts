@@ -80,6 +80,8 @@ export interface UseChatOptions {
 	sendVideo?: (fileId: string) => Promise<SendResult>;
 	/** 发送文件消息（file_id 来自 chat_file 上传，spec MessageType=file）。 */
 	sendFile?: (fileId: string) => Promise<SendResult>;
+	/** 发送语音消息（file_id 来自 chat_audio 上传，spec MessageType=audio）。 */
+	sendAudio?: (fileId: string) => Promise<SendResult>;
 	/** 发送侧 typing 信号（未连接时实现方静默丢弃）。 */
 	sendTypingSignal: (isTyping: boolean) => void;
 	/** WS 新消息事件名（window event）。 */
@@ -590,6 +592,33 @@ export function useChat(opts: UseChatOptions) {
 		}
 	};
 
+	/** 发语音：乐观气泡带本地 blob 预览（<audio> 可直接播），失败回滚。 */
+	const handleSendAudio = async (fileId: string, previewUrl: string) => {
+		if (sending || !opts.targetId() || !opts.sendAudio) return;
+		sending = true;
+		sendError = '';
+		const tempId = `temp-audio-${Date.now()}`;
+		const sentAt = new Date().toISOString();
+		messages = [...messages, { id: tempId, text: '', sent: true, time: formatTime(sentAt), sentAt, audioUrl: previewUrl }];
+		try {
+			const res = await opts.sendAudio(fileId);
+			if (res.code !== 0) {
+				messages = messages.filter((m) => m.id !== tempId);
+				sendError = res.error ?? '语音发送失败';
+			} else if (res.message_id) {
+				messages = messages
+					.filter((m) => m.id !== res.message_id)
+					.map((m) => (m.id === tempId ? { ...m, id: res.message_id! } : m));
+			}
+		} catch {
+			messages = messages.filter((m) => m.id !== tempId);
+			sendError = '语音发送失败,请稍后重试';
+		} finally {
+			sending = false;
+			cancelTyping();
+		}
+	};
+
 	/** 重试上一次失败的发送（保留原文与 mentions；成功/再次失败都会更新 failedSend）。 */
 	const retrySend = async () => {
 		const pending = failedSend;
@@ -756,10 +785,12 @@ export function useChat(opts: UseChatOptions) {
 		sendImage: opts.sendImage,
 		sendVideo: opts.sendVideo,
 		sendFile: opts.sendFile,
+		sendAudio: opts.sendAudio,
 		handleSend,
 		handleSendImage,
 		handleSendVideo,
 		handleSendFile,
+		handleSendAudio,
 		retrySend,
 		handleRecall,
 		handleEdit,

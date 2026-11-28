@@ -54,11 +54,11 @@ export function chatMediaKindOfFile(file: { type: string }): ChatMediaKind | nul
 
 
 /** 聊天上传计划：按 MIME 决定分类与契约上限（spec api_spec_media.md 分类表）。 */
-export type ChatUploadKind = 'image' | 'video' | 'file';
+
 
 export interface ChatUploadPlan {
 	kind: ChatUploadKind;
-	category: 'chat_image' | 'chat_video' | 'chat_file';
+	category: 'chat_image' | 'chat_video' | 'chat_audio' | 'chat_file';
 	maxBytes: number;
 }
 
@@ -67,6 +67,7 @@ const MB = 1024 * 1024;
 export function chatUploadPlanOfFile(file: { type: string }): ChatUploadPlan {
 	if (file.type.startsWith('image/')) return { kind: 'image', category: 'chat_image', maxBytes: 10 * MB };
 	if (file.type.startsWith('video/')) return { kind: 'video', category: 'chat_video', maxBytes: 100 * MB };
+	if (file.type.startsWith('audio/')) return { kind: 'audio', category: 'chat_audio', maxBytes: 20 * MB };
 	// 其余一律走 chat_file（服务端有黑名单约束，前端只做契约上限的 100MB 提示）
 	return { kind: 'file', category: 'chat_file', maxBytes: 100 * MB };
 }
@@ -77,4 +78,33 @@ export function formatFileSize(bytes: number | null | undefined): string {
 	if (bytes < 1024) return bytes + ' B';
 	if (bytes < MB) return (bytes / 1024).toFixed(1) + ' KB';
 	return (bytes / MB).toFixed(1) + ' MB';
+}
+
+/** 聊天上传类型（audio 单独一档：契约 chat_audio 白名单只有 mpeg/aac/ogg）。 */
+export type ChatUploadKind = 'image' | 'video' | 'audio' | 'file';
+
+/** 契约允许的 chat_audio MIME（spec api_spec_media.md 分类表）。 */
+export const CHAT_AUDIO_MIMES = ['audio/mpeg', 'audio/aac', 'audio/ogg'] as const;
+
+/** 扩展名 → 契约 MIME（浏览器给 m4a 常报 audio/x-m4a、audio/mp4，需要归一）。 */
+const AUDIO_EXT_MIME: Record<string, string> = {
+	mp3: 'audio/mpeg',
+	m4a: 'audio/aac',
+	aac: 'audio/aac',
+	ogg: 'audio/ogg',
+	oga: 'audio/ogg'
+};
+
+export function normalizeChatAudioMime(file: { name: string; type: string }): string | null {
+	if ((CHAT_AUDIO_MIMES as readonly string[]).includes(file.type)) return file.type;
+	const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+	return AUDIO_EXT_MIME[ext] ?? null;
+}
+
+/** 按契约补正音频 MIME；其它类型原样返回（图片/视频/文件的 MIME 浏览器已给对）。 */
+export function normalizeChatUploadFile<T extends File>(file: T): T {
+	if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|aac|ogg|oga)$/i.test(file.name)) return file;
+	const mime = normalizeChatAudioMime(file);
+	if (!mime || mime === file.type) return file;
+	return new File([file], file.name, { type: mime }) as T;
 }

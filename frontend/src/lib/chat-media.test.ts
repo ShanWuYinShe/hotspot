@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chatMediaKindOfFile, chatUploadPlanOfFile, formatFileSize, hasChatMedia, mapChatMediaFields } from './chat-media';
+import { chatMediaKindOfFile, chatUploadPlanOfFile, formatFileSize, hasChatMedia, mapChatMediaFields, normalizeChatAudioMime } from './chat-media';
 
 describe('mapChatMediaFields', () => {
 	it('图片 → imageUrl', () => {
@@ -68,5 +68,26 @@ describe('formatFileSize', () => {
 		expect(formatFileSize(0)).toBe('');
 		expect(formatFileSize(null)).toBe('');
 		expect(formatFileSize(undefined)).toBe('');
+	});
+});
+
+describe('chatUploadPlanOfFile 音频档', () => {
+	it('audio/* → chat_audio / 20MB', () => {
+		expect(chatUploadPlanOfFile({ type: 'audio/mpeg' })).toEqual({ kind: 'audio', category: 'chat_audio', maxBytes: 20 * 1024 * 1024 });
+	});
+});
+
+describe('normalizeChatAudioMime', () => {
+	it('契约内 MIME 原样返回', () => {
+		expect(normalizeChatAudioMime({ name: 'a.mp3', type: 'audio/mpeg' })).toBe('audio/mpeg');
+	});
+
+	it('m4a 报 audio/x-m4a 时归一为 audio/aac', () => {
+		expect(normalizeChatAudioMime({ name: 'voice.m4a', type: 'audio/x-m4a' })).toBe('audio/aac');
+		expect(normalizeChatAudioMime({ name: 'voice.m4a', type: '' })).toBe('audio/aac');
+	});
+
+	it('不支持的扩展返回 null', () => {
+		expect(normalizeChatAudioMime({ name: 'a.wav', type: 'audio/wav' })).toBeNull();
 	});
 });

@@ -149,6 +149,15 @@
 			}
 			return { code: res.code, error: '文件发送失败' };
 		},
+		sendAudio: async (fileId) => {
+			const res = await sendPrivateMessage({ target_user_id: peerUserId, type: 'audio', file_id: fileId });
+			if (res.code === 0) return { code: 0, message_id: res.data?.message_id };
+			if (res.code === 10200) {
+				const reason = (res.data as { forbidden_reason?: string } | undefined)?.forbidden_reason;
+				return { code: res.code, error: res.message || (reason && SEND_BLOCK_REASONS[reason]) || '语音发送失败' };
+			}
+			return { code: res.code, error: '语音发送失败' };
+		},
 		sendTypingSignal: (isTyping) => {
 			// 未连接静默丢弃。
 			if (!peerUserId || !wsClient.isConnected) return;
