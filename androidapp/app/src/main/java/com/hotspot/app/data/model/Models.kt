@@ -38,6 +38,7 @@ data class AppLimits(
     @SerialName("max_moment_images") val maxMomentImages: Int = 9,
     @SerialName("moment_description_max_length") val momentDescriptionMaxLength: Int = 2000,
     @SerialName("comment_max_length") val commentMaxLength: Int = 500,
+    @SerialName("message_recall_window_seconds") val messageRecallWindowSeconds: Int = 120,
 )
 
 /** 客户端公开配置（spec/api_spec_public.md → POST /public/v1/system/client_config，仅取用途所需字段）。 */
