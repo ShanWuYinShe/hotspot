@@ -54,6 +54,7 @@ import com.hotspot.app.ui.components.PageHeader
 import com.hotspot.app.ui.components.SearchInput
 import com.hotspot.app.ui.components.SystemCard
 import com.hotspot.app.ui.components.TabPills
+import com.hotspot.app.util.filterNotifyItems
 import com.hotspot.app.ui.components.SystemButton
 import com.hotspot.app.ui.theme.HotSpotTheme
 import com.hotspot.app.ui.theme.Spacing
@@ -174,18 +175,7 @@ fun NotifyScreen(
         searchLoadingAll = false
     }
 
-    val filteredItems = remember(items, query, filterId) {
-        val keyword = query.trim()
-        items.filter { item ->
-            val categoryMatch = filterId == "all" || filterId == "unread" || item.type == filterId
-            categoryMatch && (
-                keyword.isBlank() ||
-                    item.type.contains(keyword, ignoreCase = true) ||
-                    item.notifyId.contains(keyword, ignoreCase = true) ||
-                    item.payload.toString().contains(keyword, ignoreCase = true)
-                )
-        }
-    }
+    val filteredItems = remember(items, query, filterId) { filterNotifyItems(items, query, filterId) }
 
     /** 点击通知：先标记已读，再按 payload 跳到对应页面（无可跳转目标时只标已读）。 */
     fun openNotification(item: NotifyItem) {
