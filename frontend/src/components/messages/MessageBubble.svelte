@@ -153,10 +153,10 @@
 				download={fileName}
 				target="_blank"
 				rel="noopener"
-				class="flex max-w-chat-bubble items-center gap-2 rounded-md bg-surface-subtle px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
+				class="inline-flex max-w-[220px] min-w-0 items-center gap-2 rounded-md bg-surface-subtle px-3 py-2 text-sm text-text-primary outline-none focus-visible:ring-2 focus-visible:ring-accent-default"
 			>
 				<Paperclip class="size-4 shrink-0 text-text-secondary" strokeWidth={1.75} />
-				<span class="truncate">{fileName || '附件'}</span>
+				<span class="min-w-0 truncate">{fileName || '附件'}</span>
 			</a>
 			<p class="mt-1 flex items-center gap-0.75 text-xs leading-none tabular-nums {sent ? 'justify-end' : 'justify-start'} text-text-secondary">
 				{time}
