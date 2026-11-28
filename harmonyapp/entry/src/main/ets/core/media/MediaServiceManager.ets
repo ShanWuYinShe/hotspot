@@ -121,6 +121,24 @@ export class MediaServiceManager {
   }
 
   /**
+   * 从相册选择图片或视频（聊天媒体入口用：同一 picker，MIME 放开到 IMAGE_VIDEO_TYPE）。
+   */
+  public static async selectMedia(context: common.Context, maxCount: number = 1): Promise<string[]> {
+    try {
+      const picker = new photoAccessHelper.PhotoViewPicker();
+      const result = await picker.select({
+        MIMEType: photoAccessHelper.PhotoViewMIMETypes.IMAGE_VIDEO_TYPE,
+        maxSelectNumber: maxCount
+      });
+      hilog.info(DOMAIN, TAG, `选择了 ${result.photoUris.length} 个媒体文件`);
+      return result.photoUris;
+    } catch (error) {
+      hilog.error(DOMAIN, TAG, `选择媒体失败: ${JSON.stringify(error)}`);
+      throw (error instanceof Error) ? error : new Error(String(error));
+    }
+  }
+
+  /**
    * 从相册选择图片
    * 使用 PhotoViewPicker
    */

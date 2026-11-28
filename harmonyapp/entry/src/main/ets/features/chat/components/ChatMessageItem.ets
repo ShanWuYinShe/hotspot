@@ -236,6 +236,41 @@ export struct ChatMessageItem {
     .margin({ top: DesignConstants.SPACING.HALF })
   }
 
+  /** 视频消息：原生 Video 播放器（controls，不自动播放），宽度与图片气泡一致（对齐 Web <video>）。 */
+  @Builder
+  private buildVideoMessage(): void {
+    Column() {
+      Video({
+        src: MediaUrlUtil.normalize(this.msg.content)
+      })
+        .controls(true)
+        .width(DesignConstants.CHAT.IMAGE_MAX_WIDTH)
+        .aspectRatio(16 / 9)
+        .borderRadius(DesignConstants.RADIUS.MD)
+        .objectFit(ImageFit.Contain)
+        .backgroundColor(this.palette.surfaceSubtle)
+        .accessibilityText('[视频消息]')
+
+      Row({ space: DesignConstants.SPACING.XS }) {
+        Text(this.timeText)
+          .fontSize(DesignConstants.FONT.SIZE.XS)
+          .fontColor(this.palette.textSecondary)
+        if (this.msg.isSelf && this.isLastSent) {
+          LucideIcon({
+            icon: AppIcon.CHECK_ALL,
+            iconSize: DesignConstants.COMPONENT.ICON_SIZE_2XS,
+            color: this.palette.textSecondary
+          })
+            .opacity(DesignConstants.OPACITY.EMPHASIZED)
+        }
+      }
+      .justifyContent(this.msg.isSelf ? FlexAlign.End : FlexAlign.Start)
+      .margin({ top: DesignConstants.SPACING.XS })
+    }
+    .alignItems(this.msg.isSelf ? HorizontalAlign.End : HorizontalAlign.Start)
+    .margin({ top: DesignConstants.SPACING.HALF })
+  }
+
   build() {
     if (this.msg.isSystem) {
       Row() {
@@ -273,6 +308,8 @@ export struct ChatMessageItem {
 
           if (this.msg.type === 'image') {
             this.buildImageMessage()
+          } else if (this.msg.type === 'video') {
+            this.buildVideoMessage()
           } else {
             Column() {
               // 已撤回：斜体「消息已撤回」（对齐前端 MessageBubble recalled 态）
